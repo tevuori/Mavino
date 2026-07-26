@@ -50,6 +50,24 @@ function authHeaders(token: string): Record<string, string> {
   return h;
 }
 
+/**
+ * Sanitize a value for use as an HTTP header. Bun's `fetch` (and the HTTP spec)
+ * require header values to be Latin-1 (ISO-8859-1) encodable — any code point
+ * outside 0x00–0xFF throws `Header '<name>' has invalid value: '<value>'`
+ * before the request is even sent. ntfy titles/tags frequently contain emoji
+ * or other Unicode (e.g. "📞 Call Szurmanova"), which would permanently brick
+ * the publish and, for one-shot reminders, loop forever. We strip non-Latin-1
+ * characters and trim whitespace so the header is always sendable.
+ */
+function sanitizeHeader(value: string): string {
+  let out = "";
+  for (const ch of value) {
+    const cp = ch.codePointAt(0) ?? 0;
+    if (cp <= 0xff) out += ch;
+  }
+  return out.trim();
+}
+
 /** Publish a message to a topic. Throws on non-2xx. */
 export async function publish(
   cfg: NtfyUsableConfig,
@@ -59,11 +77,20 @@ export async function publish(
   const headers: Record<string, string> = {
     ...authHeaders(cfg.token),
   };
-  if (opts.title) headers["Title"] = opts.title;
+  if (opts.title) {
+    const t = sanitizeHeader(opts.title);
+    if (t) headers["Title"] = t;
+  }
   const prio = opts.priority ?? cfg.defaultPriority;
   if (prio) headers["Priority"] = String(prio);
-  if (opts.tags) headers["Tags"] = opts.tags;
-  if (opts.clickUrl) headers["Click"] = opts.clickUrl;
+  if (opts.tags) {
+    const tg = sanitizeHeader(opts.tags);
+    if (tg) headers["Tags"] = tg;
+  }
+  if (opts.clickUrl) {
+    const c = sanitizeHeader(opts.clickUrl);
+    if (c) headers["Click"] = c;
+  }
 
   const res = await fetch(url, {
     method: "POST",

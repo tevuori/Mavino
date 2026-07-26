@@ -14,9 +14,19 @@ import { runAthenaTurn } from "../ntfy/athena-turn";
 
 const TICK_MS = 30_000;
 const MAX_BODY_LEN = 4000;
+// Max consecutive publish failures before we give up on a reminder and mark it
+// fired. Without this, a permanent failure (e.g. a header value Bun's fetch
+// rejects on every attempt) retries every tick forever and the reminder is
+// never delivered nor surfaced. 5 ticks ≈ 2.5 minutes of retrying transient
+// errors before giving up.
+const MAX_PUBLISH_FAILURES = 5;
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let running = false;
+// In-memory consecutive-failure counter per reminder id. Cleared on success.
+// Lost on restart — acceptable: a truly permanent failure re-hits the cap
+// within MAX_PUBLISH_FAILURES ticks after a restart.
+const publishFailures = new Map<string, number>();
 
 async function fireReminder(reminder: {
   id: string;
@@ -78,14 +88,43 @@ async function fireReminder(reminder: {
       },
     });
   } catch (e) {
+    const n = (publishFailures.get(reminder.id) ?? 0) + 1;
+    publishFailures.set(reminder.id, n);
     console.error(
-      `[reminders] publish failed (reminder ${reminder.id}):`,
+      `[reminders] publish failed (reminder ${reminder.id}, attempt ${n}/${MAX_PUBLISH_FAILURES}):`,
       e instanceof Error ? e.message : e
     );
-    // Don't mark fired on publish failure — retry on the next tick.
+    if (n >= MAX_PUBLISH_FAILURES) {
+      // Permanent failure — give up so the row doesn't loop forever. Mark
+      // fired (kept for history) and surface the failure to the user via the
+      // inbox topic so it's not silently swallowed.
+      console.error(
+        `[reminders] giving up on reminder ${reminder.id} after ${n} consecutive failures`
+      );
+      publishFailures.delete(reminder.id);
+      await prisma.reminder.update({
+        where: { id: reminder.id },
+        data: { fired: true, firedAt: new Date() },
+      });
+      try {
+        await publish(cfg, {
+          topic: cfg.notifyTopic,
+          title: "Athena reminder failed",
+          body: `Could not deliver reminder "${reminder.title || reminder.message || reminder.id}" after ${n} attempts. Last error: ${
+            e instanceof Error ? e.message : "unknown"
+          }`.slice(0, MAX_BODY_LEN),
+          priority: cfg.defaultPriority,
+          tags: "warning",
+        });
+      } catch {
+        /* best-effort surfacing; ignore */
+      }
+    }
+    // Otherwise retry on the next tick.
     return;
   }
 
+  publishFailures.delete(reminder.id);
   await prisma.reminder.update({
     where: { id: reminder.id },
     data: { fired: true, firedAt: new Date() },
