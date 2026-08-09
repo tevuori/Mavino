@@ -66,10 +66,25 @@ function isPdfFile(name: string, mime: string): boolean {
   return ext === "pdf";
 }
 
+/**
+ * Strip NUL bytes and other C0 control characters (keeping \n, \r, \t) that
+ * Postgres' text type rejects outright ("invalid byte sequence for encoding
+ * UTF8: 0x00"). PDF extraction (and occasionally scraped HTML/Moodle pages)
+ * can produce embedded NULs that would otherwise crash the StudySource
+ * upsert. Applied before truncation so every resolveSource() caller —
+ * including plain resolveSource() callers that never touch the DB — gets
+ * clean text.
+ */
+function sanitizeText(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+}
+
 function truncate(text: string): { text: string; truncated: boolean } {
-  if (text.length <= MAX_SOURCE_CHARS) return { text, truncated: false };
+  const clean = sanitizeText(text);
+  if (clean.length <= MAX_SOURCE_CHARS) return { text: clean, truncated: false };
   return {
-    text: text.slice(0, MAX_SOURCE_CHARS) + "\n\n[…truncated…]",
+    text: clean.slice(0, MAX_SOURCE_CHARS) + "\n\n[…truncated…]",
     truncated: true,
   };
 }
