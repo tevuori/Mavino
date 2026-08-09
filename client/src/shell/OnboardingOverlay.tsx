@@ -81,6 +81,9 @@ export default function OnboardingOverlay() {
   // can be closed as soon as the user moves to the next/previous step. Windows
   // that already existed before the step opened them are left alone.
   const openedWindowRef = useRef<string | null>(null);
+  // Ref shared with the Gemini key save step so the Next button can trigger an
+  // auto-save without the step needing to be a forwardRef component.
+  const geminiSaveRef = useRef<GeminiKeySaveHandle>({ saveIfNeeded: undefined });
 
   const step = STEPS[stepIdx];
   const isLast = stepIdx === STEPS.length - 1;
@@ -133,14 +136,34 @@ export default function OnboardingOverlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const next = useCallback(() => {
-    saveName();
-    if (isLast) {
-      setHasOnboarded(true);
-    } else {
+  const [advancing, setAdvancing] = useState(false);
+
+  const next = useCallback(async () => {
+    if (advancing) return;
+    setAdvancing(true);
+    let willUnmount = false;
+    try {
+      saveName();
+      // On the Gemini save step, auto-save if a key is pasted. If saving fails,
+      // stay on this step and show the error; user can fix or clear the field.
+      if (step.id === "gemini-save") {
+        const ok = await geminiSaveRef.current.saveIfNeeded?.() ?? true;
+        if (!ok) {
+          setAdvancing(false);
+          return;
+        }
+      }
+      if (isLast) {
+        willUnmount = true;
+        setHasOnboarded(true);
+        return;
+      }
       setStepIdx((i) => Math.min(i + 1, STEPS.length - 1));
+    } finally {
+      // setHasOnboarded unmounts this overlay, so don't update its state after that.
+      if (!willUnmount) setAdvancing(false);
     }
-  }, [isLast, saveName, setHasOnboarded]);
+  }, [advancing, isLast, saveName, setHasOnboarded, step.id]);
 
   const back = useCallback(() => {
     saveName();
@@ -165,8 +188,10 @@ export default function OnboardingOverlay() {
           onSkip={skip}
           isLast={isLast}
           wide={step.wide}
+          busy={advancing}
           name={name}
           onNameChange={setName}
+          geminiSaveRef={geminiSaveRef}
         />
       ) : (
         <BottomPanel
@@ -185,11 +210,12 @@ export default function OnboardingOverlay() {
 
 // ===== Step content =====
 
-function StepContent({ stepId, name, onNameChange, onSubmitName }: {
+function StepContent({ stepId, name, onNameChange, onSubmitName, geminiSaveRef }: {
   stepId: string;
   name?: string;
   onNameChange?: (value: string) => void;
   onSubmitName?: () => void;
+  geminiSaveRef?: React.MutableRefObject<GeminiKeySaveHandle>;
 }) {
   switch (stepId) {
     case "welcome":
@@ -275,7 +301,7 @@ function StepContent({ stepId, name, onNameChange, onSubmitName }: {
         description={"Click the copy icon next to your new API key. Keep it handy — you'll paste it into Mavino on the next step."}
       />;
     case "gemini-save":
-      return <GeminiKeySaveStep />;
+      return <GeminiKeySaveStep saveRef={geminiSaveRef ?? { current: { saveIfNeeded: undefined } }} />;
     case "appearance":
       return <SettingsGuideStep
         icon={<Palette size={20} />}
@@ -498,15 +524,20 @@ function GeminiShotStep({ step, total, image, title, description, action }: {
   );
 }
 
-function GeminiKeySaveStep() {
+export interface GeminiKeySaveHandle {
+  /** Saves the pasted key if one is present. Returns true if the step can advance. */
+  saveIfNeeded?: (() => Promise<boolean>);
+}
+
+function GeminiKeySaveStep({ saveRef }: { saveRef: React.MutableRefObject<GeminiKeySaveHandle> }) {
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState(false);
 
-  const save = useCallback(async () => {
+  const saveIfNeeded = useCallback(async (): Promise<boolean> => {
     const trimmed = key.trim();
-    if (!trimmed) return;
+    if (!trimmed) return true; // user chose to skip
     setBusy(true);
     setErr(false);
     setMsg(null);
@@ -514,13 +545,23 @@ function GeminiKeySaveStep() {
       await aiApi.setKey(trimmed, "google", undefined, "gemini-3.6-flash");
       setKey("");
       setMsg("Gemini API key saved — Mavino is ready to use!");
+      return true;
     } catch (e) {
       setErr(true);
       setMsg(e instanceof Error ? e.message : "Failed to save the key. Double-check that you copied it correctly.");
+      return false;
     } finally {
       setBusy(false);
     }
   }, [key]);
+
+  useEffect(() => {
+    const target = saveRef.current;
+    target.saveIfNeeded = saveIfNeeded;
+    return () => {
+      target.saveIfNeeded = undefined;
+    };
+  }, [saveIfNeeded, saveRef]);
 
   return (
     <div className="text-center">
@@ -532,37 +573,30 @@ function GeminiKeySaveStep() {
         Paste the key you just copied from Google AI Studio. It's encrypted (AES-256-GCM) and
         stored only on the server.
       </p>
-      <div className="mx-auto mt-5 flex max-w-sm gap-2">
+      <div className="mx-auto mt-5 max-w-sm">
         <input
           autoFocus
           type="password"
           value={key}
+          disabled={busy}
           onChange={(e) => setKey(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              void save();
+              void saveIfNeeded();
             }
           }}
           placeholder="AIza..."
           aria-label="Gemini API key"
           autoComplete="off"
-          className="flex-1 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent"
+          className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-center text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent disabled:opacity-50"
         />
-        <button
-          onClick={() => void save()}
-          disabled={busy || !key.trim()}
-          className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-fg hover:opacity-90 disabled:opacity-40"
-        >
-          {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-          Save
-        </button>
       </div>
       {msg && (
         <p className={`mt-3 text-xs ${err ? "text-red-400" : "text-emerald-400"}`}>{msg}</p>
       )}
       <p className="mt-3 text-xs text-ink-muted/70">
-        You can skip this and add a key later in Settings → Mavino Assistant.
+        Press <strong>Next</strong> to save and continue, or skip and add a key later in Settings → Mavino Assistant.
       </p>
     </div>
   );
@@ -666,10 +700,11 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
   );
 }
 
-function CenteredModal({ stepId, stepIdx, totalSteps, onNext, onBack, onSkip, isLast, wide, name, onNameChange }: {
+function CenteredModal({ stepId, stepIdx, totalSteps, onNext, onBack, onSkip, isLast, wide, name, onNameChange, busy, geminiSaveRef }: {
   stepId: string; stepIdx: number; totalSteps: number;
-  onNext: () => void; onBack: () => void; onSkip: () => void; isLast: boolean; wide?: boolean;
-  name?: string; onNameChange?: (value: string) => void;
+  onNext: () => void | Promise<void>; onBack: () => void; onSkip: () => void; isLast: boolean; wide?: boolean;
+  name?: string; onNameChange?: (value: string) => void; busy?: boolean;
+  geminiSaveRef: React.MutableRefObject<GeminiKeySaveHandle>;
 }) {
   return (
     <motion.div
@@ -696,7 +731,7 @@ function CenteredModal({ stepId, stepIdx, totalSteps, onNext, onBack, onSkip, is
         )}
         {/* Content */}
         <div className="p-8">
-          <StepContent stepId={stepId} name={name} onNameChange={onNameChange} onSubmitName={onNext} />
+          <StepContent stepId={stepId} name={name} onNameChange={onNameChange} onSubmitName={onNext} geminiSaveRef={geminiSaveRef} />
         </div>
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-edge px-6 py-4">
@@ -711,12 +746,13 @@ function CenteredModal({ stepId, stepIdx, totalSteps, onNext, onBack, onSkip, is
               </button>
             )}
             <button
-              onClick={onNext}
-              className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-fg hover:opacity-90"
+              onClick={() => void onNext()}
+              disabled={busy}
+              className="flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-fg hover:opacity-90 disabled:opacity-50"
             >
-              {isLast ? "Finish" : stepIdx === 0 ? "Start Tour" : "Next"}
-              {!isLast && <ArrowRight size={14} />}
-              {isLast && <Check size={14} />}
+              {busy ? <Loader2 size={14} className="animate-spin" /> : isLast ? "Finish" : stepIdx === 0 ? "Start Tour" : "Next"}
+              {!isLast && !busy && <ArrowRight size={14} />}
+              {isLast && !busy && <Check size={14} />}
             </button>
           </div>
         </div>
@@ -727,7 +763,7 @@ function CenteredModal({ stepId, stepIdx, totalSteps, onNext, onBack, onSkip, is
 
 function BottomPanel({ stepId, stepIdx, totalSteps, onNext, onBack, onSkip }: {
   stepId: string; stepIdx: number; totalSteps: number;
-  onNext: () => void; onBack: () => void; onSkip: () => void;
+  onNext: () => void | Promise<void>; onBack: () => void; onSkip: () => void;
 }) {
   return (
     <motion.div
@@ -759,7 +795,7 @@ function BottomPanel({ stepId, stepIdx, totalSteps, onNext, onBack, onSkip }: {
             <ArrowLeft size={12} /> Back
           </button>
           <button
-            onClick={onNext}
+            onClick={() => void onNext()}
             className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:opacity-90"
           >
             Next <ArrowRight size={12} />

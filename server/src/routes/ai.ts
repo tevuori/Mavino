@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
 import { encryptSecret, decryptSecret } from "../services/crypto";
-import { isLlmConfiguredFor } from "../services/athena/llm";
+import { isLlmConfiguredFor, normalizeModelId } from "../services/athena/llm";
 import { llmRateLimiter } from "../services/athena/rate-limiter";
 import { getGlobalLlmConfig, getRateLimitsForUser, getTierRateLimits } from "../services/llm-config";
 
@@ -48,11 +48,12 @@ ai.get("/key", async (c) => {
   const stats = llmRateLimiter.stats(userId);
   const globalConfig = await getGlobalLlmConfig();
   const { tier, limits } = await getRateLimitsForUser(userId);
+  const provider = cred?.provider ?? "openai";
   return c.json({
     hasKey: Boolean(cred),
-    provider: cred?.provider ?? "openai",
+    provider,
     baseUrl: cred?.baseUrl ?? "",
-    modelId: cred?.modelId ?? "",
+    modelId: normalizeModelId(provider, cred?.modelId ?? ""),
     configured: await isLlmConfiguredFor(userId),
     rateLimitEnabled: cred?.rateLimitEnabled ?? false,
     rateLimitRpd: cred?.rateLimitRpd ?? 50,
@@ -60,7 +61,7 @@ ai.get("/key", async (c) => {
     hasFallback: Boolean(cred?.fallbackApiKeyEnc),
     fallbackProvider: cred?.fallbackProvider ?? "",
     fallbackBaseUrl: cred?.fallbackBaseUrl ?? "",
-    fallbackModelId: cred?.fallbackModelId ?? "",
+    fallbackModelId: normalizeModelId(cred?.fallbackProvider ?? "openai", cred?.fallbackModelId ?? ""),
     rateLimitUsage: stats,
     // Global mode info
     llmMode: globalConfig.mode,
@@ -78,7 +79,8 @@ ai.put("/key", zValidator("json", keySchema), async (c) => {
   const enc = encryptSecret(body.apiKey.trim());
   const provider = body.provider?.trim() || "openai";
   const baseUrl = body.baseUrl?.trim() || null;
-  const modelId = body.modelId?.trim() || null;
+  const rawModelId = body.modelId?.trim() || null;
+  const modelId = rawModelId ? normalizeModelId(provider, rawModelId) : null;
   const cred = await prisma.aiCredential.upsert({
     where: { userId },
     create: { userId, apiKeyEnc: enc, provider, baseUrl, modelId },
@@ -137,7 +139,11 @@ ai.put("/fallback", zValidator("json", fallbackSchema), async (c) => {
     data.fallbackBaseUrl = body.fallbackBaseUrl.trim() || null;
   }
   if (body.fallbackModelId !== undefined) {
-    data.fallbackModelId = body.fallbackModelId.trim() || null;
+    const fallbackProvider = (data.fallbackProvider as string | null | undefined) ?? cred?.fallbackProvider ?? "openai";
+    const rawFallbackModelId = body.fallbackModelId.trim() || null;
+    data.fallbackModelId = rawFallbackModelId
+      ? normalizeModelId(fallbackProvider, rawFallbackModelId)
+      : null;
   }
 
   await prisma.aiCredential.update({ where: { userId }, data });

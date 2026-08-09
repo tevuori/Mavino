@@ -63,6 +63,48 @@ const SERVER_BASE_URL = process.env.OPENAI_BASE_URL ?? "";
 const SERVER_MODEL = process.env.OPENAI_MODEL ?? "";
 const SERVER_PROVIDER = process.env.OPENAI_PROVIDER ?? "openai";
 
+/** Provider-specific default model IDs. Prevents falling back to OpenAI's
+ *  `gpt-4o-mini` when the user has configured a different provider. */
+const PROVIDER_DEFAULT_MODEL: Record<string, string> = {
+  openai: "gpt-4o-mini",
+  google: "gemini-3.6-flash",
+  anthropic: "claude-3-5-sonnet-20241022",
+  deepseek: "deepseek-chat",
+  groq: "llama-3.1-70b-versatile",
+  openrouter: "openrouter/auto",
+  xai: "grok-2",
+  mistralai: "mistral-large-latest",
+  cerebras: "llama3.1-70b",
+};
+
+function providerDefaultModel(provider: string): string {
+  return PROVIDER_DEFAULT_MODEL[provider] ?? "gpt-4o-mini";
+}
+
+/** Map known deprecated/shutdown models to current replacements so existing
+ *  stored credentials don't break after a provider retires a model. */
+const DEPRECATED_MODELS: Record<string, Record<string, string>> = {
+  google: {
+    "gemini-2.0-flash": "gemini-3.6-flash",
+    "gemini-2.0-flash-001": "gemini-3.6-flash",
+    "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
+    "gemini-2.0-flash-lite-001": "gemini-3.5-flash-lite",
+    "gemini-2.5-flash": "gemini-3.6-flash",
+    "gemini-2.5-flash-001": "gemini-3.6-flash",
+    "gemini-2.5-flash-lite": "gemini-3.5-flash-lite",
+    "gemini-2.5-flash-lite-001": "gemini-3.5-flash-lite",
+    "gemini-2.5-flash-preview-05-20": "gemini-3.6-flash",
+    "gemini-2.5-flash-preview-09-25": "gemini-3.6-flash",
+    "gemini-2.5-flash-lite-preview-09-2025": "gemini-3.5-flash-lite",
+  },
+};
+
+export function normalizeModelId(provider: string, modelId: string): string {
+  const map = DEPRECATED_MODELS[provider];
+  if (!map) return modelId;
+  return map[modelId] ?? modelId;
+}
+
 export class LlmError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -112,7 +154,7 @@ export async function getUserConfig(userId: string): Promise<LlmUserConfig> {
         provider: SERVER_PROVIDER,
         apiKey: SERVER_KEY,
         baseURL: SERVER_BASE_URL || undefined,
-        modelId: SERVER_MODEL || "gpt-4o-mini",
+        modelId: SERVER_MODEL || providerDefaultModel(SERVER_PROVIDER),
       };
     }
     return {
@@ -128,11 +170,12 @@ export async function getUserConfig(userId: string): Promise<LlmUserConfig> {
   if (cred) {
     const apiKey = decryptSafe(cred.apiKeyEnc);
     if (apiKey && apiKey.trim()) {
+      const provider = cred.provider?.trim() || "openai";
       return {
-        provider: cred.provider?.trim() || "openai",
+        provider,
         apiKey: apiKey.trim(),
         baseURL: cred.baseUrl?.trim() || undefined,
-        modelId: cred.modelId?.trim() || SERVER_MODEL || "gpt-4o-mini",
+        modelId: normalizeModelId(provider, cred.modelId?.trim() || SERVER_MODEL || providerDefaultModel(provider)),
       };
     }
   }
@@ -142,7 +185,7 @@ export async function getUserConfig(userId: string): Promise<LlmUserConfig> {
       provider: SERVER_PROVIDER,
       apiKey: SERVER_KEY,
       baseURL: SERVER_BASE_URL || undefined,
-      modelId: SERVER_MODEL || "gpt-4o-mini",
+      modelId: SERVER_MODEL || providerDefaultModel(SERVER_PROVIDER),
     };
   }
   // No config at all — LLM unavailable
@@ -194,11 +237,12 @@ export async function getFallbackConfig(userId: string): Promise<FallbackLlmConf
   if (!cred || !cred.fallbackApiKeyEnc) return null;
   const apiKey = decryptSafe(cred.fallbackApiKeyEnc);
   if (!apiKey || !apiKey.trim()) return null;
+  const provider = cred.fallbackProvider?.trim() || "openai";
   return {
-    provider: cred.fallbackProvider?.trim() || "openai",
+    provider,
     apiKey: apiKey.trim(),
     baseURL: cred.fallbackBaseUrl?.trim() || undefined,
-    modelId: cred.fallbackModelId?.trim() || "gpt-4o-mini",
+    modelId: normalizeModelId(provider, cred.fallbackModelId?.trim() || providerDefaultModel(provider)),
   };
 }
 
