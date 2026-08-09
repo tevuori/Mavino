@@ -10,7 +10,7 @@ import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
 import { isLlmConfiguredFor, acquireLlmModel, LlmError } from "../services/athena/llm";
 import { resolveAndCache, type SourceDescriptor } from "../services/study/source";
-import { getOrBuildGraph, getGraphById } from "../services/study/graph";
+import { startBuildGraph, getGraphStatus } from "../services/study/graph";
 
 const graphRoutes = new Hono();
 graphRoutes.use("*", authMiddleware);
@@ -78,6 +78,13 @@ const buildSchema = z.object({
   language: languageSchema,
 });
 
+// Kicks off the (potentially minutes-long) LLM extraction pass in the
+// background and returns immediately with `status: "building"` — the
+// client polls GET /:id until it flips to "ready"/"error". This keeps the
+// request itself fast regardless of source size or model speed, so it
+// isn't killed by intermediate proxy/edge timeouts (e.g. Cloudflare
+// defaults to ~100s for proxied requests, well under worst-case extraction
+// time on a slow/free model).
 graphRoutes.post("/", zValidator("json", buildSchema), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
@@ -95,16 +102,17 @@ graphRoutes.post("/", zValidator("json", buildSchema), async (c) => {
   }
 
   try {
-    const graph = await getOrBuildGraph(userId, loaded.model, cachedSources, {
+    const graph = await startBuildGraph(userId, loaded.model, cachedSources, {
       forceRefresh: body.forceRefresh,
       lang: body.language,
     });
     return c.json({
       graphId: graph.id,
       name: graph.name,
+      status: graph.status,
       data: graph.data,
       cached: graph.cached,
-    });
+    }, graph.status === "ready" ? 200 : 202);
   } catch (e) {
     return c.json({ error: e instanceof Error ? e.message : "Graph generation failed" }, 502);
   }
@@ -121,15 +129,25 @@ graphRoutes.get("/", async (c) => {
   return c.json({ graphs: rows.map(serializeSummary) });
 });
 
-/** GET /:id — full graph data. */
+/** GET /:id — graph status + data (if ready). Also used to poll an
+ *  in-progress build/refresh kicked off by POST / or POST /:id/refresh. */
 graphRoutes.get("/:id", async (c) => {
   const { userId } = c.get("auth");
-  const graph = await getGraphById(userId, c.req.param("id"));
+  const graph = await getGraphStatus(userId, c.req.param("id"));
   if (!graph) return c.json({ error: "Graph not found" }, 404);
-  return c.json({ graphId: graph.id, name: graph.name, data: graph.data, updatedAt: graph.updatedAt.toISOString() });
+  return c.json({
+    graphId: graph.id,
+    name: graph.name,
+    status: graph.status,
+    error: graph.error,
+    data: graph.data,
+    updatedAt: graph.updatedAt.toISOString(),
+  });
 });
 
-/** POST /:id/refresh — re-resolve the same sources and force-rebuild the graph. */
+/** POST /:id/refresh — re-resolve the same sources and force-rebuild the
+ *  graph in the background (same fire-and-forget + polling pattern as
+ *  POST /). */
 graphRoutes.post("/:id/refresh", zValidator("json", z.object({ language: languageSchema })), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
@@ -144,8 +162,14 @@ graphRoutes.post("/:id/refresh", zValidator("json", z.object({ language: languag
   if (studySources.length === 0) return c.json({ error: "Underlying sources no longer exist" }, 400);
 
   try {
-    const graph = await getOrBuildGraph(userId, loaded.model, studySources, { forceRefresh: true, lang: body.language });
-    return c.json({ graphId: graph.id, name: graph.name, data: graph.data, cached: false });
+    const graph = await startBuildGraph(userId, loaded.model, studySources, { forceRefresh: true, lang: body.language });
+    return c.json({
+      graphId: graph.id,
+      name: graph.name,
+      status: graph.status,
+      data: graph.data,
+      cached: false,
+    }, 202);
   } catch (e) {
     return c.json({ error: e instanceof Error ? e.message : "Graph generation failed" }, 502);
   }

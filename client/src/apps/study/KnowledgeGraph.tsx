@@ -140,6 +140,11 @@ export default function KnowledgeGraph({ initialGraphId, language, onOpenMode }:
   const { ref: canvasWrapRef, size } = useContainerSize<HTMLDivElement>();
   const buildElapsed = useElapsedSeconds(building || refreshing);
   const fgRef = useRef<ForceGraphMethods | undefined>(undefined);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Stop polling on unmount so a background build doesn't keep ticking
+  // against an unmounted component.
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   const toggleSource = (id: string) => {
     setSelectedSourceIds((prev) => {
@@ -156,6 +161,41 @@ export default function KnowledgeGraph({ initialGraphId, language, onOpenMode }:
 
   useEffect(() => { loadRecent(); }, [loadRecent]);
 
+  /**
+   * Poll a graph's status every 2.5s until it's ready or errors. The
+   * build/refresh POSTs return almost instantly ("building") — the actual
+   * LLM extraction happens server-side in the background and can take up to
+   * a couple of minutes, so we can't just await one long request (that's
+   * exactly what triggered the Cloudflare 524 timeout).
+   */
+  const pollGraph = useCallback((id: string, onDone: () => void) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => {
+      studyGraphApi
+        .get(id)
+        .then((g) => {
+          if (g.status === "building") return;
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          onDone();
+          if (g.status === "ready" && g.data) {
+            setGraphId(g.graphId);
+            setName(g.name);
+            setData(g.data);
+            loadRecent();
+          } else if (g.status === "error") {
+            setError(g.error || "Failed to build knowledge graph");
+          }
+        })
+        .catch((e) => {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          onDone();
+          setError(e instanceof Error ? e.message : "Failed to check graph status");
+        });
+    }, 2500);
+  }, [loadRecent]);
+
   const loadGraph = useCallback((id: string) => {
     setLoading(true);
     setError("");
@@ -164,13 +204,26 @@ export default function KnowledgeGraph({ initialGraphId, language, onOpenMode }:
       .then((g) => {
         setGraphId(g.graphId);
         setName(g.name);
-        setData(g.data);
         setSelectedConcept(null);
         setShowPicker(false);
+        if (g.status === "ready" && g.data) {
+          setData(g.data);
+          setLoading(false);
+        } else if (g.status === "error") {
+          setError(g.error || "Failed to build knowledge graph");
+          setLoading(false);
+        } else {
+          // Deep-linked to a graph that's still building — show progress and poll.
+          setLoading(false);
+          setBuilding(true);
+          pollGraph(id, () => setBuilding(false));
+        }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load graph"))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : "Failed to load graph");
+        setLoading(false);
+      });
+  }, [pollGraph]);
 
   useEffect(() => {
     if (initialGraphId) loadGraph(initialGraphId);
@@ -196,15 +249,22 @@ export default function KnowledgeGraph({ initialGraphId, language, onOpenMode }:
     try {
       const sources = await getSources();
       const res = await studyGraphApi.build({ sources, language });
-      setGraphId(res.graphId);
-      setName(res.name);
-      setData(res.data);
-      setSelectedConcept(null);
-      setShowPicker(false);
-      loadRecent();
+      if (res.status === "ready" && res.data) {
+        setGraphId(res.graphId);
+        setName(res.name);
+        setData(res.data);
+        setSelectedConcept(null);
+        setShowPicker(false);
+        loadRecent();
+        setBuilding(false);
+      } else {
+        // Still building on the server — keep the progress UI up and poll.
+        setSelectedConcept(null);
+        setShowPicker(false);
+        pollGraph(res.graphId, () => setBuilding(false));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to build knowledge graph");
-    } finally {
       setBuilding(false);
     }
   };
@@ -215,13 +275,18 @@ export default function KnowledgeGraph({ initialGraphId, language, onOpenMode }:
     setError("");
     try {
       const res = await studyGraphApi.refresh(graphId, language);
-      setData(res.data);
-      setName(res.name);
-      setSelectedConcept(null);
-      loadRecent();
+      if (res.status === "ready" && res.data) {
+        setData(res.data);
+        setName(res.name);
+        setSelectedConcept(null);
+        loadRecent();
+        setRefreshing(false);
+      } else {
+        setSelectedConcept(null);
+        pollGraph(res.graphId, () => setRefreshing(false));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to refresh knowledge graph");
-    } finally {
       setRefreshing(false);
     }
   };

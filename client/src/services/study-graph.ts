@@ -54,11 +54,30 @@ export interface ConceptGraphSummary {
   updatedAt: string;
 }
 
+export type ConceptGraphStatus = "building" | "ready" | "error";
+
+/**
+ * Build/refresh return (and are polled via `get`) with `status: "building"`
+ * immediately rather than blocking on the LLM extraction pass — which can
+ * take well over a minute and would otherwise be killed by intermediate
+ * proxies (e.g. Cloudflare's ~100s default edge timeout for proxied
+ * requests). Poll `get(graphId)` until `status` is "ready" or "error".
+ */
 export interface ConceptGraphResult {
   graphId: string;
   name: string;
-  data: ConceptGraphData;
+  status: ConceptGraphStatus;
+  data: ConceptGraphData | null;
   cached: boolean;
+}
+
+export interface ConceptGraphStatusResult {
+  graphId: string;
+  name: string;
+  status: ConceptGraphStatus;
+  error: string;
+  data: ConceptGraphData | null;
+  updatedAt: string;
 }
 
 export const studyGraphApi = {
@@ -71,8 +90,7 @@ export const studyGraphApi = {
 
   list: () => api.get<{ graphs: ConceptGraphSummary[] }>("/api/study/graph"),
 
-  get: (id: string) =>
-    api.get<{ graphId: string; name: string; data: ConceptGraphData; updatedAt: string }>(`/api/study/graph/${id}`),
+  get: (id: string) => api.get<ConceptGraphStatusResult>(`/api/study/graph/${id}`),
 
   refresh: (id: string, language?: StudyLanguage) =>
     api.post<ConceptGraphResult>(`/api/study/graph/${id}/refresh`, { language }),

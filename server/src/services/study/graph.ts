@@ -164,6 +164,13 @@ function serializeRow(row: {
  * same source-set always resolves to the same graph unless `forceRefresh`
  * is set, so features that share sources also share the (expensive) graph
  * extraction pass.
+ *
+ * This AWAITS the extraction call — fine for the derived-feature routes
+ * (flashcards/summarize/etc.) which are already synchronous LLM calls of
+ * similar duration. For the standalone graph build/refresh endpoints,
+ * prefer `startBuildGraph` below (fire-and-forget + polling), since the
+ * extraction pass can take well over a minute and would otherwise be
+ * killed by intermediate proxies (e.g. Cloudflare's ~100s edge timeout).
  */
 export async function getOrBuildGraph(
   userId: string,
@@ -217,9 +224,104 @@ export async function getOrBuildGraph(
   return { ...serializeRow(row), cached: false };
 }
 
-/** Fetch an existing graph by id (own-user only). */
+/** Fetch an existing, ready graph by id (own-user only). Used by the
+ *  derived-feature routes, which require a fully-built graph. */
 export async function getGraphById(userId: string, id: string) {
   const row = await prisma.conceptGraph.findFirst({ where: { id, userId, status: "ready" } });
   if (!row) return null;
   return serializeRow(row);
+}
+
+export interface GraphStatus {
+  id: string;
+  name: string;
+  status: "building" | "ready" | "error";
+  error: string;
+  data: ConceptGraphData | null;
+  updatedAt: Date;
+}
+
+/** Fetch a graph's row regardless of status (own-user only) — used to poll
+ *  a build/refresh kicked off by `startBuildGraph`. */
+export async function getGraphStatus(userId: string, id: string): Promise<GraphStatus | null> {
+  const row = await prisma.conceptGraph.findFirst({ where: { id, userId } });
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    status: row.status as GraphStatus["status"],
+    error: row.error,
+    data: row.status === "ready" ? (JSON.parse(row.data) as ConceptGraphData) : null,
+    updatedAt: row.updatedAt,
+  };
+}
+
+/**
+ * Kick off (or reuse a cached) concept graph build WITHOUT waiting for the
+ * LLM extraction pass to finish. Reserves/updates the ConceptGraph row
+ * synchronously (fast — just a DB write) so the caller gets an id to poll
+ * immediately, then runs the extraction in the background and updates the
+ * row to "ready"/"error" on completion. This keeps the HTTP request itself
+ * fast regardless of how long extraction takes, avoiding proxy/edge
+ * timeouts (e.g. Cloudflare's ~100s default) on large sources or slow models.
+ */
+export async function startBuildGraph(
+  userId: string,
+  model: LlmModel,
+  cachedSources: CachedStudySource[],
+  opts?: { forceRefresh?: boolean; lang?: StudyLanguage }
+): Promise<{ id: string; name: string; status: "ready" | "building"; cached: boolean; data: ConceptGraphData | null }> {
+  if (cachedSources.length === 0) throw new Error("No sources provided");
+  const sorted = [...cachedSources].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const sortedIds = sorted.map((s) => s.id);
+  const sourceKey = sortedIds.join(",");
+  const name = sorted.map((s) => s.name).join(", ").slice(0, 200);
+
+  if (!opts?.forceRefresh) {
+    const existing = await prisma.conceptGraph.findFirst({
+      where: { userId, sourceKey, status: "ready" },
+      orderBy: { updatedAt: "desc" },
+    });
+    if (existing) {
+      return { id: existing.id, name: existing.name, status: "ready", cached: true, data: JSON.parse(existing.data) as ConceptGraphData };
+    }
+  }
+
+  const reservation = {
+    name,
+    sourceIds: JSON.stringify(sortedIds),
+    sourceKey,
+    data: "{}",
+    status: "building",
+    error: "",
+  };
+  const existingAny = await prisma.conceptGraph.findFirst({ where: { userId, sourceKey } });
+  const row = existingAny
+    ? await prisma.conceptGraph.update({ where: { id: existingAny.id }, data: reservation })
+    : await prisma.conceptGraph.create({ data: { userId, ...reservation } });
+
+  const sourceRefs: GraphSourceRef[] = sorted.map((s, i) => ({
+    index: i + 1,
+    studySourceId: s.id,
+    name: s.name,
+    kind: s.kind,
+    refId: s.refId,
+  }));
+  const texts: Record<number, string> = {};
+  sorted.forEach((s, i) => {
+    texts[i + 1] = s.textCache;
+  });
+
+  // Fire-and-forget: the HTTP response returns before this settles.
+  void buildConceptGraphData(model, sourceRefs, texts, opts?.lang)
+    .then((data) =>
+      prisma.conceptGraph.update({ where: { id: row.id }, data: { data: JSON.stringify(data), status: "ready", error: "" } })
+    )
+    .catch((e) =>
+      prisma.conceptGraph
+        .update({ where: { id: row.id }, data: { status: "error", error: e instanceof Error ? e.message : "Graph generation failed" } })
+        .catch(() => {})
+    );
+
+  return { id: row.id, name, status: "building", cached: false, data: null };
 }
