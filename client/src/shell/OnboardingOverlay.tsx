@@ -511,7 +511,7 @@ function GeminiKeySaveStep() {
     setErr(false);
     setMsg(null);
     try {
-      await aiApi.setKey(trimmed, "google", undefined, "gemini-2.5-flash");
+      await aiApi.setKey(trimmed, "google", undefined, "gemini-3.6-flash");
       setKey("");
       setMsg("Gemini API key saved — Mavino is ready to use!");
     } catch (e) {
