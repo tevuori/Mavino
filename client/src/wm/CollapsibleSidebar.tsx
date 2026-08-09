@@ -89,7 +89,7 @@ export default function CollapsibleSidebar({
             {isLeft ? <PanelLeftClose size={14} /> : <PanelRightClose size={14} />}
           </button>
         </div>
-        <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
+        <div className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden">{children}</div>
       </div>
     </>
   );
