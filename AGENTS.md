@@ -648,3 +648,29 @@ Three user tiers control AI rate limits when global key mode is active:
 **User-facing UI**: `AthenaSection.tsx` shows a **TierInfoCard** at the top with the user's tier, current mode (global/per-user), and rate limits + today's usage. In per-user mode, the existing rate limit + fallback cards are shown. In global mode, they're hidden (managed by admin).
 
 **Admin user management**: `UsersSection.tsx` role dropdown now has three options: Free (limited AI), Paid (higher AI limits), Administrator. The user list shows PAID/FREE badges next to each user.
+
+## Performance / multi-user load test
+
+`scripts/perf-test.ts` is a deployment-readiness test that spawns N temporary users (default 50) and runs a realistic concurrent workload against a running server: auth, notes CRUD, tasks CRUD, flashcards, calendar, Athena LLM chat (SSE), and Study Hub (summarize + flashcard generation). It verifies per-user data isolation and collects per-operation latency metrics (p50/p95/p99).
+
+**Prerequisites:** server running, admin credentials, and an LLM API key (for LLM tests).
+
+```bash
+# Non-LLM tests only (no API key needed):
+bun run scripts/perf-test.ts --skip-llm
+
+# Full test with LLM (requires OPENAI_API_KEY):
+OPENAI_API_KEY=sk-... bun run scripts/perf-test.ts
+
+# Custom user count + server URL:
+OPENAI_API_KEY=sk-... bun run scripts/perf-test.ts --users=20 --url=http://localhost:3001
+
+# Keep test data for inspection (no auto-cleanup):
+bun run scripts/perf-test.ts --no-cleanup
+```
+
+**CLI flags:** `--users=N` (default 50), `--url=URL` (default `http://localhost:3001`), `--admin-user=U` / `--admin-pass=P` (default admin/admin), `--no-cleanup`, `--skip-llm`, `--login-batch=N` (default 4, respects the 5-per-15s login rate limit), `--login-delay=Ms` (default 16000), `--verbose`.
+
+**Env vars:** `OPENAI_API_KEY`, `OPENAI_PROVIDER` (default openai), `OPENAI_BASE_URL`, `OPENAI_MODEL` (default gpt-4o-mini).
+
+**What it does:** admin login → enable open registration → set global LLM key → create N users via admin API → login users in batches (rate-limit-safe) → run concurrent per-user workloads → verify data isolation (no cross-user notes/tasks visible) → print metrics table → delete all test users + disable registration. Exit code 0 = all ops succeeded, 1 = any failures.
