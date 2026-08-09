@@ -1,15 +1,17 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Sparkles, StickyNote, CheckSquare, Calendar, Settings as SettingsIcon,
   Palette, Plug, ArrowRight, ArrowLeft, X, Check, Lightbulb,
   Keyboard, Music, GraduationCap, Brain, Folder, Timer, Flame, PenTool, Mic, Globe, UserRound,
+  Loader2, ExternalLink, ShieldAlert, KeyRound,
 } from "lucide-react";
 import { useWindows } from "../store/windows";
 import { useAuth } from "../store/auth";
 import { useSettings } from "../store/settings";
 import { isAppAvailable } from "../store/features";
 import { APP_MAP } from "../apps/registry";
+import { aiApi } from "../services/ai";
 
 // ===== Onboarding step definitions =====
 
@@ -17,35 +19,68 @@ interface StepDef {
   id: string;
   /** Whether this step shows a centered modal (true) or a bottom panel (false). */
   centered?: boolean;
-  /** Optional: open an app window when this step becomes active. */
-  openApp?: { appId: string; section?: string; rect?: { x: number; y: number; width: number; height: number } };
+  /** Use a wider modal (for screenshot-heavy steps). */
+  wide?: boolean;
+  /** Optional: open an app window when this step becomes active. The window is
+   * always centered on screen and closed automatically when the user leaves
+   * this step (Next/Back/Skip/Finish). */
+  openApp?: { appId: string; section?: string; size: { width: number; height: number } };
 }
+
+const GEMINI_KEYS_URL = "https://aistudio.google.com/api-keys";
 
 const STEPS: StepDef[] = [
   { id: "welcome", centered: true },
   { id: "name", centered: true },
   { id: "desktop", centered: true },
-  { id: "notes", openApp: { appId: "notes", rect: { x: 80, y: 60, width: 720, height: 480 } } },
-  { id: "tasks", openApp: { appId: "tasks", rect: { x: 120, y: 80, width: 760, height: 460 } } },
-  { id: "athena", openApp: { appId: "athena", rect: { x: 160, y: 60, width: 680, height: 520 } } },
-  { id: "calendar", openApp: { appId: "calendar", rect: { x: 100, y: 60, width: 820, height: 520 } } },
+  { id: "notes", openApp: { appId: "notes", size: { width: 720, height: 480 } } },
+  { id: "tasks", openApp: { appId: "tasks", size: { width: 760, height: 460 } } },
+  { id: "athena", openApp: { appId: "athena", size: { width: 680, height: 520 } } },
+  { id: "calendar", openApp: { appId: "calendar", size: { width: 820, height: 520 } } },
   { id: "more-apps", centered: true },
-  { id: "llm-setup", openApp: { appId: "settings", section: "athena", rect: { x: 200, y: 80, width: 760, height: 560 } } },
-  { id: "appearance", openApp: { appId: "settings", section: "appearance", rect: { x: 200, y: 80, width: 760, height: 560 } } },
-  { id: "integrations", openApp: { appId: "settings", section: "integrations", rect: { x: 200, y: 80, width: 760, height: 560 } } },
+  { id: "llm-intro", centered: true },
+  { id: "gemini-1", centered: true, wide: true },
+  { id: "gemini-2", centered: true, wide: true },
+  { id: "gemini-3", centered: true, wide: true },
+  { id: "gemini-4", centered: true, wide: true },
+  { id: "gemini-5", centered: true, wide: true },
+  { id: "gemini-save", centered: true },
+  { id: "appearance", openApp: { appId: "settings", section: "appearance", size: { width: 760, height: 560 } } },
+  { id: "integrations", openApp: { appId: "settings", section: "integrations", size: { width: 760, height: 560 } } },
   { id: "shortcuts", centered: true },
   { id: "complete", centered: true },
 ];
 
+const TASKBAR_HEIGHT = 48;
+
+/** Computes a rect that centers a window of the given size on the current viewport. */
+function centeredRect(width: number, height: number) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight - TASKBAR_HEIGHT;
+  const w = Math.min(width, Math.max(320, vw - 20));
+  const h = Math.min(height, Math.max(240, vh - 20));
+  return {
+    x: Math.max(0, Math.floor((vw - w) / 2)),
+    y: Math.max(0, Math.floor((vh - h) / 2)),
+    width: w,
+    height: h,
+  };
+}
+
 export default function OnboardingOverlay() {
   const [stepIdx, setStepIdx] = useState(0);
   const openWindow = useWindows((s) => s.open);
+  const closeWindow = useWindows((s) => s.close);
   const setHasOnboarded = useSettings((s) => s.setHasOnboarded);
   const user = useAuth((s) => s.user);
   const updateProfile = useAuth((s) => s.updateProfile);
   // "Student" is the legacy seeded placeholder — start from an empty field.
   const currentName = user?.displayName ?? "";
   const [name, setName] = useState(currentName.trim().toLowerCase() === "student" ? "" : currentName);
+  // Tracks the window (if any) opened by the *current* onboarding step, so it
+  // can be closed as soon as the user moves to the next/previous step. Windows
+  // that already existed before the step opened them are left alone.
+  const openedWindowRef = useRef<string | null>(null);
 
   const step = STEPS[stepIdx];
   const isLast = stepIdx === STEPS.length - 1;
@@ -60,22 +95,43 @@ export default function OnboardingOverlay() {
   }, [name, step.id, updateProfile, user?.displayName]);
 
   // Open app window when entering a step that has one (only if the app is
-  // available to the user — e.g. skip opening Calendar if beta is off).
+  // available to the user — e.g. skip opening Calendar if beta is off), and
+  // close whatever window the previous step opened so onboarding never
+  // leaves a trail of stray windows behind. Windows always open centered.
   useEffect(() => {
+    if (openedWindowRef.current) {
+      closeWindow(openedWindowRef.current);
+      openedWindowRef.current = null;
+    }
     if (step.openApp) {
       const app = APP_MAP[step.openApp.appId as keyof typeof APP_MAP];
       if (app && isAppAvailable(app.id)) {
-        openWindow({
+        const payload = step.openApp.section ? { section: step.openApp.section } : undefined;
+        const alreadyOpen = useWindows
+          .getState()
+          .windows.some((w) => w.appId === app.id && JSON.stringify(w.payload) === JSON.stringify(payload));
+        const id = openWindow({
           appId: app.id,
           title: app.name,
           icon: app.icon,
-          payload: step.openApp.section ? { section: step.openApp.section } : undefined,
-          rect: step.openApp.rect,
+          payload,
+          rect: centeredRect(step.openApp.size.width, step.openApp.size.height),
         });
+        // Only track (and later auto-close) windows onboarding itself opened.
+        if (id && !alreadyOpen) openedWindowRef.current = id;
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx]);
+
+  // Close any window left open by the final step once onboarding ends
+  // (Finish/Skip unmounts this overlay).
+  useEffect(() => {
+    return () => {
+      if (openedWindowRef.current) closeWindow(openedWindowRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const next = useCallback(() => {
     saveName();
@@ -108,6 +164,7 @@ export default function OnboardingOverlay() {
           onBack={back}
           onSkip={skip}
           isLast={isLast}
+          wide={step.wide}
           name={name}
           onNameChange={setName}
         />
@@ -171,18 +228,54 @@ function StepContent({ stepId, name, onNameChange, onSubmitName }: {
       />;
     case "more-apps":
       return <MoreAppsStep />;
-    case "llm-setup":
-      return <SettingsGuideStep
-        icon={<Sparkles size={20} />}
-        title="Connect Your AI Provider"
-        section="athena"
-        description="Mavino needs an LLM to work. Enter your API key for OpenAI, DeepSeek, Anthropic, Groq, or any OpenAI-compatible endpoint. Without a key, Mavino's chat and AI features won't be available."
-        tips={[
-          "Popular affordable options: Groq (fast + free tier), DeepSeek, OpenRouter",
-          "Your key is encrypted (AES-256-GCM) and stored only on the server",
-          "You can change or remove your key anytime in Settings \u2192 Mavino Assistant",
-        ]}
+    case "llm-intro":
+      return <GeminiIntroStep />;
+    case "gemini-1":
+      return <GeminiShotStep
+        step={1}
+        total={5}
+        image="/onboarding/gemini-1.png"
+        title="Sign in to Google"
+        description="Open Google AI Studio and sign in with your Google account. Don't have one? You can create one for free in the same flow."
+        action={{
+          label: "Open Google AI Studio",
+          onClick: () => window.open(GEMINI_KEYS_URL, "_blank", "noopener,noreferrer"),
+        }}
       />;
+    case "gemini-2":
+      return <GeminiShotStep
+        step={2}
+        total={5}
+        image="/onboarding/gemini-2.png"
+        title="Accept the Terms"
+        description="Google AI Studio will ask you to accept its terms. Check the required agreement box, then click Continue."
+      />;
+    case "gemini-3":
+      return <GeminiShotStep
+        step={3}
+        total={5}
+        image="/onboarding/gemini-3.png"
+        title="Create an API Key"
+        description={'On the API Keys page, click the “Create API key” button in the top-right corner.'}
+      />;
+    case "gemini-4":
+      return <GeminiShotStep
+        step={4}
+        total={5}
+        image="/onboarding/gemini-4.png"
+        title="Name Your Key"
+        description={"Give your key any name you like. If you're not sure which project to pick, just leave “Default Gemini Project” selected — then click Create key."}
+      />;
+    case "gemini-5":
+      return <GeminiShotStep
+        step={5}
+        total={5}
+        image="/onboarding/gemini-5.png"
+        title="Copy Your Key"
+        description={"Click the copy icon next to your new API key. Keep it handy — you'll paste it into Mavino on the next step."}
+      />;
+    case "gemini-save":
+      return <GeminiKeySaveStep />;
     case "appearance":
       return <SettingsGuideStep
         icon={<Palette size={20} />}
@@ -340,6 +433,141 @@ function MoreAppsStep() {
   );
 }
 
+// ===== Gemini API key wizard =====
+
+function GeminiIntroStep() {
+  return (
+    <div className="text-center">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/20 text-accent">
+        <KeyRound size={32} />
+      </div>
+      <h2 className="mb-2 text-2xl font-bold text-ink">Connect Mavino to an AI</h2>
+      <p className="mx-auto max-w-md text-sm text-ink-muted">
+        Mavino needs an LLM API key to power chat, notes, tasks, and study tools. We recommend{" "}
+        <strong className="text-ink">Google Gemini</strong> — it has a generous free tier and only
+        takes a minute to set up.
+      </p>
+      <div className="mx-auto mt-4 flex max-w-md items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-left text-xs text-amber-200">
+        <ShieldAlert size={16} className="mt-0.5 shrink-0" />
+        <span>
+          For your data privacy, prefer providers based outside of China (e.g. Google, OpenAI,
+          Anthropic, Groq). Some China-hosted models have unclear or less protective data storage
+          and retention policies.
+        </span>
+      </div>
+      <p className="mt-4 text-sm text-ink-muted">We'll walk you through getting a free Gemini key, step by step.</p>
+    </div>
+  );
+}
+
+function GeminiShotStep({ step, total, image, title, description, action }: {
+  step: number;
+  total: number;
+  image: string;
+  title: string;
+  description: string;
+  action?: { label: string; onClick: () => void };
+}) {
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-2">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/20 text-xs font-bold text-accent">
+          {step}/{total}
+        </div>
+        <h3 className="text-base font-semibold text-ink">{title}</h3>
+      </div>
+      <motion.div
+        key={image}
+        initial={{ opacity: 0, scale: 0.97, y: 6 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="overflow-hidden rounded-xl border border-edge bg-black/40 shadow-inner"
+      >
+        <img src={image} alt={title} className="block w-full" />
+      </motion.div>
+      <p className="mt-3 text-sm text-ink-muted">{description}</p>
+      {action && (
+        <button
+          onClick={action.onClick}
+          className="mt-3 flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-medium text-accent hover:bg-accent/20"
+        >
+          <ExternalLink size={14} /> {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function GeminiKeySaveStep() {
+  const [key, setKey] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState(false);
+
+  const save = useCallback(async () => {
+    const trimmed = key.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setErr(false);
+    setMsg(null);
+    try {
+      await aiApi.setKey(trimmed, "google", undefined, "gemini-2.5-flash");
+      setKey("");
+      setMsg("Gemini API key saved — Mavino is ready to use!");
+    } catch (e) {
+      setErr(true);
+      setMsg(e instanceof Error ? e.message : "Failed to save the key. Double-check that you copied it correctly.");
+    } finally {
+      setBusy(false);
+    }
+  }, [key]);
+
+  return (
+    <div className="text-center">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/20 text-accent">
+        <KeyRound size={32} />
+      </div>
+      <h2 className="mb-2 text-2xl font-bold text-ink">Paste Your Gemini API Key</h2>
+      <p className="mx-auto max-w-sm text-sm text-ink-muted">
+        Paste the key you just copied from Google AI Studio. It's encrypted (AES-256-GCM) and
+        stored only on the server.
+      </p>
+      <div className="mx-auto mt-5 flex max-w-sm gap-2">
+        <input
+          autoFocus
+          type="password"
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void save();
+            }
+          }}
+          placeholder="AIza..."
+          aria-label="Gemini API key"
+          autoComplete="off"
+          className="flex-1 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent"
+        />
+        <button
+          onClick={() => void save()}
+          disabled={busy || !key.trim()}
+          className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-fg hover:opacity-90 disabled:opacity-40"
+        >
+          {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+          Save
+        </button>
+      </div>
+      {msg && (
+        <p className={`mt-3 text-xs ${err ? "text-red-400" : "text-emerald-400"}`}>{msg}</p>
+      )}
+      <p className="mt-3 text-xs text-ink-muted/70">
+        You can skip this and add a key later in Settings → Mavino Assistant.
+      </p>
+    </div>
+  );
+}
+
 function SettingsGuideStep({ icon, title, section, description, tips }: {
   icon: React.ReactNode; title: string; section: string; description: string; tips: string[];
 }) {
@@ -438,9 +666,9 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
   );
 }
 
-function CenteredModal({ stepId, stepIdx, totalSteps, onNext, onBack, onSkip, isLast, name, onNameChange }: {
+function CenteredModal({ stepId, stepIdx, totalSteps, onNext, onBack, onSkip, isLast, wide, name, onNameChange }: {
   stepId: string; stepIdx: number; totalSteps: number;
-  onNext: () => void; onBack: () => void; onSkip: () => void; isLast: boolean;
+  onNext: () => void; onBack: () => void; onSkip: () => void; isLast: boolean; wide?: boolean;
   name?: string; onNameChange?: (value: string) => void;
 }) {
   return (
@@ -455,7 +683,7 @@ function CenteredModal({ stepId, stepIdx, totalSteps, onNext, onBack, onSkip, is
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 10 }}
         transition={{ type: "spring", duration: 0.3 }}
-        className="relative w-full max-w-lg rounded-2xl border border-edge bg-surface shadow-2xl"
+        className={`relative w-full rounded-2xl border border-edge bg-surface shadow-2xl ${wide ? "max-w-2xl" : "max-w-lg"}`}
       >
         {/* Skip button */}
         {!isLast && (
