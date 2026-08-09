@@ -18,6 +18,7 @@ import {
   Presentation,
   Video,
   Highlighter,
+  Network,
 } from "lucide-react";
 import type { WindowInstance } from "../../store/windows";
 import type { SourceDescriptor, SourceKind, StudyLanguage } from "../../services/study";
@@ -35,12 +36,14 @@ import Podcast from "./Podcast";
 import TeacherMode from "./TeacherMode";
 import LectureNotes from "./LectureNotes";
 import Highlights from "./Highlights";
+import KnowledgeGraph from "./KnowledgeGraph";
 
 type Mode =
   | "home"
   | "chat"
   | "teach"
   | "podcast"
+  | "graph"
   | "lecture"
   | "flashcards"
   | "summarize"
@@ -56,6 +59,7 @@ const MODES: { id: Mode; label: string; icon: typeof Brain; desc: string }[] = [
   { id: "chat", label: "Ask (grounded)", icon: MessageSquare, desc: "Source-grounded Q&A with citations" },
   { id: "teach", label: "Teach Me", icon: Presentation, desc: "Interactive live tutoring with sources" },
   { id: "podcast", label: "Podcast", icon: Mic, desc: "Audio overview from your sources" },
+  { id: "graph", label: "Knowledge Graph", icon: Network, desc: "Concepts & relationships extracted once, reused everywhere" },
   { id: "lecture", label: "Lecture → Notes", icon: Video, desc: "Generate notes from a lecture video" },
   { id: "flashcards", label: "Flashcards", icon: Brain, desc: "Generate Q/A cards from a source" },
   { id: "summarize", label: "Summarize", icon: FileText, desc: "TL;DR, outline, or key points" },
@@ -79,6 +83,7 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
   const [initialPodcastId, setInitialPodcastId] = useState<string | null>(null);
   const [initialWorkspaceId, setInitialWorkspaceId] = useState<string | null>(null);
   const [initialSessionId, setInitialSessionId] = useState<string | null>(null);
+  const [initialGraphId, setInitialGraphId] = useState<string | null>(null);
 
   const toggleLanguage = () => {
     setLanguage((prev) => {
@@ -131,6 +136,13 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
     if (typeof p.sessionId === "string") {
       setInitialSessionId(p.sessionId);
       setMode("teach");
+    }
+    // Deep link to a knowledge graph (from build_concept_graph / the Knowledge
+    // Graph app's action bar). If combined with mode, seeds that mode from
+    // the graph instead of opening the graph view itself.
+    if (typeof p.graphId === "string") {
+      setInitialGraphId(p.graphId);
+      if (typeof p.mode !== "string" || p.mode === "graph") setMode("graph");
     }
   }, [win.payload]);
 
@@ -190,6 +202,17 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
           <div className="h-full">
             <TeacherMode initialSessionId={initialSessionId} language={language} />
           </div>
+        ) : mode === "graph" ? (
+          <div className="h-full">
+            <KnowledgeGraph
+              initialGraphId={initialGraphId}
+              language={language}
+              onOpenMode={(m, opts) => {
+                setMode(m as Mode);
+                if (opts?.graphId) setInitialGraphId(opts.graphId);
+              }}
+            />
+          </div>
         ) : (
           <div className="mx-auto max-w-none @5xl:max-w-2xl">
             {mode === "home" && <StudyHome onPickMode={(m, opts) => {
@@ -198,11 +221,11 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
             }} />}
             {mode === "podcast" && <Podcast initialPodcastId={initialPodcastId} initialWorkspaceId={initialWorkspaceId} language={language} />}
             {mode === "lecture" && <LectureNotes language={language} />}
-            {mode === "flashcards" && <GenerateFlashcards initialSource={initialSource} appendDeck={appendDeck} language={language} />}
-            {mode === "summarize" && <Summarize initialSource={initialSource} language={language} />}
-            {mode === "explain" && <Explain initialSource={initialSource} language={language} />}
-            {mode === "study_guide" && <StudyGuide language={language} />}
-            {mode === "quiz" && <QuizMe initialSource={initialSource} preloadedQuizId={preloadedQuizId} language={language} />}
+            {mode === "flashcards" && <GenerateFlashcards initialSource={initialSource} initialGraphId={initialGraphId} appendDeck={appendDeck} language={language} />}
+            {mode === "summarize" && <Summarize initialSource={initialSource} initialGraphId={initialGraphId} language={language} />}
+            {mode === "explain" && <Explain initialSource={initialSource} initialGraphId={initialGraphId} language={language} />}
+            {mode === "study_guide" && <StudyGuide initialGraphId={initialGraphId} language={language} />}
+            {mode === "quiz" && <QuizMe initialSource={initialSource} initialGraphId={initialGraphId} preloadedQuizId={preloadedQuizId} language={language} />}
             {mode === "syllabus" && <SyllabusTasks initialSource={initialSource} language={language} />}
             {mode === "recent" && <RecentActivity />}
             {mode === "highlights" && <Highlights />}

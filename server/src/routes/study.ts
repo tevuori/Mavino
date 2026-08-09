@@ -8,36 +8,32 @@ import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
 import { getUserConfig, buildModel, isLlmConfiguredFor, acquireLlmModel, LlmError } from "../services/athena/llm";
-import { resolveSource, type SourceDescriptor, type ResolvedSource } from "../services/study/source";
+import { resolveSource, resolveAndCache, type SourceDescriptor, type ResolvedSource } from "../services/study/source";
 import { generateJson, generateText } from "../services/study/llm-json";
 import {
-  flashcardsPrompt,
-  flashcardsSchemaHint,
-  summarizePrompt,
-  explainPrompt,
-  studyGuidePrompt,
   syllabusTasksPrompt,
   syllabusTasksSchemaHint,
   type StudyLanguage,
-  quizGeneratePrompt,
-  quizGenerateSchemaHint,
   quizGradePrompt,
   quizGradeSchemaHint,
-  flashcardsCitedPrompt,
+  flashcardsFromGraphPrompt,
   flashcardsCitedSchemaHint,
-  summarizeCitedPrompt,
-  explainCitedPrompt,
-  studyGuideCitedPrompt,
+  summarizeFromGraphPrompt,
+  explainFromGraphPrompt,
+  studyGuideFromGraph,
+  quizFromGraphPrompt,
+  quizGenerateSchemaHint,
   notetakingPrompt,
   type NoteStyle,
   type NoteDetail,
-  type FlashcardSpec,
   type QuizQuestionSpec,
   type SyllabusTaskSpec,
   type CitedFlashcardSpec,
 } from "../services/study/prompts";
 import { createQuiz, getQuiz, deleteQuiz, type StoredQuizQuestion } from "../services/study/quiz-store";
 import { logSessionSafe } from "../services/study/logSession";
+import { getOrBuildGraph, getGraphById, type ConceptGraphData } from "../services/study/graph";
+import type { LlmModel } from "multi-llm-ts";
 
 const study = new Hono();
 study.use("*", authMiddleware);
@@ -68,6 +64,36 @@ async function resolveSources(
   return resolved.map((r, i) => ({ ...r, index: i + 1 }));
 }
 
+/**
+ * Resolve a request's `graphId` (reuse an existing concept graph directly) or
+ * `source`/`sources` (resolve + cache as StudySources, then get-or-build the
+ * graph for that source-set) into a ConceptGraphData. Flashcards, Quiz,
+ * Summarize, Explain, and Study Guide all derive their output from this
+ * shared, persisted structure instead of re-analyzing raw source text.
+ */
+async function resolveGraphForRequest(
+  userId: string,
+  model: LlmModel,
+  body: { source?: SourceDescriptor; sources?: SourceDescriptor[]; graphId?: string },
+  lang?: StudyLanguage
+): Promise<{ graph: ConceptGraphData; graphId: string; name: string; truncated: boolean }> {
+  if (body.graphId) {
+    const g = await getGraphById(userId, body.graphId);
+    if (!g) throw new Error("Knowledge graph not found");
+    return { graph: g.data, graphId: g.id, name: g.name, truncated: false };
+  }
+  const list = body.sources && body.sources.length > 0
+    ? body.sources
+    : body.source
+      ? [body.source]
+      : [];
+  if (list.length === 0) throw new Error("No source provided");
+  const cachedSources = await Promise.all(list.map((s) => resolveAndCache(userId, s)));
+  const truncated = cachedSources.some((s) => s.truncated);
+  const built = await getOrBuildGraph(userId, model, cachedSources, { lang });
+  return { graph: built.data, graphId: built.id, name: built.name, truncated };
+}
+
 /** Resolve the user's LLM or return a 400 if unconfigured. */
 async function loadModel(c: any, userId: string) {
   const configured = await isLlmConfiguredFor(userId);
@@ -95,9 +121,12 @@ async function loadModel(c: any, userId: string) {
 }
 
 // ===== Generate Flashcards =====
+// Derived from the source-set's persisted concept graph (built once, then
+// reused by every feature) rather than the raw source text.
 const flashcardsSchema = z.object({
   source: sourceSchema.optional(),
   sources: z.array(sourceSchema).max(20).optional(),
+  graphId: z.string().optional(),
   deckName: z.string().optional(),
   deckColor: z.string().optional(),
   count: z.number().int().min(1).max(40).optional().default(10),
@@ -114,9 +143,9 @@ study.post("/flashcards", zValidator("json", flashcardsSchema), async (c) => {
   const loaded = await loadModel(c, userId);
   if ("error" in loaded) return loaded.error;
 
-  let resolved: ResolvedSource[];
+  let resolved: { graph: ConceptGraphData; graphId: string; name: string; truncated: boolean };
   try {
-    resolved = await resolveSources(userId, body);
+    resolved = await resolveGraphForRequest(userId, loaded.model, body, body.language as StudyLanguage);
   } catch (e) {
     return c.json({ error: e instanceof Error ? e.message : "Source error" }, 400);
   }
@@ -125,7 +154,7 @@ study.post("/flashcards", zValidator("json", flashcardsSchema), async (c) => {
   try {
     result = await generateJson<{ cards: CitedFlashcardSpec[] }>(
       loaded.model,
-      flashcardsCitedPrompt(resolved.map((r) => ({ index: r.index!, name: r.name, text: r.text })), body.count, body.mode, body.language as StudyLanguage),
+      flashcardsFromGraphPrompt(resolved.graph, body.count, body.mode, body.language as StudyLanguage),
       flashcardsCitedSchemaHint()
     );
   } catch (e) {
@@ -139,7 +168,7 @@ study.post("/flashcards", zValidator("json", flashcardsSchema), async (c) => {
     return c.json({ error: "The AI did not generate any valid flashcards." }, 502);
   }
 
-  const primaryName = resolved.map((r) => r.name).join(", ");
+  const primaryName = resolved.name;
   const deckName = body.deckName?.trim() || `Flashcards: ${primaryName}`;
   let deckId: string | null = null;
   if (body.create) {
@@ -155,16 +184,17 @@ study.post("/flashcards", zValidator("json", flashcardsSchema), async (c) => {
       data: cards.map((card) => ({
         front: String(card.front).slice(0, 2000),
         back: String(card.back).slice(0, 2000),
-        sourceRef: (card.source != null ? resolved.find((r) => r.index === card.source)?.name ?? primaryName : primaryName).slice(0, 200),
+        sourceRef: (card.source != null ? resolved.graph.sources.find((s) => s.index === card.source)?.name ?? primaryName : primaryName).slice(0, 200),
         deckId: deck.id,
       })),
     });
   }
 
-  const sessionId = await logSessionSafe(userId, "flashcards", deckName, resolved[0].ref, {
+  const sessionId = await logSessionSafe(userId, "flashcards", deckName, resolved.graph.sources[0]?.refId ?? "", {
     deckId,
     cardCount: cards.length,
     create: body.create,
+    graphId: resolved.graphId,
   });
 
   return c.json({
@@ -172,14 +202,16 @@ study.post("/flashcards", zValidator("json", flashcardsSchema), async (c) => {
     deckName,
     cards: cards.map((card) => ({ front: card.front, back: card.back })),
     sessionId,
-    truncated: resolved.some((r) => r.truncated),
+    truncated: resolved.truncated,
   });
 });
 
 // ===== Summarize =====
+// Derived from the source-set's persisted concept graph.
 const summarizeSchema = z.object({
   source: sourceSchema.optional(),
   sources: z.array(sourceSchema).max(20).optional(),
+  graphId: z.string().optional(),
   mode: z.enum(["tldr", "outline", "keypoints"]).optional().default("keypoints"),
   saveAsNote: z.boolean().optional().default(true),
   noteTitle: z.string().optional(),
@@ -192,21 +224,20 @@ study.post("/summarize", zValidator("json", summarizeSchema), async (c) => {
   const loaded = await loadModel(c, userId);
   if ("error" in loaded) return loaded.error;
 
-  let resolved: ResolvedSource[];
+  let resolved: { graph: ConceptGraphData; graphId: string; name: string; truncated: boolean };
   try {
-    resolved = await resolveSources(userId, body);
+    resolved = await resolveGraphForRequest(userId, loaded.model, body, body.language as StudyLanguage);
   } catch (e) {
     return c.json({ error: e instanceof Error ? e.message : "Source error" }, 400);
   }
 
-  const combinedText = resolved.map((r) => r.text).join("\n\n");
-  const combinedName = resolved.map((r) => r.name).join(", ");
+  const combinedName = resolved.name;
 
   let summary: string;
   try {
     summary = await generateText(
       loaded.model,
-      summarizeCitedPrompt(combinedText, body.mode, combinedName, body.language as StudyLanguage),
+      summarizeFromGraphPrompt(resolved.graph, body.mode, body.language as StudyLanguage),
       "You are a study assistant. Summarize accurately in clear Markdown. Do not invent information."
     );
   } catch (e) {
@@ -227,18 +258,21 @@ study.post("/summarize", zValidator("json", summarizeSchema), async (c) => {
     noteId = note.id;
   }
 
-  const sessionId = await logSessionSafe(userId, "summary", `Summary: ${combinedName}`, resolved[0].ref, {
+  const sessionId = await logSessionSafe(userId, "summary", `Summary: ${combinedName}`, resolved.graph.sources[0]?.refId ?? "", {
     mode: body.mode,
     noteId,
+    graphId: resolved.graphId,
   });
 
-  return c.json({ summary, noteId, sessionId, truncated: resolved.some((r) => r.truncated) });
+  return c.json({ summary, noteId, sessionId, truncated: resolved.truncated });
 });
 
 // ===== Explain =====
+// Derived from the source-set's persisted concept graph.
 const explainSchema = z.object({
   source: sourceSchema.optional(),
   sources: z.array(sourceSchema).max(20).optional(),
+  graphId: z.string().optional(),
   depth: z.enum(["eli5", "standard", "expert"]).optional().default("standard"),
   saveAsNote: z.boolean().optional().default(true),
   noteTitle: z.string().optional(),
@@ -251,21 +285,20 @@ study.post("/explain", zValidator("json", explainSchema), async (c) => {
   const loaded = await loadModel(c, userId);
   if ("error" in loaded) return loaded.error;
 
-  let resolved: ResolvedSource[];
+  let resolved: { graph: ConceptGraphData; graphId: string; name: string; truncated: boolean };
   try {
-    resolved = await resolveSources(userId, body);
+    resolved = await resolveGraphForRequest(userId, loaded.model, body, body.language as StudyLanguage);
   } catch (e) {
     return c.json({ error: e instanceof Error ? e.message : "Source error" }, 400);
   }
 
-  const combinedText = resolved.map((r) => r.text).join("\n\n");
-  const combinedName = resolved.map((r) => r.name).join(", ");
+  const combinedName = resolved.name;
 
   let explanation: string;
   try {
     explanation = await generateText(
       loaded.model,
-      explainCitedPrompt(combinedText, body.depth, combinedName, body.language as StudyLanguage),
+      explainFromGraphPrompt(resolved.graph, body.depth, body.language as StudyLanguage),
       "You are a study assistant. Explain clearly and accurately in Markdown with examples. Do not invent information."
     );
   } catch (e) {
@@ -286,18 +319,23 @@ study.post("/explain", zValidator("json", explainSchema), async (c) => {
     noteId = note.id;
   }
 
-  const sessionId = await logSessionSafe(userId, "explain", `Explain: ${combinedName}`, resolved[0].ref, {
+  const sessionId = await logSessionSafe(userId, "explain", `Explain: ${combinedName}`, resolved.graph.sources[0]?.refId ?? "", {
     depth: body.depth,
     noteId,
+    graphId: resolved.graphId,
   });
 
-  return c.json({ explanation, noteId, sessionId, truncated: resolved.some((r) => r.truncated) });
+  return c.json({ explanation, noteId, sessionId, truncated: resolved.truncated });
 });
 
 // ===== Study Guide (multiple notes / sources) =====
+// Rendered directly from the persisted concept graph — no extra LLM call is
+// needed once the graph exists, since the graph is already organized by
+// concept with citations.
 const studyGuideSchema = z.object({
   noteIds: z.array(z.string()).max(10).optional(),
   sources: z.array(sourceSchema).max(10).optional(),
+  graphId: z.string().optional(),
   saveAsNote: z.boolean().optional().default(true),
   noteTitle: z.string().optional(),
   language: languageSchema,
@@ -309,44 +347,25 @@ study.post("/study-guide", zValidator("json", studyGuideSchema), async (c) => {
   const loaded = await loadModel(c, userId);
   if ("error" in loaded) return loaded.error;
 
-  // Build the combined source material from noteIds and/or sources.
-  const materials: { title: string; content: string }[] = [];
+  // noteIds are just another kind of source descriptor for graph purposes.
+  const sources: SourceDescriptor[] = [
+    ...(body.noteIds ?? []).map((id): SourceDescriptor => ({ kind: "note", id })),
+    ...(body.sources ?? []) as SourceDescriptor[],
+  ];
 
-  if (body.noteIds && body.noteIds.length > 0) {
-    const notes = await prisma.note.findMany({
-      where: { id: { in: body.noteIds }, userId },
-    });
-    for (const n of notes) {
-      materials.push({ title: n.title, content: n.content });
-    }
-  }
-
-  if (body.sources && body.sources.length > 0) {
-    for (const src of body.sources) {
-      try {
-        const resolved = await resolveSource(userId, src as SourceDescriptor);
-        materials.push({ title: resolved.name, content: resolved.text });
-      } catch {
-        // Skip sources that can't be resolved.
-      }
-    }
-  }
-
-  if (materials.length === 0) return c.json({ error: "No notes or sources found" }, 404);
-
-  // Number materials 1..N for the cited prompt's [n] markers.
-  const citedMaterials = materials.map((m, i) => ({ index: i + 1, name: m.title, content: m.content }));
-
-  let guide: string;
+  let resolved: { graph: ConceptGraphData; graphId: string; name: string; truncated: boolean };
   try {
-    guide = await generateText(
+    resolved = await resolveGraphForRequest(
+      userId,
       loaded.model,
-      studyGuideCitedPrompt(citedMaterials, body.language as StudyLanguage),
-      "You are a study assistant. Create a clear, comprehensive study guide in Markdown. Do not invent information."
+      { sources, graphId: body.graphId },
+      body.language as StudyLanguage
     );
   } catch (e) {
-    return c.json({ error: e instanceof Error ? e.message : "Generation failed" }, 502);
+    return c.json({ error: e instanceof Error ? e.message : "No notes or sources found" }, 404);
   }
+
+  const guide = studyGuideFromGraph(resolved.graph);
 
   let noteId: string | null = null;
   if (body.saveAsNote && guide.trim()) {
@@ -362,17 +381,14 @@ study.post("/study-guide", zValidator("json", studyGuideSchema), async (c) => {
     noteId = note.id;
   }
 
-  const sourceRefs = [
-    ...(body.noteIds ?? []),
-    ...(body.sources ?? []).map((s) => s.id ?? s.url ?? "paste"),
-  ].join(",");
+  const sourceRefs = resolved.graph.sources.map((s) => s.refId).join(",");
 
   const sessionId = await logSessionSafe(
     userId,
     "study_guide",
     "Study Guide",
     sourceRefs,
-    { noteId, sourceCount: materials.length }
+    { noteId, sourceCount: resolved.graph.sources.length, graphId: resolved.graphId }
   );
 
   return c.json({ guide, noteId, sessionId });
@@ -461,9 +477,11 @@ study.post("/syllabus-tasks", zValidator("json", syllabusSchema), async (c) => {
 });
 
 // ===== Quiz Me: start =====
+// Derived from the source-set's persisted concept graph.
 const quizStartSchema = z.object({
   source: sourceSchema.optional(),
   sources: z.array(sourceSchema).max(20).optional(),
+  graphId: z.string().optional(),
   questionCount: z.number().int().min(1).max(20).optional().default(5),
   types: z.array(z.enum(["mcq", "short"])).optional().default(["mcq", "short"]),
   language: languageSchema,
@@ -475,21 +493,20 @@ study.post("/quiz/start", zValidator("json", quizStartSchema), async (c) => {
   const loaded = await loadModel(c, userId);
   if ("error" in loaded) return loaded.error;
 
-  let resolved: ResolvedSource[];
+  let resolved: { graph: ConceptGraphData; graphId: string; name: string; truncated: boolean };
   try {
-    resolved = await resolveSources(userId, body);
+    resolved = await resolveGraphForRequest(userId, loaded.model, body, body.language as StudyLanguage);
   } catch (e) {
     return c.json({ error: e instanceof Error ? e.message : "Source error" }, 400);
   }
 
-  const combinedText = resolved.map((r) => r.text).join("\n\n");
-  const combinedName = resolved.map((r) => r.name).join(", ");
+  const combinedName = resolved.name;
 
   let result;
   try {
     result = await generateJson<{ questions: QuizQuestionSpec[] }>(
       loaded.model,
-      quizGeneratePrompt(combinedText, body.questionCount, body.types, body.language as StudyLanguage),
+      quizFromGraphPrompt(resolved.graph, body.questionCount, body.types, body.language as StudyLanguage),
       quizGenerateSchemaHint()
     );
   } catch (e) {
@@ -509,13 +526,15 @@ study.post("/quiz/start", zValidator("json", quizStartSchema), async (c) => {
     answer: String(q.answer),
   }));
 
-  const quiz = createQuiz(userId, combinedName, resolved[0].ref, combinedText, stored);
+  // Grading (quiz/:id/answer) uses sourceText as grounding context — the
+  // rendered graph (concepts + facts) serves that role just as well as raw text.
+  const quiz = createQuiz(userId, combinedName, resolved.graph.sources[0]?.refId ?? "", studyGuideFromGraph(resolved.graph), stored);
 
   // Return questions WITHOUT answers (so the client can't peek).
   return c.json({
     quizId: quiz.id,
     sourceName: combinedName,
-    truncated: resolved.some((r) => r.truncated),
+    truncated: resolved.truncated,
     questions: stored.map((q) => ({
       id: q.id,
       type: q.type,

@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { Sparkles, FileText, GraduationCap } from "lucide-react";
-import { ActionButton, ErrorBanner, Loading, SuccessBanner } from "./ui";
+import { ActionButton, ErrorBanner, Loading, PinnedGraph, SuccessBanner } from "./ui";
 import { studyApi, type SourceDescriptor } from "../../services/study";
 import { studySourcesApi, type StudySource } from "../../services/study-sources";
 import WorkspaceSourceSelector, { studySourceToDescriptor } from "./WorkspaceSourceSelector";
 import { useWindows } from "../../store/windows";
 import HighlightableMarkdown from "./HighlightableMarkdown";
 
-export default function StudyGuide({ language }: { language?: "en" | "cs" }) {
+export default function StudyGuide({ initialGraphId, language }: { initialGraphId?: string | null; language?: "en" | "cs" }) {
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(new Set());
+  const [graphId, setGraphId] = useState<string | null>(initialGraphId ?? null);
   const [title, setTitle] = useState("");
   const [genLoading, setGenLoading] = useState(false);
   const [error, setError] = useState("");
@@ -38,17 +39,18 @@ export default function StudyGuide({ language }: { language?: "en" | "cs" }) {
       .filter((x): x is SourceDescriptor => x !== null);
   };
 
+  const hasSource = graphId !== null || selectedSourceIds.size > 0;
+
   const run = async () => {
-    if (selectedSourceIds.size === 0) return;
+    if (!hasSource) return;
     setGenLoading(true);
     setError("");
     setSuccess("");
     setGuide("");
     setNoteId(null);
     try {
-      const sources = await getSources();
       const res = await studyApi.studyGuide({
-        sources,
+        ...(graphId ? { graphId } : { sources: await getSources() }),
         saveAsNote: true,
         noteTitle: title.trim() || undefined,
         language,
@@ -84,11 +86,15 @@ export default function StudyGuide({ language }: { language?: "en" | "cs" }) {
         Select sources to consolidate into a single study guide / cheat sheet.
       </p>
 
-      <WorkspaceSourceSelector
-        selectedIds={selectedSourceIds}
-        onToggle={toggleSource}
-        disabled={genLoading}
-      />
+      {graphId ? (
+        <PinnedGraph graphId={graphId} onDismiss={() => setGraphId(null)} />
+      ) : (
+        <WorkspaceSourceSelector
+          selectedIds={selectedSourceIds}
+          onToggle={toggleSource}
+          disabled={genLoading}
+        />
+      )}
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
@@ -100,8 +106,8 @@ export default function StudyGuide({ language }: { language?: "en" | "cs" }) {
             className="w-48 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-accent"
           />
         </label>
-        <ActionButton onClick={run} disabled={selectedSourceIds.size === 0} loading={genLoading}>
-          <Sparkles size={13} /> Generate ({selectedSourceIds.size})
+        <ActionButton onClick={run} disabled={!hasSource} loading={genLoading}>
+          <Sparkles size={13} /> Generate{graphId ? "" : ` (${selectedSourceIds.size})`}
         </ActionButton>
       </div>
 

@@ -1,9 +1,11 @@
 // ===== Shared UI bits for Study Hub modes =====
 
-import { Loader2, CheckCircle2, AlertCircle, GraduationCap, FileText, File as FileIcon, Link2, ClipboardPaste, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, CheckCircle2, AlertCircle, GraduationCap, FileText, File as FileIcon, Link2, ClipboardPaste, X, Network } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { SourceDescriptor } from "../../services/study";
+import { studyGraphApi } from "../../services/study-graph";
 
 export function MarkdownView({ content }: { content: string }) {
   return (
@@ -100,6 +102,42 @@ export function PreselectedSource({
       <div className="min-w-0 flex-1">
         <span className="text-[10px] uppercase tracking-wide text-ink-muted">{source.kind}</span>
         <p className="truncate font-medium text-ink">{label}</p>
+      </div>
+      {onDismiss && (
+        <button
+          onClick={onDismiss}
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-ink-muted hover:bg-surface-3 hover:text-ink"
+          title="Choose a different source"
+        >
+          <X size={12} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Shows a pinned Knowledge Graph (from the Knowledge Graph app's action bar,
+ * or a deep-linked graphId) as a card. When a graph is pinned, generation
+ * derives from its persisted concepts/relationships instead of re-resolving
+ * and re-analyzing raw source text.
+ */
+export function PinnedGraph({ graphId, onDismiss }: { graphId: string; onDismiss?: () => void }) {
+  const [name, setName] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    studyGraphApi
+      .get(graphId)
+      .then((g) => { if (!cancelled) setName(g.name); })
+      .catch(() => { if (!cancelled) setName(null); });
+    return () => { cancelled = true; };
+  }, [graphId]);
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 p-2.5 text-xs">
+      <Network size={14} className="shrink-0 text-accent" />
+      <div className="min-w-0 flex-1">
+        <span className="text-[10px] uppercase tracking-wide text-ink-muted">Knowledge graph</span>
+        <p className="truncate font-medium text-ink">{name ?? "Loading…"}</p>
       </div>
       {onDismiss && (
         <button

@@ -105,6 +105,7 @@ export const studyApi = {
   flashcards: (data: {
     source?: SourceDescriptor;
     sources?: SourceDescriptor[];
+    graphId?: string;
     deckName?: string;
     deckColor?: string;
     count?: number;
@@ -116,6 +117,7 @@ export const studyApi = {
   summarize: (data: {
     source?: SourceDescriptor;
     sources?: SourceDescriptor[];
+    graphId?: string;
     mode?: "tldr" | "outline" | "keypoints";
     saveAsNote?: boolean;
     noteTitle?: string;
@@ -125,6 +127,7 @@ export const studyApi = {
   explain: (data: {
     source?: SourceDescriptor;
     sources?: SourceDescriptor[];
+    graphId?: string;
     depth?: "eli5" | "standard" | "expert";
     saveAsNote?: boolean;
     noteTitle?: string;
@@ -134,6 +137,7 @@ export const studyApi = {
   studyGuide: (data: {
     noteIds?: string[];
     sources?: SourceDescriptor[];
+    graphId?: string;
     saveAsNote?: boolean;
     noteTitle?: string;
     language?: StudyLanguage;
@@ -156,6 +160,7 @@ export const studyApi = {
   quizStart: (data: {
     source?: SourceDescriptor;
     sources?: SourceDescriptor[];
+    graphId?: string;
     questionCount?: number;
     types?: ("mcq" | "short")[];
     language?: StudyLanguage;

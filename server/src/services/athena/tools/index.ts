@@ -9,6 +9,7 @@ import { windowTools } from "./windows";
 import { workspaceTools } from "./workspaces";
 import { studyTools } from "./study";
 import { studyHubTools } from "./study-hub";
+import { studyGraphTools } from "./study-graph";
 import { flashcardsTools } from "./flashcards";
 import { moodleTools } from "./moodle";
 import { calendarTools } from "./calendar";
@@ -42,6 +43,7 @@ export const ALL_TOOLS: ToolDef[] = [
   ...workspaceTools,
   ...studyTools,
   ...studyHubTools,
+  ...studyGraphTools,
   ...flashcardsTools,
   ...moodleTools,
   ...calendarTools,

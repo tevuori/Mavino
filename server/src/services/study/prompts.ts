@@ -493,3 +493,196 @@ Notes from all slides:
 ${allSlideNotes}
 """${langInstr(lang)}`;
 }
+
+// ===== Concept graph (knowledge graph) =====
+// A single-pass structured extraction of a source-set into concepts, facts,
+// and relationships. Persisted (services/study/graph.ts) and reused to
+// derive flashcards/quizzes/summaries/explanations/study guides so that
+// feature isn't re-analyzing raw source text every time.
+
+export function conceptGraphPrompt(
+  sources: { index: number; name: string; text: string }[],
+  lang?: StudyLanguage
+): string {
+  const blocks = sources
+    .map((s) => `--- SOURCE [${s.index}]: ${s.name} ---\n${s.text}\n`)
+    .join("\n");
+  return `You are building a knowledge graph from the study material below. Extract the key concepts, terms, people, events, formulas, and processes as graph NODES, and the relationships between them as graph EDGES. This graph will be the single source of truth used to later generate flashcards, quizzes, summaries, explanations, and study guides — so it must be complete, accurate, and grounded ONLY in the material provided.
+
+RULES:
+- Extract 8-30 concepts depending on how much material there is. Prefer fewer, well-defined concepts over many shallow ones.
+- Each concept needs: a short "id" (lowercase-kebab-case slug, unique), a human-readable "label", a "type" (one of: concept, term, person, event, formula, process, date, other), a 1-2 sentence grounded "definition", an "importance" score from 1 (minor/supporting) to 5 (central to the material), a list of "facts" (specific supporting details, each with the text and the 1-based SOURCE index/indexes it came from), and "sourceIndexes" (which SOURCE(s) the concept itself is discussed in).
+- Each relationship needs "from" and "to" (concept ids, both must exist in your concepts list), a short "relation" label describing the connection (e.g. "causes", "is part of", "depends on", "precedes", "contrasts with", "is an example of", "is defined by"), and "sourceIndexes".
+- Do not invent facts, concepts, or relationships not supported by the material.
+- Write a "summary": a 2-4 sentence overview of the material as a whole.
+
+Return JSON:
+{
+  "summary": "...",
+  "concepts": [
+    {
+      "id": "photosynthesis",
+      "label": "Photosynthesis",
+      "type": "process",
+      "definition": "...",
+      "importance": 5,
+      "facts": [ { "text": "...", "sourceIndexes": [1] } ],
+      "sourceIndexes": [1]
+    }
+  ],
+  "relationships": [
+    { "from": "photosynthesis", "to": "chlorophyll", "relation": "requires", "sourceIndexes": [1] }
+  ]
+}
+
+Study material:
+${blocks}${langInstr(lang)}`;
+}
+
+export function conceptGraphSchemaHint(): string {
+  return 'Schema: { "summary": string, "concepts": [ { "id": string, "label": string, "type": "concept"|"term"|"person"|"event"|"formula"|"process"|"date"|"other", "definition": string, "importance": number, "facts": [ { "text": string, "sourceIndexes": number[] } ], "sourceIndexes": number[] } ], "relationships": [ { "from": string, "to": string, "relation": string, "sourceIndexes": number[] } ] }';
+}
+
+export interface ConceptGraphDataLike {
+  summary: string;
+  sources: { index: number; name: string }[];
+  concepts: {
+    id: string;
+    label: string;
+    type: string;
+    definition: string;
+    importance: number;
+    facts: { text: string; sourceIndexes: number[] }[];
+    sourceIndexes: number[];
+  }[];
+  relationships: { from: string; to: string; relation: string; sourceIndexes: number[] }[];
+}
+
+/** Render the compact graph JSON (not the original source text) into a prompt block. */
+function graphBlock(graph: ConceptGraphDataLike): string {
+  const conceptsSorted = [...graph.concepts].sort((a, b) => b.importance - a.importance);
+  const conceptLines = conceptsSorted
+    .map((c) => {
+      const facts = c.facts.map((f) => `    - ${f.text} [${f.sourceIndexes.join(",")}]`).join("\n");
+      return `- [${c.id}] ${c.label} (${c.type}, importance ${c.importance}) [${c.sourceIndexes.join(",")}]: ${c.definition}${facts ? "\n" + facts : ""}`;
+    })
+    .join("\n");
+  const relLines = graph.relationships
+    .map((r) => `- ${r.from} --${r.relation}--> ${r.to} [${r.sourceIndexes.join(",")}]`)
+    .join("\n");
+  const sourceLines = graph.sources.map((s) => `[${s.index}] ${s.name}`).join("\n");
+  return `SUMMARY: ${graph.summary}
+
+CONCEPTS:
+${conceptLines}
+
+RELATIONSHIPS:
+${relLines}
+
+SOURCES:
+${sourceLines}`;
+}
+
+export function flashcardsFromGraphPrompt(
+  graph: ConceptGraphDataLike,
+  count: number,
+  mode: string,
+  lang?: StudyLanguage
+): string {
+  const modeInstr =
+    mode === "cloze"
+      ? 'Cloze deletion style: the "front" is a sentence with a key term replaced by "_____", and the "back" is the missing term.'
+      : mode === "concept"
+      ? 'Focus on definitions and concepts ("What is X?" / "Define X").'
+      : mode === "factual"
+      ? "Focus on specific facts and details from the concepts' fact lists."
+      : "Use a balance of concept definitions and specific facts.";
+  return `Generate ${count} flashcards from the knowledge graph below (already extracted from the study material — do not need to re-derive concepts, just phrase them as cards). Each card must have a concise question on the front and a clear, correct answer on the back. ${modeInstr} For each card, set "source" to a SOURCE index that supports it (see the SOURCES list).
+
+Return JSON: { "cards": [ { "front": "...", "back": "...", "source": 1 }, ... ] }
+
+${graphBlock(graph)}${langInstr(lang)}`;
+}
+
+export function quizFromGraphPrompt(
+  graph: ConceptGraphDataLike,
+  count: number,
+  types: string[],
+  lang?: StudyLanguage
+): string {
+  const typeInstr = types.includes("mcq") && types.includes("short")
+    ? "a mix of multiple-choice (mcq) and short-answer (short) questions"
+    : types.includes("mcq")
+    ? "only multiple-choice (mcq) questions"
+    : types.includes("short")
+    ? "only short-answer (short) questions"
+    : "a mix of multiple-choice (mcq) and short-answer (short) questions";
+  return `Generate ${count} quiz questions from the knowledge graph below (already extracted from the study material). Use ${typeInstr}. For mcq questions, provide 4 options and the correct answer (exact text of the correct option). For short questions, provide the model answer. Each question needs a unique sequential id starting at 1.
+
+Return JSON: { "questions": [ { "id": 1, "type": "mcq", "prompt": "...", "options": ["a","b","c","d"], "answer": "b" }, { "id": 2, "type": "short", "prompt": "...", "answer": "..." } ] }
+
+${graphBlock(graph)}${langInstr(lang)}`;
+}
+
+export function summarizeFromGraphPrompt(graph: ConceptGraphDataLike, mode: string, lang?: StudyLanguage): string {
+  const modeInstr =
+    mode === "tldr"
+      ? "a 2-3 sentence TL;DR"
+      : mode === "outline"
+      ? "a structured outline with headings and bullet points, organized by concept"
+      : "5-8 key bullet points";
+  return `Using ONLY the knowledge graph below (already extracted from the study material), write a summary as ${modeInstr}. Use clear Markdown formatting. After key points, cite the source(s) as [n] matching the SOURCES list. Include a "## Sources" section at the end listing each cited source as \`[n] <name>\`.
+
+${graphBlock(graph)}${langInstr(lang)}`;
+}
+
+export function explainFromGraphPrompt(graph: ConceptGraphDataLike, depth: string, lang?: StudyLanguage): string {
+  const depthInstr =
+    depth === "eli5"
+      ? "as if explaining to a 5-year-old (simple words, analogies, no jargon)"
+      : depth === "expert"
+      ? "at an advanced/expert level with technical depth, edge cases, and nuance"
+      : "at a standard undergraduate level — clear and thorough but not overly simplified";
+  return `Using ONLY the knowledge graph below (already extracted from the study material), explain the material ${depthInstr}. Use Markdown with headings and examples drawn from the concepts/facts/relationships. After key statements, cite the source(s) as [n] matching the SOURCES list. Include a "## Sources" section at the end listing each cited source as \`[n] <name>\`.
+
+${graphBlock(graph)}${langInstr(lang)}`;
+}
+
+/** Pure-template study guide renderer — no LLM call needed once the graph exists. */
+export function studyGuideFromGraph(graph: ConceptGraphDataLike): string {
+  const conceptsSorted = [...graph.concepts].sort((a, b) => b.importance - a.importance);
+  const lines: string[] = [];
+  lines.push(`# Study Guide`);
+  lines.push("");
+  lines.push(graph.summary);
+  lines.push("");
+  for (const c of conceptsSorted) {
+    lines.push(`## ${c.label}`);
+    lines.push("");
+    lines.push(`_${c.type}_ — ${c.definition} ${c.sourceIndexes.map((i) => `[${i}]`).join("")}`);
+    if (c.facts.length > 0) {
+      lines.push("");
+      for (const f of c.facts) {
+        lines.push(`- ${f.text} ${f.sourceIndexes.map((i) => `[${i}]`).join("")}`);
+      }
+    }
+    lines.push("");
+  }
+  if (graph.relationships.length > 0) {
+    lines.push(`## Relationships`);
+    lines.push("");
+    const byId = new Map(graph.concepts.map((c) => [c.id, c.label]));
+    for (const r of graph.relationships) {
+      const from = byId.get(r.from) ?? r.from;
+      const to = byId.get(r.to) ?? r.to;
+      lines.push(`- **${from}** ${r.relation} **${to}** ${r.sourceIndexes.map((i) => `[${i}]`).join("")}`);
+    }
+    lines.push("");
+  }
+  lines.push(`## Sources`);
+  lines.push("");
+  for (const s of graph.sources) {
+    lines.push(`[${s.index}] ${s.name}`);
+  }
+  return lines.join("\n");
+}

@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { Sparkles, CheckCircle2, XCircle, RotateCcw, Award, Brain, Save, Filter } from "lucide-react";
 import WorkspaceSourceSelector, { studySourceToDescriptor } from "./WorkspaceSourceSelector";
 import { studySourcesApi, type StudySource } from "../../services/study-sources";
-import { ActionButton, ErrorBanner, Loading, MarkdownView, PreselectedSource, SuccessBanner, TruncationNote } from "./ui";
+import { ActionButton, ErrorBanner, Loading, MarkdownView, PinnedGraph, PreselectedSource, SuccessBanner, TruncationNote } from "./ui";
 import {
   studyApi,
   type SourceDescriptor,
@@ -25,15 +25,18 @@ interface AnsweredQuestion extends QuizQuestion {
 
 export default function QuizMe({
   initialSource,
+  initialGraphId,
   preloadedQuizId,
   language,
 }: {
   initialSource?: SourceDescriptor | null;
+  initialGraphId?: string | null;
   preloadedQuizId?: string | null;
   language?: "en" | "cs";
 }) {
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(new Set());
   const [pinnedSource, setPinnedSource] = useState<SourceDescriptor | null>(initialSource ?? null);
+  const [graphId, setGraphId] = useState<string | null>(initialGraphId ?? null);
   const toggleSource = (id: string) => {
     setSelectedSourceIds((prev) => {
       const next = new Set(prev);
@@ -108,7 +111,7 @@ export default function QuizMe({
     });
   };
 
-  const hasSource = pinnedSource !== null || selectedSourceIds.size > 0;
+  const hasSource = graphId !== null || pinnedSource !== null || selectedSourceIds.size > 0;
 
   const start = async () => {
     if (!hasSource) return;
@@ -119,9 +122,8 @@ export default function QuizMe({
     setAnswer("");
     setFeedback(null);
     try {
-      const sources = await getSources();
       const res = await studyApi.quizStart({
-        sources,
+        ...(graphId ? { graphId } : { sources: await getSources() }),
         questionCount: count,
         types: [...types],
         language,
@@ -261,7 +263,9 @@ export default function QuizMe({
   if (phase === "setup") {
     return (
       <div className="flex flex-col gap-3">
-        {pinnedSource ? (
+        {graphId ? (
+          <PinnedGraph graphId={graphId} onDismiss={() => setGraphId(null)} />
+        ) : pinnedSource ? (
           <PreselectedSource source={pinnedSource} onDismiss={() => setPinnedSource(null)} />
         ) : (
           <WorkspaceSourceSelector selectedIds={selectedSourceIds} onToggle={toggleSource} disabled={loading} />

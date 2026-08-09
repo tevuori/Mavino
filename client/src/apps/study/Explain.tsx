@@ -4,14 +4,15 @@ import { useState } from "react";
 import { Sparkles, FileText, GraduationCap } from "lucide-react";
 import WorkspaceSourceSelector, { studySourceToDescriptor } from "./WorkspaceSourceSelector";
 import { studySourcesApi, type StudySource } from "../../services/study-sources";
-import { ActionButton, ErrorBanner, Loading, PreselectedSource, SuccessBanner, TruncationNote } from "./ui";
+import { ActionButton, ErrorBanner, Loading, PinnedGraph, PreselectedSource, SuccessBanner, TruncationNote } from "./ui";
 import { studyApi, type SourceDescriptor } from "../../services/study";
 import { useWindows } from "../../store/windows";
 import HighlightableMarkdown from "./HighlightableMarkdown";
 
-export default function Explain({ initialSource, language }: { initialSource?: SourceDescriptor | null; language?: "en" | "cs" }) {
+export default function Explain({ initialSource, initialGraphId, language }: { initialSource?: SourceDescriptor | null; initialGraphId?: string | null; language?: "en" | "cs" }) {
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(new Set());
   const [pinnedSource, setPinnedSource] = useState<SourceDescriptor | null>(initialSource ?? null);
+  const [graphId, setGraphId] = useState<string | null>(initialGraphId ?? null);
   const toggleSource = (id: string) => {
     setSelectedSourceIds((prev) => {
       const next = new Set(prev);
@@ -37,7 +38,7 @@ export default function Explain({ initialSource, language }: { initialSource?: S
   const [truncated, setTruncated] = useState(false);
   const openWindow = useWindows((s) => s.open);
 
-  const hasSource = pinnedSource !== null || selectedSourceIds.size > 0;
+  const hasSource = graphId !== null || pinnedSource !== null || selectedSourceIds.size > 0;
 
   const run = async () => {
     if (!hasSource) return;
@@ -47,8 +48,9 @@ export default function Explain({ initialSource, language }: { initialSource?: S
     setExplanation("");
     setNoteId(null);
     try {
-      const sources = await getSources();
-      const res = await studyApi.explain({ sources, depth, saveAsNote: true, language });
+      const res = graphId
+        ? await studyApi.explain({ graphId, depth, saveAsNote: true, language })
+        : await studyApi.explain({ sources: await getSources(), depth, saveAsNote: true, language });
       setExplanation(res.explanation);
       setNoteId(res.noteId);
       setTruncated(res.truncated);
@@ -77,7 +79,9 @@ export default function Explain({ initialSource, language }: { initialSource?: S
 
   return (
     <div className="flex flex-col gap-3">
-      {pinnedSource ? (
+      {graphId ? (
+        <PinnedGraph graphId={graphId} onDismiss={() => setGraphId(null)} />
+      ) : pinnedSource ? (
         <PreselectedSource source={pinnedSource} onDismiss={() => setPinnedSource(null)} />
       ) : (
         <WorkspaceSourceSelector selectedIds={selectedSourceIds} onToggle={toggleSource} disabled={loading} />

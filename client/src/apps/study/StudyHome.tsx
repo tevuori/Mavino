@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Brain, FileText, HelpCircle, Lightbulb, BookOpen, ListTodo,
   History, Sparkles, ChevronRight, TrendingUp, Clock, MessageSquare, Mic, Plus, Trash2, Link2,
-  FolderOpen, Pencil, Presentation, Video,
+  FolderOpen, Pencil, Presentation, Video, Network,
 } from "lucide-react";
 import { studyApi, type StudySession } from "../../services/study";
 import { flashcardsApi } from "../../services/flashcards";
@@ -95,6 +95,7 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
     { mode: "teach", label: "Teach Me", icon: Presentation, color: "text-indigo-400", desc: "Interactive live tutoring — Mavino teaches from your sources with voice" },
     { mode: "chat", label: "Ask (grounded)", icon: MessageSquare, color: "text-violet-400", desc: "Q&A grounded in your sources, with citations" },
     { mode: "podcast", label: "Podcast", icon: Mic, color: "text-rose-400", desc: "Audio overview from your sources" },
+    { mode: "graph", label: "Knowledge Graph", icon: Network, color: "text-cyan-400", desc: "Extract concepts & relationships once, reuse everywhere" },
     { mode: "lecture", label: "Lecture → Notes", icon: Video, color: "text-teal-400", desc: "Generate notes from a lecture video recording" },
     { mode: "flashcards", label: "Generate Flashcards", icon: Brain, color: "text-indigo-400", desc: "AI Q/A cards from a note or text" },
     { mode: "summarize", label: "Summarize", icon: FileText, color: "text-sky-400", desc: "TL;DR, outline, or key points" },

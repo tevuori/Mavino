@@ -49,12 +49,18 @@ export default {
         "slide-up": "slideUp 0.25s ease-out",
         "scale-in": "scaleIn 0.18s ease-out",
         "pulse-soft": "pulseSoft 2s ease-in-out infinite",
+        "progress-slide": "progressSlide 1.4s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: { from: { opacity: "0" }, to: { opacity: "1" } },
         slideUp: { from: { opacity: "0", transform: "translateY(8px)" }, to: { opacity: "1", transform: "translateY(0)" } },
         scaleIn: { from: { opacity: "0", transform: "scale(0.96)" }, to: { opacity: "1", transform: "scale(1)" } },
         pulseSoft: { "0%,100%": { opacity: "1" }, "50%": { opacity: "0.6" } },
+        progressSlide: {
+          "0%": { transform: "translateX(-100%)" },
+          "50%": { transform: "translateX(150%)" },
+          "100%": { transform: "translateX(150%)" },
+        },
       },
     },
   },

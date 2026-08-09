@@ -55,6 +55,7 @@ model User {
   spotifyCredential  SpotifyCredential?
   microsoftCredential MicrosoftCredential?
   studySources  StudySource[]
+  conceptGraphs ConceptGraph[]
   studyChats    StudyChat[]
   podcasts      Podcast[]
   studyWorkspaces LearningWorkspace[]
@@ -735,6 +736,34 @@ model StudySource {
 
   @@index([userId])
   @@index([userId, kind])
+}
+
+// ===== Concept graph (knowledge graph) =====
+// A structured representation of a fixed set of StudySources — concepts,
+// their definitions/facts, and typed relationships between them, each
+// citing the source(s) it was drawn from. Built once per unique source-set
+// via a single LLM extraction pass (services/study/graph.ts) and then
+// reused to derive flashcards, quizzes, summaries, explanations, and study
+// guides without re-analyzing the raw source text every time.
+model ConceptGraph {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  // Sorted JSON array of StudySource ids this graph was built from.
+  sourceIds String   @default("[]")
+  // Sorted, comma-joined StudySource ids — dedupe/lookup key (one graph per
+  // unique source-set per user).
+  sourceKey String   @default("")
+  // JSON-encoded ConceptGraphData: { summary, sources, concepts, relationships }.
+  data      String   @default("{}")
+  status    String   @default("ready") // "building" | "ready" | "error"
+  error     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, sourceKey])
 }
 
 // A persisted source-grounded Q&A conversation (NotebookLM "notebook").
