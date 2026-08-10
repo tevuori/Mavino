@@ -41,6 +41,9 @@ export interface ToolDef {
   requiresConfirmation?: boolean;
   /** If true, result is forwarded to the client as a `client_action` chunk. */
   clientAction?: boolean;
+  /** If true, the tool is only available to PAID / MANAGER / ADMIN users.
+   *  Free and Demo users won't see it in the manifest or be able to invoke it. */
+  paidOnly?: boolean;
   handler: (args: any, ctx: ToolContext) => Promise<any>;
 }
 

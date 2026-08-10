@@ -217,6 +217,7 @@ function StepContent({ stepId, name, onNameChange, onSubmitName, geminiSaveRef }
   onSubmitName?: () => void;
   geminiSaveRef?: React.MutableRefObject<GeminiKeySaveHandle>;
 }) {
+  const user = useAuth((s) => s.user);
   switch (stepId) {
     case "welcome":
       return <WelcomeStep />;
@@ -243,7 +244,13 @@ function StepContent({ stepId, name, onNameChange, onSubmitName, geminiSaveRef }
         icon={<Sparkles size={20} />}
         title="Mavino — Your AI Assistant"
         description="Chat with Mavino to get help with your studies. It can read your notes, create tasks, run code, search the web, manage your calendar, and much more. It has access to all your apps."
-        tips={["Ask Mavino to summarize your notes", "It can run Python/JS code in a sandbox", "It can create tasks, events, and flashcards for you"]}
+        tips={[
+          "Ask Mavino to summarize your notes",
+          ...(user && ["PAID", "MANAGER", "ADMIN"].includes(user.role)
+            ? ["It can run Python/JS code in a sandbox"]
+            : []),
+          "It can create tasks, events, and flashcards for you",
+        ]}
       />;
     case "calendar":
       return <TourStep

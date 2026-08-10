@@ -13,6 +13,7 @@ export const sandboxTools: ToolDef[] = [
       "Execute a Python, JavaScript, or TypeScript code snippet in an isolated sandbox (no network access, 10s timeout, 256MB memory limit). Returns stdout, stderr, exit code, and duration. Use this when the user asks to run, test, or evaluate code. The code and its output are shown inline in the chat.",
     requiresConfirmation: true,
     clientAction: true,
+    paidOnly: true,
     parameters: [
       {
         name: "language",

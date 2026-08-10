@@ -64,9 +64,19 @@ export const ALL_TOOLS: ToolDef[] = [
   ...mapTools,
 ];
 
+/** Roles that get access to `paidOnly` tools (sandbox, etc.). */
+const PAID_TIERS = new Set(["PAID", "MANAGER", "ADMIN"]);
+
+/** Filter the full tool list by user role (drops paidOnly tools for free/demo). */
+export function toolsForRole(role: string): ToolDef[] {
+  if (PAID_TIERS.has(role)) return ALL_TOOLS;
+  return ALL_TOOLS.filter((t) => !t.paidOnly);
+}
+
 /** Tool metadata safe to expose to the client (no handlers). */
-export function toolManifest() {
-  return ALL_TOOLS.map((t) => ({
+export function toolManifest(role?: string) {
+  const tools = role ? toolsForRole(role) : ALL_TOOLS;
+  return tools.map((t) => ({
     name: t.name,
     description: t.description,
     parameters: t.parameters,

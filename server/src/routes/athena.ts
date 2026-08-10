@@ -10,7 +10,7 @@ import { buildModel, getUserConfig, LlmError, acquireLlmModel } from "../service
 import { buildSystemPrompt } from "../services/athena/context";
 import {
   AthenaToolsPlugin,
-  ALL_TOOLS,
+  toolsForRole,
   CLIENT_ACTION_TOOLS,
   DESTRUCTIVE_TOOLS,
   toolManifest,
@@ -39,8 +39,17 @@ function isTextFile(name: string): boolean {
 const athena = new Hono();
 athena.use("*", authMiddleware);
 
-/** GET /api/athena/tools — list available tools (for client UI). */
-athena.get("/tools", (c) => c.json({ tools: toolManifest() }));
+/** GET /api/athena/tools — list available tools (for client UI).
+ *  Paid-only tools (e.g. run_code sandbox) are hidden from FREE/DEMO users. */
+athena.get("/tools", async (c) => {
+  const { userId } = c.get("auth");
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  const role = user?.role ?? "FREE";
+  return c.json({ tools: toolManifest(role) });
+});
 
 // ---------- Custom instructions (injected into the system prompt) ----------
 
@@ -144,6 +153,14 @@ athena.post("/chat", zValidator("json", chatSchema, (result, c) => {
   const clientWindows: ClientWindowInfo[] = body.windows ?? [];
   const systemPrompt = await buildSystemPrompt(userId, clientWindows);
 
+  // Load the user's role to filter paid-only tools (e.g. run_code sandbox).
+  const userRow = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  const role = userRow?.role ?? "FREE";
+  const allowedTools = toolsForRole(role);
+
   // Build the message list, ensuring alternating user/assistant roles.
   // Some providers (DeepSeek/OpenAI) reject consecutive same-role messages
   // with 400. If the client sends two user messages in a row (e.g. because
@@ -176,7 +193,7 @@ athena.post("/chat", zValidator("json", chatSchema, (result, c) => {
     c,
     async (stream) => {
       const model = acquired.model;
-      const plugin = new AthenaToolsPlugin(ALL_TOOLS, {
+      const plugin = new AthenaToolsPlugin(allowedTools, {
         userId,
         windows: clientWindows,
       });
