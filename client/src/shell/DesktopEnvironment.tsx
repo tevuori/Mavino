@@ -169,9 +169,9 @@ export default function DesktopEnvironment() {
   }, [switchRelative, moveFocusedRelative]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <div className="flex h-full w-full flex-col overflow-hidden">
       {isDemo && (
-        <div className="absolute inset-x-0 top-0 z-[10001] flex items-center justify-center gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-200 backdrop-blur-sm">
+        <div className="z-10 flex shrink-0 items-center justify-center gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-200 backdrop-blur-sm">
           <span>Demo mode — your work is temporary and will expire soon.</span>
           <button
             onClick={logout}
@@ -181,7 +181,7 @@ export default function DesktopEnvironment() {
           </button>
         </div>
       )}
-      <div className={isDemo ? "h-[calc(100%-2rem)]" : "h-full"}>
+      <div className="relative flex-1 overflow-hidden">
         <Wallpaper />
         <MusicWidget />
         <Desktop />
