@@ -1,4 +1,4 @@
-import type { ToolDef } from "./plugin";
+import { type ToolDef, paidOnly } from "./plugin";
 import { fetchPageText } from "../../browser";
 
 // Browser tools. The navigation + DOM automation tools are clientAction: the
@@ -20,7 +20,8 @@ function resolveTargetUrl(input: string): string {
   return `https://duckduckgo.com/?q=${encodeURIComponent(trimmed)}`;
 }
 
-export const browserTools: ToolDef[] = [
+// Browser is a Paid-tier app — all browser tools are paid-only.
+export const browserTools: ToolDef[] = paidOnly([
   {
     name: "open_browser",
     description:
@@ -338,4 +339,4 @@ export const browserTools: ToolDef[] = [
       }
     },
   },
-];
+]);

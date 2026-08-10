@@ -7,9 +7,10 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 
 const habits = new Hono();
-habits.use("*", authMiddleware);
+habits.use("*", authMiddleware, appTierGate("habits"));
 
 const habitSchema = z.object({
   name: z.string().min(1).max(100),

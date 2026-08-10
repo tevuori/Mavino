@@ -1,7 +1,8 @@
-import type { ToolDef } from "./plugin";
+import { type ToolDef, paidOnly } from "./plugin";
 import prisma from "../../../db/client";
 
-export const gradeTools: ToolDef[] = [
+// Grades is a Paid-tier app — all grade tools are paid-only.
+export const gradeTools: ToolDef[] = paidOnly([
   {
     name: "list_courses",
     description:
@@ -61,7 +62,7 @@ export const gradeTools: ToolDef[] = [
       };
     },
   },
-];
+]);
 
 function letterGrade(pct: number): string {
   if (pct >= 90) return "A";

@@ -17,6 +17,7 @@
 import { Hono } from "hono";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 import { acquireLlmModel, getUserConfig, isLlmConfiguredFor } from "../services/athena/llm";
 import { generateJson } from "../services/study/llm-json";
 import { canonicalPair } from "../db/links";
@@ -25,7 +26,7 @@ import { mkdir, writeFile, readFile, stat } from "node:fs/promises";
 import { getStorageStatus } from "../services/storage-quota";
 
 const voice = new Hono();
-voice.use("*", authMiddleware);
+voice.use("*", authMiddleware, appTierGate("voice"));
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 const TRANSCRIPTION_MODEL = process.env.OPENAI_TRANSCRIPTION_MODEL ?? "whisper-1";

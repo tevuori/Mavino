@@ -2,13 +2,14 @@
 // list_calendar_events, create_calendar_event, schedule_task,
 // find_free_slots, open_calendar.
 
-import type { ToolDef } from "./plugin";
+import { type ToolDef, paidOnly } from "./plugin";
 import prisma from "../../../db/client";
 import { fetchTimetable, isVutAuthenticated } from "../../../services/vut";
 import { getVutGrant } from "../../../services/features";
 import { isMicrosoftConfiguredFor, listEvents as msListEvents } from "../../../services/microsoft";
 
-export const calendarTools: ToolDef[] = [
+// Calendar is a Paid-tier app — all calendar tools are paid-only.
+export const calendarTools: ToolDef[] = paidOnly([
   {
     name: "list_calendar_events",
     description:
@@ -281,4 +282,4 @@ export const calendarTools: ToolDef[] = [
       return { synced: upserted, deleted, range: { from: from.toISOString(), to: to.toISOString() } };
     },
   },
-];
+]);

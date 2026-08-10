@@ -203,6 +203,7 @@ export const crossAppTools: ToolDef[] = [
       "Schedule a calendar event to review a specific note at a given time. Creates a CalendarEvent linked to the note and opens the Calendar app. Use list_notes first to get the note id.",
     destructive: true,
     clientAction: true,
+    paidOnly: true, // Creates a Calendar event (Calendar is a Paid-tier app).
     parameters: [
       { name: "noteId", type: "string", description: "Note id to review", required: true },
       { name: "start", type: "string", description: "ISO 8601 datetime for the review start", required: true },

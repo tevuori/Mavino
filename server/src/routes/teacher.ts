@@ -16,7 +16,7 @@ import { studyFunctionMiddleware } from "../middleware/study-functions";
 import { acquireLlmModel, isLlmConfiguredFor, LlmError } from "../services/athena/llm";
 import {
   AthenaToolsPlugin,
-  ALL_TOOLS,
+  toolsForUser,
   CLIENT_ACTION_TOOLS,
   DESTRUCTIVE_TOOLS,
   type ClientWindowInfo,
@@ -631,8 +631,19 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
   const abort = new AbortController();
   c.req.raw.signal?.addEventListener("abort", () => abort.abort());
 
+  // Load the user's role to filter paid-only/pro-only tools (same pattern as
+  // the main Athena chat route). Previously this used ALL_TOOLS directly,
+  // which gave FREE users access to Pro/Paid-only tools (Atlas, Crunch,
+  // sandbox) inside teacher sessions.
+  const userRow = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  const role = userRow?.role ?? "FREE";
+  const allowedTools = await toolsForUser(userId, role);
+
   return streamSSE(c, async (stream) => {
-    const plugin = new AthenaToolsPlugin(ALL_TOOLS, { userId, windows: clientWindows });
+    const plugin = new AthenaToolsPlugin(allowedTools, { userId, windows: clientWindows });
     model.addPlugin(plugin);
 
     // Patch the internal OpenAI client's fetch to retry on transient

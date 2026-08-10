@@ -3,9 +3,10 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 
 const grades = new Hono();
-grades.use("*", authMiddleware);
+grades.use("*", authMiddleware, appTierGate("grades"));
 
 // ===== Courses =====
 const courseSchema = z.object({

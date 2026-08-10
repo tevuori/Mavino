@@ -50,6 +50,13 @@ export interface ToolDef {
   handler: (args: any, ctx: ToolContext) => Promise<any>;
 }
 
+/** Mark all tools in an array as paid-only (available to PAID/PRO/MANAGER/ADMIN
+ *  only). Use this to gate an entire tool set to the Paid tier without adding
+ *  `paidOnly: true` to every individual tool definition. */
+export function paidOnly(tools: ToolDef[]): ToolDef[] {
+  return tools.map((t) => ({ ...t, paidOnly: true }));
+}
+
 /** OpenAI function-tool format (what multi-llm-ts sends to the provider). */
 interface OpenAiTool {
   type: "function";

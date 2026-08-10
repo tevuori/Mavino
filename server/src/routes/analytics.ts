@@ -17,6 +17,7 @@ import { Hono } from "hono";
 import prisma from "../db/client";
 import { adminGuard } from "../middleware/admin";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 import { flushAnalytics, dayBucket } from "../services/analytics";
 
 const analytics = new Hono();
@@ -254,7 +255,7 @@ function dayKey(d: Date): string {
 }
 
 /** GET /api/analytics/me — the signed-in user's unified dashboard payload. */
-analytics.get("/me", authMiddleware, async (c) => {
+analytics.get("/me", authMiddleware, appTierGate("analytics"), async (c) => {
   const { userId } = c.get("auth");
   const now = new Date();
   const windowStart = new Date(now.getTime() - (ME_WINDOW_DAYS - 1) * 86_400_000);

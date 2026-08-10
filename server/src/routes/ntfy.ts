@@ -8,6 +8,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 import { decryptNtfyConfig, ntfyStatus, saveNtfyConfig, deleteNtfyConfig } from "../services/ntfy/config";
 import { publish, pollMessages } from "../services/ntfy/client";
 import { isValidCron, nextRunAt } from "../services/ntfy/scheduler";
@@ -15,7 +16,7 @@ import { restartSubscriberFor, stopSubscriberFor } from "../services/ntfy/subscr
 import { getUserTimezone } from "../services/timezone";
 
 const ntfy = new Hono();
-ntfy.use("*", authMiddleware);
+ntfy.use("*", authMiddleware, appTierGate("ntfy"));
 
 const MAX_MSG_LOG = 200;
 

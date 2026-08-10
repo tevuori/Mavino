@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { authMiddlewareWithQuery } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 import {
   proxyPage,
   fetchPageText,
@@ -9,7 +10,8 @@ import {
 
 const browser = new Hono();
 // Browser proxy routes are loaded via <iframe> src that can't set Authorization headers.
-browser.use("*", authMiddlewareWithQuery);
+// Browser is a Paid-tier app — gate all routes.
+browser.use("*", authMiddlewareWithQuery, appTierGate("browser"));
 
 /**
  * GET /api/browser/proxy?url=...

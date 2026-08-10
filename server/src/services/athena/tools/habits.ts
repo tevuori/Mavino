@@ -1,14 +1,15 @@
 // ===== Athena habit tools =====
 // list_habits, create_habit, log_habit, open_habits.
 
-import type { ToolDef } from "./plugin";
+import { type ToolDef, paidOnly } from "./plugin";
 import prisma from "../../../db/client";
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export const habitsTools: ToolDef[] = [
+// Habits is a Paid-tier app — all habit tools are paid-only.
+export const habitsTools: ToolDef[] = paidOnly([
   {
     name: "list_habits",
     description: "List the user's habits with their current streaks.",
@@ -115,4 +116,4 @@ export const habitsTools: ToolDef[] = [
       return { action: "open_habits" };
     },
   },
-];
+]);

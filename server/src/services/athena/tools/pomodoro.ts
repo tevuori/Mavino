@@ -1,10 +1,11 @@
-import type { ToolDef } from "./plugin";
+import { type ToolDef, paidOnly } from "./plugin";
 
 // Pomodoro runs client-side (Web Audio chime + timer + DND). The server can't
 // start it directly, so this tool returns a `client_action` payload that the
 // Athena client UI dispatches to the pomodoro store. Marked clientAction so the
 // /api/athena/chat stream emits it as a dedicated chunk the client can act on.
-export const pomodoroTools: ToolDef[] = [
+// Pomodoro is a Paid-tier app — the tool is paid-only.
+export const pomodoroTools: ToolDef[] = paidOnly([
   {
     name: "start_pomodoro",
     description:
@@ -27,4 +28,4 @@ export const pomodoroTools: ToolDef[] = [
       };
     },
   },
-];
+]);

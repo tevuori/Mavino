@@ -9,11 +9,12 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 import { decryptNtfyConfig } from "../services/ntfy/config";
 import { getUserTimezone, parseFireAtInTz } from "../services/timezone";
 
 const reminders = new Hono();
-reminders.use("*", authMiddleware);
+reminders.use("*", authMiddleware, appTierGate("reminders"));
 
 const createSchema = z.object({
   type: z.enum(["basic", "athena"]).default("basic"),

@@ -2,11 +2,12 @@
 // list_flashcard_decks, delete_flashcard_deck, delete_flashcard.
 // Lets the Athena chat assistant inspect and remove flashcard decks / cards.
 
-import type { ToolDef } from "./plugin";
+import { type ToolDef, paidOnly } from "./plugin";
 import prisma from "../../../db/client";
 import { cleanupOrphanLinks } from "../../../db/links";
 
-export const flashcardsTools: ToolDef[] = [
+// Flashcards is a Paid-tier app — all flashcard tools are paid-only.
+export const flashcardsTools: ToolDef[] = paidOnly([
   {
     name: "list_flashcard_decks",
     description:
@@ -78,4 +79,4 @@ export const flashcardsTools: ToolDef[] = [
       return { deleted: true, cardId, deckId: card.deckId };
     },
   },
-];
+]);

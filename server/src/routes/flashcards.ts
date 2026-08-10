@@ -3,10 +3,11 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 import { cleanupOrphanLinks } from "../db/links";
 
 const flashcards = new Hono();
-flashcards.use("*", authMiddleware);
+flashcards.use("*", authMiddleware, appTierGate("flashcards"));
 
 // ===== Decks =====
 const deckSchema = z.object({

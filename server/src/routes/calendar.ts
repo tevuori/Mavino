@@ -7,10 +7,11 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 import { cleanupOrphanLinks } from "../db/links";
 
 const calendar = new Hono();
-calendar.use("*", authMiddleware);
+calendar.use("*", authMiddleware, appTierGate("calendar"));
 
 const eventSchema = z.object({
   title: z.string().min(1).max(200),

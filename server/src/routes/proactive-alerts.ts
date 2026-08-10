@@ -8,6 +8,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 import {
   computeNextRunAt,
   normalizeCategories,
@@ -16,7 +17,8 @@ import {
 import { getUserTimezone } from "../services/timezone";
 
 const proactive = new Hono();
-proactive.use("*", authMiddleware);
+// Proactive alerts deliver via ntfy (Paid-tier app).
+proactive.use("*", authMiddleware, appTierGate("ntfy"));
 
 const DEFAULT_CATEGORIES = "calendar,tasks,flashcards,habits";
 

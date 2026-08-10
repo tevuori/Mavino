@@ -10,7 +10,7 @@
 // draw_map_route, show_map_pois, open_trip) return a payload that the Athena
 // client dispatches to the Maps app via the maps store (see store/maps.ts).
 
-import type { ToolDef } from "./plugin";
+import { type ToolDef, paidOnly } from "./plugin";
 import {
   geocode,
   geocodeSmart,
@@ -45,7 +45,8 @@ function safe<T>(fn: (args: any, ctx: any) => Promise<T>): (args: any, ctx: any)
   };
 }
 
-export const mapTools: ToolDef[] = [
+// Maps is a Paid-tier app — all map tools are paid-only.
+export const mapTools: ToolDef[] = paidOnly([
   // ===== Server-side: data tools =====
 
   {
@@ -655,4 +656,4 @@ export const mapTools: ToolDef[] = [
       return { configured };
     }),
   },
-];
+]);

@@ -3,14 +3,15 @@
 // the user can also message Athena from their phone (handled by the inbox
 // subscriber), but these tools cover outbound notifications + scheduling.
 
-import type { ToolDef } from "./plugin";
+import { type ToolDef, paidOnly } from "./plugin";
 import prisma from "../../../db/client";
 import { decryptNtfyConfig } from "../../ntfy/config";
 import { publish } from "../../ntfy/client";
 import { isValidCron, nextRunAt } from "../../ntfy/scheduler";
 import { getUserTimezone } from "../../timezone";
 
-export const ntfyTools: ToolDef[] = [
+// Ntfy is a Paid-tier app — all ntfy tools are paid-only.
+export const ntfyTools: ToolDef[] = paidOnly([
   {
     name: "send_notification",
     description:
@@ -204,4 +205,4 @@ export const ntfyTools: ToolDef[] = [
       return { deleted: true, jobId: id, name: job.name };
     },
   },
-];
+]);

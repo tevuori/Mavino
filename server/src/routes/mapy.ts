@@ -7,6 +7,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 import {
   hasApiKey,
   saveApiKey,
@@ -36,7 +37,7 @@ import {
 import { generateTour, regenerateDay, type Difficulty, type GeneratedTour } from "../services/tour-planner";
 
 const mapy = new Hono();
-mapy.use("*", authMiddleware);
+mapy.use("*", authMiddleware, appTierGate("maps"));
 
 /** Wrap a handler so MapyNotConfiguredError → 400 with a helpful message. */
 function mapyGuard(fn: (c: any) => Promise<Response>): (c: any) => Promise<Response> {

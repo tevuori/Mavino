@@ -7,7 +7,7 @@
 //     and be tailored at fire time.
 // Plus list/cancel/delete for management.
 
-import type { ToolDef } from "./plugin";
+import { type ToolDef, paidOnly } from "./plugin";
 import prisma from "../../../db/client";
 import { decryptNtfyConfig } from "../../ntfy/config";
 import { getUserTimezone, parseFireAtInTz } from "../../timezone";
@@ -16,7 +16,8 @@ function parseFireAt(raw: unknown, tz: string): Date | null {
   return parseFireAtInTz(raw, tz);
 }
 
-export const reminderTools: ToolDef[] = [
+// Reminders is a Paid-tier app — all reminder tools are paid-only.
+export const reminderTools: ToolDef[] = paidOnly([
   {
     name: "create_reminder",
     description:
@@ -200,4 +201,4 @@ export const reminderTools: ToolDef[] = [
       return { deleted: true, reminderId: id, title: existing.title };
     },
   },
-];
+]);

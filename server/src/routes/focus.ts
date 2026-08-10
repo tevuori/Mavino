@@ -9,9 +9,10 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { appTierGate } from "../middleware/app-tier";
 
 const focus = new Hono();
-focus.use("*", authMiddleware);
+focus.use("*", authMiddleware, appTierGate("pomodoro"));
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
