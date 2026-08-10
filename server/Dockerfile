@@ -10,6 +10,7 @@ RUN apt-get update -qq && apt-get install -y -qq docker.io ffmpeg tesseract-ocr 
 
 # Install deps
 COPY package.json bunfig.toml ./
+COPY patches ./patches
 COPY prisma ./prisma
 RUN bun install
 RUN bunx prisma generate
