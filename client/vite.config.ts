@@ -64,7 +64,18 @@ export default defineConfig({
       },
       workbox: {
         navigateFallbackDenylist: [/^\/api/],
-        globPatterns: ["**/*.{js,css,html,svg,png,ico,woff,woff2,ttf}"],
+        // Precache static assets but NOT index.html. Content-hashed JS/CSS
+        // chunks are safe to cache forever (their filenames change on each
+        // build). index.html must always come from the network so new deploys
+        // are picked up immediately — if the SW precaches it, users get a
+        // stale HTML referencing deleted chunks → "Failed to fetch dynamically
+        // imported module" errors.
+        globPatterns: ["**/*.{js,css,svg,png,ico,woff,woff2,ttf}"],
+        globIgnores: ["**/index.html", "**/*.html"],
+        // On navigation, fetch index.html from the network (not cache) so the
+        // user always gets the latest version. Falls back to the cached copy
+        // only when offline.
+        navigateFallback: "index.html",
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         skipWaiting: true,

@@ -49,11 +49,12 @@ import adminStorage from "./routes/admin-storage";
 import studyFunctions from "./routes/study-functions";
 import { analyticsMiddleware, startAnalyticsFlusher } from "./services/analytics";
 import { logError } from "./services/error-log";
-import { startScheduler } from "./services/ntfy/scheduler";
-import { startAllSubscribers } from "./services/ntfy/subscriber";
-import { startProactiveScheduler } from "./services/ntfy/proactive-scheduler";
-import { startReminderScheduler } from "./services/reminders/scheduler";
+import { startScheduler, stopScheduler } from "./services/ntfy/scheduler";
+import { startAllSubscribers, stopAllSubscribers } from "./services/ntfy/subscriber";
+import { startProactiveScheduler, stopProactiveScheduler } from "./services/ntfy/proactive-scheduler";
+import { startReminderScheduler, stopReminderScheduler } from "./services/reminders/scheduler";
 import { startDemoCleanup } from "./services/demo";
+import prisma from "./db/client";
 
 const app = new Hono();
 
@@ -234,3 +235,25 @@ export default {
   maxRequestBodySize: 2 * 1024 * 1024 * 1024, // 2 GB
   fetch: app.fetch,
 };
+
+// Graceful shutdown — stop background workers and close the Prisma connection
+// pool so PostgreSQL doesn't accumulate orphaned connections on restart.
+let shuttingDown = false;
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[mavino-server] Received ${signal}, shutting down gracefully...`);
+  stopScheduler();
+  stopAllSubscribers();
+  stopProactiveScheduler();
+  stopReminderScheduler();
+  try {
+    await prisma.$disconnect();
+    console.log("[mavino-server] Prisma disconnected.");
+  } catch (e) {
+    console.error("[mavino-server] Error disconnecting Prisma:", e);
+  }
+  process.exit(0);
+}
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));

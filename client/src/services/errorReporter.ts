@@ -88,8 +88,22 @@ export function installGlobalErrorHandlers() {
 
   window.addEventListener("unhandledrejection", (event) => {
     const reason = event.reason;
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    // Stale chunk after a deploy — auto-reload to pick up the new index.html.
+    // This catches dynamic import failures that escape React's Suspense boundary.
+    if (
+      msg.includes("Failed to fetch dynamically imported module") ||
+      msg.includes("error loading dynamically imported module") ||
+      msg.includes("Importing a module script failed")
+    ) {
+      if (!location.search.includes("_reload=")) {
+        location.replace(`${location.pathname}?_reload=${Date.now()}${location.hash}`);
+      }
+      event.preventDefault();
+      return;
+    }
     reportError({
-      message: reason instanceof Error ? reason.message : String(reason),
+      message: msg,
       stack: reason instanceof Error ? reason.stack : undefined,
       source: "unhandledrejection",
     });

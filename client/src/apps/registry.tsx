@@ -5,29 +5,65 @@ import type { AppId, WindowInstance } from "../store/windows";
 // separate chunks. The app metadata (id, name, icon) is eager so the taskbar,
 // start menu, and desktop icons render instantly — only the app *content*
 // loads on demand when a window is opened.
-const NotesApp = lazy(() => import("./notes/NotesApp"));
-const TasksApp = lazy(() => import("./tasks/TasksApp"));
-const FilesApp = lazy(() => import("./files/FilesApp"));
-const SettingsApp = lazy(() => import("./settings/SettingsApp"));
-const PomodoroApp = lazy(() => import("./pomodoro/PomodoroApp"));
-const FlashcardsApp = lazy(() => import("./flashcards/FlashcardsApp"));
-const GradesApp = lazy(() => import("./grades/GradesApp"));
-const VUTApp = lazy(() => import("./vut/VUTApp"));
-const EditorApp = lazy(() => import("./editor/EditorApp"));
-const ViewerApp = lazy(() => import("./viewer/ViewerApp"));
-const AthenaApp = lazy(() => import("./athena/AthenaApp"));
-const StudyApp = lazy(() => import("./study/StudyApp"));
-const TodayApp = lazy(() => import("./today/TodayApp"));
-const CalendarApp = lazy(() => import("./calendar/CalendarApp"));
-const HabitsApp = lazy(() => import("./habits/HabitsApp"));
-const WhiteboardApp = lazy(() => import("./whiteboard/WhiteboardApp"));
-const NtfyApp = lazy(() => import("./ntfy/NtfyApp"));
-const VoiceApp = lazy(() => import("./voice/VoiceApp"));
-const BrowserApp = lazy(() => import("./browser/BrowserApp"));
-const RemindersApp = lazy(() => import("./reminders/RemindersApp"));
-const AnalyticsApp = lazy(() => import("./analytics/AnalyticsApp"));
-const MoodleApp = lazy(() => import("./moodle/MoodleApp"));
-const MapsApp = lazy(() => import("./maps/MapsApp"));
+
+/**
+ * Wrap a dynamic import so that if the chunk is missing on the server (stale
+ * deploy — the old content-hashed filename no longer exists), we reload the
+ * page to pick up the new index.html instead of showing a broken app.
+ *
+ * This is the standard fix for "Failed to fetch dynamically imported module"
+ * errors that occur when a service worker or browser cache serves an old
+ * index.html referencing deleted chunks.
+ */
+function lazyImport<T extends { default: ComponentType<any> }>(
+  factory: () => Promise<T>
+): React.LazyExoticComponent<T["default"]> {
+  return lazy(() =>
+    factory().catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (
+        msg.includes("Failed to fetch dynamically imported module") ||
+        msg.includes("error loading dynamically imported module") ||
+        msg.includes("Importing a module script failed")
+      ) {
+        // The current page has stale chunk references — reload to get the
+        // latest index.html. Use a cache-busting query param so the browser
+        // doesn't serve a cached HTML document.
+        if (!location.search.includes("_reload=")) {
+          location.replace(`${location.pathname}?_reload=${Date.now()}${location.hash}`);
+        }
+        // Return a never-resolving promise so React stays in Suspense while
+        // the reload happens.
+        return new Promise<T>(() => {});
+      }
+      throw err;
+    })
+  );
+}
+
+const NotesApp = lazyImport(() => import("./notes/NotesApp"));
+const TasksApp = lazyImport(() => import("./tasks/TasksApp"));
+const FilesApp = lazyImport(() => import("./files/FilesApp"));
+const SettingsApp = lazyImport(() => import("./settings/SettingsApp"));
+const PomodoroApp = lazyImport(() => import("./pomodoro/PomodoroApp"));
+const FlashcardsApp = lazyImport(() => import("./flashcards/FlashcardsApp"));
+const GradesApp = lazyImport(() => import("./grades/GradesApp"));
+const VUTApp = lazyImport(() => import("./vut/VUTApp"));
+const EditorApp = lazyImport(() => import("./editor/EditorApp"));
+const ViewerApp = lazyImport(() => import("./viewer/ViewerApp"));
+const AthenaApp = lazyImport(() => import("./athena/AthenaApp"));
+const StudyApp = lazyImport(() => import("./study/StudyApp"));
+const TodayApp = lazyImport(() => import("./today/TodayApp"));
+const CalendarApp = lazyImport(() => import("./calendar/CalendarApp"));
+const HabitsApp = lazyImport(() => import("./habits/HabitsApp"));
+const WhiteboardApp = lazyImport(() => import("./whiteboard/WhiteboardApp"));
+const NtfyApp = lazyImport(() => import("./ntfy/NtfyApp"));
+const VoiceApp = lazyImport(() => import("./voice/VoiceApp"));
+const BrowserApp = lazyImport(() => import("./browser/BrowserApp"));
+const RemindersApp = lazyImport(() => import("./reminders/RemindersApp"));
+const AnalyticsApp = lazyImport(() => import("./analytics/AnalyticsApp"));
+const MoodleApp = lazyImport(() => import("./moodle/MoodleApp"));
+const MapsApp = lazyImport(() => import("./maps/MapsApp"));
 
 export interface AppDefinition {
   id: AppId;
