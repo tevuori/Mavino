@@ -8,7 +8,10 @@ import { useWindows } from "../store/windows";
 const TASKBAR_H = 48;
 const MIN_W = 360;
 const MIN_H = 240;
-const PANEL_Z = 9990; // above normal windows, below taskbar (10000)
+// Above normal windows AND always-on-top Athena app windows (10000 + zCounter),
+// but below other shell overlays (StartMenu 11000, ContextMenu 12000, etc.).
+// The panel is positioned above the taskbar area so it never overlaps it.
+const PANEL_Z = 10990;
 
 type DragMode = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
