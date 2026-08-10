@@ -4,6 +4,8 @@
 
 **A desktop-environment-style productivity dashboard for students.**
 
+*Made by students, for students.*
+
 Vite + React 18 · TypeScript · Tailwind CSS 3 · Bun + Hono · Prisma + SQLite · Docker Compose
 
 [Features](#-features) · [Screenshots](#-screenshots) · [Study Hub](#-study-hub) · [Quick Start](#-quick-start) · [Docker](#-docker) · [Project Structure](#-project-structure) · [License](#-license)

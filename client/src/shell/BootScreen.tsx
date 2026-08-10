@@ -55,7 +55,8 @@ export default function BootScreen({ onDone }: Props) {
       >
         Mavino
       </motion.h1>
-      <p className="mb-10 text-sm text-slate-400">Student OS</p>
+      <p className="text-sm text-slate-400">Student OS</p>
+      <p className="mb-10 text-xs text-slate-500">Made by students, for students</p>
       <div className="h-1 w-48 overflow-hidden rounded-full bg-slate-800">
         <motion.div
           className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"

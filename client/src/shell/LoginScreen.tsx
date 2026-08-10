@@ -194,6 +194,9 @@ export default function LoginScreen() {
               ? "Enter your verification code"
               : "Reset your password"}
           </p>
+          {mode === "login" && (
+            <p className="mt-1 text-[11px] text-ink-muted/70">Made by students, for students</p>
+          )}
         </div>
 
         {mode === "forgot" ? (

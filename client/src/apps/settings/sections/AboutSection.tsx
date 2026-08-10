@@ -99,6 +99,7 @@ export default function AboutSection() {
           <div>
             <p className="text-sm font-medium text-ink">Mavino — Student OS</p>
             <p className="text-xs text-ink-muted">Client v{appVersion}</p>
+            <p className="mt-1 text-xs text-ink-muted">Made by students, for students</p>
           </div>
           <Heart size={16} className="text-accent" />
         </div>

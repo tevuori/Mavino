@@ -114,6 +114,9 @@ export default function StartMenu({ open, onClose }: Props) {
                 </button>
               </div>
             </div>
+            <p className="mt-3 text-center text-[10px] text-ink-muted">
+              Made by students, for students
+            </p>
           </motion.div>
         </>
       )}
