@@ -45,6 +45,7 @@ import features from "./routes/features";
 import clientErrors from "./routes/client-errors";
 import adminErrors from "./routes/admin-errors";
 import adminLlm from "./routes/admin-llm";
+import adminStorage from "./routes/admin-storage";
 import studyFunctions from "./routes/study-functions";
 import { analyticsMiddleware, startAnalyticsFlusher } from "./services/analytics";
 import { logError } from "./services/error-log";
@@ -202,6 +203,7 @@ app.route("/api/mapy", mapy);
 app.route("/api/client-errors", clientErrors);
 app.route("/api/admin/errors", adminErrors);
 app.route("/api/admin/llm", adminLlm);
+app.route("/api/admin/storage", adminStorage);
 
 // Start ntfy background workers (cron scheduler + per-user inbox subscribers).
 startScheduler();

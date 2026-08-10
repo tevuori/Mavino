@@ -18,6 +18,7 @@ import {
 } from "../services/athena/tools";
 import { generateJson } from "../services/study/llm-json";
 import prisma from "../db/client";
+import { getStorageStatus } from "../services/storage-quota";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 const TEMP_DIR = path.join(UPLOAD_DIR, "temp");
@@ -499,6 +500,13 @@ athena.post("/save-attached", zValidator("json", saveAttachedSchema), async (c) 
 
   // Copy from temp to permanent location.
   const content = await readFile(srcPath);
+
+  // Enforce role-based storage quota before persisting the file.
+  const quota = await getStorageStatus(userId, content.length);
+  if (!quota.allowed) {
+    return c.json({ error: quota.message }, 413);
+  }
+
   await writeFile(destPath, content);
 
   const ext = path.extname(name).slice(1).toLowerCase();

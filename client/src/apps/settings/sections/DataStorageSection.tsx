@@ -14,7 +14,7 @@ function fmtSize(bytes: number): string {
 
 export default function DataStorageSection() {
   const { deleteAccount } = useAuth();
-  const [storage, setStorage] = useState<{ total: number; count: number } | null>(null);
+  const [storage, setStorage] = useState<{ total: number; count: number; limit?: number | null } | null>(null);
   const [exportBusy, setExportBusy] = useState(false);
   const [cacheMsg, setCacheMsg] = useState<string | null>(null);
   const [delPw, setDelPw] = useState("");
@@ -92,15 +92,28 @@ export default function DataStorageSection() {
           <>
             <div className="mb-1 flex items-center justify-between text-xs text-ink-muted">
               <span>{storage.count} file(s)</span>
-              <span>{fmtSize(storage.total)}</span>
+              <span>
+                {fmtSize(storage.total)}
+                {storage.limit ? ` / ${fmtSize(storage.limit)}` : ""}
+              </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-surface-3">
               <div
                 className="h-full rounded-full bg-accent"
-                style={{ width: `${Math.min(100, (storage.total / (500 * 1024 * 1024)) * 100)}%` }}
+                style={{
+                  width: `${
+                    storage.limit
+                      ? Math.min(100, (storage.total / storage.limit) * 100)
+                      : Math.min(100, (storage.total / (500 * 1024 * 1024)) * 100)
+                  }%`,
+                }}
               />
             </div>
-            <p className="mt-1 text-[11px] text-ink-muted">Quota shown relative to a 500 MB soft limit.</p>
+            <p className="mt-1 text-[11px] text-ink-muted">
+              {storage.limit
+                ? `Quota: ${fmtSize(storage.limit)}`
+                : "No quota configured — bar shown relative to 500 MB."}
+            </p>
           </>
         ) : (
           <p className="text-sm text-ink-muted">Unable to load storage info.</p>

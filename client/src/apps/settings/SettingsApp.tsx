@@ -37,6 +37,7 @@ import UsersSection from "./sections/UsersSection";
 import BetaSection from "./sections/BetaSection";
 import AppsSection from "./sections/AppsSection";
 import LlmAdminSection from "./sections/LlmAdminSection";
+import StorageAdminSection from "./sections/StorageAdminSection";
 import ErrorLogSection from "./sections/ErrorLogSection";
 import AnalyticsSection from "./sections/AnalyticsSection";
 import StudyHubSection from "./sections/StudyHubSection";
@@ -70,6 +71,7 @@ const SECTIONS: SectionDef[] = [
   { id: "users", label: "Users", icon: <UsersIcon size={15} />, managerAllowed: true },
   { id: "apps", label: "Apps", icon: <LayoutGrid size={15} />, adminOnly: true },
   { id: "llm-admin", label: "LLM Config", icon: <Sparkles size={15} />, adminOnly: true },
+  { id: "storage-admin", label: "Storage Quotas", icon: <Database size={15} />, adminOnly: true },
   { id: "study-hub", label: "Study Hub", icon: <GraduationCap size={15} />, adminOnly: true },
   { id: "error-logs", label: "Error Logs", icon: <AlertTriangle size={15} />, adminOnly: true },
   { id: "analytics", label: "Analytics", icon: <BarChart3 size={15} />, adminOnly: true },
@@ -107,6 +109,7 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
     if (active === "users" && isAdminOrManager) return <UsersSection />;
     if (active === "apps" && isAdmin) return <AppsSection />;
     if (active === "llm-admin" && isAdmin) return <LlmAdminSection />;
+    if (active === "storage-admin" && isAdmin) return <StorageAdminSection />;
     if (active === "study-hub" && isAdmin) return <StudyHubSection />;
     if (active === "error-logs" && isAdmin) return <ErrorLogSection />;
     if (active === "analytics" && isAdmin) return <AnalyticsSection />;

@@ -17,6 +17,7 @@ import { alignTranscriptToSlides, formatTimestamp, type AlignedSlide } from "./a
 import { lectureSlideNotePrompt, lectureSummaryPrompt, type NoteStyle, type NoteDetail, type StudyLanguage } from "../prompts";
 import { canonicalPair } from "../../../db/links";
 import { logSessionSafe } from "../logSession";
+import { getStorageStatus } from "../../storage-quota";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 const WORK_DIR = path.resolve(process.cwd(), "uploads", "_lecture_work");
@@ -168,6 +169,13 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
 
       // Save as VFile.
       const { size } = await stat(absPath);
+
+      // Enforce role-based storage quota before persisting the slide image.
+      const quota = await getStorageStatus(userId, size);
+      if (!quota.allowed) {
+        throw new Error(quota.message);
+      }
+
       const vFile = await prisma.vFile.create({
         data: {
           name: imgName,

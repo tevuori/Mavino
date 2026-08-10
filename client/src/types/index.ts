@@ -155,6 +155,8 @@ export interface FolderTreeNode {
 export interface StorageInfo {
   total: number;
   count: number;
+  /** Storage quota in bytes, or null if unlimited. */
+  limit?: number | null;
 }
 
 export interface LyricsLine {

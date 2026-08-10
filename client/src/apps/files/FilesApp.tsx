@@ -798,11 +798,20 @@ export default function FilesApp(_: { win: WindowInstance }) {
           <div className="border-t border-edge p-3">
             <div className="mb-1 flex items-center gap-1.5 text-[11px] text-ink-muted">
               <HardDrive size={12} /> Storage
+              {storage.limit ? (
+                <span className="ml-auto">{formatBytes(storage.total)} / {formatBytes(storage.limit)}</span>
+              ) : null}
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
               <div
                 className="h-full rounded-full bg-accent transition-all"
-                style={{ width: `${Math.min(100, (storage.total / (500 * 1024 * 1024)) * 100)}%` }}
+                style={{
+                  width: `${
+                    storage.limit
+                      ? Math.min(100, (storage.total / storage.limit) * 100)
+                      : Math.min(100, (storage.total / (500 * 1024 * 1024)) * 100)
+                  }%`,
+                }}
               />
             </div>
             <div className="mt-1 text-[10px] text-ink-muted">

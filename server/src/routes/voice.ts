@@ -22,6 +22,7 @@ import { generateJson } from "../services/study/llm-json";
 import { canonicalPair } from "../db/links";
 import path from "node:path";
 import { mkdir, writeFile, readFile, stat } from "node:fs/promises";
+import { getStorageStatus } from "../services/storage-quota";
 
 const voice = new Hono();
 voice.use("*", authMiddleware);
@@ -179,6 +180,13 @@ voice.post("/", async (c) => {
   const absPath = path.join(UPLOAD_DIR, storageKey);
   await mkdir(path.dirname(absPath), { recursive: true });
   const audioBuf = Buffer.from(await audio.arrayBuffer());
+
+  // Enforce role-based storage quota before writing audio to disk.
+  const quota = await getStorageStatus(userId, audioBuf.length);
+  if (!quota.allowed) {
+    return c.json({ error: quota.message }, 413);
+  }
+
   await writeFile(absPath, audioBuf);
 
   const file = await prisma.vFile.create({

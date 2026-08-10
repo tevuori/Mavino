@@ -2,6 +2,7 @@ import path from "node:path";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import type { ToolDef } from "./plugin";
 import prisma from "../../../db/client";
+import { getStorageStatus } from "../../storage-quota";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 
@@ -144,6 +145,14 @@ export const fileTools: ToolDef[] = [
       }
       const abs = path.join(UPLOAD_DIR, file.storageKey);
       const buf = Buffer.from(String(args.content ?? ""), "utf-8");
+
+      // Enforce role-based storage quota. The existing file is overwritten,
+      // so the net change is new size minus old size.
+      const quota = await getStorageStatus(userId, buf.length - file.size);
+      if (!quota.allowed) {
+        return { error: quota.message };
+      }
+
       await writeFile(abs, buf);
       const updated = await prisma.vFile.update({
         where: { id: file.id },
@@ -180,6 +189,13 @@ export const fileTools: ToolDef[] = [
       try {
         await mkdir(path.dirname(absPath), { recursive: true });
         const buf = Buffer.from(String(args.content ?? ""), "utf-8");
+
+        // Enforce role-based storage quota before writing to disk.
+        const quota = await getStorageStatus(userId, buf.length);
+        if (!quota.allowed) {
+          return { error: quota.message };
+        }
+
         await writeFile(absPath, buf);
         const ext = path.extname(name).slice(1).toLowerCase();
         const mime = ext === "md" || ext === "markdown"

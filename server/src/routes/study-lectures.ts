@@ -12,6 +12,7 @@ import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
 import { studyFunctionMiddleware } from "../middleware/study-functions";
 import { runLecturePipeline } from "../services/study/lecture/pipeline";
+import { getStorageStatus } from "../services/storage-quota";
 
 const lectures = new Hono();
 lectures.use("*", authMiddleware, studyFunctionMiddleware("lecture"));
@@ -138,6 +139,13 @@ lectures.post("/upload", async (c) => {
   const absPath = path.join(UPLOAD_DIR, storageKey);
   await mkdir(path.dirname(absPath), { recursive: true });
   const buf = Buffer.from(await video.arrayBuffer());
+
+  // Enforce role-based storage quota before writing the video to disk.
+  const quota = await getStorageStatus(userId, buf.length);
+  if (!quota.allowed) {
+    return c.json({ error: quota.message }, 413);
+  }
+
   await writeFile(absPath, buf);
 
   const vFile = await prisma.vFile.create({

@@ -11,6 +11,7 @@ import { load as cheerioLoad } from "cheerio";
 import { decryptSecret } from "../services/crypto";
 import { fetchWithVutSession } from "../services/vut";
 import { fetchMoodlePage, fetchResourceContent } from "../services/moodle";
+import { getStorageStatus } from "../services/storage-quota";
 
 /** True if the file is an integration-managed virtual file (e.g. Moodle). */
 function isManagedExternal(record: { externalUrl: string | null; source: string }): boolean {
@@ -323,12 +324,19 @@ files.get("/tree", async (c) => {
 // Storage usage
 files.get("/storage", async (c) => {
   const { userId } = c.get("auth");
-  const agg = await prisma.vFile.aggregate({
-    where: { userId },
-    _sum: { size: true },
-    _count: { _all: true },
+  const [agg, status] = await Promise.all([
+    prisma.vFile.aggregate({
+      where: { userId, storageKey: { not: "" }, source: { not: "moodle" } },
+      _sum: { size: true },
+      _count: { _all: true },
+    }),
+    getStorageStatus(userId),
+  ]);
+  return c.json({
+    total: status.used,
+    count: agg._count._all ?? 0,
+    limit: status.limit,
   });
-  return c.json({ total: agg._sum.size ?? 0, count: agg._count._all });
 });
 
 /** Max per-upload size for the general /files/upload endpoint (100 MB).
@@ -426,6 +434,12 @@ files.post("/upload", async (c) => {
     );
   }
 
+  // Enforce role-based storage quota before writing to disk.
+  const quota = await getStorageStatus(userId, file.size);
+  if (!quota.allowed) {
+    return c.json({ error: quota.message }, 413);
+  }
+
   const safeName = path.basename(file.name).replace(/[^\w.\- ]+/g, "_");
   const storageKey = `${userId}/${Date.now()}-${safeName}`;
   const absPath = path.join(UPLOAD_DIR, storageKey);
@@ -457,8 +471,15 @@ files.post("/text", zValidator("json", createTextSchema), async (c) => {
   const safeName = path.basename(name).replace(/[^\w.\- ]+/g, "_");
   const storageKey = `${userId}/${Date.now()}-${safeName}`;
   const absPath = path.join(UPLOAD_DIR, storageKey);
-  await mkdir(path.dirname(absPath), { recursive: true });
   const buf = Buffer.from(content, "utf-8");
+
+  // Enforce role-based storage quota before writing to disk.
+  const quota = await getStorageStatus(userId, buf.length);
+  if (!quota.allowed) {
+    return c.json({ error: quota.message }, 413);
+  }
+
+  await mkdir(path.dirname(absPath), { recursive: true });
   await writeFile(absPath, buf);
   const ext = path.extname(name).slice(1).toLowerCase();
   const mime = ext === "md" || ext === "markdown"
@@ -546,6 +567,14 @@ files.put("/:id/content", zValidator("json", saveContentSchema), async (c) => {
   const { content } = c.req.valid("json");
   const absPath = path.join(UPLOAD_DIR, record.storageKey);
   const buf = Buffer.from(content, "utf-8");
+
+  // Enforce role-based storage quota. The existing file will be overwritten,
+  // so the net change is new size minus old size.
+  const quota = await getStorageStatus(userId, buf.length - record.size);
+  if (!quota.allowed) {
+    return c.json({ error: quota.message }, 413);
+  }
+
   await writeFile(absPath, buf);
   const updated = await prisma.vFile.update({
     where: { id: record.id },
@@ -608,6 +637,13 @@ files.post("/duplicate/:id", async (c) => {
   if (!record) return c.json({ error: "Not found" }, 404);
   if (isManagedExternal(record)) return c.json({ error: "Moodle-managed files can't be duplicated" }, 403);
   const srcPath = path.join(UPLOAD_DIR, record.storageKey);
+
+  // Enforce role-based storage quota before copying on disk.
+  const quota = await getStorageStatus(userId, record.size);
+  if (!quota.allowed) {
+    return c.json({ error: quota.message }, 413);
+  }
+
   const safeName = path.basename(record.name).replace(/[^\w.\- ]+/g, "_");
   const storageKey = `${userId}/${Date.now()}-copy-${safeName}`;
   const destPath = path.join(UPLOAD_DIR, storageKey);
