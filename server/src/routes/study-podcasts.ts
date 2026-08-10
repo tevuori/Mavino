@@ -9,6 +9,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { studyFunctionMiddleware } from "../middleware/study-functions";
 import { acquireLlmModel, isLlmConfiguredFor } from "../services/athena/llm";
 import { generateText } from "../services/study/llm-json";
 import { podcastScriptPrompt, type StudyLanguage } from "../services/study/prompts";
@@ -16,7 +17,7 @@ import { logSessionSafe } from "../services/study/logSession";
 import { canonicalPair } from "../db/links";
 
 const podcasts = new Hono();
-podcasts.use("*", authMiddleware);
+podcasts.use("*", authMiddleware, studyFunctionMiddleware("podcast"));
 
 function parseSourceIds(raw: string): string[] {
   try {

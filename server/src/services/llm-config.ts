@@ -171,7 +171,7 @@ export async function setTierRateLimits(config: {
 /** Map a user role to a rate tier. */
 export function roleToTier(role: string): RateTier {
   if (role === "ADMIN") return "admin";
-  if (role === "PAID") return "paid";
+  if (role === "PAID" || role === "MANAGER") return "paid";
   return "free";
 }
 

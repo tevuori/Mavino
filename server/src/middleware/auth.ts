@@ -4,6 +4,8 @@ import { verifyToken } from "../services/jwt";
 export interface AuthVars {
   userId: string;
   username: string;
+  /** Set by role-aware middleware (admin/adminOrManager). */
+  role?: string;
 }
 
 declare module "hono" {

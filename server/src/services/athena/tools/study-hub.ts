@@ -24,6 +24,7 @@ import {
 import { getQuiz, deleteQuiz } from "../../study/quiz-store";
 import { logSessionSafe } from "../../study/logSession";
 import { Message } from "multi-llm-ts";
+import { withStudyGate } from "./study-gate";
 
 /** Helper: resolve an array of on-the-fly source descriptors into cached
  *  StudySource rows, returning their ids. Used by chat/podcast/teacher tools
@@ -66,7 +67,7 @@ async function loadSources(userId: string, sourceIds: string[]): Promise<Grounde
     .filter((x): x is GroundedSource => x !== null);
 }
 
-export const studyHubTools: ToolDef[] = [
+const rawStudyHubTools: ToolDef[] = [
   // ===== Study Sources library =====
   {
     name: "list_study_sources",
@@ -755,6 +756,22 @@ export const studyHubTools: ToolDef[] = [
     },
   },
 ];
+
+const STUDY_HUB_FUNCTION_GATE: Record<string, string> = {
+  start_study_chat: "chat",
+  ask_study_chat: "chat",
+  delete_study_chat: "chat",
+  generate_podcast: "podcast",
+  delete_podcast: "podcast",
+  start_teacher_session: "teach",
+  delete_teacher_session: "teach",
+  answer_quiz_question: "quiz",
+  take_notes_from_source: "notes_from_source",
+};
+
+export const studyHubTools: ToolDef[] = rawStudyHubTools.map((t) =>
+  STUDY_HUB_FUNCTION_GATE[t.name] ? withStudyGate(t, STUDY_HUB_FUNCTION_GATE[t.name]) : t
+);
 
 // ===== helpers =====
 function safeParseArray(raw: string): string[] {

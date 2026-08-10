@@ -12,13 +12,14 @@ import { streamSSE } from "hono/streaming";
 import { Message } from "multi-llm-ts";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { studyFunctionMiddleware } from "../middleware/study-functions";
 import { acquireLlmModel, isLlmConfiguredFor } from "../services/athena/llm";
 import { groundedQaSystemPrompt, type GroundedSource, type StudyLanguage } from "../services/study/prompts";
 import { logSessionSafe } from "../services/study/logSession";
 import { canonicalPair } from "../db/links";
 
 const chat = new Hono();
-chat.use("*", authMiddleware);
+chat.use("*", authMiddleware, studyFunctionMiddleware("chat"));
 
 interface StoredMessage {
   role: "user" | "assistant";

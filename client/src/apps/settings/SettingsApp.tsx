@@ -19,6 +19,7 @@ import {
   Shield,
   LayoutGrid,
   AlertTriangle,
+  GraduationCap,
 } from "lucide-react";
 import { useAuth } from "../../store/auth";
 import type { WindowInstance } from "../../store/windows";
@@ -38,6 +39,7 @@ import AppsSection from "./sections/AppsSection";
 import LlmAdminSection from "./sections/LlmAdminSection";
 import ErrorLogSection from "./sections/ErrorLogSection";
 import AnalyticsSection from "./sections/AnalyticsSection";
+import StudyHubSection from "./sections/StudyHubSection";
 import DataStorageSection from "./sections/DataStorageSection";
 import AboutSection from "./sections/AboutSection";
 import DateTimeSection from "./sections/DateTimeSection";
@@ -47,7 +49,10 @@ interface SectionDef {
   id: string;
   label: string;
   icon: React.ReactNode;
+  /** Hidden from non-admin users. */
   adminOnly?: boolean;
+  /** Visible to admins and managers (overrides adminOnly when true). */
+  managerAllowed?: boolean;
 }
 
 const SECTIONS: SectionDef[] = [
@@ -62,9 +67,10 @@ const SECTIONS: SectionDef[] = [
   { id: "notifications", label: "Notifications", icon: <Bell size={15} /> },
   { id: "proactive-alerts", label: "Proactive Alerts", icon: <BellRing size={15} /> },
   { id: "beta", label: "Beta Apps", icon: <FlaskConical size={15} /> },
-  { id: "users", label: "Users", icon: <UsersIcon size={15} />, adminOnly: true },
+  { id: "users", label: "Users", icon: <UsersIcon size={15} />, managerAllowed: true },
   { id: "apps", label: "Apps", icon: <LayoutGrid size={15} />, adminOnly: true },
   { id: "llm-admin", label: "LLM Config", icon: <Sparkles size={15} />, adminOnly: true },
+  { id: "study-hub", label: "Study Hub", icon: <GraduationCap size={15} />, adminOnly: true },
   { id: "error-logs", label: "Error Logs", icon: <AlertTriangle size={15} />, adminOnly: true },
   { id: "analytics", label: "Analytics", icon: <BarChart3 size={15} />, adminOnly: true },
   { id: "data", label: "Data & Storage", icon: <Database size={15} /> },
@@ -76,9 +82,14 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
   const { user } = useAuth();
   const [active, setActive] = useState<string | null>((win.payload?.section as string) || "appearance");
   const isAdmin = user?.role === "ADMIN";
+  const isManager = user?.role === "MANAGER";
+  const isAdminOrManager = isAdmin || isManager;
 
-  const visibleSections = SECTIONS.filter((s) => !s.adminOnly || isAdmin);
-  const activeLabel = visibleSections.find((s) => s.id === active)?.label ?? "Settings";
+  const visibleSections = SECTIONS.filter((s) => {
+    if (s.adminOnly && !s.managerAllowed) return isAdmin;
+    if (s.managerAllowed) return isAdminOrManager;
+    return true;
+  });
 
   const renderSection = () => {
     if (active === null) return null;
@@ -93,9 +104,10 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
     if (active === "notifications") return <NotificationsSection />;
     if (active === "proactive-alerts") return <ProactiveAlertsSection />;
     if (active === "beta") return <BetaSection />;
-    if (active === "users" && isAdmin) return <UsersSection />;
+    if (active === "users" && isAdminOrManager) return <UsersSection />;
     if (active === "apps" && isAdmin) return <AppsSection />;
     if (active === "llm-admin" && isAdmin) return <LlmAdminSection />;
+    if (active === "study-hub" && isAdmin) return <StudyHubSection />;
     if (active === "error-logs" && isAdmin) return <ErrorLogSection />;
     if (active === "analytics" && isAdmin) return <AnalyticsSection />;
     if (active === "data") return <DataStorageSection />;

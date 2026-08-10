@@ -2,6 +2,7 @@
 // Purpose-built AI study workflows on top of the Athena LLM infrastructure.
 
 import { useState, useEffect } from "react";
+import { useStudyFunctions } from "./useStudyFunctions";
 import {
   Brain,
   FileText,
@@ -71,6 +72,24 @@ const MODES: { id: Mode; label: string; icon: typeof Brain; desc: string }[] = [
   { id: "highlights", label: "Highlights", icon: Highlighter, desc: "Your saved highlights & annotations" },
 ];
 
+const FUNCTION_MODE_IDS = new Set<Mode>([
+  "chat",
+  "teach",
+  "podcast",
+  "graph",
+  "lecture",
+  "flashcards",
+  "summarize",
+  "explain",
+  "study_guide",
+  "quiz",
+  "syllabus",
+]);
+
+function isFunctionMode(mode: Mode) {
+  return FUNCTION_MODE_IDS.has(mode);
+}
+
 export default function StudyApp({ win }: { win: WindowInstance }) {
   const [mode, setMode] = useState<Mode>("home");
   const [language, setLanguage] = useState<StudyLanguage>(() => {
@@ -84,6 +103,12 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
   const [initialWorkspaceId, setInitialWorkspaceId] = useState<string | null>(null);
   const [initialSessionId, setInitialSessionId] = useState<string | null>(null);
   const [initialGraphId, setInitialGraphId] = useState<string | null>(null);
+  const { enabled, loading } = useStudyFunctions();
+
+  const isModeEnabled = (m: Mode) => !isFunctionMode(m) || loading || enabled.has(m);
+  const ensureEnabled = (m: Mode): Mode => (isModeEnabled(m) ? m : "home");
+
+  const activeMode = isModeEnabled(mode) ? mode : "home";
 
   const toggleLanguage = () => {
     setLanguage((prev) => {
@@ -94,14 +119,21 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
   };
 
   // Honor a payload sent when opening (e.g. from Athena's open_study_hub or
-  // start_quiz tool).
+  // start_quiz tool). Disabled Study Hub functions are ignored and the app
+  // falls back to Home.
   useEffect(() => {
     const p = win.payload;
     if (!p) return;
-    if (typeof p.mode === "string") {
-      const m = MODES.find((x) => x.id === p.mode);
-      if (m) setMode(m.id);
-    }
+
+    const requestedMode = MODES.find((x) => x.id === p.mode)?.id ?? null;
+    const finalMode = requestedMode ? ensureEnabled(requestedMode) : null;
+    const requestedWorkspaceMode =
+      typeof p.mode === "string" && (p.mode === "chat" || p.mode === "podcast")
+        ? ensureEnabled(p.mode as Mode)
+        : null;
+
+    if (finalMode) setMode(finalMode);
+
     const sk = p.sourceKind as SourceKind | undefined;
     if (sk && p.sourceId && typeof p.sourceId === "string") {
       setInitialSource({ kind: sk, id: p.sourceId });
@@ -115,25 +147,23 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
     }
     // start_quiz tool pre-generates the quiz on the server and passes the id
     // so QuizMe can jump straight into the answering phase.
-    if (typeof p.quizId === "string") {
+    if (typeof p.quizId === "string" && isModeEnabled("quiz")) {
       setPreloadedQuizId(p.quizId);
     }
     // Deep links to a specific grounded chat / podcast.
-    if (typeof p.chatId === "string") {
+    if (typeof p.chatId === "string" && isModeEnabled("chat")) {
       setInitialChatId(p.chatId);
       setMode("chat");
     }
-    if (typeof p.podcastId === "string") {
+    if (typeof p.podcastId === "string" && isModeEnabled("podcast")) {
       setInitialPodcastId(p.podcastId);
       setMode("podcast");
     }
-    if (typeof p.workspaceId === "string") {
+    if (typeof p.workspaceId === "string" && requestedWorkspaceMode) {
       setInitialWorkspaceId(p.workspaceId);
-      if (typeof p.mode === "string" && (p.mode === "chat" || p.mode === "podcast")) {
-        setMode(p.mode);
-      }
+      setMode(requestedWorkspaceMode);
     }
-    if (typeof p.sessionId === "string") {
+    if (typeof p.sessionId === "string" && isModeEnabled("teach")) {
       setInitialSessionId(p.sessionId);
       setMode("teach");
     }
@@ -142,9 +172,13 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
     // the graph instead of opening the graph view itself.
     if (typeof p.graphId === "string") {
       setInitialGraphId(p.graphId);
-      if (typeof p.mode !== "string" || p.mode === "graph") setMode("graph");
+      if (typeof p.mode !== "string" || p.mode === "graph") {
+        if (isModeEnabled("graph")) setMode("graph");
+      } else if (isModeEnabled(p.mode as Mode)) {
+        setMode(ensureEnabled(p.mode as Mode));
+      }
     }
-  }, [win.payload]);
+  }, [win.payload, loading]);
 
   return (
     <div className="relative flex h-full bg-surface">
@@ -170,9 +204,9 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
           </button>
         </div>
         <div className="flex flex-1 flex-col gap-0.5 p-2">
-          {MODES.map((m) => {
+          {MODES.filter((m) => isModeEnabled(m.id)).map((m) => {
             const Icon = m.icon;
-            const active = mode === m.id;
+            const active = activeMode === m.id;
             return (
               <button
                 key={m.id}
@@ -194,15 +228,15 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
 
       {/* Main */}
       <div className="flex-1 overflow-y-auto p-5">
-        {mode === "chat" ? (
+        {activeMode === "chat" ? (
           <div className="h-full">
             <SourceChat initialChatId={initialChatId} initialWorkspaceId={initialWorkspaceId} language={language} />
           </div>
-        ) : mode === "teach" ? (
+        ) : activeMode === "teach" ? (
           <div className="h-full">
             <TeacherMode initialSessionId={initialSessionId} language={language} />
           </div>
-        ) : mode === "graph" ? (
+        ) : activeMode === "graph" ? (
           <div className="h-full">
             <KnowledgeGraph
               initialGraphId={initialGraphId}
@@ -215,20 +249,20 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
           </div>
         ) : (
           <div className="mx-auto max-w-none @5xl:max-w-2xl">
-            {mode === "home" && <StudyHome onPickMode={(m, opts) => {
+            {activeMode === "home" && <StudyHome onPickMode={(m, opts) => {
               setMode(m as Mode);
               if (opts?.workspaceId) setInitialWorkspaceId(opts.workspaceId);
             }} />}
-            {mode === "podcast" && <Podcast initialPodcastId={initialPodcastId} initialWorkspaceId={initialWorkspaceId} language={language} />}
-            {mode === "lecture" && <LectureNotes language={language} />}
-            {mode === "flashcards" && <GenerateFlashcards initialSource={initialSource} initialGraphId={initialGraphId} appendDeck={appendDeck} language={language} />}
-            {mode === "summarize" && <Summarize initialSource={initialSource} initialGraphId={initialGraphId} language={language} />}
-            {mode === "explain" && <Explain initialSource={initialSource} initialGraphId={initialGraphId} language={language} />}
-            {mode === "study_guide" && <StudyGuide initialGraphId={initialGraphId} language={language} />}
-            {mode === "quiz" && <QuizMe initialSource={initialSource} initialGraphId={initialGraphId} preloadedQuizId={preloadedQuizId} language={language} />}
-            {mode === "syllabus" && <SyllabusTasks initialSource={initialSource} language={language} />}
-            {mode === "recent" && <RecentActivity />}
-            {mode === "highlights" && <Highlights />}
+            {activeMode === "podcast" && <Podcast initialPodcastId={initialPodcastId} initialWorkspaceId={initialWorkspaceId} language={language} />}
+            {activeMode === "lecture" && <LectureNotes language={language} />}
+            {activeMode === "flashcards" && <GenerateFlashcards initialSource={initialSource} initialGraphId={initialGraphId} appendDeck={appendDeck} language={language} />}
+            {activeMode === "summarize" && <Summarize initialSource={initialSource} initialGraphId={initialGraphId} language={language} />}
+            {activeMode === "explain" && <Explain initialSource={initialSource} initialGraphId={initialGraphId} language={language} />}
+            {activeMode === "study_guide" && <StudyGuide initialGraphId={initialGraphId} language={language} />}
+            {activeMode === "quiz" && <QuizMe initialSource={initialSource} initialGraphId={initialGraphId} preloadedQuizId={preloadedQuizId} language={language} />}
+            {activeMode === "syllabus" && <SyllabusTasks initialSource={initialSource} language={language} />}
+            {activeMode === "recent" && <RecentActivity />}
+            {activeMode === "highlights" && <Highlights />}
           </div>
         )}
       </div>

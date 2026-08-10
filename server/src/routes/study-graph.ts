@@ -8,12 +8,13 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { studyFunctionMiddleware } from "../middleware/study-functions";
 import { isLlmConfiguredFor, acquireLlmModel, LlmError } from "../services/athena/llm";
 import { resolveAndCache, type SourceDescriptor } from "../services/study/source";
 import { startBuildGraph, getGraphStatus } from "../services/study/graph";
 
 const graphRoutes = new Hono();
-graphRoutes.use("*", authMiddleware);
+graphRoutes.use("*", authMiddleware, studyFunctionMiddleware("graph"));
 
 const sourceSchema = z.object({
   kind: z.enum(["note", "file", "paste", "moodle", "url"]),

@@ -12,6 +12,7 @@ import { streamSSE } from "hono/streaming";
 import { Message } from "multi-llm-ts";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { studyFunctionMiddleware } from "../middleware/study-functions";
 import { acquireLlmModel, isLlmConfiguredFor, LlmError } from "../services/athena/llm";
 import {
   AthenaToolsPlugin,
@@ -46,7 +47,7 @@ import type { GroundedSource, StudyLanguage } from "../services/study/prompts";
 import { logSessionSafe } from "../services/study/logSession";
 
 const teacher = new Hono();
-teacher.use("*", authMiddleware);
+teacher.use("*", authMiddleware, studyFunctionMiddleware("teach"));
 
 // ---------- helpers ----------
 

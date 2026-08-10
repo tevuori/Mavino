@@ -10,10 +10,11 @@ import path from "node:path";
 import { mkdir, writeFile, stat } from "node:fs/promises";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { studyFunctionMiddleware } from "../middleware/study-functions";
 import { runLecturePipeline } from "../services/study/lecture/pipeline";
 
 const lectures = new Hono();
-lectures.use("*", authMiddleware);
+lectures.use("*", authMiddleware, studyFunctionMiddleware("lecture"));
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 

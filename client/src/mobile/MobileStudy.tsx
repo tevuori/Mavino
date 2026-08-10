@@ -3,15 +3,16 @@ import { BookOpen, Brain, FileText, GraduationCap, Lightbulb, List, Plus, Sparkl
 import { studyApi, type SourceDescriptor, type StudySession } from "../services/study";
 import { flashcardsApi } from "../services/flashcards";
 import type { MobileTool } from "./MobileLauncher";
-import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading, MobileTextarea } from "./MobileUi";
+import { useStudyFunctions } from "../apps/study/useStudyFunctions";
+import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileLoading, MobileTextarea } from "./MobileUi";
 
 type Action = "summarize" | "explain" | "studyGuide" | "flashcards";
 
-const ACTIONS: { id: Action; label: string; icon: React.ReactNode }[] = [
-  { id: "summarize", label: "Summarize", icon: <FileText size={16} /> },
-  { id: "explain", label: "Explain", icon: <Lightbulb size={16} /> },
-  { id: "studyGuide", label: "Study guide", icon: <List size={16} /> },
-  { id: "flashcards", label: "Flashcards", icon: <Brain size={16} /> },
+const ALL_ACTIONS: { id: Action; label: string; icon: React.ReactNode; functionId: string }[] = [
+  { id: "summarize", label: "Summarize", icon: <FileText size={16} />, functionId: "summarize" },
+  { id: "explain", label: "Explain", icon: <Lightbulb size={16} />, functionId: "explain" },
+  { id: "studyGuide", label: "Study guide", icon: <List size={16} />, functionId: "study_guide" },
+  { id: "flashcards", label: "Flashcards", icon: <Brain size={16} />, functionId: "flashcards" },
 ];
 
 export default function MobileStudy({
@@ -21,6 +22,7 @@ export default function MobileStudy({
   onClose?: () => void;
   onOpenTool?: (tool: MobileTool) => void;
 }) {
+  const { enabled, loading: functionsLoading } = useStudyFunctions();
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "new">("list");
@@ -29,6 +31,10 @@ export default function MobileStudy({
   const [language, setLanguage] = useState<"en" | "cs">("en");
   const [working, setWorking] = useState(false);
   const [result, setResult] = useState<{ title: string; body: string } | null>(null);
+
+  const isFunctionEnabled = (fn: string) => functionsLoading || enabled.has(fn);
+  const actions = ALL_ACTIONS.filter((a) => isFunctionEnabled(a.functionId));
+  const selectedAction = actions.find((a) => a.id === action) ?? actions[0];
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -42,20 +48,20 @@ export default function MobileStudy({
   }, [load]);
 
   const run = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() || !selectedAction) return;
     const source: SourceDescriptor = { kind: "paste", text: text.trim() };
     setWorking(true);
     try {
-      if (action === "summarize") {
+      if (selectedAction.id === "summarize") {
         const res = await studyApi.summarize({ source, mode: "keypoints", saveAsNote: true, language });
         setResult({ title: "Summary", body: res.summary });
-      } else if (action === "explain") {
+      } else if (selectedAction.id === "explain") {
         const res = await studyApi.explain({ source, depth: "standard", saveAsNote: true, language });
         setResult({ title: "Explanation", body: res.explanation });
-      } else if (action === "studyGuide") {
+      } else if (selectedAction.id === "studyGuide") {
         const res = await studyApi.studyGuide({ sources: [source], saveAsNote: true, language });
         setResult({ title: "Study guide", body: res.guide });
-      } else if (action === "flashcards") {
+      } else if (selectedAction.id === "flashcards") {
         const res = await studyApi.flashcards({
           source,
           deckName: `Mobile ${new Date().toLocaleDateString()}`,
@@ -84,13 +90,13 @@ export default function MobileStudy({
         <MobileHeader title="New study" subtitle="AI workflow" onBack={() => { setView("list"); setResult(null); }} />
 
         <div className="mb-4 grid grid-cols-2 gap-2">
-          {ACTIONS.map((a) => (
+          {actions.map((a) => (
             <button
               key={a.id}
               type="button"
               onClick={() => { setAction(a.id); setResult(null); }}
               className={`flex items-center justify-center gap-2 rounded-2xl py-2.5 text-sm font-medium ${
-                action === a.id ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+                selectedAction?.id === a.id ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
               }`}
             >
               {a.icon} {a.label}
@@ -126,10 +132,10 @@ export default function MobileStudy({
         <button
           type="button"
           onClick={() => void run()}
-          disabled={working || !text.trim()}
+          disabled={working || !text.trim() || !selectedAction}
           className="mb-4 w-full rounded-2xl bg-indigo-500 py-3 text-sm font-semibold text-white disabled:opacity-50"
         >
-          {working ? "Working…" : `Run ${ACTIONS.find((a) => a.id === action)?.label}`}
+          {working ? "Working…" : `Run ${selectedAction?.label ?? "…"}`}
         </button>
 
         {result && (
@@ -155,7 +161,7 @@ export default function MobileStudy({
 
       <div className="mb-5 rounded-2xl border border-white/10 bg-white/[.045] p-4">
         <p className="mb-3 text-sm font-semibold text-white">Quick start</p>
-        {onOpenTool && (
+        {onOpenTool && isFunctionEnabled("teach") && (
           <button
             type="button"
             onClick={() => onOpenTool("teach")}
@@ -169,7 +175,7 @@ export default function MobileStudy({
           </button>
         )}
         <div className="grid grid-cols-2 gap-2">
-          {ACTIONS.slice(0, 4).map((a) => (
+          {actions.slice(0, 4).map((a) => (
             <button
               key={a.id}
               type="button"

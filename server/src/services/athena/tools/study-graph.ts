@@ -7,8 +7,9 @@ import type { ToolDef } from "./plugin";
 import { getUserConfig, acquireLlmModel } from "../llm";
 import { resolveAndCache, type SourceDescriptor, type SourceKind } from "../../study/source";
 import { getOrBuildGraph, getGraphById } from "../../study/graph";
+import { withStudyGate } from "./study-gate";
 
-export const studyGraphTools: ToolDef[] = [
+const rawStudyGraphTools: ToolDef[] = [
   {
     name: "build_concept_graph",
     description:
@@ -82,3 +83,7 @@ export const studyGraphTools: ToolDef[] = [
     },
   },
 ];
+
+export const studyGraphTools: ToolDef[] = rawStudyGraphTools.map((t) =>
+  t.name === "build_concept_graph" || t.name === "get_concept_graph" ? withStudyGate(t, "graph") : t
+);

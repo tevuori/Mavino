@@ -7,6 +7,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
+import { studyFunctionMiddleware } from "../middleware/study-functions";
 import { getUserConfig, buildModel, isLlmConfiguredFor, acquireLlmModel, LlmError } from "../services/athena/llm";
 import { resolveSource, resolveAndCache, type SourceDescriptor, type ResolvedSource } from "../services/study/source";
 import { generateJson, generateText } from "../services/study/llm-json";
@@ -136,7 +137,7 @@ const flashcardsSchema = z.object({
   language: languageSchema,
 });
 
-study.post("/flashcards", zValidator("json", flashcardsSchema), async (c) => {
+study.post("/flashcards", studyFunctionMiddleware("flashcards"), zValidator("json", flashcardsSchema), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
 
@@ -218,7 +219,7 @@ const summarizeSchema = z.object({
   language: languageSchema,
 });
 
-study.post("/summarize", zValidator("json", summarizeSchema), async (c) => {
+study.post("/summarize", studyFunctionMiddleware("summarize"), zValidator("json", summarizeSchema), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
   const loaded = await loadModel(c, userId);
@@ -279,7 +280,7 @@ const explainSchema = z.object({
   language: languageSchema,
 });
 
-study.post("/explain", zValidator("json", explainSchema), async (c) => {
+study.post("/explain", studyFunctionMiddleware("explain"), zValidator("json", explainSchema), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
   const loaded = await loadModel(c, userId);
@@ -341,7 +342,7 @@ const studyGuideSchema = z.object({
   language: languageSchema,
 });
 
-study.post("/study-guide", zValidator("json", studyGuideSchema), async (c) => {
+study.post("/study-guide", studyFunctionMiddleware("study_guide"), zValidator("json", studyGuideSchema), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
   const loaded = await loadModel(c, userId);
@@ -402,7 +403,7 @@ const syllabusSchema = z.object({
   language: languageSchema,
 });
 
-study.post("/syllabus-tasks", zValidator("json", syllabusSchema), async (c) => {
+study.post("/syllabus-tasks", studyFunctionMiddleware("syllabus"), zValidator("json", syllabusSchema), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
   const loaded = await loadModel(c, userId);
@@ -487,7 +488,7 @@ const quizStartSchema = z.object({
   language: languageSchema,
 });
 
-study.post("/quiz/start", zValidator("json", quizStartSchema), async (c) => {
+study.post("/quiz/start", studyFunctionMiddleware("quiz"), zValidator("json", quizStartSchema), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
   const loaded = await loadModel(c, userId);
@@ -547,9 +548,10 @@ study.post("/quiz/start", zValidator("json", quizStartSchema), async (c) => {
 // ===== Quiz Me: fetch a pre-generated quiz (without answers) =====
 // Used by the QuizMe component when Athena's start_quiz tool pre-generates
 // a quiz on the server and passes the quizId via a client_action payload.
-study.get("/quiz/:id", async (c) => {
+study.get("/quiz/:id", studyFunctionMiddleware("quiz"), async (c) => {
   const { userId } = c.get("auth");
   const quizId = c.req.param("id");
+  if (!quizId) return c.json({ error: "Quiz id is required" }, 400);
   const quiz = getQuiz(quizId, userId);
   if (!quiz) return c.json({ error: "Quiz not found or expired. Please restart." }, 404);
   return c.json({
@@ -571,7 +573,7 @@ const quizAnswerSchema = z.object({
   language: languageSchema,
 });
 
-study.post("/quiz/:id/answer", zValidator("json", quizAnswerSchema), async (c) => {
+study.post("/quiz/:id/answer", studyFunctionMiddleware("quiz"), zValidator("json", quizAnswerSchema), async (c) => {
   const { userId } = c.get("auth");
   const quizId = c.req.param("id");
   const body = c.req.valid("json");
@@ -618,7 +620,7 @@ const quizFinishSchema = z.object({
   saveAsNote: z.boolean().optional().default(false),
 });
 
-study.post("/quiz/:id/finish", zValidator("json", quizFinishSchema), async (c) => {
+study.post("/quiz/:id/finish", studyFunctionMiddleware("quiz"), zValidator("json", quizFinishSchema), async (c) => {
   const { userId } = c.get("auth");
   const quizId = c.req.param("id");
   const body = c.req.valid("json");
@@ -667,7 +669,7 @@ const notesFromSourceSchema = z.object({
   language: languageSchema,
 });
 
-study.post("/notes-from-source", zValidator("json", notesFromSourceSchema), async (c) => {
+study.post("/notes-from-source", studyFunctionMiddleware("notes_from_source"), zValidator("json", notesFromSourceSchema), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
   const loaded = await loadModel(c, userId);

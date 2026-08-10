@@ -25,8 +25,9 @@ import {
 } from "../../study/prompts";
 import { logSessionSafe } from "../../study/logSession";
 import { createQuiz, type StoredQuizQuestion } from "../../study/quiz-store";
+import { withStudyGate } from "./study-gate";
 
-export const studyTools: ToolDef[] = [
+const rawStudyTools: ToolDef[] = [
   {
     name: "generate_flashcards",
     description:
@@ -426,3 +427,16 @@ export const studyTools: ToolDef[] = [
     },
   },
 ];
+
+const FUNCTION_GATE: Record<string, string> = {
+  generate_flashcards: "flashcards",
+  summarize_note: "summarize",
+  create_tasks_from_text: "syllabus",
+  explain_note: "explain",
+  generate_study_guide: "study_guide",
+  start_quiz: "quiz",
+};
+
+export const studyTools: ToolDef[] = rawStudyTools.map((t) =>
+  FUNCTION_GATE[t.name] ? withStudyGate(t, FUNCTION_GATE[t.name]) : t
+);

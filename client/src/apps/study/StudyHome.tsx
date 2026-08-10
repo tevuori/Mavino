@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Brain, FileText, HelpCircle, Lightbulb, BookOpen, ListTodo,
-  History, Sparkles, ChevronRight, TrendingUp, Clock, MessageSquare, Mic, Plus, Trash2, Link2,
+  History, Sparkles, ChevronRight, TrendingUp, Clock, MessageSquare, Mic, Plus, Trash2,
   FolderOpen, Pencil, Presentation, Video, Network,
 } from "lucide-react";
 import { studyApi, type StudySession } from "../../services/study";
@@ -12,6 +12,7 @@ import { studyWorkspacesApi, type LearningWorkspace } from "../../services/study
 import { Loading, ErrorBanner } from "./ui";
 import WorkspaceEditor from "./WorkspaceEditor";
 import { useWindows } from "../../store/windows";
+import { useStudyFunctions } from "./useStudyFunctions";
 
 interface DeckRow { id: string; name: string; color: string; _count: { cards: number }; }
 
@@ -49,6 +50,9 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const openWindow = useWindows((s) => s.open);
+  const { enabled: studyEnabled, loading: studyLoading } = useStudyFunctions();
+
+  const isFunctionEnabled = (m: string) => studyLoading || studyEnabled.has(m);
 
   const loadAll = () => {
     Promise.all([
@@ -91,7 +95,7 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
   const lastSession = sessions[0];
   const studyCount = sessions.length;
 
-  const quickActions: { mode: string; label: string; icon: typeof Brain; color: string; desc: string }[] = [
+  const allQuickActions: { mode: string; label: string; icon: typeof Brain; color: string; desc: string }[] = [
     { mode: "teach", label: "Teach Me", icon: Presentation, color: "text-indigo-400", desc: "Interactive live tutoring — Mavino teaches from your sources with voice" },
     { mode: "chat", label: "Ask (grounded)", icon: MessageSquare, color: "text-violet-400", desc: "Q&A grounded in your sources, with citations" },
     { mode: "podcast", label: "Podcast", icon: Mic, color: "text-rose-400", desc: "Audio overview from your sources" },
@@ -104,6 +108,8 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
     { mode: "study_guide", label: "Study Guide", icon: BookOpen, color: "text-emerald-400", desc: "Consolidate notes into a cheat sheet" },
     { mode: "syllabus", label: "Syllabus → Tasks", icon: ListTodo, color: "text-orange-400", desc: "Extract tasks from a syllabus" },
   ];
+
+  const quickActions = allQuickActions.filter((qa) => isFunctionEnabled(qa.mode));
 
   return (
     <div className="flex flex-col gap-4">
@@ -206,18 +212,22 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => launchWorkspace(ws, "chat")}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-edge bg-surface px-2 py-1.5 text-[11px] font-medium text-ink transition hover:border-accent/50 hover:text-accent"
-                  >
-                    <MessageSquare size={12} /> Ask
-                  </button>
-                  <button
-                    onClick={() => launchWorkspace(ws, "podcast")}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-edge bg-surface px-2 py-1.5 text-[11px] font-medium text-ink transition hover:border-accent/50 hover:text-accent"
-                  >
-                    <Mic size={12} /> Podcast
-                  </button>
+                  {isFunctionEnabled("chat") && (
+                    <button
+                      onClick={() => launchWorkspace(ws, "chat")}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-edge bg-surface px-2 py-1.5 text-[11px] font-medium text-ink transition hover:border-accent/50 hover:text-accent"
+                    >
+                      <MessageSquare size={12} /> Ask
+                    </button>
+                  )}
+                  {isFunctionEnabled("podcast") && (
+                    <button
+                      onClick={() => launchWorkspace(ws, "podcast")}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-edge bg-surface px-2 py-1.5 text-[11px] font-medium text-ink transition hover:border-accent/50 hover:text-accent"
+                    >
+                      <Mic size={12} /> Podcast
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

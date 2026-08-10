@@ -4,7 +4,7 @@ import { usersApi } from "../../../services/users";
 import { featuresAdminApi } from "../../../services/features";
 import { useAuth } from "../../../store/auth";
 import type { AdminUser, UserRole } from "../../../types";
-import { SectionHeader, Card, Field, StatusPill, MsgBox, inputClass } from "../ui";
+import { SectionHeader, Card, Field, inputClass } from "../ui";
 
 const AVATAR_PRESETS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
@@ -14,6 +14,7 @@ const AVATAR_PRESETS = [
 
 export default function UsersSection() {
   const { user: me } = useAuth();
+  const isAdmin = me?.role === "ADMIN";
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -64,39 +65,43 @@ export default function UsersSection() {
       <SectionHeader
         icon={<UsersIcon size={18} />}
         title="User Management"
-        description="Create, edit, and remove user accounts. Administrators only."
+        description="Create, edit, and remove user accounts. Managers can manage non-admin accounts; only admins can manage admin accounts."
       />
 
-      {/* Open registration toggle */}
-      <Card className="mb-3 flex items-center justify-between p-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
-            <UserPlus size={16} />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-ink">Allow new users to sign up</p>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              When enabled, the login screen shows a "Create account" form. New users
-              get the USER role (not admin). Disabled by default.
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={toggleReg}
-          disabled={regLoading}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-            regEnabled ? "bg-accent" : "bg-surface-3"
-          } disabled:opacity-50`}
-          role="switch"
-          aria-checked={regEnabled}
-        >
-          <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-              regEnabled ? "left-[22px]" : "left-0.5"
-            }`}
-          />
-        </button>
-      </Card>
+      {isAdmin && (
+        <>
+          {/* Open registration toggle */}
+          <Card className="mb-3 flex items-center justify-between p-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
+                <UserPlus size={16} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-ink">Allow new users to sign up</p>
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  When enabled, the login screen shows a "Create account" form. New users
+                  get the USER role (not admin). Disabled by default.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleReg}
+              disabled={regLoading}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+                regEnabled ? "bg-accent" : "bg-surface-3"
+              } disabled:opacity-50`}
+              role="switch"
+              aria-checked={regEnabled}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                  regEnabled ? "left-[22px]" : "left-0.5"
+                }`}
+              />
+            </button>
+          </Card>
+        </>
+      )}
 
       <div className="mb-3 flex items-center justify-between">
         <span className="text-xs text-ink-muted">{users.length} user(s)</span>
@@ -161,8 +166,11 @@ function UserRow({
   onReset: () => void;
   onChanged: () => void;
 }) {
+  const { user: me } = useAuth();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const isManager = me?.role === "MANAGER";
+  const canManage = me?.role === "ADMIN" || (isManager && u.role !== "ADMIN");
 
   const del = async () => {
     if (!confirm(`Delete user "${u.username}"? This removes all their data.`)) return;
@@ -192,6 +200,9 @@ function UserRow({
           {u.role === "ADMIN" && (
             <ShieldCheck size={13} className="shrink-0 text-accent" />
           )}
+          {u.role === "MANAGER" && (
+            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">MANAGER</span>
+          )}
           {u.role === "PAID" && (
             <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-medium text-indigo-400">PAID</span>
           )}
@@ -205,34 +216,36 @@ function UserRow({
         </p>
         {err && <p className="text-xs text-red-500">{err}</p>}
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <button
-          onClick={onEdit}
-          disabled={busy}
-          className="rounded-md p-1.5 text-ink-muted hover:bg-surface-3 hover:text-ink"
-          title="Edit"
-        >
-          <UserIcon size={15} />
-        </button>
-        <button
-          onClick={onReset}
-          disabled={busy}
-          className="rounded-md p-1.5 text-ink-muted hover:bg-surface-3 hover:text-ink"
-          title="Reset password"
-        >
-          <KeyRound size={15} />
-        </button>
-        {!isMe && (
+      {canManage && (
+        <div className="flex shrink-0 items-center gap-1">
           <button
-            onClick={del}
+            onClick={onEdit}
             disabled={busy}
-            className="rounded-md p-1.5 text-ink-muted hover:bg-red-500 hover:text-white"
-            title="Delete"
+            className="rounded-md p-1.5 text-ink-muted hover:bg-surface-3 hover:text-ink"
+            title="Edit"
           >
-            <Trash2 size={15} />
+            <UserIcon size={15} />
           </button>
-        )}
-      </div>
+          <button
+            onClick={onReset}
+            disabled={busy}
+            className="rounded-md p-1.5 text-ink-muted hover:bg-surface-3 hover:text-ink"
+            title="Reset password"
+          >
+            <KeyRound size={15} />
+          </button>
+          {!isMe && (
+            <button
+              onClick={del}
+              disabled={busy}
+              className="rounded-md p-1.5 text-ink-muted hover:bg-red-500 hover:text-white"
+              title="Delete"
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -265,6 +278,7 @@ function Modal({
 }
 
 function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { user: me } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -272,6 +286,19 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
   const [role, setRole] = useState<UserRole>("FREE");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const isAdmin = me?.role === "ADMIN";
+  const roleOptions: { value: UserRole; label: string }[] = isAdmin
+    ? [
+        { value: "FREE", label: "Free (limited AI)" },
+        { value: "PAID", label: "Paid (higher AI limits)" },
+        { value: "MANAGER", label: "Manager (user management)" },
+        { value: "ADMIN", label: "Administrator" },
+      ]
+    : [
+        { value: "FREE", label: "Free (limited AI)" },
+        { value: "PAID", label: "Paid (higher AI limits)" },
+        { value: "MANAGER", label: "Manager (user management)" },
+      ];
 
   const submit = async () => {
     if (!username.trim() || !password) return;
@@ -327,9 +354,9 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
         </Field>
         <Field label="Role">
           <select value={role} onChange={(e) => setRole(e.target.value as UserRole)} className={inputClass}>
-            <option value="FREE">Free (limited AI)</option>
-            <option value="PAID">Paid (higher AI limits)</option>
-            <option value="ADMIN">Administrator</option>
+            {roleOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
           </select>
         </Field>
         {err && <p className="text-xs text-red-500">{err}</p>}
@@ -369,6 +396,19 @@ function EditUserModal({
   const [err, setErr] = useState<string | null>(null);
 
   const isSelf = user.id === me?.id;
+  const isAdmin = me?.role === "ADMIN";
+  const roleOptions: { value: UserRole; label: string }[] = isAdmin
+    ? [
+        { value: "FREE", label: "Free (limited AI)" },
+        { value: "PAID", label: "Paid (higher AI limits)" },
+        { value: "MANAGER", label: "Manager (user management)" },
+        { value: "ADMIN", label: "Administrator" },
+      ]
+    : [
+        { value: "FREE", label: "Free (limited AI)" },
+        { value: "PAID", label: "Paid (higher AI limits)" },
+        { value: "MANAGER", label: "Manager (user management)" },
+      ];
 
   // Load the user's VUT access grant when the modal opens.
   useEffect(() => {
@@ -446,9 +486,9 @@ function EditUserModal({
             disabled={isSelf}
             className={inputClass}
           >
-            <option value="FREE">Free (limited AI)</option>
-            <option value="PAID">Paid (higher AI limits)</option>
-            <option value="ADMIN">Administrator</option>
+            {roleOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
           </select>
         </Field>
         {/* VUT integration access grant */}

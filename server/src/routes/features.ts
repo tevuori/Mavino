@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "../middleware/auth";
-import { adminMiddleware } from "../middleware/admin";
+import { adminMiddleware, adminOrManagerMiddleware } from "../middleware/admin";
 import prisma from "../db/client";
 import {
   ALL_APP_IDS,
@@ -61,13 +61,12 @@ features.put("/beta", zValidator("json", betaSchema), async (c) => {
   return c.json({ betaEnabled: enabled });
 });
 
-// ----- admin: global kill switch + per-user grants -----
+// ----- admin: global kill switch (admin only) + per-user VUT grants (admin or manager) -----
 
 const admin = new Hono();
-admin.use("*", adminMiddleware);
 
 /** GET /api/features/admin — app catalog + currently disabled apps. */
-admin.get("/", async (c) => {
+admin.get("/", adminMiddleware, async (c) => {
   const disabled = await getGlobalDisabledApps();
   return c.json({
     apps: appCatalog(),
@@ -78,7 +77,7 @@ admin.get("/", async (c) => {
 const disabledSchema = z.object({ apps: z.array(z.string()) });
 
 /** PUT /api/features/admin/disabled — set the global disabled-apps list. */
-admin.put("/disabled", zValidator("json", disabledSchema), async (c) => {
+admin.put("/disabled", adminMiddleware, zValidator("json", disabledSchema), async (c) => {
   const { apps } = c.req.valid("json");
   await setGlobalDisabledApps(apps);
   const disabled = await getGlobalDisabledApps();
@@ -86,8 +85,8 @@ admin.put("/disabled", zValidator("json", disabledSchema), async (c) => {
 });
 
 /** GET /api/features/admin/users/:userId/grants — a user's access grants. */
-admin.get("/users/:userId/grants", async (c) => {
-  const userId = c.req.param("userId");
+admin.get("/users/:userId/grants", adminOrManagerMiddleware, async (c) => {
+  const userId = c.req.param("userId")!;
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!user) return c.json({ error: "User not found" }, 404);
   const vut = await getVutGrant(userId);
@@ -97,8 +96,8 @@ admin.get("/users/:userId/grants", async (c) => {
 const grantSchema = z.object({ vut: z.boolean() });
 
 /** PUT /api/features/admin/users/:userId/grants — set a user's VUT access. */
-admin.put("/users/:userId/grants", zValidator("json", grantSchema), async (c) => {
-  const userId = c.req.param("userId");
+admin.put("/users/:userId/grants", adminOrManagerMiddleware, zValidator("json", grantSchema), async (c) => {
+  const userId = c.req.param("userId")!;
   const { vut } = c.req.valid("json");
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
   if (!user) return c.json({ error: "User not found" }, 404);

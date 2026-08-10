@@ -17,6 +17,7 @@ import { studySourcesApi } from "../../services/study-sources";
 import type { SourceDescriptor, StudyLanguage } from "../../services/study";
 import WorkspaceSourceSelector from "./WorkspaceSourceSelector";
 import { ActionButton, ErrorBanner, Loading, PreselectedSource } from "./ui";
+import { useStudyFunctions } from "./useStudyFunctions";
 
 const TYPE_COLORS: Record<string, string> = {
   concept: "#818cf8",
@@ -347,13 +348,17 @@ export default function KnowledgeGraph({ initialGraphId, language, onOpenMode }:
     return [...set];
   }, [data]);
 
-  const actions: { mode: string; label: string; icon: typeof Brain }[] = [
+  const { enabled: studyEnabled, loading: studyLoading } = useStudyFunctions();
+
+  const allActions: { mode: string; label: string; icon: typeof Brain }[] = [
     { mode: "flashcards", label: "Flashcards", icon: Brain },
     { mode: "quiz", label: "Quiz", icon: HelpCircle },
     { mode: "summarize", label: "Summarize", icon: FileText },
     { mode: "explain", label: "Explain", icon: Lightbulb },
     { mode: "study_guide", label: "Study Guide", icon: BookOpen },
   ];
+
+  const actions = allActions.filter((a) => studyLoading || studyEnabled.has(a.mode));
 
   return (
     <div className="flex h-full flex-col gap-3 p-4">
