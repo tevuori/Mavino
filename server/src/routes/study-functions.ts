@@ -49,6 +49,7 @@ const updateSchema = z.record(
   z.object({
     free: z.boolean(),
     paid: z.boolean(),
+    pro: z.boolean(),
   })
 );
 
