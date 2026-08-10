@@ -50,4 +50,5 @@ export const adminLlmApi = {
     rpd?: number;
     rpm?: number;
   }) => api.put<{ ok: boolean; config: DemoConfig }>("/api/admin/llm/demo", data),
+  cleanupDemoUsers: () => api.post<{ ok: boolean; deleted: number }>("/api/admin/llm/demo/cleanup"),
 };

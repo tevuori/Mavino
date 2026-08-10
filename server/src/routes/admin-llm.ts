@@ -12,7 +12,7 @@ import {
   setTierRateLimits,
   type LlmMode,
 } from "../services/llm-config";
-import { getDemoConfig, setDemoConfig, type DemoConfigInput } from "../services/demo";
+import { getDemoConfig, setDemoConfig, cleanupOldDemoUsers, type DemoConfigInput } from "../services/demo";
 
 const adminLlm = new Hono();
 adminLlm.use("*", authMiddleware, adminMiddleware);
@@ -105,6 +105,12 @@ adminLlm.put("/demo", zValidator("json", demoConfigSchema), async (c) => {
   const body = c.req.valid("json") as DemoConfigInput;
   const config = await setDemoConfig(body);
   return c.json({ ok: true, config });
+});
+
+/** POST /api/admin/llm/demo/cleanup — manually delete expired demo users. */
+adminLlm.post("/demo/cleanup", async (c) => {
+  const deleted = await cleanupOldDemoUsers();
+  return c.json({ ok: true, deleted });
 });
 
 export default adminLlm;

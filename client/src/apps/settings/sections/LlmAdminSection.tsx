@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Sparkles, KeyRound, Gauge, Trash2, Check, AlertCircle, Play } from "lucide-react";
+import { Sparkles, KeyRound, Gauge, Trash2, Check, AlertCircle, Play, Loader2 } from "lucide-react";
 import { adminLlmApi, type GlobalLlmConfig, type TierRateLimitsMap, type DemoConfig } from "../../../services/admin-llm";
 import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass } from "../ui";
 
@@ -350,6 +350,7 @@ function DemoModeCard() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState(false);
+  const [cleanupBusy, setCleanupBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -390,6 +391,20 @@ function DemoModeCard() {
       setMsg(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const runCleanup = async () => {
+    setCleanupBusy(true);
+    try {
+      const res = await adminLlmApi.cleanupDemoUsers();
+      setMsg(`Cleaned up ${res.deleted} expired demo user(s).`);
+      setErr(false);
+    } catch (e) {
+      setErr(true);
+      setMsg(e instanceof Error ? e.message : "Cleanup failed");
+    } finally {
+      setCleanupBusy(false);
     }
   };
 
@@ -467,10 +482,19 @@ function DemoModeCard() {
         </Field>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <SaveButton busy={busy} onClick={save} disabled={busy}>
           Save demo settings
         </SaveButton>
+        <button
+          type="button"
+          onClick={runCleanup}
+          disabled={cleanupBusy}
+          className="flex items-center gap-1.5 rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:bg-surface-3 hover:text-ink disabled:opacity-50"
+        >
+          {cleanupBusy ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+          Clean up expired demo users
+        </button>
       </div>
       <MsgBox msg={msg} error={err} />
     </Card>
