@@ -36,6 +36,15 @@
           "value": "public, max-age=31536000, immutable"
         }
       ]
+    },
+    {
+      "source": "/((?!api|assets|sw.js|manifest.webmanifest|favicon|icon-|apple-touch-icon).+)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
     }
   ]
 }

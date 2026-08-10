@@ -1,5 +1,6 @@
 import { lazy, type ComponentType } from "react";
 import type { AppId, WindowInstance } from "../store/windows";
+import { isStaleChunkError, reloadWithCacheBust } from "../services/stale-chunk";
 
 // All app components are lazy-loaded via React.lazy() so they split into
 // separate chunks. The app metadata (id, name, icon) is eager so the taskbar,
@@ -20,18 +21,11 @@ function lazyImport<T extends { default: ComponentType<any> }>(
 ): React.LazyExoticComponent<T["default"]> {
   return lazy(() =>
     factory().catch((err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (
-        msg.includes("Failed to fetch dynamically imported module") ||
-        msg.includes("error loading dynamically imported module") ||
-        msg.includes("Importing a module script failed")
-      ) {
+      if (isStaleChunkError(err)) {
         // The current page has stale chunk references — reload to get the
         // latest index.html. Use a cache-busting query param so the browser
         // doesn't serve a cached HTML document.
-        if (!location.search.includes("_reload=")) {
-          location.replace(`${location.pathname}?_reload=${Date.now()}${location.hash}`);
-        }
+        reloadWithCacheBust();
         // Return a never-resolving promise so React stays in Suspense while
         // the reload happens.
         return new Promise<T>(() => {});
