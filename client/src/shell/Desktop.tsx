@@ -105,8 +105,8 @@ export default function Desktop() {
       onContextMenu={onContextMenu}
       onClick={() => menu && setMenu(null)}
     >
-      {/* Desktop icons */}
-      <div className="absolute left-3 top-3 flex flex-col flex-wrap gap-1" style={{ maxHeight: "calc(100% - 24px)" }}>
+      {/* Desktop icons — fixed-height cells so 2-line names don't break the grid */}
+      <div className="absolute left-3 top-3 grid grid-flow-col grid-rows-[repeat(auto-fill,88px)] gap-1" style={{ height: "calc(100% - 24px)" }}>
         {apps.filter((a) => a.pinnedToDesktop).map((app) => {
           const Icon = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number }>>)[app.icon] ?? Lucide.AppWindow;
           return (
@@ -114,9 +114,9 @@ export default function Desktop() {
               key={app.id}
               onDoubleClick={() => open({ appId: app.id, title: app.name, icon: app.icon })}
               onClick={(e) => e.stopPropagation()}
-              className="group flex w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition hover:bg-white/10 focus:bg-accent/20"
+              className="group flex h-[88px] w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition hover:bg-white/10 focus:bg-accent/20"
             >
-              <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white shadow-lg backdrop-blur-sm transition group-hover:scale-105">
+              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white shadow-lg backdrop-blur-sm transition group-hover:scale-105">
                 <Icon size={22} />
                 {app.access === "preview" && (
                   <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-white/20">
@@ -124,7 +124,7 @@ export default function Desktop() {
                   </span>
                 )}
               </div>
-              <span className="text-xs font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+              <span className="line-clamp-2 w-full text-xs font-medium leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                 {app.name}
               </span>
             </button>
