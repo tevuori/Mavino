@@ -7,15 +7,16 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import * as Lucide from "lucide-react";
 import {
   Store, Search, Download, Trash2, Check, Loader2, Star, Puzzle,
-  Wrench, ShieldAlert, Lock, RefreshCw, Filter, CircleCheck,
+  Wrench, ShieldAlert, Lock, RefreshCw, Filter, CircleCheck, Code2,
 } from "lucide-react";
 import type { WindowInstance } from "../../store/windows";
 import { pluginsApi, type PluginCatalogEntry } from "../../services/plugins";
 import { usePlugins } from "../../store/plugins";
 import { useFeatures } from "../../store/features";
 import { SectionHeader, Card, MsgBox } from "../settings/ui";
+import DeveloperGuide from "./DeveloperGuide";
 
-type Tab = "browse" | "installed";
+type Tab = "browse" | "installed" | "develop";
 
 export default function MarketplaceApp({ win: _win }: { win: WindowInstance }) {
   const [tab, setTab] = useState<Tab>("browse");
@@ -137,10 +138,19 @@ export default function MarketplaceApp({ win: _win }: { win: WindowInstance }) {
             icon={<Puzzle size={14} />}
             label={`Installed (${installedList.length})`}
           />
+          <TabButton
+            active={tab === "develop"}
+            onClick={() => setTab("develop")}
+            icon={<Code2 size={14} />}
+            label="Develop"
+          />
         </div>
       </div>
 
       {/* Content */}
+      {tab === "develop" ? (
+        <DeveloperGuide />
+      ) : (
       <div className="flex-1 overflow-y-auto p-5">
         {tab === "browse" ? (
           <>
@@ -235,6 +245,7 @@ export default function MarketplaceApp({ win: _win }: { win: WindowInstance }) {
         )}
         <MsgBox msg={err} error />
       </div>
+      )}
     </div>
   );
 }
