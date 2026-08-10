@@ -64,6 +64,8 @@ const RemindersApp = lazyImport(() => import("./reminders/RemindersApp"));
 const AnalyticsApp = lazyImport(() => import("./analytics/AnalyticsApp"));
 const MoodleApp = lazyImport(() => import("./moodle/MoodleApp"));
 const MapsApp = lazyImport(() => import("./maps/MapsApp"));
+const PlansApp = lazyImport(() => import("./plans/PlansApp"));
+const MarketplaceApp = lazyImport(() => import("./marketplace/MarketplaceApp"));
 
 export interface AppDefinition {
   id: AppId;
@@ -71,9 +73,10 @@ export interface AppDefinition {
   icon: string; // lucide icon name
   component: ComponentType<{ win: WindowInstance }>;
   pinnedToDesktop?: boolean;
-  /** Availability tier. "core" apps are always available; "beta" apps require
-   *  the per-user Beta toggle in Settings. Mirrors server/services/features.ts. */
-  tier?: "core" | "beta";
+  /** Minimum subscription tier required to fully access this app. "free" apps
+   *  are always available; "paid"/"pro" apps show a lock badge + paywall
+   *  preview for lower-tier users. Mirrors server/services/features.ts. */
+  minTier?: "free" | "paid" | "pro";
   /** When set, the app requires an admin-granted access flag (e.g. "vut" for
    *  VUT + Moodle, which ride on the VUT SSO session). */
   requiresGrant?: "vut";
@@ -86,30 +89,34 @@ export interface AppDefinition {
 }
 
 export const APPS: AppDefinition[] = [
-  // ----- Core (always available) -----
-  { id: "notes", name: "Notes", icon: "StickyNote", component: NotesApp, pinnedToDesktop: true, tier: "core" },
-  { id: "tasks", name: "Tasks", icon: "CheckSquare", component: TasksApp, pinnedToDesktop: true, tier: "core" },
-  { id: "files", name: "Files", icon: "Folder", component: FilesApp, pinnedToDesktop: true, tier: "core" },
-  { id: "whiteboard", name: "Whiteboard", icon: "PenTool", component: WhiteboardApp, pinnedToDesktop: true, fullscreenOnMobile: true, tier: "core" },
-  { id: "study", name: "Study Hub", icon: "GraduationCap", component: StudyApp, pinnedToDesktop: true, tier: "core" },
-  { id: "athena", name: "Mavino", icon: "Sparkles", component: AthenaApp, pinnedToDesktop: true, tier: "core" },
-  { id: "today", name: "Today", icon: "CalendarCheck", component: TodayApp, pinnedToDesktop: true, tier: "core" },
-  { id: "settings", name: "Settings", icon: "Settings", component: SettingsApp, pinnedToDesktop: false, tier: "core" },
+  // ----- Free tier (always available) -----
+  { id: "notes", name: "Notes", icon: "StickyNote", component: NotesApp, pinnedToDesktop: true, minTier: "free" },
+  { id: "tasks", name: "Tasks", icon: "CheckSquare", component: TasksApp, pinnedToDesktop: true, minTier: "free" },
+  { id: "files", name: "Files", icon: "Folder", component: FilesApp, pinnedToDesktop: true, minTier: "free" },
+  { id: "whiteboard", name: "Whiteboard", icon: "PenTool", component: WhiteboardApp, pinnedToDesktop: true, fullscreenOnMobile: true, minTier: "free" },
+  { id: "study", name: "Study Hub", icon: "GraduationCap", component: StudyApp, pinnedToDesktop: true, minTier: "free" },
+  { id: "athena", name: "Mavino", icon: "Sparkles", component: AthenaApp, pinnedToDesktop: true, minTier: "free" },
+  { id: "today", name: "Today", icon: "CalendarCheck", component: TodayApp, pinnedToDesktop: true, minTier: "free" },
+  { id: "settings", name: "Settings", icon: "Settings", component: SettingsApp, pinnedToDesktop: false, minTier: "free" },
+  { id: "plans", name: "Plans", icon: "CreditCard", component: PlansApp, pinnedToDesktop: true, minTier: "free" },
 
-  // ----- Beta (per-user toggle in Settings) -----
-  { id: "editor", name: "Editor", icon: "Code2", component: EditorApp, pinnedToDesktop: true, hideOnMobile: true, tier: "beta" },
-  { id: "viewer", name: "Viewer", icon: "Eye", component: ViewerApp, pinnedToDesktop: false, fullscreenOnMobile: true, hideOnMobile: true, tier: "beta" },
-  { id: "pomodoro", name: "Pomodoro", icon: "Timer", component: PomodoroApp, pinnedToDesktop: true, tier: "beta" },
-  { id: "flashcards", name: "Flashcards", icon: "Brain", component: FlashcardsApp, pinnedToDesktop: true, tier: "beta" },
-  { id: "grades", name: "Grades", icon: "GraduationCap", component: GradesApp, pinnedToDesktop: true, tier: "beta" },
-  { id: "calendar", name: "Calendar", icon: "Calendar", component: CalendarApp, pinnedToDesktop: true, tier: "beta" },
-  { id: "habits", name: "Habits", icon: "Flame", component: HabitsApp, pinnedToDesktop: true, tier: "beta" },
-  { id: "ntfy", name: "Ntfy", icon: "Bell", component: NtfyApp, pinnedToDesktop: false, tier: "beta" },
-  { id: "voice", name: "Voice Notes", icon: "Mic", component: VoiceApp, pinnedToDesktop: true, tier: "beta" },
-  { id: "browser", name: "Browser", icon: "Globe", component: BrowserApp, pinnedToDesktop: true, tier: "beta" },
-  { id: "reminders", name: "Reminders", icon: "BellRing", component: RemindersApp, pinnedToDesktop: false, tier: "beta" },
-  { id: "analytics", name: "Analytics", icon: "BarChart3", component: AnalyticsApp, pinnedToDesktop: true, tier: "beta" },
-  { id: "maps", name: "Maps", icon: "Map", component: MapsApp, pinnedToDesktop: true, tier: "beta" },
+  // ----- Paid tier (preview for free users) -----
+  { id: "editor", name: "Editor", icon: "Code2", component: EditorApp, pinnedToDesktop: true, hideOnMobile: true, minTier: "paid" },
+  { id: "viewer", name: "Viewer", icon: "Eye", component: ViewerApp, pinnedToDesktop: false, fullscreenOnMobile: true, hideOnMobile: true, minTier: "paid" },
+  { id: "pomodoro", name: "Pomodoro", icon: "Timer", component: PomodoroApp, pinnedToDesktop: true, minTier: "paid" },
+  { id: "flashcards", name: "Flashcards", icon: "Brain", component: FlashcardsApp, pinnedToDesktop: true, minTier: "paid" },
+  { id: "grades", name: "Grades", icon: "GraduationCap", component: GradesApp, pinnedToDesktop: true, minTier: "paid" },
+  { id: "calendar", name: "Calendar", icon: "Calendar", component: CalendarApp, pinnedToDesktop: true, minTier: "paid" },
+  { id: "habits", name: "Habits", icon: "Flame", component: HabitsApp, pinnedToDesktop: true, minTier: "paid" },
+  { id: "ntfy", name: "Ntfy", icon: "Bell", component: NtfyApp, pinnedToDesktop: false, minTier: "paid" },
+  { id: "voice", name: "Voice Notes", icon: "Mic", component: VoiceApp, pinnedToDesktop: true, minTier: "paid" },
+  { id: "browser", name: "Browser", icon: "Globe", component: BrowserApp, pinnedToDesktop: true, minTier: "paid" },
+  { id: "reminders", name: "Reminders", icon: "BellRing", component: RemindersApp, pinnedToDesktop: false, minTier: "paid" },
+  { id: "analytics", name: "Analytics", icon: "BarChart3", component: AnalyticsApp, pinnedToDesktop: true, minTier: "paid" },
+  { id: "maps", name: "Maps", icon: "Map", component: MapsApp, pinnedToDesktop: true, minTier: "paid" },
+
+  // ----- Marketplace (paid tier — browse/install community plugins) -----
+  { id: "marketplace", name: "Marketplace", icon: "Store", component: MarketplaceApp, pinnedToDesktop: true, minTier: "paid" },
 
   // ----- Admin-granted (VUT SSO → VUT + Moodle) -----
   { id: "vut", name: "VUT", icon: "GraduationCap", component: VUTApp, pinnedToDesktop: true, requiresGrant: "vut" },
@@ -119,3 +126,19 @@ export const APPS: AppDefinition[] = [
 export const APP_MAP: Record<AppId, AppDefinition> = Object.fromEntries(
   APPS.map((a) => [a.id, a])
 ) as Record<AppId, AppDefinition>;
+
+// ----- Plugin apps (dynamically installed from the marketplace) -----
+
+/** Prefix for synthetic plugin app ids: `plugin:<pluginKey>`. */
+export const PLUGIN_APP_PREFIX = "plugin:";
+
+/** True if an app id refers to a dynamically-installed plugin. */
+export function isPluginAppId(appId: string): boolean {
+  return appId.startsWith(PLUGIN_APP_PREFIX);
+}
+
+/** Extract the pluginKey from a plugin app id, or null. */
+export function pluginKeyFromAppId(appId: string): string | null {
+  if (!appId.startsWith(PLUGIN_APP_PREFIX)) return null;
+  return appId.slice(PLUGIN_APP_PREFIX.length);
+}

@@ -10,7 +10,6 @@ import {
   Plug,
   Bell,
   BellRing,
-  FlaskConical,
   Users as UsersIcon,
   Database,
   Info,
@@ -20,6 +19,8 @@ import {
   LayoutGrid,
   AlertTriangle,
   GraduationCap,
+  CreditCard,
+  Puzzle,
 } from "lucide-react";
 import { useAuth } from "../../store/auth";
 import type { WindowInstance } from "../../store/windows";
@@ -34,8 +35,9 @@ import IntegrationsSection from "./sections/IntegrationsSection";
 import NotificationsSection from "./sections/NotificationsSection";
 import ProactiveAlertsSection from "./sections/ProactiveAlertsSection";
 import UsersSection from "./sections/UsersSection";
-import BetaSection from "./sections/BetaSection";
 import AppsSection from "./sections/AppsSection";
+import TiersSection from "./sections/TiersSection";
+import PluginsAdminSection from "./sections/PluginsAdminSection";
 import LlmAdminSection from "./sections/LlmAdminSection";
 import StorageAdminSection from "./sections/StorageAdminSection";
 import ErrorLogSection from "./sections/ErrorLogSection";
@@ -67,9 +69,10 @@ const SECTIONS: SectionDef[] = [
   { id: "integrations", label: "Integrations", icon: <Plug size={15} /> },
   { id: "notifications", label: "Notifications", icon: <Bell size={15} /> },
   { id: "proactive-alerts", label: "Proactive Alerts", icon: <BellRing size={15} /> },
-  { id: "beta", label: "Beta Apps", icon: <FlaskConical size={15} /> },
   { id: "users", label: "Users", icon: <UsersIcon size={15} />, managerAllowed: true },
   { id: "apps", label: "Apps", icon: <LayoutGrid size={15} />, adminOnly: true },
+  { id: "plugins", label: "Plugins", icon: <Puzzle size={15} />, adminOnly: true },
+  { id: "tiers", label: "Tiers & Plans", icon: <CreditCard size={15} />, adminOnly: true },
   { id: "llm-admin", label: "LLM Config", icon: <Sparkles size={15} />, adminOnly: true },
   { id: "storage-admin", label: "Storage Quotas", icon: <Database size={15} />, adminOnly: true },
   { id: "study-hub", label: "Study Hub", icon: <GraduationCap size={15} />, adminOnly: true },
@@ -105,9 +108,10 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
     if (active === "integrations") return <IntegrationsSection />;
     if (active === "notifications") return <NotificationsSection />;
     if (active === "proactive-alerts") return <ProactiveAlertsSection />;
-    if (active === "beta") return <BetaSection />;
     if (active === "users" && isAdminOrManager) return <UsersSection />;
     if (active === "apps" && isAdmin) return <AppsSection />;
+    if (active === "plugins" && isAdmin) return <PluginsAdminSection />;
+    if (active === "tiers" && isAdmin) return <TiersSection />;
     if (active === "llm-admin" && isAdmin) return <LlmAdminSection />;
     if (active === "storage-admin" && isAdmin) return <StorageAdminSection />;
     if (active === "study-hub" && isAdmin) return <StudyHubSection />;

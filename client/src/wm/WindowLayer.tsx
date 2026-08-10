@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import { useWindows } from "../store/windows";
-import { APP_MAP } from "../apps/registry";
+import { APP_MAP, isPluginAppId } from "../apps/registry";
 import Window from "./Window";
+import LockedAppPreview from "../shell/LockedAppPreview";
+import PluginAppWrapper from "../apps/plugins/PluginAppWrapper";
 
 /** Loading fallback shown while a lazy-loaded app chunk is downloading. */
 function AppLoader() {
@@ -20,13 +22,27 @@ export default function WindowLayer() {
   return (
     <>
       {visible.map((win) => {
+        const isPreview = Boolean(win.payload?.preview);
+        // Plugin apps: render via PluginAppWrapper (not in the static APP_MAP).
+        if (isPluginAppId(win.appId)) {
+          return (
+            <Window key={win.id} win={win}>
+              <Suspense fallback={<AppLoader />}>
+                <PluginAppWrapper win={win} />
+              </Suspense>
+            </Window>
+          );
+        }
         const def = APP_MAP[win.appId];
         if (!def) return null;
-        const App = def.component;
         return (
           <Window key={win.id} win={win}>
             <Suspense fallback={<AppLoader />}>
-              <App win={win} />
+              {isPreview ? (
+                <LockedAppPreview win={win} />
+              ) : (
+                <def.component win={win} />
+              )}
             </Suspense>
           </Window>
         );

@@ -1,5 +1,5 @@
-import { ArrowLeft, BookOpen, Brain, FileText, Flame, Folder, Globe, GraduationCap, Mic, Music2, NotebookPen, PenTool, Settings, Timer, BellRing, Search } from "lucide-react";
-import { useFeatures } from "../store/features";
+import { ArrowLeft, BookOpen, Brain, FileText, Flame, Folder, Globe, GraduationCap, Mic, Music2, NotebookPen, PenTool, Settings, Timer, BellRing, Search, Lock } from "lucide-react";
+import { useFeatures, type SubscriptionTier } from "../store/features";
 import { APP_MAP } from "../apps/registry";
 import type { AppId } from "../store/windows";
 
@@ -34,21 +34,28 @@ const ALL_APPS: { id: MobileTool; name: string; description: string; icon: typeo
   { id: "ntfy", name: "Ntfy", description: "Messages and automations", icon: Music2 }, { id: "settings", name: "Settings", description: "Account and preferences", icon: Settings }, { id: "editor", name: "Editor", description: "Text and code files", icon: FileText },
 ];
 
+const TIER_RANK: Record<SubscriptionTier, number> = { free: 0, paid: 1, pro: 2 };
+
 export default function MobileLauncher({ onClose, onOpen }: { onClose: () => void; onOpen: (tool: MobileTool) => void }) {
   // Filter tools by the same availability rules as the desktop launch surfaces.
-  const betaEnabled = useFeatures((s) => s.betaEnabled);
+  const subscriptionTier = useFeatures((s) => s.subscriptionTier);
   const vutGranted = useFeatures((s) => s.vutGranted);
   const disabledApps = useFeatures((s) => s.disabledApps);
-  const apps = ALL_APPS.filter((a) => {
+  const appTiers = useFeatures((s) => s.appTiers);
+  const apps = ALL_APPS.map((a) => {
     const appId = TOOL_TO_APP_ID[a.id];
-    if (appId === "settings") return true;
-    if (disabledApps.has(appId)) return false;
     const def = APP_MAP[appId];
-    if (!def) return false;
-    if (def.requiresGrant === "vut") return vutGranted;
-    if (def.tier === "beta") return betaEnabled;
-    return true;
-  });
+    let access: "full" | "preview" | "hidden" = "full";
+    if (appId === "settings") access = "full";
+    else if (disabledApps.has(appId)) access = "hidden";
+    else if (!def) access = "hidden";
+    else if (def.requiresGrant === "vut") access = vutGranted ? "full" : "hidden";
+    else {
+      const minTier = appTiers[appId] ?? def.minTier ?? "free";
+      access = TIER_RANK[subscriptionTier] >= TIER_RANK[minTier] ? "full" : "preview";
+    }
+    return { ...a, access };
+  }).filter((a) => a.access !== "hidden");
 
-  return <div className="mx-auto min-w-0 max-w-md px-5 pb-7 pt-[max(1.5rem,env(safe-area-inset-top))]"><header className="mb-6 flex items-center gap-3"><button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[.06] text-white"><ArrowLeft size={21} /></button><div><p className="text-sm font-medium text-indigo-300">Everything else</p><h1 className="text-3xl font-bold text-white">Your tools</h1></div></header><label className="mb-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.05] px-4 py-3 text-slate-400"><Search size={18} /><input placeholder="Search apps" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500" /></label><div className="grid grid-cols-2 gap-3">{apps.map(({ id, name, description, icon: Icon }) => <button key={id} type="button" onClick={() => onOpen(id)} className="min-h-32 rounded-3xl border border-white/10 bg-white/[.045] p-4 text-left active:scale-[.98] active:bg-white/[.08]"><span className="mb-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-300"><Icon size={20} /></span><p className="font-semibold text-white">{name}</p><p className="mt-1 text-xs leading-5 text-slate-400">{description}</p></button>)}</div></div>;
+  return <div className="mx-auto min-w-0 max-w-md px-5 pb-7 pt-[max(1.5rem,env(safe-area-inset-top))]"><header className="mb-6 flex items-center gap-3"><button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[.06] text-white"><ArrowLeft size={21} /></button><div><p className="text-sm font-medium text-indigo-300">Everything else</p><h1 className="text-3xl font-bold text-white">Your tools</h1></div></header><label className="mb-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.05] px-4 py-3 text-slate-400"><Search size={18} /><input placeholder="Search apps" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500" /></label><div className="grid grid-cols-2 gap-3">{apps.map(({ id, name, description, icon: Icon, access }) => <button key={id} type="button" onClick={() => onOpen(id)} className="relative min-h-32 rounded-3xl border border-white/10 bg-white/[.045] p-4 text-left active:scale-[.98] active:bg-white/[.08]"><span className="mb-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-300"><Icon size={20} /></span><p className="flex items-center gap-1.5 font-semibold text-white">{name}{access === "preview" && <Lock size={12} className="text-amber-400" />}</p><p className="mt-1 text-xs leading-5 text-slate-400">{description}</p></button>)}</div></div>;
 }

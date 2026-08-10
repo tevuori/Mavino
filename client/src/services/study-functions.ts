@@ -11,6 +11,7 @@ export interface StudyFunctionDef {
 export interface StudyFunctionTierConfig {
   free: boolean;
   paid: boolean;
+  pro: boolean;
 }
 
 export type StudyFunctionConfig = Record<string, StudyFunctionTierConfig>;

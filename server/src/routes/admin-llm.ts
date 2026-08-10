@@ -68,6 +68,8 @@ adminLlm.get("/rate-limits", async (c) => {
 });
 
 const rateLimitSchema = z.object({
+  proRpd: z.number().int().min(0).max(100000).optional(),
+  proRpm: z.number().int().min(0).max(10000).optional(),
   paidRpd: z.number().int().min(0).max(100000).optional(),
   paidRpm: z.number().int().min(0).max(10000).optional(),
   freeRpd: z.number().int().min(0).max(100000).optional(),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./store/auth";
 import { useFeatures } from "./store/features";
+import { usePlugins } from "./store/plugins";
 import { useFormFactor, initFormFactorListeners } from "./store/formfactor";
 import { installGlobalErrorHandlers } from "./services/errorReporter";
 import { cleanupStaleServiceWorkersInDev } from "./services/sw-cleanup";
@@ -19,6 +20,7 @@ type Phase = "boot" | "app";
 export default function App() {
   const { status, user, refresh } = useAuth();
   const loadFeatures = useFeatures((s) => s.load);
+  const loadPlugins = usePlugins((s) => s.load);
   const mode = useFormFactor((s) => s.mode);
   const [phase, setPhase] = useState<Phase>("boot");
 
@@ -33,11 +35,15 @@ export default function App() {
     return cleanup;
   }, [refresh]);
 
-  // Load feature flags (beta toggle, VUT grant, disabled apps) once
-  // authenticated so launch surfaces filter correctly.
+  // Load feature flags (subscription tier, VUT grant, disabled apps) once
+  // authenticated so launch surfaces filter correctly. Also load installed
+  // plugins so they appear in the taskbar / start menu / desktop.
   useEffect(() => {
-    if (status === "authenticated") void loadFeatures();
-  }, [status, loadFeatures]);
+    if (status === "authenticated") {
+      void loadFeatures();
+      void loadPlugins();
+    }
+  }, [status, loadFeatures, loadPlugins]);
 
   if (phase === "boot") {
     return <BootScreen onDone={() => setPhase("app")} />;

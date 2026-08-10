@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { isAppAvailable } from "./features";
+import { isAppAccessible, isAppAvailable } from "./features";
 
 export type AppId =
   | "notes"
@@ -25,7 +25,13 @@ export type AppId =
   | "reminders"
   | "analytics"
   | "moodle"
-  | "maps";
+  | "maps"
+  | "plans"
+  | "marketplace"
+  // Plugin apps use synthetic ids of the form `plugin:<pluginKey>`. The
+  // `(string & {})` catch-all preserves autocomplete for the literal union
+  // above while allowing any string for dynamically-installed plugins.
+  | (string & {});
 
 export interface WindowRect {
   x: number;
@@ -169,7 +175,7 @@ function seedWorkspaces(): { workspaces: Workspace[]; activeWorkspaceId: string 
   return { workspaces: [w1, w2], activeWorkspaceId: w1.id };
 }
 
-const DEFAULT_SIZE: Record<AppId, WindowRect> = {
+const DEFAULT_SIZE: Partial<Record<AppId, WindowRect>> = {
   notes: { x: 120, y: 80, width: 880, height: 600 },
   tasks: { x: 180, y: 100, width: 920, height: 560 },
   files: { x: 100, y: 60, width: 820, height: 560 },
@@ -194,6 +200,7 @@ const DEFAULT_SIZE: Record<AppId, WindowRect> = {
   analytics: { x: 140, y: 70, width: 980, height: 680 },
   moodle: { x: 120, y: 60, width: 960, height: 660 },
   maps: { x: 120, y: 60, width: 1040, height: 700 },
+  plans: { x: 200, y: 80, width: 720, height: 640 },
 };
 
 function clampToViewport(rect: WindowRect): WindowRect {
@@ -224,7 +231,7 @@ function computeRestoredRect(win: WindowInstance): WindowRect {
   const vw = window.innerWidth;
   const vh = window.innerHeight - TASKBAR_H;
   const prev = win.prevRect && !isFullscreenRect(win.prevRect) ? win.prevRect : null;
-  const base = prev ?? DEFAULT_SIZE[win.appId];
+  const base = prev ?? DEFAULT_SIZE[win.appId] ?? { x: 200, y: 100, width: 880, height: 600 };
   const width = Math.min(base.width, vw - 20);
   const height = Math.min(base.height, vh - 20);
   const x = Math.max(0, Math.floor((vw - width) / 2));
@@ -293,14 +300,18 @@ export const useWindows = create<WindowsState>((set, get) => ({
       return existing.id;
     }
     // App availability guard: refuse to open apps the user can't access
-    // (beta toggle off, VUT not granted, or admin kill-switched). This catches
-    // deep links / Athena tool dispatch that bypass the filtered launch
-    // surfaces. Settings is always openable.
-    if (!isAppAvailable(appId)) {
+    // (tier too low with no preview, VUT not granted, or admin kill-switched).
+    // Preview-mode apps are allowed to open — the window content is wrapped
+    // in a paywall overlay by the window renderer. This catches deep links /
+    // Athena tool dispatch that bypass the filtered launch surfaces.
+    // Settings is always openable.
+    const access = isAppAccessible(appId);
+    if (access === "hidden") {
       return "";
     }
+    const isPreview = access === "preview";
     const id = nextId();
-    const base = DEFAULT_SIZE[appId];
+    const base = DEFAULT_SIZE[appId] ?? { x: 200, y: 100, width: 880, height: 600 };
     // If an explicit rect with x/y is provided, use it directly (no cascade, no auto-tile).
     // Otherwise, the window will be auto-tiled with the other windows.
     const hasExplicitPos = rect && (rect.x !== undefined || rect.y !== undefined);
@@ -326,7 +337,7 @@ export const useWindows = create<WindowsState>((set, get) => ({
       closing: false,
       alwaysOnTop,
       workspaceId: state.activeWorkspaceId,
-      payload,
+      payload: isPreview ? { ...payload, preview: true } : payload,
     };
     set({ windows: [...state.windows, win], focusedId: id, zCounter: z });
 

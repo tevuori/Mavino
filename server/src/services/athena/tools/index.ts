@@ -28,6 +28,7 @@ import { teacherTools } from "./teacher";
 import { ntfyTools } from "./ntfy";
 import { reminderTools } from "./reminders";
 import { mapTools } from "./maps";
+import { loadPluginTools } from "../../plugins";
 
 export { AthenaToolsPlugin, type ToolDef, type ToolContext, type ClientWindowInfo } from "./plugin";
 
@@ -73,9 +74,25 @@ export function toolsForRole(role: string): ToolDef[] {
   return ALL_TOOLS.filter((t) => !t.paidOnly);
 }
 
+/**
+ * Build the tool list for a user: built-in tools (filtered by role) + any
+ * plugin tools from the user's installed+enabled plugins. Plugin tools are
+ * only loaded for paid/pro users (the marketplace is paid-only).
+ */
+export async function toolsForUser(userId: string, role: string): Promise<ToolDef[]> {
+  const builtin = toolsForRole(role);
+  if (!PAID_TIERS.has(role)) return builtin;
+  try {
+    const pluginTools = await loadPluginTools(userId);
+    return [...builtin, ...pluginTools];
+  } catch {
+    // Plugin loading failure should never break Athena chat.
+    return builtin;
+  }
+}
+
 /** Tool metadata safe to expose to the client (no handlers). */
-export function toolManifest(role?: string) {
-  const tools = role ? toolsForRole(role) : ALL_TOOLS;
+export function toolManifest(tools: ToolDef[]) {
   return tools.map((t) => ({
     name: t.name,
     description: t.description,

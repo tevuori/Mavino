@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import * as Lucide from "lucide-react";
+import { Lock } from "lucide-react";
 import AppLogo from "./AppLogo";
 import { useWindows } from "../store/windows";
-import { useAvailableApps } from "../store/features";
+import { useAccessibleApps } from "../store/features";
 import StartMenu from "./StartMenu";
 import SystemTray from "./SystemTray";
 import WorkspaceSwitcher from "../wm/WorkspaceSwitcher";
@@ -13,7 +14,7 @@ interface Props {
 
 export default function Taskbar({ onOpenOverview }: Props) {
   const { windows, focusedId, restoreOrMinimize, open } = useWindows();
-  const apps = useAvailableApps();
+  const apps = useAccessibleApps();
   const activeWorkspaceId = useWindows((s) => s.activeWorkspaceId);
   const switchWorkspace = useWindows((s) => s.switchWorkspace);
   const [startOpen, setStartOpen] = useState(false);
@@ -84,6 +85,11 @@ export default function Taskbar({ onOpenOverview }: Props) {
                 title={app.name}
               >
                 <Icon size={18} />
+                {app.access === "preview" && (
+                  <span className="absolute right-0 top-0 text-amber-500">
+                    <Lock size={8} />
+                  </span>
+                )}
                 {isRunning && (
                   <span
                     className={`absolute bottom-0.5 left-1/2 h-1 -translate-x-1/2 rounded-full ${

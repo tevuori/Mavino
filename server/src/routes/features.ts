@@ -1,6 +1,7 @@
 // ===== Feature flags routes =====
-// Per-user beta toggle, admin global app kill-switch, and admin per-user
-// VUT access grants. Backed by services/features.ts (Setting key/value rows).
+// Per-user subscription tier, app tier assignments, admin global app
+// kill-switch, and admin per-user VUT access grants. Backed by
+// services/features.ts (Setting key/value rows).
 
 import { Hono } from "hono";
 import { z } from "zod";
@@ -10,66 +11,63 @@ import { adminMiddleware, adminOrManagerMiddleware } from "../middleware/admin";
 import prisma from "../db/client";
 import {
   ALL_APP_IDS,
-  CORE_APPS,
   VUT_GRANT_APPS,
   UNDISABLEABLE_APPS,
-  getUserBeta,
-  setUserBeta,
+  getAppTiers,
+  setAppTier,
+  setAppTiers,
   getVutGrant,
   setVutGrant,
   getGlobalDisabledApps,
   setGlobalDisabledApps,
+  getSubscriptionTier,
+  type AppTier,
 } from "../services/features";
 
 const features = new Hono();
 features.use("*", authMiddleware);
 
 /** App catalog entry returned to admins. */
-function appCatalog() {
+function appCatalog(appTiers: Record<string, AppTier>) {
   return ALL_APP_IDS.map((id) => ({
     id,
-    tier: CORE_APPS.has(id) ? "core" : "beta",
+    minTier: appTiers[id] ?? "free",
     requiresGrant: VUT_GRANT_APPS.has(id) ? "vut" : undefined,
     undisableable: UNDISABLEABLE_APPS.has(id),
   }));
 }
 
-// ----- user: own feature state + beta toggle -----
+// ----- user: own feature state -----
 
 /** GET /api/features — current user's feature state. */
 features.get("/", async (c) => {
   const { userId } = c.get("auth");
-  const [betaEnabled, vutGranted, disabled] = await Promise.all([
-    getUserBeta(userId),
+  const [subscriptionTier, vutGranted, disabled, appTiers] = await Promise.all([
+    getSubscriptionTier(userId),
     getVutGrant(userId),
     getGlobalDisabledApps(),
+    getAppTiers(),
   ]);
   return c.json({
-    betaEnabled,
+    subscriptionTier,
     vutGranted,
     disabledApps: Array.from(disabled),
+    appTiers,
   });
 });
 
-const betaSchema = z.object({ enabled: z.boolean() });
-
-/** PUT /api/features/beta — toggle own beta-apps access. */
-features.put("/beta", zValidator("json", betaSchema), async (c) => {
-  const { userId } = c.get("auth");
-  const { enabled } = c.req.valid("json");
-  await setUserBeta(userId, enabled);
-  return c.json({ betaEnabled: enabled });
-});
-
-// ----- admin: global kill switch (admin only) + per-user VUT grants (admin or manager) -----
+// ----- admin: app tier management + global kill switch -----
 
 const admin = new Hono();
 
 /** GET /api/features/admin — app catalog + currently disabled apps. */
 admin.get("/", adminMiddleware, async (c) => {
-  const disabled = await getGlobalDisabledApps();
+  const [disabled, appTiers] = await Promise.all([
+    getGlobalDisabledApps(),
+    getAppTiers(),
+  ]);
   return c.json({
-    apps: appCatalog(),
+    apps: appCatalog(appTiers),
     disabledApps: Array.from(disabled),
   });
 });
@@ -83,6 +81,33 @@ admin.put("/disabled", adminMiddleware, zValidator("json", disabledSchema), asyn
   const disabled = await getGlobalDisabledApps();
   return c.json({ disabledApps: Array.from(disabled) });
 });
+
+const tierSchema = z.object({
+  appId: z.string(),
+  tier: z.enum(["free", "paid", "pro"]),
+});
+
+/** PUT /api/features/admin/tiers — set the tier for a single app. */
+admin.put("/tiers", adminMiddleware, zValidator("json", tierSchema), async (c) => {
+  const { appId, tier } = c.req.valid("json");
+  await setAppTier(appId, tier as AppTier);
+  const appTiers = await getAppTiers();
+  return c.json({ appTiers });
+});
+
+const bulkTierSchema = z.object({
+  assignments: z.record(z.string(), z.enum(["free", "paid", "pro"])),
+});
+
+/** PUT /api/features/admin/tiers/bulk — set tiers for multiple apps at once. */
+admin.put("/tiers/bulk", adminMiddleware, zValidator("json", bulkTierSchema), async (c) => {
+  const { assignments } = c.req.valid("json");
+  await setAppTiers(assignments as Record<string, AppTier>);
+  const appTiers = await getAppTiers();
+  return c.json({ appTiers });
+});
+
+// ----- admin: per-user VUT grants (admin or manager) -----
 
 /** GET /api/features/admin/users/:userId/grants — a user's access grants. */
 admin.get("/users/:userId/grants", adminOrManagerMiddleware, async (c) => {

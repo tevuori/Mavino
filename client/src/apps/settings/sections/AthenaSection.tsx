@@ -38,12 +38,14 @@ function TierInfoCard() {
 
   const tierLabel: Record<RateTier, string> = {
     admin: "Admin",
+    pro: "Pro",
     paid: "Paid",
     free: "Free",
     demo: "Demo",
   };
   const tierIcon: Record<RateTier, typeof Crown> = {
     admin: Crown,
+    pro: Zap,
     paid: Zap,
     free: Globe,
     demo: Sparkles,

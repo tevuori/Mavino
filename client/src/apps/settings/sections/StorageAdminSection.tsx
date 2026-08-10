@@ -6,12 +6,13 @@ import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass 
 const ROLE_LABELS: Record<string, string> = {
   FREE: "Free",
   PAID: "Paid",
+  PRO: "Pro",
   MANAGER: "Manager",
   ADMIN: "Admin",
   DEMO: "Demo",
 };
 
-const ROLE_ORDER = ["FREE", "PAID", "MANAGER", "ADMIN", "DEMO"];
+const ROLE_ORDER = ["FREE", "PAID", "PRO", "MANAGER", "ADMIN", "DEMO"];
 
 function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

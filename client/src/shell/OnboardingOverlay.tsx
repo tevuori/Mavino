@@ -98,7 +98,7 @@ export default function OnboardingOverlay() {
   }, [name, step.id, updateProfile, user?.displayName]);
 
   // Open app window when entering a step that has one (only if the app is
-  // available to the user — e.g. skip opening Calendar if beta is off), and
+  // available to the user — e.g. skip opening Calendar if it's tier-gated), and
   // close whatever window the previous step opened so onboarding never
   // leaves a trail of stray windows behind. Windows always open centered.
   useEffect(() => {

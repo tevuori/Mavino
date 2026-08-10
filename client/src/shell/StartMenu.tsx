@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Lucide from "lucide-react";
-import { Search, Power, LogOut } from "lucide-react";
-import { useAvailableApps } from "../store/features";
+import { Search, Power, LogOut, Lock } from "lucide-react";
+import { useAccessibleApps } from "../store/features";
 import { useWindows } from "../store/windows";
 import { useAuth } from "../store/auth";
 
@@ -14,7 +14,7 @@ interface Props {
 export default function StartMenu({ open, onClose }: Props) {
   const { open: openWindow } = useWindows();
   const { user, logout } = useAuth();
-  const apps = useAvailableApps();
+  const apps = useAccessibleApps();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -68,8 +68,13 @@ export default function StartMenu({ open, onClose }: Props) {
                     onClick={() => launch(app)}
                     className="flex flex-col items-center gap-1.5 rounded-lg p-3 transition hover:bg-surface-3"
                   >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
+                    <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
                       <Icon size={22} />
+                      {app.access === "preview" && (
+                        <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-edge">
+                          <Lock size={9} />
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs text-ink">{app.name}</span>
                   </button>

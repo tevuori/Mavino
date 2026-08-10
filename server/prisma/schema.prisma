@@ -14,7 +14,7 @@ model User {
   passwordHash String
   displayName  String   @default("")
   avatarColor  String   @default("#6366f1")
-  role         String   @default("FREE") // "ADMIN" | "PAID" | "MANAGER" | "FREE" | "DEMO"
+  role         String   @default("FREE") // "ADMIN" | "PRO" | "PAID" | "MANAGER" | "FREE" | "DEMO"
   athenaInstructions String @default("") // custom instructions injected into Athena system prompt
   // 2FA (TOTP) — totpSecret stores the base32-encoded secret (encrypted at
   // rest via services/crypto.ts). totpEnabled is false until the user
@@ -73,6 +73,8 @@ model User {
   hikingTours       HikingTour[]
   passwordResetTokens PasswordResetToken[]
   errorLogs          ErrorLog[]
+  subscription       Subscription?
+  installedPlugins   UserPlugin[]
 }
 
 // ===== Password reset tokens =====
@@ -1097,4 +1099,102 @@ model ErrorLog {
   @@index([timestamp])
   @@index([resolved])
   @@index([source])
+}
+
+// ===== Subscriptions (Stripe-powered monetization) =====
+// Tracks a user's paid subscription state. The User.role field is the
+// authoritative tier indicator (PAID / PRO) and is kept in sync with the
+// Stripe subscription status via webhook handlers. When a subscription is
+// canceled or lapses, the user's role reverts to FREE. The Subscription row
+// is retained for history. Stripe customer/subscription IDs link back to the
+// Stripe API for portal access and reconciliation.
+
+model Subscription {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                  String    // "paid" | "pro"
+  status                String    // "active" | "past_due" | "canceled" | "trialing" | "incomplete"
+  stripeCustomerId      String?   @unique
+  stripeSubscriptionId  String?   @unique
+  stripePriceId         String?
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelAt              DateTime? // when cancellation takes effect (null = not canceling)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([status])
+}
+
+// ===== Plugin / App Marketplace =====
+// A curated catalog of third-party / community plugins that extend Athena
+// without touching core code. Admins publish plugins from a manifest (JSON
+// metadata + a remote entry-module URL). Paid/Pro users can browse the
+// marketplace and install plugins; Free users are blocked from the marketplace
+// entirely (403 on the routes + no Marketplace app).
+//
+// A plugin manifest looks like:
+//   {
+//     "id": "my-plugin",            // unique slug (pluginKey)
+//     "name": "My Plugin",
+//     "description": "Does cool stuff",
+//     "icon": "Sparkles",           // lucide icon name
+//     "version": "1.0.0",
+//     "author": "community-dev",
+//     "category": "productivity",
+//     "entryUrl": "https://cdn.example.com/my-plugin.js",  // ES module, default export = React component
+//     "minTier": "paid",            // "paid" | "pro"
+//     "permissions": ["storage"],
+//     "tools": [                    // optional Athena tool definitions
+//       {
+//         "name": "my_tool",
+//         "description": "Does something via LLM",
+//         "parameters": [...],      // JSON-schema-like (PluginParameter[])
+//         "handlerUrl": "https://api.example.com/my-plugin/tool",  // webhook proxy
+//         "destructive": false
+//       }
+//     ]
+//   }
+//
+// Security model: plugins are admin-curated (the admin publishes them), so the
+// trust boundary is at publication time. The entry module is loaded via dynamic
+// import on the client (same-origin execution). Athena tool calls are proxied
+// server-side to the plugin's handlerUrl webhook — the plugin's backend never
+// sees the user's JWT or session; only the tool arguments + anonymous user id.
+
+model Plugin {
+  id          String   @id @default(cuid())
+  pluginKey   String   @unique // unique slug, e.g. "pomodoro-pro"
+  name        String
+  description String   @default("")
+  icon        String   @default("Puzzle") // lucide icon name
+  version     String   @default("1.0.0")
+  author      String   @default("")
+  category    String   @default("general")
+  entryUrl    String   // remote ES module URL (default export = React component)
+  manifest    String   @default("{}") // full JSON manifest (tools, permissions, etc.)
+  minTier     String   @default("paid") // "paid" | "pro" — who can install
+  featured    Boolean  @default(false)
+  published   Boolean  @default(true) // hidden from marketplace until published
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  installs    UserPlugin[]
+
+  @@index([published, featured])
+  @@index([category])
+}
+
+model UserPlugin {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pluginKey   String
+  plugin      Plugin   @relation(fields: [pluginKey], references: [pluginKey], onDelete: Cascade)
+  enabled     Boolean  @default(true)
+  installedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, pluginKey])
+  @@index([userId])
 }

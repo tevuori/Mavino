@@ -69,12 +69,13 @@ export default function StudyHubSection() {
     }
   };
 
-  const toggle = (id: string, tier: "free" | "paid") => {
+  const toggle = (id: string, tier: "free" | "paid" | "pro") => {
     setConfig((prev) => ({
       ...prev,
       [id]: {
         free: tier === "free" ? !prev[id]?.free : Boolean(prev[id]?.free),
         paid: tier === "paid" ? !prev[id]?.paid : Boolean(prev[id]?.paid),
+        pro: tier === "pro" ? !prev[id]?.pro : Boolean(prev[id]?.pro ?? prev[id]?.paid),
       },
     }));
   };
@@ -84,7 +85,7 @@ export default function StudyHubSection() {
       <SectionHeader
         icon={<GraduationCap size={18} />}
         title="Study Hub Functions"
-        description="Enable or disable each Study Hub AI function for Free and Paid tiers. Managers always have access; these settings do not affect admins or managers."
+        description="Enable or disable each Study Hub AI function for Free, Paid, and Pro tiers. Managers always have access; these settings do not affect admins or managers."
       />
 
       {loading ? (
@@ -101,6 +102,7 @@ export default function StudyHubSection() {
             <div className="flex items-center gap-6 pr-2">
               <span className="w-16 text-center">Free</span>
               <span className="w-16 text-center">Paid</span>
+              <span className="w-16 text-center">Pro</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -124,6 +126,12 @@ export default function StudyHubSection() {
                     label="Paid"
                     on={Boolean(config[f.id]?.paid)}
                     onClick={() => toggle(f.id, "paid")}
+                    busy={saving}
+                  />
+                  <TierToggle
+                    label="Pro"
+                    on={Boolean(config[f.id]?.pro ?? config[f.id]?.paid)}
+                    onClick={() => toggle(f.id, "pro")}
                     busy={saving}
                   />
                 </div>

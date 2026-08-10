@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Square, Sparkles, Loader2, Wrench, AlertCircle, Save, FolderOpen, LayoutGrid, Maximize2, X, ChevronDown, Paperclip, FileText, FileCode, FileType, Trash2, Cloud, Lightbulb, Check, Folder as FolderIcon, Plus, History, MessageSquare, Trash, Terminal, ExternalLink, Globe } from "lucide-react";
+import { Send, Square, Sparkles, Loader2, Wrench, AlertCircle, Save, FolderOpen, LayoutGrid, Maximize2, X, ChevronDown, Paperclip, FileText, FileCode, FileType, Trash2, Cloud, Lightbulb, Check, Folder as FolderIcon, Plus, History, MessageSquare, Trash, Terminal, ExternalLink, Globe, Copy, RotateCcw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -804,55 +804,18 @@ export default function AthenaApp({
     setAttachError(null);
   };
 
-  const send = useCallback(
-    (text: string) => {
-      let content = text.trim();
-      if (!content || streaming) return;
-
-      // If there's an attachment, inject its content into the message.
-      if (attachment) {
-        const fileLabel = attachment.fileType === "pdf" ? "PDF document" : `${attachment.fileType} file`;
-        const truncationNote = attachment.truncated ? "\n_(content truncated — first 50,000 characters shown)_" : "";
-        content = `I've attached a ${fileLabel}: **${attachment.fileName}** (${(attachment.fileSize / 1024).toFixed(1)} KB)\n\nFile content:\n\`\`\`\n${attachment.text}${truncationNote}\n\`\`\`\n\n${content}`;
-        // Clear the attachment after sending (it's now in the chat context).
-        setAttachment(null);
-      }
-
-      // Build conversation history for the server. We must maintain
-      // alternating user/assistant messages — some providers reject
-      // consecutive same-role messages with 400.
-      // If an assistant turn has no text content (e.g. it only called
-      // client-action tools like tile_windows), use a placeholder so
-      // the alternation is preserved.
-      const history: AthenaMessage[] = [
-        ...turns
-          .filter((t) => !t.error)
-          .map((t) => {
-            if (t.role === "assistant" && !t.content.trim()) {
-              // Assistant turn with no text (tool-only turn).
-              const toolNames = (t.tools ?? []).map((tc) => tc.name).join(", ");
-              return {
-                role: "assistant" as const,
-                content: toolNames
-                  ? `(Completed: ${toolNames})`
-                  : "(Done)",
-              };
-            }
-            return { role: t.role, content: t.content };
-          })
-          .filter((t) => t.content.trim()),
-        { role: "user", content },
-      ];
-
-      const userTurn: ChatTurn = { role: "user", content };
+  // Shared streaming setup — appends a fresh pending assistant turn to
+  // `turnsBefore` and streams the response. Used by both send() and
+  // regenerate() so copy/retry share the exact same SSE handling.
+  const startStream = useCallback(
+    (history: AthenaMessage[], turnsBefore: ChatTurn[]) => {
       const assistantTurn: ChatTurn = {
         role: "assistant",
         content: "",
         tools: [],
         pending: true,
       };
-      setTurns((prev) => [...prev, userTurn, assistantTurn]);
-      setInput("");
+      setTurns([...turnsBefore, assistantTurn]);
       setStreaming(true);
 
       const winState = buildWindowState();
@@ -927,9 +890,89 @@ export default function AthenaApp({
 
       handleRef.current.done.finally(() => setStreaming(false));
     },
-    [turns, streaming, dispatchClientAction, buildWindowState, attachment, saveConversation, maybeGenerateTitle]
+    [buildWindowState, dispatchClientAction, saveConversation, maybeGenerateTitle]
+  );
+
+  const send = useCallback(
+    (text: string) => {
+      let content = text.trim();
+      if (!content || streaming) return;
+
+      // If there's an attachment, inject its content into the message.
+      if (attachment) {
+        const fileLabel = attachment.fileType === "pdf" ? "PDF document" : `${attachment.fileType} file`;
+        const truncationNote = attachment.truncated ? "\n_(content truncated — first 50,000 characters shown)_" : "";
+        content = `I've attached a ${fileLabel}: **${attachment.fileName}** (${(attachment.fileSize / 1024).toFixed(1)} KB)\n\nFile content:\n\`\`\`\n${attachment.text}${truncationNote}\n\`\`\`\n\n${content}`;
+        // Clear the attachment after sending (it's now in the chat context).
+        setAttachment(null);
+      }
+
+      // Build conversation history for the server. We must maintain
+      // alternating user/assistant messages — some providers reject
+      // consecutive same-role messages with 400.
+      // If an assistant turn has no text content (e.g. it only called
+      // client-action tools like tile_windows), use a placeholder so
+      // the alternation is preserved.
+      const history: AthenaMessage[] = [
+        ...turns
+          .filter((t) => !t.error)
+          .map((t) => {
+            if (t.role === "assistant" && !t.content.trim()) {
+              // Assistant turn with no text (tool-only turn).
+              const toolNames = (t.tools ?? []).map((tc) => tc.name).join(", ");
+              return {
+                role: "assistant" as const,
+                content: toolNames
+                  ? `(Completed: ${toolNames})`
+                  : "(Done)",
+              };
+            }
+            return { role: t.role, content: t.content };
+          })
+          .filter((t) => t.content.trim()),
+        { role: "user", content },
+      ];
+
+      const userTurn: ChatTurn = { role: "user", content };
+      setInput("");
+      startStream(history, [...turns, userTurn]);
+    },
+    [turns, streaming, attachment, startStream]
   );
   sendRef.current = send;
+
+  // Regenerate the assistant response at `assistantIdx` by re-running the
+  // preceding user prompt. Drops the old assistant turn (and anything after
+  // it) and re-streams a fresh response.
+  const regenerate = useCallback(
+    (assistantIdx: number) => {
+      if (streaming) return;
+      const userTurn = turns[assistantIdx - 1];
+      if (!userTurn || userTurn.role !== "user") return;
+      // Keep everything up to (and including) the user turn; drop the old
+      // assistant turn and any turns after it.
+      const turnsBefore = turns.slice(0, assistantIdx);
+      const history: AthenaMessage[] = [
+        ...turnsBefore
+          .slice(0, -1) // exclude the user turn we're re-sending
+          .filter((t) => !t.error)
+          .map((t) => {
+            if (t.role === "assistant" && !t.content.trim()) {
+              const toolNames = (t.tools ?? []).map((tc) => tc.name).join(", ");
+              return {
+                role: "assistant" as const,
+                content: toolNames ? `(Completed: ${toolNames})` : "(Done)",
+              };
+            }
+            return { role: t.role, content: t.content };
+          })
+          .filter((t) => t.content.trim()),
+        { role: "user", content: userTurn.content },
+      ];
+      startStream(history, turnsBefore);
+    },
+    [turns, streaming, startStream]
+  );
 
   const stop = () => {
     handleRef.current?.abort();
@@ -1132,7 +1175,16 @@ export default function AthenaApp({
         ) : (
           <div className="mx-auto flex max-w-none @5xl:max-w-2xl flex-col gap-3">
             {turns.map((t, i) => (
-              <TurnBubble key={i} turn={t} />
+              <TurnBubble
+                key={i}
+                turn={t}
+                isLastAssistant={
+                  t.role === "assistant" &&
+                  i === turns.length - 1
+                }
+                onRetry={() => regenerate(i)}
+                retryDisabled={streaming}
+              />
             ))}
           </div>
         )}
@@ -1242,8 +1294,34 @@ export default function AthenaApp({
 
 // ===== UI components =====
 
-function TurnBubble({ turn }: { turn: ChatTurn }) {
+function TurnBubble({
+  turn,
+  isLastAssistant,
+  onRetry,
+  retryDisabled,
+}: {
+  turn: ChatTurn;
+  isLastAssistant: boolean;
+  onRetry?: () => void;
+  retryDisabled?: boolean;
+}) {
   const isUser = turn.role === "user";
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    if (!turn.content) return;
+    try {
+      await navigator.clipboard.writeText(turn.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard API may be unavailable (e.g. insecure context) — ignore.
+    }
+  };
+  // Show the action row only for finished assistant turns that produced
+  // either text content or an error. While streaming (pending) the row is
+  // hidden so it doesn't flicker on every chunk.
+  const showActions =
+    !isUser && !turn.pending && (!!turn.content || !!turn.error);
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[85%] ${isUser ? "" : "w-full"}`}>
@@ -1289,6 +1367,30 @@ function TurnBubble({ turn }: { turn: ChatTurn }) {
             </span>
           )}
         </div>
+        {showActions && (
+          <div className="mt-1 flex items-center gap-1">
+            {turn.content && (
+              <button
+                onClick={copy}
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-ink-muted transition hover:bg-surface-2 hover:text-ink"
+                title="Copy message"
+              >
+                {copied ? <Check size={11} /> : <Copy size={11} />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            )}
+            {isLastAssistant && onRetry && (
+              <button
+                onClick={onRetry}
+                disabled={retryDisabled}
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-ink-muted transition hover:bg-surface-2 hover:text-ink disabled:opacity-40"
+                title="Regenerate response"
+              >
+                <RotateCcw size={11} /> Retry
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

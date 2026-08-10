@@ -13,11 +13,12 @@ export interface StorageQuota {
   maxBytes: number;
 }
 
-const ROLES = ["FREE", "PAID", "MANAGER", "ADMIN", "DEMO"] as const;
+const ROLES = ["FREE", "PAID", "PRO", "MANAGER", "ADMIN", "DEMO"] as const;
 
 const DEFAULT_QUOTAS: Record<string, StorageQuota> = {
   FREE: { enabled: true, maxBytes: 500 * 1024 * 1024 },
   PAID: { enabled: true, maxBytes: 2 * 1024 * 1024 * 1024 },
+  PRO: { enabled: true, maxBytes: 10 * 1024 * 1024 * 1024 },
   MANAGER: { enabled: false, maxBytes: 0 },
   ADMIN: { enabled: false, maxBytes: 0 },
   DEMO: { enabled: true, maxBytes: 500 * 1024 * 1024 },

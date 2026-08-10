@@ -117,7 +117,7 @@ export async function clearGlobalLlmKey(): Promise<void> {
 
 // ----- Rate limit tier config (global, admin-configurable) -----
 
-export type RateTier = "admin" | "paid" | "free" | "demo";
+export type RateTier = "admin" | "pro" | "paid" | "free" | "demo";
 
 export interface TierRateLimits {
   rpd: number; // requests per day (0 = unlimited)
@@ -126,11 +126,14 @@ export interface TierRateLimits {
 
 const DEFAULT_LIMITS: Record<RateTier, TierRateLimits> = {
   admin: { rpd: 0, rpm: 0 }, // unlimited
+  pro: { rpd: 2000, rpm: 60 },
   paid: { rpd: 500, rpm: 30 },
   free: { rpd: 50, rpm: 10 },
   demo: { rpd: 100, rpm: 10 },
 };
 
+const PRO_RPD_KEY = "ratelimit.pro.rpd";
+const PRO_RPM_KEY = "ratelimit.pro.rpm";
 const PAID_RPD_KEY = "ratelimit.paid.rpd";
 const PAID_RPM_KEY = "ratelimit.paid.rpm";
 const FREE_RPD_KEY = "ratelimit.free.rpd";
@@ -138,7 +141,9 @@ const FREE_RPM_KEY = "ratelimit.free.rpm";
 
 /** Get the rate limits for each tier (admin-configurable). */
 export async function getTierRateLimits(): Promise<Record<RateTier, TierRateLimits>> {
-  const [paidRpd, paidRpm, freeRpd, freeRpm] = await Promise.all([
+  const [proRpd, proRpm, paidRpd, paidRpm, freeRpd, freeRpm] = await Promise.all([
+    getSetting(PRO_RPD_KEY),
+    getSetting(PRO_RPM_KEY),
     getSetting(PAID_RPD_KEY),
     getSetting(PAID_RPM_KEY),
     getSetting(FREE_RPD_KEY),
@@ -146,6 +151,10 @@ export async function getTierRateLimits(): Promise<Record<RateTier, TierRateLimi
   ]);
   return {
     admin: DEFAULT_LIMITS.admin, // always unlimited
+    pro: {
+      rpd: proRpd ? Number(proRpd) : DEFAULT_LIMITS.pro.rpd,
+      rpm: proRpm ? Number(proRpm) : DEFAULT_LIMITS.pro.rpm,
+    },
     paid: {
       rpd: paidRpd ? Number(paidRpd) : DEFAULT_LIMITS.paid.rpd,
       rpm: paidRpm ? Number(paidRpm) : DEFAULT_LIMITS.paid.rpm,
@@ -158,13 +167,17 @@ export async function getTierRateLimits(): Promise<Record<RateTier, TierRateLimi
   };
 }
 
-/** Update the rate limits for paid and/or free tiers. */
+/** Update the rate limits for pro, paid, and/or free tiers. */
 export async function setTierRateLimits(config: {
+  proRpd?: number;
+  proRpm?: number;
   paidRpd?: number;
   paidRpm?: number;
   freeRpd?: number;
   freeRpm?: number;
 }): Promise<void> {
+  if (config.proRpd !== undefined) await setSetting(PRO_RPD_KEY, String(config.proRpd));
+  if (config.proRpm !== undefined) await setSetting(PRO_RPM_KEY, String(config.proRpm));
   if (config.paidRpd !== undefined) await setSetting(PAID_RPD_KEY, String(config.paidRpd));
   if (config.paidRpm !== undefined) await setSetting(PAID_RPM_KEY, String(config.paidRpm));
   if (config.freeRpd !== undefined) await setSetting(FREE_RPD_KEY, String(config.freeRpd));
@@ -174,7 +187,8 @@ export async function setTierRateLimits(config: {
 /** Map a user role to a rate tier. */
 export function roleToTier(role: string): RateTier {
   if (role === "ADMIN") return "admin";
-  if (role === "PAID" || role === "MANAGER") return "paid";
+  if (role === "PRO" || role === "MANAGER") return "pro";
+  if (role === "PAID") return "paid";
   if (role === "DEMO") return "demo";
   return "free";
 }

@@ -289,7 +289,7 @@ Athena/
         │   ├── study/            # Study Hub (AI flashcards, summarize, quiz, explain, study guide, syllabus→tasks)
         │   ├── calendar/         # Calendar / Planner (month/week/day, ICS import/export, task drag-to-schedule)
         │   ├── habits/           # Habit Tracker (streaks, heatmap, auto-complete from Pomodoro)
-        │   ├── settings/         # Settings (Appearance, Wallpaper, Animated BG, Account, Sound & Athena, Athena Assistant, Integrations, Notifications, Users [admin], Data & Storage, About). Split into apps/settings/sections/*.tsx + ui.tsx shared helpers; SettingsApp.tsx is the shell with section nav (Users gated behind role=ADMIN).
+        │   ├── settings/         # Settings (Appearance, Wallpaper, Animated BG, Account, Sound & Athena, Athena Assistant, Integrations, Notifications, Users [admin], Apps [admin], Tiers & Plans [admin], LLM Config [admin], Storage Quotas [admin], Study Hub [admin], Error Logs [admin], Analytics [admin], Data & Storage, About). Split into apps/settings/sections/*.tsx + ui.tsx shared helpers; SettingsApp.tsx is the shell with section nav (admin sections gated behind role=ADMIN).
         │   └── whiteboard/      # Whiteboard (SVG vector canvas, pen/line/rect/ellipse/arrow/text/eraser, clipboard image paste, undo/redo, SVG/PNG export, multi-board)
         │   └── ntfy/            # Ntfy (bidirectional Athena push channel, message log, cron-job manager)
         │   └── voice/           # Voice Notes (mic recorder, Whisper transcription, linked Note) — useRecorder.ts shared hook
@@ -586,23 +586,36 @@ Athena/
 - The `getOAuthToken` callback fetches a fresh access token from the server each time the SDK requests one, so token expiry (1 hour) is handled automatically.
 - LRCLIB (https://lrclib.net) is a free public API — no key needed. We set a descriptive `User-Agent` and throttle to 300ms between requests per their guidelines.
 
-## App availability / feature flags (MVP scoping)
+## App availability / tier-based gating + monetization
 
-Apps are classified into three availability tiers (defined in `client/src/apps/registry.tsx` `tier`/`requiresGrant` fields, mirrored server-side in `server/src/services/features.ts`):
+Apps are classified into subscription tiers (defined in `client/src/apps/registry.tsx` `minTier`/`requiresGrant` fields, mirrored server-side in `server/src/services/features.ts`):
 
-- **Core** (always available): Notes, Tasks, Files, Whiteboard, Study Hub (Teach Me lives here), Mavino assistant, Today, Settings. These are the MVP pitch alongside the desktop shell.
-- **Beta** (per-user toggle): Pomodoro, Flashcards, Grades, Editor, Viewer, Calendar, Habits, Ntfy, Voice, Browser, Reminders, Analytics, Maps. Hidden until the user enables **Settings → Beta Apps**.
-- **Admin-granted** (`requiresGrant: "vut"`): VUT + Moodle. Moodle rides on the VUT SSO session, so a single per-user `vut` grant covers both. Hidden unless an admin grants the user access.
+- **Free** (`minTier: "free"`): Notes, Tasks, Files, Whiteboard, Study Hub (Teach Me lives here), Mavino assistant, Today, Settings, Plans. Always accessible to all users.
+- **Paid** (`minTier: "paid"`): Pomodoro, Flashcards, Grades, Editor, Viewer, Calendar, Habits, Ntfy, Voice, Browser, Reminders, Analytics, Maps. Users on the Free tier see these in **preview mode** — the app opens but is overlaid with a paywall (`PaywallOverlay` / `LockedAppPreview`). Paid/Pro users get full access.
+- **Pro** (`minTier: "pro"`): No apps default to Pro, but admins can reassign any app to the Pro tier via Settings → Tiers & Plans.
+- **Admin-granted** (`requiresGrant: "vut"`): VUT + Moodle. Moodle rides on the VUT SSO session, so a single per-user `vut` grant covers both. Hidden unless an admin grants the user access (not tier-gated).
 
-**Flag storage:** all flags live in the existing `Setting` key/value table (no schema migration needed). Per-user flags use the user's id; the global kill-switch uses `userId = null`. Keys: `beta.enabled` (per-user), `vut.access` (per-user), `apps.disabled` (global, JSON string array).
+**Subscription tiers** are derived from `User.role`: `ADMIN`/`MANAGER`/`PRO` → pro, `PAID` → paid, `FREE`/`DEMO` → free. The `Subscription` Prisma model tracks Stripe subscription state (plan, status, Stripe IDs, billing period) and is kept in sync via webhooks.
 
-**Client store:** `client/src/store/features.ts` loads `/api/features` on auth (in `App.tsx`) and exposes `useAvailableApps()` (reactive, for launch surfaces), `isAppAvailable(appId)` (pure, used by the `windows.open()` guard and onboarding), and `useAppAvailable(appId)`. All launch surfaces (StartMenu, Desktop, Taskbar, CommandPalette, MobileLauncher, OnboardingOverlay) filter by availability. `windows.open()` refuses to open unavailable apps (returns `""`), catching deep links / Athena tool dispatch that bypass the filtered surfaces. Settings is undisableable.
+**Flag storage:** all flags live in the `Setting` key/value table. Per-user flags use the user's id; global flags use `userId = null`. Keys: `app.tiers` (global, JSON appId→tier overrides), `vut.access` (per-user), `apps.disabled` (global, JSON string array), `stripe.price.paid` / `stripe.price.pro` (global, admin-configured Stripe price IDs).
 
-**Server routes** (`server/src/routes/features.ts`, mounted at `/api/features`): `GET /` (own state), `PUT /beta` (toggle own beta), and admin (`/admin`, adminMiddleware): `GET /` (app catalog + disabled list), `PUT /disabled` (set global kill-switch), `GET /admin/users/:userId/grants` + `PUT /admin/users/:userId/grants` (`{ vut }`). The `requireVutAccess` middleware (`server/src/middleware/vut-access.ts`) gates `/api/vut` and `/api/moodle` (403 `VUT_NOT_GRANTED` when not granted). The Athena calendar tool's VUT timetable merge and the Moodle Athena tools also check `getVutGrant` so non-granted users can't pull VUT/Moodle data through Athena.
+**Client store:** `client/src/store/features.ts` loads `/api/features` on auth (in `App.tsx`) and exposes `useAccessibleApps()` (reactive, returns apps with `access: "full"|"preview"|"hidden"`), `isAppAccessible(appId)` (pure, used by the `windows.open()` guard), and `useAppAccessible(appId)`. All launch surfaces (StartMenu, Desktop, Taskbar, CommandPalette, MobileLauncher, OnboardingOverlay) show accessible apps with lock badges on preview-mode apps. `windows.open()` allows preview apps to open (with `payload.preview = true`) but blocks hidden apps. Settings is undisableable. `WindowLayer.tsx` wraps preview windows in `LockedAppPreview`, which renders the real app underneath a `PaywallOverlay` with an upgrade CTA that opens the Plans app.
 
-**Admin UI:** Settings → **Apps** (admin) = global per-app kill switch (Settings always on). Settings → **Users** → edit user = per-user VUT/Moodle grant toggle. Settings → **Beta Apps** (all users) = the beta toggle + a read-only VUT-access status pill.
+**Server routes** (`server/src/routes/features.ts`, mounted at `/api/features`): `GET /` (own state: subscriptionTier, vutGranted, disabledApps, appTiers), and admin (`/admin`, adminMiddleware): `GET /` (app catalog + disabled list), `PUT /disabled` (set global kill-switch), `PUT /tiers` (set single app tier), `PUT /tiers/bulk` (set multiple app tiers), `GET /admin/users/:userId/grants` + `PUT /admin/users/:userId/grants` (`{ vut }`, admin or manager). The `requireVutAccess` middleware (`server/src/middleware/vut-access.ts`) gates `/api/vut` and `/api/moodle` (403 `VUT_NOT_GRANTED` when not granted).
 
-**Locked states:** the VUT and Moodle apps render a "not enabled" screen when `vutGranted` is false (defense-in-depth if a window is open when the grant is revoked). The Integrations cards for VUT/Moodle show a locked notice instead of the login form when not granted.
+**Admin UI:** Settings → **Apps** (admin) = global per-app kill switch (Settings always on). Settings → **Tiers & Plans** (admin) = assign each app to a tier (free/paid/pro) + configure Stripe price IDs. Settings → **Users** → edit user = per-user VUT/Moodle grant toggle + role assignment (Free/Paid/Pro/Manager/Demo/Admin).
+
+**Locked states:** Preview-mode apps render the real app content with `pointerEvents: none` and a `PaywallOverlay` on top. The overlay can be dismissed to browse the preview, but a compact lock badge remains. The VUT and Moodle apps render a "not enabled" screen when `vutGranted` is false (defense-in-depth if a window is open when the grant is revoked).
+
+### Stripe integration + subscription management
+
+**Server** (`server/src/services/stripe.ts`): Handles checkout session creation, billing portal, cancellation, and webhook processing. The `Subscription` Prisma model tracks per-user subscription state. Webhooks (`checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.payment_failed`) sync the DB and update `User.role` (PAID/PRO on activation, FREE on cancellation). Price IDs are configurable via env vars (`STRIPE_PRICE_PAID`, `STRIPE_PRICE_PRO`) or admin override (Setting table).
+
+**Server routes** (`server/src/routes/subscriptions.ts`, mounted at `/api/subscriptions`): `GET /` (own status), `POST /checkout` (create checkout session), `POST /portal` (billing portal), `POST /cancel` (cancel subscription), `POST /webhook` (Stripe webhook, no auth — signature verified), and admin (`/admin/prices` GET/PUT for price IDs).
+
+**Client** (`client/src/services/subscriptions.ts`): API wrapper. **Plans app** (`client/src/apps/plans/PlansApp.tsx`): shows current plan, plan comparison cards (Free/Paid/Pro), upgrade buttons (Stripe checkout), billing portal + cancel buttons, and an apps-by-tier overview.
+
+**Env vars:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PAID`, `STRIPE_PRICE_PRO`, `STRIPE_SUCCESS_URL` (optional, defaults to `PUBLIC_URL`).
 
 ## Error monitoring + LLM global key + tier-based rate limits
 
@@ -633,21 +646,22 @@ The admin can choose between two LLM key modes in Settings → **LLM Config** (a
 
 ### User tiers + rate limits
 
-Three user tiers control AI rate limits when global key mode is active:
+Four user tiers control AI rate limits when global key mode is active:
 
 - **ADMIN** — unlimited (rpd=0, rpm=0). No restrictions.
+- **PRO** — highest limits (default: 2000 rpd, 60 rpm). Admin-configurable. Also applies to MANAGER role.
 - **PAID** — higher limits (default: 500 rpd, 30 rpm). Admin-configurable.
 - **FREE** — lower limits (default: 50 rpd, 10 rpm). Admin-configurable.
 
-**Role migration**: `User.role` changed from `"USER"|"ADMIN"` to `"FREE"|"PAID"|"ADMIN"`. Migration `2_error_logs_and_user_roles` renames existing "USER" → "FREE" and updates the default. Open-registration users get "FREE"; bootstrap user gets "ADMIN".
+**Role migration**: `User.role` is `"FREE"|"PAID"|"PRO"|"MANAGER"|"ADMIN"|"DEMO"`. The `PRO` role was added in a later migration for the monetization tier system. Open-registration users get "FREE"; bootstrap user gets "ADMIN". The `Subscription` Prisma model tracks Stripe subscription state and webhooks sync `User.role` with the subscription plan.
 
-**Rate limit storage**: `Setting` table (userId = null): `ratelimit.paid.rpd`, `ratelimit.paid.rpm`, `ratelimit.free.rpd`, `ratelimit.free.rpm`. Admin tier is always unlimited (hardcoded, not configurable). Setting rpd or rpm to 0 means unlimited.
+**Rate limit storage**: `Setting` table (userId = null): `ratelimit.pro.rpd`, `ratelimit.pro.rpm`, `ratelimit.paid.rpd`, `ratelimit.paid.rpm`, `ratelimit.free.rpd`, `ratelimit.free.rpm`. Admin tier is always unlimited (hardcoded, not configurable). Setting rpd or rpm to 0 means unlimited.
 
 **Rate limiting**: `services/athena/llm.ts` `acquireLlmModel()` calls `getRateLimitsForUser(userId)` which looks up the user's role → tier → limits. The existing in-memory `llmRateLimiter` (sliding window) enforces the limits. In per-user mode, the user's own rate limit config applies instead.
 
 **User-facing UI**: `AthenaSection.tsx` shows a **TierInfoCard** at the top with the user's tier, current mode (global/per-user), and rate limits + today's usage. In per-user mode, the existing rate limit + fallback cards are shown. In global mode, they're hidden (managed by admin).
 
-**Admin user management**: `UsersSection.tsx` role dropdown now has three options: Free (limited AI), Paid (higher AI limits), Administrator. The user list shows PAID/FREE badges next to each user.
+**Admin user management**: `UsersSection.tsx` role dropdown has options: Free (limited AI), Paid (higher AI limits), Pro (highest AI limits), Manager (user management), Demo (pre-seeded trial), Administrator. The user list shows PRO/PAID/FREE badges next to each user.
 
 ## Performance / multi-user load test
 
@@ -674,3 +688,25 @@ bun run scripts/perf-test.ts --no-cleanup
 **Env vars:** `OPENAI_API_KEY`, `OPENAI_PROVIDER` (default openai), `OPENAI_BASE_URL`, `OPENAI_MODEL` (default gpt-4o-mini).
 
 **What it does:** admin login → enable open registration → set global LLM key → create N users via admin API → login users in batches (rate-limit-safe) → run concurrent per-user workloads → verify data isolation (no cross-user notes/tasks visible) → print metrics table → delete all test users + disable registration. Exit code 0 = all ops succeeded, 1 = any failures.
+
+## Plugin / App Marketplace
+
+A curated marketplace where **paid/pro** users can browse and install community-built plugins (apps + Athena tools) without touching core code. Free users are blocked entirely (402 on all marketplace routes, no Marketplace app).
+
+**Prisma models:** `Plugin` (catalog — admin-published) + `UserPlugin` (per-user install). A plugin is defined by a **manifest** (JSON): `id` (slug), `name`, `icon` (lucide), `entryUrl` (remote ES module, default export = React component), `minTier` ("paid"|"pro"), `permissions[]`, and optional `tools[]` (Athena tool definitions with `handlerUrl` webhook).
+
+**Server** (`services/plugins.ts`, `routes/plugins.ts`):
+- `GET /api/plugins` — published catalog (with install counts + status). Paid/pro only (402 for free).
+- `GET /api/plugins/installed` — user's installed+enabled plugins.
+- `POST /api/plugins/:key/install` / `DELETE` — install/uninstall.
+- `PUT /api/plugins/:key/enabled` — enable/disable.
+- Admin (`/api/plugins/admin`): `GET` (all), `POST` (publish from manifest), `PUT /:key` (update), `DELETE /:key` (remove), `PUT /:key/featured`, `PUT /:key/published`.
+
+**Plugin apps on the client:** installed plugins appear in the taskbar, start menu, desktop, and command palette alongside built-in apps. Each plugin app uses a synthetic `appId` of `plugin:<pluginKey>`. The `AppId` type includes a `(string & {})` catch-all to accept these while preserving autocomplete for built-in ids. `PluginAppWrapper` (`apps/plugins/`) is the single component used for all plugin apps — it looks up the plugin in the plugin store by `win.appId` and renders `PluginApp` (dynamic import of `entryUrl` + error boundary). `store/plugins.ts` loads installed plugins; `store/features.ts` merges them into `useAccessibleApps()`.
+
+**Athena tool plugins:** a plugin manifest can declare `tools[]` with `handlerUrl` webhooks. `loadPluginTools()` in `services/plugins.ts` turns these into `ToolDef`s that proxy execution to the webhook (POST `{ plugin, arguments }`). The plugin's backend never sees the user's JWT/session. `toolsForUser()` in `services/athena/tools/index.ts` merges built-in + plugin tools per user (paid/pro only). The `athena.ts` chat route and `/api/athena/tools` endpoint use `toolsForUser()` instead of `toolsForRole()`.
+
+**Security model:** plugins are admin-curated (published via Settings → Plugins). The entry module is loaded via dynamic `import()` on the client (same-origin execution — only publish plugins from trusted sources). Tool calls are proxied server-side so the plugin backend never receives credentials.
+
+**Settings:** admin "Plugins" section (`sections/PluginsAdminSection.tsx`) — publish/edit/feature/delete plugins via raw JSON manifest. The Marketplace app (`apps/marketplace/MarketplaceApp.tsx`) is a paid-tier built-in app for browsing/installing.
+

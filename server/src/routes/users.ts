@@ -95,7 +95,7 @@ const createSchema = z.object({
   password: z.string().min(4).max(128),
   displayName: z.string().max(64).optional().default(""),
   avatarColor: z.string().max(32).optional(),
-  role: z.enum(["FREE", "PAID", "MANAGER", "ADMIN", "DEMO"]).optional().default("FREE"),
+  role: z.enum(["FREE", "PAID", "PRO", "MANAGER", "ADMIN", "DEMO"]).optional().default("FREE"),
 });
 
 /** POST /api/users — create a new user (admin or manager). */
@@ -130,7 +130,7 @@ users.post("/", zValidator("json", createSchema), async (c) => {
 const updateSchema = z.object({
   displayName: z.string().max(64).optional(),
   avatarColor: z.string().max(32).optional(),
-  role: z.enum(["FREE", "PAID", "MANAGER", "ADMIN", "DEMO"]).optional(),
+  role: z.enum(["FREE", "PAID", "PRO", "MANAGER", "ADMIN", "DEMO"]).optional(),
 });
 
 /** PATCH /api/users/:id — update profile / role (admin or manager). */

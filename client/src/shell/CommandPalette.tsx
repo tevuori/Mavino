@@ -7,7 +7,7 @@ import {
   Calendar, Flame, Zap,
 } from "lucide-react";
 import { useWindows, type AppId } from "../store/windows";
-import { useAvailableApps } from "../store/features";
+import { useAccessibleApps } from "../store/features";
 import { api } from "../services/api";
 import { openTargetForFile, isImageFile, isPdfFile, isAudioFile, isVideoFile, isTextFile } from "../services/files";
 import type { Note, Task, VFile } from "../types";
@@ -77,7 +77,7 @@ export default function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const { open: openWindow } = useWindows();
-  const apps = useAvailableApps();
+  const apps = useAccessibleApps();
 
   // Load notes + tasks + files when palette opens
   useEffect(() => {

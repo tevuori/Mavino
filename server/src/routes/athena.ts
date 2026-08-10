@@ -10,7 +10,7 @@ import { buildModel, getUserConfig, LlmError, acquireLlmModel } from "../service
 import { buildSystemPrompt } from "../services/athena/context";
 import {
   AthenaToolsPlugin,
-  toolsForRole,
+  toolsForUser,
   CLIENT_ACTION_TOOLS,
   DESTRUCTIVE_TOOLS,
   toolManifest,
@@ -48,7 +48,8 @@ athena.get("/tools", async (c) => {
     select: { role: true },
   });
   const role = user?.role ?? "FREE";
-  return c.json({ tools: toolManifest(role) });
+  const tools = await toolsForUser(userId, role);
+  return c.json({ tools: toolManifest(tools) });
 });
 
 // ---------- Custom instructions (injected into the system prompt) ----------
@@ -159,7 +160,7 @@ athena.post("/chat", zValidator("json", chatSchema, (result, c) => {
     select: { role: true },
   });
   const role = userRow?.role ?? "FREE";
-  const allowedTools = toolsForRole(role);
+  const allowedTools = await toolsForUser(userId, role);
 
   // Build the message list, ensuring alternating user/assistant roles.
   // Some providers (DeepSeek/OpenAI) reject consecutive same-role messages

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as Lucide from "lucide-react";
-import { useAvailableApps } from "../store/features";
+import { Lock } from "lucide-react";
+import { useAccessibleApps } from "../store/features";
 import { useWindows } from "../store/windows";
 import { useSettings, type WallpaperId, type AnimatedBgId } from "../store/settings";
 import ContextMenu, { type MenuItem } from "./ContextMenu";
@@ -28,7 +29,7 @@ const QUICK_ANIM_BGS: { id: AnimatedBgId; name: string }[] = [
 
 export default function Desktop() {
   const { open } = useWindows();
-  const apps = useAvailableApps();
+  const apps = useAccessibleApps();
   const { setWallpaper, setAnimatedBg } = useSettings();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [wallpaperSubmenu, setWallpaperSubmenu] = useState(false);
@@ -115,8 +116,13 @@ export default function Desktop() {
               onClick={(e) => e.stopPropagation()}
               className="group flex w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition hover:bg-white/10 focus:bg-accent/20"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white shadow-lg backdrop-blur-sm transition group-hover:scale-105">
+              <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white shadow-lg backdrop-blur-sm transition group-hover:scale-105">
                 <Icon size={22} />
+                {app.access === "preview" && (
+                  <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-white/20">
+                    <Lock size={9} />
+                  </span>
+                )}
               </div>
               <span className="text-xs font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                 {app.name}

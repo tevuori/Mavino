@@ -31,6 +31,7 @@ export const STUDY_FUNCTION_IDS = new Set(STUDY_HUB_FUNCTIONS.map((f) => f.id));
 export interface StudyFunctionTierConfig {
   free: boolean;
   paid: boolean;
+  pro: boolean;
 }
 
 export type StudyFunctionConfig = Record<string, StudyFunctionTierConfig>;
@@ -40,7 +41,7 @@ const CONFIG_KEY = "study.functions";
 function defaultConfig(): StudyFunctionConfig {
   const out: StudyFunctionConfig = {};
   for (const f of STUDY_HUB_FUNCTIONS) {
-    out[f.id] = { free: true, paid: true };
+    out[f.id] = { free: true, paid: true, pro: true };
   }
   return out;
 }
@@ -56,9 +57,12 @@ function safeParseConfig(raw: string | null): StudyFunctionConfig {
       if (val && typeof val === "object") {
         const free = Boolean((val as Record<string, unknown>).free);
         const paid = Boolean((val as Record<string, unknown>).paid);
-        out[f.id] = { free, paid };
+        const pro = (val as Record<string, unknown>).pro !== undefined
+          ? Boolean((val as Record<string, unknown>).pro)
+          : paid; // back-compat: if pro not stored, inherit paid value
+        out[f.id] = { free, paid, pro };
       } else {
-        out[f.id] = { free: true, paid: true };
+        out[f.id] = { free: true, paid: true, pro: true };
       }
     }
     return out;
@@ -78,8 +82,12 @@ export async function setStudyFunctionConfig(config: StudyFunctionConfig): Promi
   // Normalize: keep only known function ids and ensure booleans.
   const normalized: StudyFunctionConfig = {};
   for (const f of STUDY_HUB_FUNCTIONS) {
-    const val = config[f.id] ?? { free: true, paid: true };
-    normalized[f.id] = { free: Boolean(val.free), paid: Boolean(val.paid) };
+    const val = config[f.id] ?? { free: true, paid: true, pro: true };
+    normalized[f.id] = {
+      free: Boolean(val.free),
+      paid: Boolean(val.paid),
+      pro: Boolean(val.pro),
+    };
   }
   const value = JSON.stringify(normalized);
   const existing = await prisma.setting.findFirst({ where: { userId: null, key: CONFIG_KEY } });
@@ -103,7 +111,8 @@ export async function isStudyFunctionEnabled(userId: string, functionId: string)
   const role = await getUserRole(userId);
   if (role === "ADMIN" || role === "MANAGER" || role === "DEMO") return true;
   const config = await getStudyFunctionConfig();
-  const cfg = config[functionId] ?? { free: true, paid: true };
+  const cfg = config[functionId] ?? { free: true, paid: true, pro: true };
+  if (role === "PRO") return cfg.pro;
   if (role === "PAID") return cfg.paid;
   return cfg.free;
 }
@@ -116,7 +125,9 @@ export async function getEnabledStudyFunctionIds(userId: string): Promise<string
   }
   const config = await getStudyFunctionConfig();
   return STUDY_HUB_FUNCTIONS.filter((f) => {
-    const cfg = config[f.id] ?? { free: true, paid: true };
-    return role === "PAID" ? cfg.paid : cfg.free;
+    const cfg = config[f.id] ?? { free: true, paid: true, pro: true };
+    if (role === "PRO") return cfg.pro;
+    if (role === "PAID") return cfg.paid;
+    return cfg.free;
   }).map((f) => f.id);
 }

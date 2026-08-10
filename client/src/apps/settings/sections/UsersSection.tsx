@@ -206,6 +206,9 @@ function UserRow({
           {u.role === "PAID" && (
             <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-medium text-indigo-400">PAID</span>
           )}
+          {u.role === "PRO" && (
+            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-500">PRO</span>
+          )}
           {u.role === "FREE" && (
             <span className="rounded bg-surface-3 px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">FREE</span>
           )}
@@ -294,6 +297,7 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
     ? [
         { value: "FREE", label: "Free (limited AI)" },
         { value: "PAID", label: "Paid (higher AI limits)" },
+        { value: "PRO", label: "Pro (highest AI limits)" },
         { value: "MANAGER", label: "Manager (user management)" },
         { value: "DEMO", label: "Demo (pre-seeded trial)" },
         { value: "ADMIN", label: "Administrator" },
@@ -301,6 +305,7 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
     : [
         { value: "FREE", label: "Free (limited AI)" },
         { value: "PAID", label: "Paid (higher AI limits)" },
+        { value: "PRO", label: "Pro (highest AI limits)" },
         { value: "MANAGER", label: "Manager (user management)" },
       ];
 
@@ -405,6 +410,7 @@ function EditUserModal({
     ? [
         { value: "FREE", label: "Free (limited AI)" },
         { value: "PAID", label: "Paid (higher AI limits)" },
+        { value: "PRO", label: "Pro (highest AI limits)" },
         { value: "MANAGER", label: "Manager (user management)" },
         { value: "DEMO", label: "Demo (pre-seeded trial)" },
         { value: "ADMIN", label: "Administrator" },
@@ -412,6 +418,7 @@ function EditUserModal({
     : [
         { value: "FREE", label: "Free (limited AI)" },
         { value: "PAID", label: "Paid (higher AI limits)" },
+        { value: "PRO", label: "Pro (highest AI limits)" },
         { value: "MANAGER", label: "Manager (user management)" },
       ];
 

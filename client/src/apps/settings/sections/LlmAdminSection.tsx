@@ -227,6 +227,8 @@ function GlobalKeyCard() {
 
 function TierRateLimitsCard() {
   const [limits, setLimits] = useState<TierRateLimitsMap | null>(null);
+  const [proRpd, setProRpd] = useState(2000);
+  const [proRpm, setProRpm] = useState(60);
   const [paidRpd, setPaidRpd] = useState(500);
   const [paidRpm, setPaidRpm] = useState(30);
   const [freeRpd, setFreeRpd] = useState(50);
@@ -239,6 +241,8 @@ function TierRateLimitsCard() {
     try {
       const l = await adminLlmApi.getRateLimits();
       setLimits(l);
+      setProRpd(l.pro?.rpd ?? 2000);
+      setProRpm(l.pro?.rpm ?? 60);
       setPaidRpd(l.paid.rpd);
       setPaidRpm(l.paid.rpm);
       setFreeRpd(l.free.rpd);
@@ -253,7 +257,7 @@ function TierRateLimitsCard() {
     setErr(false);
     setMsg(null);
     try {
-      await adminLlmApi.setRateLimits({ paidRpd, paidRpm, freeRpd, freeRpm });
+      await adminLlmApi.setRateLimits({ proRpd, proRpm, paidRpd, paidRpm, freeRpd, freeRpm });
       await refresh();
       setMsg("Rate limits saved.");
     } catch (e) {
@@ -277,7 +281,32 @@ function TierRateLimitsCard() {
         <p className="text-sm font-medium text-ink">Admin</p>
         <p className="mt-0.5 text-xs text-ink-muted">No restrictions — unlimited requests.</p>
       </div>
-      <div className="mb-3 grid grid-cols-2 gap-3">
+      <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-edge bg-surface-2 p-3">
+          <p className="mb-2 text-sm font-medium text-ink">Pro tier</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Requests / day">
+              <input
+                type="number"
+                min={0}
+                max={100000}
+                value={proRpd}
+                onChange={(e) => setProRpd(Number(e.target.value))}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Requests / min">
+              <input
+                type="number"
+                min={0}
+                max={10000}
+                value={proRpm}
+                onChange={(e) => setProRpm(Number(e.target.value))}
+                className={inputClass}
+              />
+            </Field>
+          </div>
+        </div>
         <div className="rounded-lg border border-edge bg-surface-2 p-3">
           <p className="mb-2 text-sm font-medium text-ink">Paid tier</p>
           <div className="grid grid-cols-2 gap-2">

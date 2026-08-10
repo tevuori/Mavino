@@ -54,8 +54,8 @@ export default function AppsSection() {
 
   const nameFor = (id: string) => (APP_MAP as Record<string, { name: string }>)[id]?.name ?? id;
 
-  const core = apps.filter((a) => a.tier === "core" && !a.requiresGrant);
-  const beta = apps.filter((a) => a.tier === "beta" && !a.requiresGrant);
+  const free = apps.filter((a) => a.minTier === "free" && !a.requiresGrant);
+  const paid = apps.filter((a) => (a.minTier === "paid" || a.minTier === "pro") && !a.requiresGrant);
   const grant = apps.filter((a) => a.requiresGrant === "vut");
 
   const renderRow = (app: AdminAppEntry) => {
@@ -79,9 +79,11 @@ export default function AppsSection() {
           <p className="text-xs text-ink-muted">
             {app.requiresGrant === "vut"
               ? "Admin-granted per user"
-              : app.tier === "core"
-              ? "Core app"
-              : "Beta app"}
+              : app.minTier === "free"
+              ? "Free tier"
+              : app.minTier === "pro"
+              ? "Pro tier"
+              : "Paid tier"}
           </p>
         </div>
         <button
@@ -120,14 +122,14 @@ export default function AppsSection() {
       ) : (
         <>
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Core
+            Free tier
           </h4>
-          <Card className="mb-4 p-0">{core.map(renderRow)}</Card>
+          <Card className="mb-4 p-0">{free.map(renderRow)}</Card>
 
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Beta
+            Paid / Pro tier
           </h4>
-          <Card className="mb-4 p-0">{beta.map(renderRow)}</Card>
+          <Card className="mb-4 p-0">{paid.map(renderRow)}</Card>
 
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
             Admin-granted

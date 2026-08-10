@@ -34,6 +34,8 @@ export const adminLlmApi = {
   deleteKey: () => api.delete<{ ok: boolean }>("/api/admin/llm/key"),
   getRateLimits: () => api.get<TierRateLimitsMap>("/api/admin/llm/rate-limits"),
   setRateLimits: (data: {
+    proRpd?: number;
+    proRpm?: number;
     paidRpd?: number;
     paidRpm?: number;
     freeRpd?: number;
