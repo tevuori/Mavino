@@ -29,6 +29,7 @@ import { ntfyTools } from "./ntfy";
 import { reminderTools } from "./reminders";
 import { mapTools } from "./maps";
 import { atlasTools } from "./atlas";
+import { crunchTools } from "./crunch";
 import { loadPluginTools } from "../../plugins";
 
 export { AthenaToolsPlugin, type ToolDef, type ToolContext, type ClientWindowInfo } from "./plugin";
@@ -65,6 +66,7 @@ export const ALL_TOOLS: ToolDef[] = [
   ...reminderTools,
   ...mapTools,
   ...atlasTools,
+  ...crunchTools,
 ];
 
 /** Roles that get access to `paidOnly` tools (sandbox, etc.).

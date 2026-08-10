@@ -405,6 +405,18 @@ export default function AthenaApp({
       const id = openWindow({ appId: "atlas", title: "Atlas", icon: "Network" });
       return id;
     };
+    // Find an open Crunch window, or open one if none exists. Returns the id.
+    const ensureCrunchWindow = (): string => {
+      const wins = windowsRef.current.filter((w) => w.appId === "crunch");
+      const existing = wins.find((w) => !w.minimized) ?? wins[wins.length - 1];
+      if (existing) {
+        if (existing.minimized) minimizeWindow(existing.id);
+        focusWindow(existing.id);
+        return existing.id;
+      }
+      const id = openWindow({ appId: "crunch", title: "Crunch", icon: "CalendarClock" });
+      return id;
+    };
     switch (act) {
       case "profile_updated": {
         // set_user_name changed the display name server-side — pull the fresh
@@ -751,6 +763,15 @@ export default function AthenaApp({
         // If a conceptId is provided, store it so the Atlas app can focus on it.
         if (payload.conceptId) {
           sessionStorage.setItem(`atlas:focus:${id}`, String(payload.conceptId));
+        }
+        break;
+      }
+      // ===== Crunch (Pro AI exam planner) =====
+      case "open_crunch": {
+        const id = ensureCrunchWindow();
+        // If a date is provided, store it so the Crunch app can focus on it.
+        if (payload.date) {
+          sessionStorage.setItem(`crunch:focus:${id}`, String(payload.date));
         }
         break;
       }

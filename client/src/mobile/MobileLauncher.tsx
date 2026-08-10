@@ -1,9 +1,9 @@
-import { ArrowLeft, BookOpen, Brain, FileText, Flame, Folder, Globe, GraduationCap, Mic, Music2, Network, NotebookPen, PenTool, Settings, Timer, BellRing, Search, Lock } from "lucide-react";
+import { ArrowLeft, BookOpen, Brain, FileText, Flame, Folder, Globe, GraduationCap, Mic, Music2, Network, NotebookPen, PenTool, Settings, Timer, BellRing, Search, Lock, CalendarClock } from "lucide-react";
 import { useFeatures, type SubscriptionTier } from "../store/features";
 import { APP_MAP } from "../apps/registry";
 import type { AppId } from "../store/windows";
 
-export type MobileTool = "notes" | "study" | "teach" | "flashcards" | "focus" | "files" | "voice" | "grades" | "vut" | "habits" | "whiteboard" | "browser" | "reminders" | "ntfy" | "settings" | "editor" | "moodle" | "atlas";
+export type MobileTool = "notes" | "study" | "teach" | "flashcards" | "focus" | "files" | "voice" | "grades" | "vut" | "habits" | "whiteboard" | "browser" | "reminders" | "ntfy" | "settings" | "editor" | "moodle" | "atlas" | "crunch";
 
 /** Maps a mobile tool id to the desktop AppId used for availability checks. */
 const TOOL_TO_APP_ID: Record<MobileTool, AppId> = {
@@ -25,6 +25,7 @@ const TOOL_TO_APP_ID: Record<MobileTool, AppId> = {
   editor: "editor",
   moodle: "moodle",
   atlas: "atlas",
+  crunch: "crunch",
 };
 
 const ALL_APPS: { id: MobileTool; name: string; description: string; icon: typeof NotebookPen }[] = [
@@ -34,6 +35,7 @@ const ALL_APPS: { id: MobileTool; name: string; description: string; icon: typeo
   { id: "habits", name: "Habits", description: "Small wins, daily", icon: Flame }, { id: "whiteboard", name: "Whiteboard", description: "Sketch your thinking", icon: PenTool }, { id: "browser", name: "Browser", description: "Research with Mavino", icon: Globe }, { id: "reminders", name: "Reminders", description: "Never lose a deadline", icon: BellRing },
   { id: "ntfy", name: "Ntfy", description: "Messages and automations", icon: Music2 }, { id: "settings", name: "Settings", description: "Account and preferences", icon: Settings }, { id: "editor", name: "Editor", description: "Text and code files", icon: FileText },
   { id: "atlas", name: "Atlas", description: "Your global knowledge map", icon: Network },
+  { id: "crunch", name: "Crunch", description: "Adaptive exam prep planner", icon: CalendarClock },
 ];
 
 const TIER_RANK: Record<SubscriptionTier, number> = { free: 0, paid: 1, pro: 2 };

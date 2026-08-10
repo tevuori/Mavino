@@ -147,6 +147,25 @@ export async function workspaceSummary(userId: string): Promise<string> {
       // ignore malformed atlas data
     }
   }
+  // Crunch (Pro): report exam-prep plan status so the model can proactively
+  // suggest studying or warn about falling behind.
+  const crunchRow = await prisma.crunchPlan.findUnique({ where: { userId } });
+  if (crunchRow?.status === "ready") {
+    try {
+      const crunchData = JSON.parse(crunchRow.data) as { stats?: { examCount?: number; behindPct?: number; nextExamName?: string | null; nextExamDays?: number | null; completedMinutes?: number; totalMinutes?: number } };
+      const cs = crunchData.stats;
+      if (cs && (cs.examCount ?? 0) > 0) {
+        const crunchParts: string[] = [`Crunch: ${cs.examCount} exam${cs.examCount !== 1 ? "s" : ""}`];
+        if (cs.nextExamName && cs.nextExamDays !== null) {
+          crunchParts.push(`next: ${cs.nextExamName} in ${cs.nextExamDays}d`);
+        }
+        if ((cs.behindPct ?? 0) >= 20) crunchParts.push(`BEHIND ${cs.behindPct}%`);
+        parts.push(crunchParts.join(", "));
+      }
+    } catch {
+      // ignore malformed crunch data
+    }
+  }
   return parts.join(" | ");
 }
 
@@ -223,6 +242,9 @@ export async function buildSystemPrompt(
   const atlasLine = isProTier
     ? "- Atlas (Pro — global knowledge graph): atlas_status (check if the user's Atlas is built + stats), atlas_weak_concepts (list concepts with low mastery/grades — use when the user asks what they're struggling with), atlas_find_concept (find a concept by label + get its linked notes/flashcards/tasks/courses + related concepts), open_atlas (open the Atlas app, optionally focused on a concept). Atlas stitches together all Study Hub graphs + notes + flashcards + tasks + courses into one map.\n"
     : "";
+  const crunchLine = isProTier
+    ? "- Crunch (Pro — AI exam planner): crunch_status (check if the user's exam-prep plan is generated + stats: exams, topics, behind %, next exam), crunch_today (list today's study tasks from the plan — use when the user asks what to study today), crunch_log_progress (mark a task done/not-done by id from crunch_today), open_crunch (open the Crunch app, optionally focused on a date). Crunch generates a day-by-day spaced-repetition plan from exam dates + syllabi, reads mastery from flashcard reviews + grades, and auto-adjusts as the user logs progress. If the workspace summary shows BEHIND N%, proactively warn the user and suggest opening Crunch.\n"
+    : "";
   const now = new Date();
   const dateLine = `Current date/time: ${now.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short", timeZone: tz })} (ISO: ${now.toISOString()}). The user's timezone is ${tz} — interpret any wall-clock times the user mentions (e.g. "3pm", "tomorrow at 9") as being in ${tz}, and emit fireAt / dueDate timestamps as ISO 8601 with the ${tz} offset (or convert to UTC with a trailing Z). Use this as "today" when the user says "today" — do not guess the date. Calendar/task tools accept ISO 8601 timestamps (e.g. ${now.toISOString().slice(0, 10)}T00:00:00Z).`;
   return `You are Mavino, the user's personal workspace assistant living inside their Mavino Student OS desktop. You can see and act on the user's workspace through tools.
@@ -273,7 +295,7 @@ ${sandboxLine}- Auto notetaking: create_notes_from_url (fetch a web page → AI 
   • Workflow for "plan a hike from A to B": geocode A and B → plan_route(mode="hiking") → draw_map_route (pass geometry + pois) → narrate the full plan: distance, duration, ascent/descent, water sources, legal sleeping spots, and landmarks along the way. Then offer to save_trip.
   • Workflow for "plan a 3-day hiking tour based in X": Call plan_hiking_tour DIRECTLY — do NOT geocode, search_places, web_search, or research first. The tool handles geocoding internally (with fallbacks for peaks not in mapy.cz). Choose the mode based on what the user wants: mode="through" = a CONTINUOUS point-to-point hike (each day continues where the previous ended — use this when the user says "traverse", "ridge hike", "through-hike", "point-to-point", or wants to go from A to B over multiple days; requires end="Y" for the destination); mode="hub" = loop hikes from a single base each day (use this when the user says "base camp", "hub", or wants to return to the same accommodation each night). Default to mode="through" for multi-day hikes unless the user explicitly wants to return to base each night. plan_hiking_tour(base="X", mode="through", end="Y", days=3, difficulty="medium") → the tool saves + opens the tour on the map → narrate the returned summary (overview, day-by-day, packing list, safety notes) in your reply. If the tool returns an error about geocoding, suggest the user try a nearby town name or provide coordinates. Encourage the user to ask for regenerate_tour_day if they don't like a particular day. CRITICAL: Never call geocode before plan_hiking_tour — this wastes turns and the tool does its own geocoding.
   • Workflow for "find water/sleeping spots near X": geocode X → find_nearby_pois(categories="water" or "sleeping") → show_map_pois → list them in your reply.
-${atlasLine}
+${atlasLine}${crunchLine}
 Guidelines:
 - Be concise and direct. Prefer action over explanation.
 - When the user refers to a file by name, it is most likely in the "Recently opened files" list below. Use its id with read_file/edit_file. If not found there, use search_files. If the file doesn't exist yet, use create_file.

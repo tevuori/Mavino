@@ -731,3 +731,24 @@ A dedicated **Atlas** app (`client/src/apps/atlas/AtlasApp.tsx`) is the first Pr
 **UI:** Desktop `AtlasApp` uses `react-force-graph-2d` (same lib as Study Hub KnowledgeGraph). Weak concepts render with red nodes + red ring. Concept detail sidebar shows linked notes/flashcards/tasks/courses with "Open in…" buttons that call `useWindows().open()` to jump to the respective app. "Weak only" filter toggle. Stale banner when source graphs changed since last build. Mobile `MobileAtlas` is list-based (force graph impractical on touch) — concepts sorted weak-first, tap to expand linked items.
 
 
+## Crunch (Pro-tier AI exam planner)
+
+A dedicated **Crunch** app (`client/src/apps/crunch/CrunchApp.tsx`) is the second Pro-tier-exclusive app. It's an adaptive exam-prep scheduler: the user inputs exam dates + syllabi, and Crunch reads current mastery from flashcard review history + grades, then generates a day-by-day spaced-repetition study plan that auto-adjusts as the user logs progress. Sends proactive ntfy alerts when falling behind.
+
+**Distinct from:** Calendar (passive), Today (daily view), Study Hub (per-document), Analytics (backward-looking). Crunch is forward-looking and adaptive — it understands your weak spots and schedules around them.
+
+**Data model:** `CrunchPlan` Prisma model — one row per user (`userId` unique), JSON `data` column containing `CrunchPlanData` (exams, topics, days, stats). `lastAlertAt` throttles "falling behind" ntfy alerts to once per day. Build status: `building` | `ready` | `error` (same fire-and-forget + polling pattern as AtlasGraph).
+
+**Generation pipeline** (`services/crunch.ts` `generateCrunchPlan`): (1) Normalize exam inputs (parse dates, filter past, assign colors). (2) Load courses + flashcard decks + reviews + assignments + study sessions. (3) Compute deck mastery from `FlashcardReview` (avg quality / 5). (4) Compute course grade percentages from `Assignment` weighted scores. (5) Parse each exam's syllabus into topics via LLM (one `generateJson` call per exam — extracts label, priority 1-5, estimated hours, matches to flashcard decks by name). Falls back to line/comma splitting if LLM fails. (6) Compute mastery per topic from linked decks + course grade. (7) Generate spaced-repetition schedule: distribute "new" (learn) sessions in first 60% of days, spaced reviews at intervals [1, 3, 7, 14] days, practice sessions in last 30%, mock exams 1-2 days before each exam. Respects daily study minutes cap. (8) Compute stats (behind %, next exam, completed/total minutes).
+
+**Behind-alerts:** `checkBehindAlert` compares planned vs completed minutes for past days. If behind ≥20% and ntfy is configured, publishes a priority-4 alert to the user's notify topic (throttled to once per 24h via `lastAlertAt`). Called fire-and-forget on GET / and `crunch_status` tool calls.
+
+**Endpoints** (`routes/crunch.ts`): `/` (GET — status + data, also triggers behind-alert check), `/generate` (POST — kick off background generation, body: `{ exams, dailyMinutes }`), `/progress` (POST — mark a task done/not-done), `/day-complete` (POST — bulk-complete all tasks on a date), `/` (DELETE — delete plan). All gated by `crunchGate` middleware (402 for non-Pro).
+
+**Athena tools** (`tools/crunch.ts`, all `proOnly: true`): `crunch_status` (check plan + stats + exams + topics), `crunch_today` (list today's tasks with topic/type/duration/done), `crunch_log_progress` (mark a task done/not-done by id — `destructive: true`), `open_crunch` (client action — opens the Crunch app, optionally focused on a date via `sessionStorage` key `crunch:focus:<windowId>`). The `open_crunch` client action is dispatched in `AthenaApp.tsx` alongside `open_atlas` etc.
+
+**Athena context:** `workspaceSummary` in `context.ts` includes Crunch exam count, next exam name + days, and behind % (with "BEHIND N%" flag if ≥20%). The system prompt includes a Crunch capabilities line (Pro-only, hidden for non-Pro users) that instructs Athena to proactively warn when behind.
+
+**UI:** Desktop `CrunchApp` has two modes — exam setup form (add exams with name/date/syllabus + daily study target) and day-by-day plan view (timeline of study tasks with progress checkboxes, task type icons/colors, mastery badges, "Complete all" bulk action per day, day navigation, behind-alert banner, next-exam countdown). Mobile `MobileCrunch` shows today's tasks as tappable cards + upcoming days + stats grid + behind alert + setup form.
+
+

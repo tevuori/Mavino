@@ -64,6 +64,7 @@ const PLANS: Array<{
     features: [
       "Everything in Paid",
       "Atlas — global knowledge graph",
+      "Crunch — adaptive exam planner",
       "Pro-tier AI rate limits",
       "50 GB storage",
       "Priority new features",

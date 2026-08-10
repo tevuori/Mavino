@@ -76,6 +76,7 @@ model User {
   subscription       Subscription?
   installedPlugins   UserPlugin[]
   atlasGraph         AtlasGraph?
+  crunchPlan         CrunchPlan?
 }
 
 // ===== Password reset tokens =====
@@ -1229,6 +1230,36 @@ model AtlasGraph {
   sourceSnapshot String @default("[]")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ===== Crunch (Pro-tier AI exam planner) =====
+// An adaptive exam-prep scheduler: the user inputs exam dates + syllabi, and
+// Crunch reads current mastery from flashcard review history + grades, then
+// generates a day-by-day spaced-repetition study plan that auto-adjusts as
+// the user logs progress. Sends proactive ntfy alerts when the user is
+// falling behind.
+//
+// One row per user (userId is unique). The full plan is stored as JSON in
+// `data` (CrunchPlanData). The build is fire-and-forget + polling, same
+// pattern as AtlasGraph: POST /generate reserves/updates the row to
+// "building" synchronously, the (potentially slow) LLM scheduling runs in
+// the background, and the client polls GET / until status flips to "ready".
+// `lastAlertAt` throttles "falling behind" ntfy alerts (max one per day).
+
+model CrunchPlan {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // JSON-encoded CrunchPlanData: { exams, topics, days, generatedAt, ... }.
+  data         String   @default("{}")
+  status       String   @default("ready") // "building" | "ready" | "error"
+  error        String   @default("")
+  // Timestamp of the last "falling behind" ntfy alert (throttle: 1/day).
+  lastAlertAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([userId])
 }
