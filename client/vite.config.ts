@@ -44,7 +44,7 @@ export default defineConfig({
   plugins: [
     react(),
     !isCapacitorBuild && VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       includeAssets: ["favicon-32.png", "favicon-16.png", "apple-touch-icon.png"],
       manifest: {
         name: "Mavino — Student OS",

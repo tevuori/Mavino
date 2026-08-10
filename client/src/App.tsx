@@ -3,6 +3,7 @@ import { useAuth } from "./store/auth";
 import { useFeatures } from "./store/features";
 import { useFormFactor, initFormFactorListeners } from "./store/formfactor";
 import { installGlobalErrorHandlers } from "./services/errorReporter";
+import { cleanupStaleServiceWorkersInDev } from "./services/sw-cleanup";
 import BootScreen from "./shell/BootScreen";
 import LoginScreen from "./shell/LoginScreen";
 import ResetPasswordScreen from "./shell/ResetPasswordScreen";
@@ -10,6 +11,7 @@ import ForceChangePasswordScreen from "./shell/ForceChangePasswordScreen";
 import DesktopEnvironment from "./shell/DesktopEnvironment";
 import MobileShell from "./shell/mobile/MobileShell";
 import UpdateDialog from "./shell/UpdateDialog";
+import ReloadPrompt from "./shell/ReloadPrompt";
 import GlobalErrorBoundary from "./shell/GlobalErrorBoundary";
 
 type Phase = "boot" | "app";
@@ -23,6 +25,7 @@ export default function App() {
   // On mount, check existing token + set up form-factor listeners + global error handlers
   useEffect(() => {
     refresh();
+    cleanupStaleServiceWorkersInDev();
     const cleanup = initFormFactorListeners();
     installGlobalErrorHandlers();
     // Initialize Capacitor native plugins if running inside a native shell.
@@ -74,6 +77,8 @@ export default function App() {
       {/* Rendered once at the top level. Reads from the useUpdater store and
           is a no-op on web/PWA builds (the store is never populated there). */}
       <UpdateDialog />
+      {/* Web/PWA prompt when a new build is deployed. No-op in dev and on native. */}
+      <ReloadPrompt />
     </GlobalErrorBoundary>
   );
 }

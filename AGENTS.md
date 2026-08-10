@@ -64,7 +64,7 @@ Athena adapts to phone/tablet/desktop via a **form-factor store** (`client/src/s
 - The release pipeline is `.github/workflows/build-android.yml`: on a `v*` tag push (or manual dispatch), it builds the client, `cap sync android`, builds a signed release APK with the keystore from secrets, computes SHA256, writes `latest.json`, and creates a GitHub Release with the APK + `*.apk.sha256` + `latest.json` as assets.
 - **Required GitHub secrets:** `KEYSTORE_BASE64` (base64-encoded release keystore), `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. Generate with `keytool -genkeypair -v -keystore athena-release.keystore -alias athena -keyalg RSA -keysize 2048 -validity 10000` then `base64 -w0 athena-release.keystore > athena-release.keystore.b64`. **Every release must be signed with the same keystore** — Android refuses in-place updates signed with a different key. Back up the keystore somewhere safe.
 - **versionCode formula:** `major*10000 + minor*100 + patch` (e.g. `1.2.3` → `10203`). Must be monotonically increasing.
-- Web/PWA builds are unaffected — all update logic is gated on `isCapacitor()`. The PWA already uses vite-plugin-pwa's `autoUpdate` for SW-based updates.
+- Web/PWA builds are unaffected — all update logic is gated on `isCapacitor()`. The PWA uses vite-plugin-pwa's `prompt` registration with a top-level `ReloadPrompt` so users can reload when a new build is deployed.
 
 ## Moodle integration
 
