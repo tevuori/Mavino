@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "../middleware/auth";
-import { adminMiddleware } from "../middleware/admin";
+import { adminGuard } from "../middleware/admin";
 import {
   createCheckoutSession,
   createPortalSession,
@@ -63,7 +63,7 @@ subscriptions.post("/cancel", authMiddleware, async (c) => {
 const admin = new Hono();
 
 /** GET /api/subscriptions/admin/prices — get configured price IDs. */
-admin.get("/prices", adminMiddleware, async (c) => {
+admin.get("/prices", ...adminGuard, async (c) => {
   const [paidPriceId, proPriceId] = await Promise.all([
     getPriceId("paid"),
     getPriceId("pro"),
@@ -81,7 +81,7 @@ const priceSchema = z.object({
 });
 
 /** PUT /api/subscriptions/admin/prices — set a price ID for a plan. */
-admin.put("/prices", adminMiddleware, zValidator("json", priceSchema), async (c) => {
+admin.put("/prices", ...adminGuard, zValidator("json", priceSchema), async (c) => {
   const { plan, priceId } = c.req.valid("json");
   await setPriceId(plan, priceId);
   return c.json({ ok: true });

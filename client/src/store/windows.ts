@@ -28,6 +28,7 @@ export type AppId =
   | "maps"
   | "plans"
   | "marketplace"
+  | "atlas"
   // Plugin apps use synthetic ids of the form `plugin:<pluginKey>`. The
   // `(string & {})` catch-all preserves autocomplete for the literal union
   // above while allowing any string for dynamically-installed plugins.

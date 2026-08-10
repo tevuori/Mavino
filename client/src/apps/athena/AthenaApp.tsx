@@ -393,6 +393,18 @@ export default function AthenaApp({
       const id = openWindow({ appId: "maps", title: "Maps", icon: "Map" });
       return id;
     };
+    // Find an open Atlas window, or open one if none exists. Returns the id.
+    const ensureAtlasWindow = (): string => {
+      const wins = windowsRef.current.filter((w) => w.appId === "atlas");
+      const existing = wins.find((w) => !w.minimized) ?? wins[wins.length - 1];
+      if (existing) {
+        if (existing.minimized) minimizeWindow(existing.id);
+        focusWindow(existing.id);
+        return existing.id;
+      }
+      const id = openWindow({ appId: "atlas", title: "Atlas", icon: "Network" });
+      return id;
+    };
     switch (act) {
       case "profile_updated": {
         // set_user_name changed the display name server-side — pull the fresh
@@ -731,6 +743,15 @@ export default function AthenaApp({
         issueMapCmdRef.current(id, "draw_tour", {
           tourDays: payload.tourDays as { name: string; geometry: [number, number][] }[] | undefined,
         });
+        break;
+      }
+      // ===== Atlas (Pro global knowledge graph) =====
+      case "open_atlas": {
+        const id = ensureAtlasWindow();
+        // If a conceptId is provided, store it so the Atlas app can focus on it.
+        if (payload.conceptId) {
+          sessionStorage.setItem(`atlas:focus:${id}`, String(payload.conceptId));
+        }
         break;
       }
       default: {

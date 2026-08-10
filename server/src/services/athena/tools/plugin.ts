@@ -44,6 +44,9 @@ export interface ToolDef {
   /** If true, the tool is only available to PAID / MANAGER / ADMIN users.
    *  Free and Demo users won't see it in the manifest or be able to invoke it. */
   paidOnly?: boolean;
+  /** If true, the tool is only available to PRO / MANAGER / ADMIN users
+   *  (Pro-tier exclusive). Paid and Free users won't see it. */
+  proOnly?: boolean;
   handler: (args: any, ctx: ToolContext) => Promise<any>;
 }
 

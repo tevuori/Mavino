@@ -710,3 +710,24 @@ A curated marketplace where **paid/pro** users can browse and install community-
 
 **Settings:** admin "Plugins" section (`sections/PluginsAdminSection.tsx`) — publish/edit/feature/delete plugins via raw JSON manifest. The Marketplace app (`apps/marketplace/MarketplaceApp.tsx`) is a paid-tier built-in app for browsing/installing.
 
+## Atlas (Pro-tier global knowledge graph)
+
+A dedicated **Atlas** app (`client/src/apps/atlas/AtlasApp.tsx`) is the first Pro-tier-exclusive app. It's a "graph of graphs": stitches together every Study Hub `ConceptGraph` the user has built, plus their notes, flashcards, tasks, and courses, into one living map of their knowledge — with weak spots highlighted in red.
+
+**Relationship to Study Hub Knowledge Graph:** The Study Hub graph (Free/Paid) is *micro* — one source-set, cited, document-analysis. Atlas is *macro* — everything you own, auto-merged, cross-linked. Atlas consumes Study Hub graphs as inputs (each becomes a cluster); it doesn't duplicate them. If the user has notes but zero Study Hub graphs, Atlas runs one LLM extraction pass over note snippets to seed concepts so it's useful standalone.
+
+**Data model:** `AtlasGraph` Prisma model — one row per user (`userId` unique), JSON `data` column containing `AtlasData` (concepts, links, clusters, stats). `sourceSnapshot` tracks which ConceptGraphs were used at build time so staleness can be detected. Build status: `building` | `ready` | `error` (same fire-and-forget + polling pattern as ConceptGraph).
+
+**Build pipeline** (`services/atlas.ts` `buildAtlasData`): deterministic, no LLM unless seeding from notes. (1) Load all ready ConceptGraphs → collect concepts + edges, namespaced per source graph. (2) Merge concepts across graphs by normalized label (lowercase, strip stopwords/punctuation, sort tokens — "Derivative of a function" ≈ "function derivative"). (3) Remap edges to merged concept ids. (4) Load notes / flashcard decks+cards / tasks / courses+assignments. (5) Link items to concepts by text matching (concept label appears in item text — regex word-boundary for single words, substring for phrases). (6) Compute mastery per concept from `FlashcardReview` (avg quality / 5 for cards in linked decks). (7) Compute gradePct from `Assignment` scores in linked courses. (8) Flag weak = mastery < 0.6 OR gradePct < 60. (9) Build clusters (one per source graph + one per course). (10) If no graphs but notes exist, one LLM call seeds concepts from note snippets.
+
+**Endpoints** (`routes/atlas.ts`): `GET /api/atlas` (status + data + stale flag), `POST /api/atlas/build` (fire-and-forget, returns 202), `GET /api/atlas/concept/:id` (concept detail with linked items + related concepts), `GET /api/atlas/weak` (weak concepts). All gated by `atlasGate` middleware → 402 for non-Pro users.
+
+**Athena tools** (`tools/atlas.ts`, all `proOnly: true`): `atlas_status` (check build + stats + top/weak concepts), `atlas_weak_concepts` (list weak spots with linked item counts), `atlas_find_concept` (find by label substring → full detail with linked items), `open_atlas` (client action — opens the Atlas app, optionally focused on a concept via `sessionStorage` key `atlas:focus:<windowId>`). The `open_atlas` client action is dispatched in `AthenaApp.tsx` alongside `open_maps` etc.
+
+**Pro-tier tool gating:** `ToolDef.proOnly` flag (added alongside `paidOnly`). `PRO_TIERS = ["PRO", "MANAGER", "ADMIN"]` in `tools/index.ts`. Also fixed `PAID_TIERS` to include `"PRO"` (Pro is a higher tier than Paid, so Pro users get all paid-only tools + marketplace plugins — this was a pre-existing bug).
+
+**Athena context:** `workspaceSummary` in `context.ts` includes Atlas concept/weak counts. The system prompt includes an Atlas capabilities line (Pro-only, hidden for non-Pro users).
+
+**UI:** Desktop `AtlasApp` uses `react-force-graph-2d` (same lib as Study Hub KnowledgeGraph). Weak concepts render with red nodes + red ring. Concept detail sidebar shows linked notes/flashcards/tasks/courses with "Open in…" buttons that call `useWindows().open()` to jump to the respective app. "Weak only" filter toggle. Stale banner when source graphs changed since last build. Mobile `MobileAtlas` is list-based (force graph impractical on touch) — concepts sorted weak-first, tap to expand linked items.
+
+

@@ -75,6 +75,7 @@ model User {
   errorLogs          ErrorLog[]
   subscription       Subscription?
   installedPlugins   UserPlugin[]
+  atlasGraph         AtlasGraph?
 }
 
 // ===== Password reset tokens =====
@@ -1196,5 +1197,38 @@ model UserPlugin {
   updatedAt   DateTime @updatedAt
 
   @@unique([userId, pluginKey])
+  @@index([userId])
+}
+
+// ===== Atlas (Pro-tier global knowledge graph) =====
+// A per-user "graph of graphs": stitches together every Study Hub
+// ConceptGraph the user has built, plus their notes, flashcards, tasks, and
+// courses, into one living map of their knowledge. Concepts are merged
+// across source-graphs by normalized-label matching, linked to the items
+// that mention/test/cover them, and enriched with mastery (from flashcard
+// reviews) and grade signals so weak spots are highlighted.
+//
+// One row per user (userId is unique). The full stitched graph is stored as
+// JSON in `data` (AtlasData). The build is fire-and-forget + polling, same
+// pattern as ConceptGraph: POST /build reserves/updates the row to
+// "building" synchronously, the (potentially slow) stitching runs in the
+// background, and the client polls GET / until status flips to "ready".
+
+model AtlasGraph {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // JSON-encoded AtlasData: { concepts, links, clusters, stats, builtAt }.
+  data      String   @default("{}")
+  status    String   @default("ready") // "building" | "ready" | "error"
+  error     String   @default("")
+  // Snapshot of source ConceptGraph ids + their updatedAt timestamps at
+  // build time, so the client/server can tell whether a re-build is needed
+  // (any source graph changed since last build). JSON array of
+  // { graphId, updatedAt }.
+  sourceSnapshot String @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
 }

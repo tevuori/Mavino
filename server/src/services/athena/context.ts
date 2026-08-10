@@ -132,6 +132,21 @@ export async function workspaceSummary(userId: string): Promise<string> {
   if (podcastCount > 0) studyHubParts.push(`${podcastCount} podcasts`);
   if (teacherSessionCount > 0) studyHubParts.push(`${teacherSessionCount} teacher sessions`);
   if (studyHubParts.length > 0) parts.push(`Study Hub: ${studyHubParts.join(", ")}`);
+  // Atlas (Pro): report build status + concept/weak counts so the model
+  // can proactively suggest exploring weak spots.
+  const atlasRow = await prisma.atlasGraph.findUnique({ where: { userId } });
+  if (atlasRow?.status === "ready") {
+    try {
+      const atlasData = JSON.parse(atlasRow.data) as { concepts?: unknown[]; stats?: { weakCount?: number; conceptCount?: number } };
+      const conceptCount = atlasData.stats?.conceptCount ?? atlasData.concepts?.length ?? 0;
+      const weakCount = atlasData.stats?.weakCount ?? 0;
+      if (conceptCount > 0) {
+        parts.push(`Atlas: ${conceptCount} concepts${weakCount > 0 ? ` (${weakCount} weak)` : ""}`);
+      }
+    } catch {
+      // ignore malformed atlas data
+    }
+  }
   return parts.join(" | ");
 }
 
@@ -202,6 +217,12 @@ export async function buildSystemPrompt(
   const sandboxGuideline = isPaidTier
     ? "- For run_code: the user confirms before execution. If the sandbox is unavailable (no Docker), tell the user clearly.\n"
     : "";
+  // Atlas (global knowledge graph) is a Pro-only feature. Hide it from
+  // non-Pro users so the model never advertises it.
+  const isProTier = ["PRO", "MANAGER", "ADMIN"].includes(user?.role ?? "FREE");
+  const atlasLine = isProTier
+    ? "- Atlas (Pro — global knowledge graph): atlas_status (check if the user's Atlas is built + stats), atlas_weak_concepts (list concepts with low mastery/grades — use when the user asks what they're struggling with), atlas_find_concept (find a concept by label + get its linked notes/flashcards/tasks/courses + related concepts), open_atlas (open the Atlas app, optionally focused on a concept). Atlas stitches together all Study Hub graphs + notes + flashcards + tasks + courses into one map.\n"
+    : "";
   const now = new Date();
   const dateLine = `Current date/time: ${now.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short", timeZone: tz })} (ISO: ${now.toISOString()}). The user's timezone is ${tz} — interpret any wall-clock times the user mentions (e.g. "3pm", "tomorrow at 9") as being in ${tz}, and emit fireAt / dueDate timestamps as ISO 8601 with the ${tz} offset (or convert to UTC with a trailing Z). Use this as "today" when the user says "today" — do not guess the date. Calendar/task tools accept ISO 8601 timestamps (e.g. ${now.toISOString().slice(0, 10)}T00:00:00Z).`;
   return `You are Mavino, the user's personal workspace assistant living inside their Mavino Student OS desktop. You can see and act on the user's workspace through tools.
@@ -252,7 +273,7 @@ ${sandboxLine}- Auto notetaking: create_notes_from_url (fetch a web page → AI 
   • Workflow for "plan a hike from A to B": geocode A and B → plan_route(mode="hiking") → draw_map_route (pass geometry + pois) → narrate the full plan: distance, duration, ascent/descent, water sources, legal sleeping spots, and landmarks along the way. Then offer to save_trip.
   • Workflow for "plan a 3-day hiking tour based in X": Call plan_hiking_tour DIRECTLY — do NOT geocode, search_places, web_search, or research first. The tool handles geocoding internally (with fallbacks for peaks not in mapy.cz). Choose the mode based on what the user wants: mode="through" = a CONTINUOUS point-to-point hike (each day continues where the previous ended — use this when the user says "traverse", "ridge hike", "through-hike", "point-to-point", or wants to go from A to B over multiple days; requires end="Y" for the destination); mode="hub" = loop hikes from a single base each day (use this when the user says "base camp", "hub", or wants to return to the same accommodation each night). Default to mode="through" for multi-day hikes unless the user explicitly wants to return to base each night. plan_hiking_tour(base="X", mode="through", end="Y", days=3, difficulty="medium") → the tool saves + opens the tour on the map → narrate the returned summary (overview, day-by-day, packing list, safety notes) in your reply. If the tool returns an error about geocoding, suggest the user try a nearby town name or provide coordinates. Encourage the user to ask for regenerate_tour_day if they don't like a particular day. CRITICAL: Never call geocode before plan_hiking_tour — this wastes turns and the tool does its own geocoding.
   • Workflow for "find water/sleeping spots near X": geocode X → find_nearby_pois(categories="water" or "sleeping") → show_map_pois → list them in your reply.
-
+${atlasLine}
 Guidelines:
 - Be concise and direct. Prefer action over explanation.
 - When the user refers to a file by name, it is most likely in the "Recently opened files" list below. Use its id with read_file/edit_file. If not found there, use search_files. If the file doesn't exist yet, use create_file.

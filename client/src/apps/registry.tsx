@@ -60,6 +60,7 @@ const MoodleApp = lazyImport(() => import("./moodle/MoodleApp"));
 const MapsApp = lazyImport(() => import("./maps/MapsApp"));
 const PlansApp = lazyImport(() => import("./plans/PlansApp"));
 const MarketplaceApp = lazyImport(() => import("./marketplace/MarketplaceApp"));
+const AtlasApp = lazyImport(() => import("./atlas/AtlasApp"));
 
 export interface AppDefinition {
   id: AppId;
@@ -111,6 +112,9 @@ export const APPS: AppDefinition[] = [
 
   // ----- Marketplace (paid tier — browse/install community plugins) -----
   { id: "marketplace", name: "Marketplace", icon: "Store", component: MarketplaceApp, pinnedToDesktop: true, minTier: "paid" },
+
+  // ----- Pro tier (exclusive apps for Pro subscribers) -----
+  { id: "atlas", name: "Atlas", icon: "Network", component: AtlasApp, pinnedToDesktop: true, minTier: "pro" },
 
   // ----- Admin-granted (VUT SSO → VUT + Moodle) -----
   { id: "vut", name: "VUT", icon: "GraduationCap", component: VUTApp, pinnedToDesktop: true, requiresGrant: "vut" },

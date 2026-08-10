@@ -28,6 +28,7 @@ import { teacherTools } from "./teacher";
 import { ntfyTools } from "./ntfy";
 import { reminderTools } from "./reminders";
 import { mapTools } from "./maps";
+import { atlasTools } from "./atlas";
 import { loadPluginTools } from "../../plugins";
 
 export { AthenaToolsPlugin, type ToolDef, type ToolContext, type ClientWindowInfo } from "./plugin";
@@ -63,15 +64,22 @@ export const ALL_TOOLS: ToolDef[] = [
   ...ntfyTools,
   ...reminderTools,
   ...mapTools,
+  ...atlasTools,
 ];
 
-/** Roles that get access to `paidOnly` tools (sandbox, etc.). */
-const PAID_TIERS = new Set(["PAID", "MANAGER", "ADMIN"]);
+/** Roles that get access to `paidOnly` tools (sandbox, etc.).
+ *  Includes PRO since Pro is a higher tier than Paid. */
+const PAID_TIERS = new Set(["PAID", "PRO", "MANAGER", "ADMIN"]);
 
-/** Filter the full tool list by user role (drops paidOnly tools for free/demo). */
+/** Roles that get access to `proOnly` tools (Atlas, etc.). */
+const PRO_TIERS = new Set(["PRO", "MANAGER", "ADMIN"]);
+
+/** Filter the full tool list by user role (drops paidOnly/proOnly tools for
+ *  lower tiers). */
 export function toolsForRole(role: string): ToolDef[] {
-  if (PAID_TIERS.has(role)) return ALL_TOOLS;
-  return ALL_TOOLS.filter((t) => !t.paidOnly);
+  if (PRO_TIERS.has(role)) return ALL_TOOLS;
+  if (PAID_TIERS.has(role)) return ALL_TOOLS.filter((t) => !t.proOnly);
+  return ALL_TOOLS.filter((t) => !t.paidOnly && !t.proOnly);
 }
 
 /**

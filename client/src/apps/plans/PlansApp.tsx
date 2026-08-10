@@ -63,6 +63,7 @@ const PLANS: Array<{
     description: "For power users",
     features: [
       "Everything in Paid",
+      "Atlas — global knowledge graph",
       "Pro-tier AI rate limits",
       "50 GB storage",
       "Priority new features",
