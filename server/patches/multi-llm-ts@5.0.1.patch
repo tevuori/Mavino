@@ -1,0 +1,80 @@
+diff --git a/dist/index.js b/dist/index.js
+index d70c6d5169962d9ff5f5a51b9222fb82361fea61..306b9159a92970b4e31b664d378adac65fc951e0 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -2894,7 +2894,7 @@ var google_default = class extends LlmEngine {
+         parts: response.candidates[0].content.parts
+       });
+       thread.push({
+-        role: "tool",
++        role: "user",
+         parts: results.map((r) => ({ functionResponse: r }))
+       });
+       await this.applyCooldown(startTime);
+@@ -3071,7 +3071,7 @@ var google_default = class extends LlmEngine {
+       } catch {
+       }
+       return {
+-        role: "tool",
++        role: "user",
+         parts: [{
+           functionResponse: {
+             id: payload.name,
+@@ -3133,7 +3133,7 @@ var google_default = class extends LlmEngine {
+   syncToolHistoryToThread(context) {
+     let historyIndex = 0;
+     for (const msg of context.thread) {
+-      if (msg.role === "tool" && msg.parts) {
++      if (msg.parts && msg.parts.some((p) => p.functionResponse)) {
+         for (const part of msg.parts) {
+           const functionResponse = part.functionResponse;
+           if (functionResponse && historyIndex < context.toolHistory.length) {
+@@ -3197,7 +3197,7 @@ var google_default = class extends LlmEngine {
+             parts: assistantParts
+           };
+           const toolContent = {
+-            role: "tool",
++            role: "user",
+             parts: completed.map(({ tc, result }) => ({
+               functionResponse: {
+                 id: tc.function,
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 09ebb8eeeebc27f69facc58c855607ffa0c408eb..fc3e13fd96bc5d5b2553ba9eae4bc332e78dfe57 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -2812,7 +2812,7 @@ var google_default = class extends LlmEngine {
+         parts: response.candidates[0].content.parts
+       });
+       thread.push({
+-        role: "tool",
++        role: "user",
+         parts: results.map((r) => ({ functionResponse: r }))
+       });
+       await this.applyCooldown(startTime);
+@@ -2989,7 +2989,7 @@ var google_default = class extends LlmEngine {
+       } catch {
+       }
+       return {
+-        role: "tool",
++        role: "user",
+         parts: [{
+           functionResponse: {
+             id: payload.name,
+@@ -3051,7 +3051,7 @@ var google_default = class extends LlmEngine {
+   syncToolHistoryToThread(context) {
+     let historyIndex = 0;
+     for (const msg of context.thread) {
+-      if (msg.role === "tool" && msg.parts) {
++      if (msg.parts && msg.parts.some((p) => p.functionResponse)) {
+         for (const part of msg.parts) {
+           const functionResponse = part.functionResponse;
+           if (functionResponse && historyIndex < context.toolHistory.length) {
+@@ -3115,7 +3115,7 @@ var google_default = class extends LlmEngine {
+             parts: assistantParts
+           };
+           const toolContent = {
+-            role: "tool",
++            role: "user",
+             parts: completed.map(({ tc, result }) => ({
+               functionResponse: {
+                 id: tc.function,

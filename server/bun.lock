@@ -34,6 +34,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "multi-llm-ts@5.0.1": "patches/multi-llm-ts@5.0.1.patch",
+  },
   "packages": {
     "@anthropic-ai/sdk": ["@anthropic-ai/sdk@0.67.1", "", { "dependencies": { "json-schema-to-ts": "^3.1.1" }, "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" }, "optionalPeers": ["zod"], "bin": { "anthropic-ai-sdk": "bin/cli" } }, "sha512-ZLYZLog5ttur2OXkBxoCr8C+bsIGG//OwKYoDw4ZOlwdKF6u+qqQ7y+R4x9zqgQJBbdg5qZs6RHA7L+QpSrHUA=="],
 
