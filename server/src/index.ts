@@ -52,6 +52,7 @@ import { startScheduler } from "./services/ntfy/scheduler";
 import { startAllSubscribers } from "./services/ntfy/subscriber";
 import { startProactiveScheduler } from "./services/ntfy/proactive-scheduler";
 import { startReminderScheduler } from "./services/reminders/scheduler";
+import { startDemoCleanup } from "./services/demo";
 
 const app = new Hono();
 
@@ -211,6 +212,8 @@ startAllSubscribers().catch((e) =>
 startProactiveScheduler();
 // Start the one-shot reminder scheduler.
 startReminderScheduler();
+// Start demo-user cleanup (removes expired DEMO accounts + cascaded data).
+startDemoCleanup();
 // Start the anonymous usage-analytics flusher (writes buffered hits to DB every 30s).
 startAnalyticsFlusher();
 

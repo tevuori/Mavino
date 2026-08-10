@@ -209,6 +209,9 @@ function UserRow({
           {u.role === "FREE" && (
             <span className="rounded bg-surface-3 px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">FREE</span>
           )}
+          {u.role === "DEMO" && (
+            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">DEMO</span>
+          )}
           {isMe && <span className="text-[10px] uppercase text-ink-muted">(you)</span>}
         </p>
         <p className="truncate text-xs text-ink-muted">
@@ -292,6 +295,7 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
         { value: "FREE", label: "Free (limited AI)" },
         { value: "PAID", label: "Paid (higher AI limits)" },
         { value: "MANAGER", label: "Manager (user management)" },
+        { value: "DEMO", label: "Demo (pre-seeded trial)" },
         { value: "ADMIN", label: "Administrator" },
       ]
     : [
@@ -402,6 +406,7 @@ function EditUserModal({
         { value: "FREE", label: "Free (limited AI)" },
         { value: "PAID", label: "Paid (higher AI limits)" },
         { value: "MANAGER", label: "Manager (user management)" },
+        { value: "DEMO", label: "Demo (pre-seeded trial)" },
         { value: "ADMIN", label: "Administrator" },
       ]
     : [

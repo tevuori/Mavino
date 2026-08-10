@@ -10,6 +10,7 @@ interface AuthState {
   login: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
   loginWithTotp: (challengeToken: string, totpCode: string, rememberMe?: boolean) => Promise<void>;
   register: (username: string, password: string, displayName?: string) => Promise<void>;
+  tryDemo: () => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   updateProfile: (patch: { displayName?: string; avatarColor?: string; email?: string }) => Promise<void>;
@@ -62,6 +63,18 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ token: data.token, user: data.user, status: "authenticated" });
   },
 
+  tryDemo: async () => {
+    const fingerprint = await getFingerprint();
+    const data = await api.post<{ token: string; refreshToken: string | null; user: User }>(
+      "/api/auth/demo",
+      { deviceFingerprint: fingerprint, deviceLabel: "Demo browser" }
+    );
+    setToken(data.token);
+    setRefreshToken(data.refreshToken);
+    sessionStorage.setItem("demo-just-logged-in", "1");
+    set({ token: data.token, user: data.user, status: "authenticated" });
+  },
+
   logout: async () => {
     const refreshToken = getRefreshToken();
     if (refreshToken) {
@@ -73,6 +86,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
     setToken(null);
     setRefreshToken(null);
+    sessionStorage.removeItem("demo-just-logged-in");
     set({ user: null, token: null, status: "unauthenticated" });
   },
 

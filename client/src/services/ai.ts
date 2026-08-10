@@ -1,7 +1,7 @@
 import { api } from "./api";
 
 export type LlmMode = "per-user" | "global";
-export type RateTier = "admin" | "paid" | "free";
+export type RateTier = "admin" | "paid" | "free" | "demo";
 
 export interface TierRateLimits {
   rpd: number; // 0 = unlimited

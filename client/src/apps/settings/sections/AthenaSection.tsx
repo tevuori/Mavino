@@ -3,6 +3,7 @@ import { Sparkles, Trash2, Loader2, Check, Gauge, Shield, Volume2, Crown, Zap, G
 import { aiApi, type AiKeyStatus, type RateTier } from "../../../services/ai";
 import { getAthenaInstructions, setAthenaInstructions } from "../../../services/athena";
 import { ttsApi, type TtsConfig } from "../../../services/tts";
+import { useAuth } from "../../../store/auth";
 import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass } from "../ui";
 
 export default function AthenaSection() {
@@ -39,11 +40,13 @@ function TierInfoCard() {
     admin: "Admin",
     paid: "Paid",
     free: "Free",
+    demo: "Demo",
   };
   const tierIcon: Record<RateTier, typeof Crown> = {
     admin: Crown,
     paid: Zap,
     free: Globe,
+    demo: Sparkles,
   };
   const TierIcon = tierIcon[status.tier];
   const limits = status.tierRateLimits;
@@ -56,6 +59,7 @@ function TierInfoCard() {
           <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
             status.tier === "admin" ? "bg-amber-500/15 text-amber-500"
             : status.tier === "paid" ? "bg-indigo-500/15 text-indigo-400"
+            : status.tier === "demo" ? "bg-amber-500/15 text-amber-400"
             : "bg-surface-3 text-ink-muted"
           }`}>
             <TierIcon size={16} />
@@ -243,6 +247,8 @@ function LlmConfigCard() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState(false);
+  const { user } = useAuth();
+  const isDemo = user?.role === "DEMO";
 
   const refresh = useCallback(async () => {
     try {
@@ -302,6 +308,22 @@ function LlmConfigCard() {
 
   const hasKey = status?.hasKey ?? false;
   const isGlobal = status?.llmMode === "global";
+
+  // Demo accounts always use the admin demo key and cannot set a personal one.
+  if (isDemo) {
+    return (
+      <Card className="mb-4">
+        <div className="mb-3 flex items-center gap-2 text-sm">
+          <Sparkles size={16} className="text-accent" />
+          <span className="font-medium text-ink">Demo account</span>
+        </div>
+        <p className="text-xs text-ink-muted">
+          Demo accounts use the admin-configured demo LLM. You cannot set a personal key —
+          Mavino AI is ready to use while the demo session is active.
+        </p>
+      </Card>
+    );
+  }
 
   // In global mode, per-user keys are ignored — show an info banner instead.
   if (isGlobal) {

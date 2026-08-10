@@ -8,6 +8,7 @@
 
 import prisma from "../db/client";
 import { encryptSecret, decryptSecret } from "./crypto";
+import { getDemoConfig } from "./demo";
 
 export type LlmMode = "per-user" | "global";
 
@@ -116,7 +117,7 @@ export async function clearGlobalLlmKey(): Promise<void> {
 
 // ----- Rate limit tier config (global, admin-configurable) -----
 
-export type RateTier = "admin" | "paid" | "free";
+export type RateTier = "admin" | "paid" | "free" | "demo";
 
 export interface TierRateLimits {
   rpd: number; // requests per day (0 = unlimited)
@@ -127,6 +128,7 @@ const DEFAULT_LIMITS: Record<RateTier, TierRateLimits> = {
   admin: { rpd: 0, rpm: 0 }, // unlimited
   paid: { rpd: 500, rpm: 30 },
   free: { rpd: 50, rpm: 10 },
+  demo: { rpd: 100, rpm: 10 },
 };
 
 const PAID_RPD_KEY = "ratelimit.paid.rpd";
@@ -152,6 +154,7 @@ export async function getTierRateLimits(): Promise<Record<RateTier, TierRateLimi
       rpd: freeRpd ? Number(freeRpd) : DEFAULT_LIMITS.free.rpd,
       rpm: freeRpm ? Number(freeRpm) : DEFAULT_LIMITS.free.rpm,
     },
+    demo: DEFAULT_LIMITS.demo, // demo limits are controlled in demo config
   };
 }
 
@@ -172,6 +175,7 @@ export async function setTierRateLimits(config: {
 export function roleToTier(role: string): RateTier {
   if (role === "ADMIN") return "admin";
   if (role === "PAID" || role === "MANAGER") return "paid";
+  if (role === "DEMO") return "demo";
   return "free";
 }
 
@@ -185,6 +189,10 @@ export async function getRateLimitsForUser(userId: string): Promise<{
     select: { role: true },
   });
   const tier = roleToTier(user?.role ?? "FREE");
+  if (tier === "demo") {
+    const cfg = await getDemoConfig();
+    return { tier, limits: cfg.rateLimits };
+  }
   const allLimits = await getTierRateLimits();
   return { tier, limits: allLimits[tier] };
 }

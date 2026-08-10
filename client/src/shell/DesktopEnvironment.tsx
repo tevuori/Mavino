@@ -13,6 +13,7 @@ import OnboardingOverlay from "./OnboardingOverlay";
 import { useWindows } from "../store/windows";
 import { useAthenaQuick } from "../store/athenaQuick";
 import { useSettings } from "../store/settings";
+import { useAuth } from "../store/auth";
 import { useEffect, useState } from "react";
 
 export default function DesktopEnvironment() {
@@ -21,7 +22,25 @@ export default function DesktopEnvironment() {
   const moveFocusedRelative = useWindows((s) => s.moveFocusedRelative);
   const toggleAthenaQuick = useAthenaQuick((s) => s.toggle);
   const hasOnboarded = useSettings((s) => s.hasOnboarded);
+  const setHasOnboarded = useSettings((s) => s.setHasOnboarded);
+  const { user, logout } = useAuth();
   const [overviewOpen, setOverviewOpen] = useState(false);
+  const isDemo = user?.role === "DEMO";
+
+  // Demo bootstrap: skip onboarding and auto-open Study Hub once after login.
+  useEffect(() => {
+    if (!isDemo) return;
+    setHasOnboarded(true);
+    if (sessionStorage.getItem("demo-just-logged-in") === "1") {
+      sessionStorage.removeItem("demo-just-logged-in");
+      open({
+        appId: "study",
+        title: "Study Hub",
+        icon: "BookOpen",
+        payload: { mode: "home" },
+      });
+    }
+  }, [isDemo, setHasOnboarded, open]);
 
   // Win + Y → toggle Athena quick panel (rolls in from the selected edge)
   useEffect(() => {
@@ -151,18 +170,31 @@ export default function DesktopEnvironment() {
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      <Wallpaper />
-      <MusicWidget />
-      <Desktop />
-      <WindowLayer />
-      <AthenaQuickPanel />
-      <SnapPreview />
-      <Taskbar onOpenOverview={() => setOverviewOpen(true)} />
-      <AltTabSwitcher />
-      <WorkspaceOverview open={overviewOpen} onClose={() => setOverviewOpen(false)} />
-      <CommandPalette />
-      <QuickCapture />
-      {!hasOnboarded && <OnboardingOverlay />}
+      {isDemo && (
+        <div className="absolute inset-x-0 top-0 z-[10001] flex items-center justify-center gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-200 backdrop-blur-sm">
+          <span>Demo mode — your work is temporary and will expire soon.</span>
+          <button
+            onClick={logout}
+            className="rounded-md bg-amber-500/20 px-2 py-0.5 font-medium text-amber-100 transition hover:bg-amber-500/30"
+          >
+            Sign up / Log in
+          </button>
+        </div>
+      )}
+      <div className={isDemo ? "h-[calc(100%-2rem)]" : "h-full"}>
+        <Wallpaper />
+        <MusicWidget />
+        <Desktop />
+        <WindowLayer />
+        <AthenaQuickPanel />
+        <SnapPreview />
+        <Taskbar onOpenOverview={() => setOverviewOpen(true)} />
+        <AltTabSwitcher />
+        <WorkspaceOverview open={overviewOpen} onClose={() => setOverviewOpen(false)} />
+        <CommandPalette />
+        <QuickCapture />
+        {!hasOnboarded && !isDemo && <OnboardingOverlay />}
+      </div>
     </div>
   );
 }

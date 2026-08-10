@@ -101,7 +101,7 @@ async function getUserRole(userId: string): Promise<string | null> {
 export async function isStudyFunctionEnabled(userId: string, functionId: string): Promise<boolean> {
   if (!STUDY_FUNCTION_IDS.has(functionId)) return true;
   const role = await getUserRole(userId);
-  if (role === "ADMIN" || role === "MANAGER") return true;
+  if (role === "ADMIN" || role === "MANAGER" || role === "DEMO") return true;
   const config = await getStudyFunctionConfig();
   const cfg = config[functionId] ?? { free: true, paid: true };
   if (role === "PAID") return cfg.paid;
@@ -111,7 +111,7 @@ export async function isStudyFunctionEnabled(userId: string, functionId: string)
 /** List the Study Hub function ids enabled for the given user. */
 export async function getEnabledStudyFunctionIds(userId: string): Promise<string[]> {
   const role = await getUserRole(userId);
-  if (role === "ADMIN" || role === "MANAGER") {
+  if (role === "ADMIN" || role === "MANAGER" || role === "DEMO") {
     return Array.from(STUDY_FUNCTION_IDS);
   }
   const config = await getStudyFunctionConfig();

@@ -16,6 +16,16 @@ export interface TierRateLimits {
 
 export type TierRateLimitsMap = Record<RateTier, TierRateLimits>;
 
+export interface DemoConfig {
+  enabled: boolean;
+  hasKey: boolean;
+  provider: string;
+  baseUrl: string;
+  modelId: string;
+  ttlHours: number;
+  rateLimits: { rpd: number; rpm: number };
+}
+
 export const adminLlmApi = {
   getConfig: () => api.get<GlobalLlmConfig>("/api/admin/llm"),
   setMode: (mode: LlmMode) => api.put<{ ok: boolean; mode: LlmMode }>("/api/admin/llm/mode", { mode }),
@@ -29,4 +39,15 @@ export const adminLlmApi = {
     freeRpd?: number;
     freeRpm?: number;
   }) => api.put<{ ok: boolean }>("/api/admin/llm/rate-limits", data),
+  getDemoConfig: () => api.get<DemoConfig>("/api/admin/llm/demo"),
+  setDemoConfig: (data: {
+    enabled?: boolean;
+    apiKey?: string;
+    provider?: string;
+    baseUrl?: string;
+    modelId?: string;
+    ttlHours?: number;
+    rpd?: number;
+    rpm?: number;
+  }) => api.put<{ ok: boolean; config: DemoConfig }>("/api/admin/llm/demo", data),
 };

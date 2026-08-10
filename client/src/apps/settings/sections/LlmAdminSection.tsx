@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Sparkles, KeyRound, Gauge, Loader2, Trash2, Check, AlertCircle } from "lucide-react";
-import { adminLlmApi, type GlobalLlmConfig, type TierRateLimitsMap } from "../../../services/admin-llm";
+import { Sparkles, KeyRound, Gauge, Trash2, Check, AlertCircle, Play } from "lucide-react";
+import { adminLlmApi, type GlobalLlmConfig, type TierRateLimitsMap, type DemoConfig } from "../../../services/admin-llm";
 import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass } from "../ui";
 
 export default function LlmAdminSection() {
@@ -9,9 +9,10 @@ export default function LlmAdminSection() {
       <SectionHeader
         icon={<Sparkles size={18} />}
         title="LLM Configuration"
-        description="Control whether users provide their own API keys or use a single global key. Configure rate limits for each user tier."
+        description="Control whether users provide their own API keys or use a single global key. Configure rate limits for each user tier and demo mode."
       />
       <GlobalKeyCard />
+      <DemoModeCard />
       <TierRateLimitsCard />
     </section>
   );
@@ -330,6 +331,146 @@ function TierRateLimitsCard() {
       </div>
       <div className="flex items-center gap-2">
         <SaveButton busy={busy} onClick={save}>Save rate limits</SaveButton>
+      </div>
+      <MsgBox msg={msg} error={err} />
+    </Card>
+  );
+}
+
+function DemoModeCard() {
+  const [config, setConfig] = useState<DemoConfig | null>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [keyInput, setKeyInput] = useState("");
+  const [provider, setProvider] = useState("openai");
+  const [baseUrl, setBaseUrl] = useState("");
+  const [modelId, setModelId] = useState("");
+  const [ttlHours, setTtlHours] = useState(24);
+  const [rpd, setRpd] = useState(100);
+  const [rpm, setRpm] = useState(10);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const c = await adminLlmApi.getDemoConfig();
+      setConfig(c);
+      setEnabled(c.enabled);
+      setProvider(c.provider || "openai");
+      setBaseUrl(c.baseUrl || "");
+      setModelId(c.modelId || "");
+      setTtlHours(c.ttlHours ?? 24);
+      setRpd(c.rateLimits?.rpd ?? 100);
+      setRpm(c.rateLimits?.rpm ?? 10);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const save = async () => {
+    setBusy(true);
+    setErr(false);
+    setMsg(null);
+    try {
+      await adminLlmApi.setDemoConfig({
+        enabled,
+        apiKey: keyInput.trim() || undefined,
+        provider: provider.trim() || undefined,
+        baseUrl: baseUrl.trim() || undefined,
+        modelId: modelId.trim() || undefined,
+        ttlHours,
+        rpd,
+        rpm,
+      });
+      setKeyInput("");
+      await refresh();
+      setMsg("Demo settings saved.");
+    } catch (e) {
+      setErr(true);
+      setMsg(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="mb-4">
+      <div className="mb-3 flex items-center gap-2 text-sm">
+        <Play size={16} className="text-accent" />
+        <h3 className="font-semibold text-ink">Demo Mode</h3>
+        {config && (
+          <StatusPill
+            on={config.enabled && config.hasKey}
+            onLabel={config.enabled && config.hasKey ? "Ready" : "Off"}
+            offLabel="Off"
+          />
+        )}
+      </div>
+
+      <p className="mb-3 text-xs text-ink-muted">
+        Let visitors try Mavino without creating an account. Demo users get fresh, pre-seeded accounts and use this separate LLM key.
+      </p>
+
+      <label className="mb-4 flex cursor-pointer items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => setEnabled(e.target.checked)}
+          className="h-4 w-4 rounded border-edge accent-[var(--accent)]"
+        />
+        Enable "Try Demo" button on the login screen
+      </label>
+
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <Field label="Provider">
+          <select value={provider} onChange={(e) => setProvider(e.target.value)} className={inputClass}>
+            <option value="openai">openai (OpenAI-compatible)</option>
+            <option value="deepseek">deepseek</option>
+            <option value="anthropic">anthropic</option>
+            <option value="openrouter">openrouter</option>
+            <option value="groq">groq</option>
+            <option value="mistralai">mistralai</option>
+            <option value="google">google</option>
+            <option value="ollama">ollama (local)</option>
+            <option value="xai">xai</option>
+            <option value="meta">meta</option>
+            <option value="cerebras">cerebras</option>
+          </select>
+        </Field>
+        <Field label="Model id (optional)">
+          <input value={modelId} onChange={(e) => setModelId(e.target.value)} placeholder="gpt-4o-mini" className={inputClass} />
+        </Field>
+      </div>
+      <Field label="Base URL (optional)">
+        <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.openai.com/v1" className={inputClass} />
+      </Field>
+      <div className="mt-3 flex gap-2">
+        <input
+          type="password"
+          value={keyInput}
+          onChange={(e) => setKeyInput(e.target.value)}
+          placeholder={config?.hasKey ? "Enter a new key to replace" : "Demo API key"}
+          className={`flex-1 ${inputClass}`}
+          autoComplete="off"
+        />
+      </div>
+
+      <div className="my-4 grid grid-cols-3 gap-2">
+        <Field label="TTL (hours)">
+          <input type="number" min={1} max={720} value={ttlHours} onChange={(e) => setTtlHours(Number(e.target.value))} className={inputClass} />
+        </Field>
+        <Field label="Demo requests / day">
+          <input type="number" min={0} max={100000} value={rpd} onChange={(e) => setRpd(Number(e.target.value))} className={inputClass} />
+        </Field>
+        <Field label="Demo requests / min">
+          <input type="number" min={0} max={10000} value={rpm} onChange={(e) => setRpm(Number(e.target.value))} className={inputClass} />
+        </Field>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <SaveButton busy={busy} onClick={save} disabled={busy}>
+          Save demo settings
+        </SaveButton>
       </div>
       <MsgBox msg={msg} error={err} />
     </Card>

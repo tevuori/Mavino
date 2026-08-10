@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { LogIn, Loader2, Server, UserPlus, ShieldCheck, Mail } from "lucide-react";
+import { LogIn, Loader2, Server, UserPlus, ShieldCheck, Mail, Sparkles } from "lucide-react";
 import { useAuth } from "../store/auth";
 import { Capacitor } from "@capacitor/core";
 import { getBaseUrl, setBaseUrl } from "../services/api";
@@ -8,7 +8,7 @@ import { api } from "../services/api";
 import AppLogo from "./AppLogo";
 
 export default function LoginScreen() {
-  const { login, loginWithTotp, register } = useAuth();
+  const { login, loginWithTotp, register, tryDemo } = useAuth();
   const isNative = Capacitor.isNativePlatform();
   const [serverUrl, setServerUrl] = useState(getBaseUrl());
   const [username, setUsername] = useState("");
@@ -16,6 +16,10 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Demo state
+  const [demoStatus, setDemoStatus] = useState<{ enabled: boolean; configured: boolean } | null>(null);
+  const [demoStatusChecked, setDemoStatusChecked] = useState(false);
 
   // Registration form state
   const [mode, setMode] = useState<"login" | "register" | "totp" | "forgot">("login");
@@ -50,6 +54,26 @@ export default function LoginScreen() {
       })
       .finally(() => {
         if (!cancelled) setRegistrationChecked(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Check whether the demo flow is enabled and configured.
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<{ enabled: boolean; configured: boolean }>("/api/auth/demo-status")
+      .then((data) => {
+        if (cancelled) return;
+        setDemoStatus(data);
+      })
+      .catch(() => {
+        /* server unreachable or demo unavailable */
+      })
+      .finally(() => {
+        if (!cancelled) setDemoStatusChecked(true);
       });
     return () => {
       cancelled = true;
@@ -130,6 +154,18 @@ export default function LoginScreen() {
     setBusy(true);
     try {
       await register(regUsername, regPassword, regDisplayName.trim() || undefined);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitDemo = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      await tryDemo();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -327,6 +363,19 @@ export default function LoginScreen() {
               {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
               Sign in
             </button>
+
+            {demoStatusChecked && demoStatus?.enabled && demoStatus?.configured && (
+              <button
+                type="button"
+                onClick={submitDemo}
+                disabled={busy}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-accent bg-accent/10 py-2.5 text-sm font-medium text-accent transition hover:bg-accent/20 disabled:opacity-50"
+              >
+                {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                Try Demo
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {

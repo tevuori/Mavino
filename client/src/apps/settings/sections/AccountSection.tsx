@@ -128,7 +128,7 @@ export default function AccountSection() {
             <p className="font-medium text-ink">{displayName || "—"}</p>
             <p className="text-sm text-ink-muted">@{user?.username}</p>
             <p className="mt-1 flex items-center gap-1 text-[11px] uppercase tracking-wide text-ink-muted">
-              <ShieldCheck size={11} /> {user?.role === "ADMIN" ? "Administrator" : "User"}
+              <ShieldCheck size={11} /> {user?.role === "ADMIN" ? "Administrator" : user?.role === "DEMO" ? "Demo" : "User"}
             </p>
           </div>
         </div>

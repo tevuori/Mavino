@@ -15,6 +15,7 @@ import {
   verifyTotpPlain,
 } from "../services/totp";
 import { sendPasswordResetEmail } from "../services/email";
+import { getDemoConfig, isDemoReady, createDemoUser } from "../services/demo";
 
 const auth = new Hono();
 
@@ -170,6 +171,58 @@ auth.get("/registration-status", async (c) => {
   });
   const enabled = setting?.value === "true";
   return c.json({ enabled, bootstrap: false });
+});
+
+/**
+ * GET /auth/demo-status — public endpoint.
+ * Returns whether the demo flow is enabled and ready (has a demo LLM key).
+ */
+auth.get("/demo-status", async (c) => {
+  const [ready, config] = await Promise.all([isDemoReady(), getDemoConfig()]);
+  return c.json({
+    enabled: config.enabled,
+    configured: ready,
+    hasKey: config.hasKey,
+  });
+});
+
+const demoSchema = z.object({
+  deviceFingerprint: z.string().max(256).optional().default(""),
+  deviceLabel: z.string().max(256).optional().default(""),
+});
+
+// 5 demo sessions per minute per IP — demo creation is expensive and public.
+const demoLimiter = rateLimit({ max: 5, windowMs: 60_000 });
+
+/**
+ * POST /auth/demo — create a fresh demo user, seed data, and log in.
+ */
+auth.post("/demo", demoLimiter, zValidator("json", demoSchema), async (c) => {
+  const ready = await isDemoReady();
+  if (!ready) {
+    return c.json({ error: "Demo is not available." }, 403);
+  }
+  const { deviceFingerprint, deviceLabel } = c.req.valid("json");
+  const ua = c.req.header("user-agent") ?? "";
+  const label = deviceLabel || (ua ? `Demo on ${ua.split(" ")[0]?.replace(/[^a-zA-Z0-9]/g, "-") ?? "Browser"}` : "Demo browser");
+  try {
+    const result = await createDemoUser({
+      deviceFingerprint,
+      deviceLabel: label.slice(0, 50),
+    });
+    const user = await prisma.user.findUnique({ where: { id: result.userId } });
+    if (!user) {
+      return c.json({ error: "Demo user creation failed" }, 500);
+    }
+    return c.json({
+      token: result.token,
+      refreshToken: result.refreshToken,
+      user: publicUser(user),
+    });
+  } catch (e) {
+    console.error("[auth/demo] error:", e);
+    return c.json({ error: "Failed to create demo session. Try again later." }, 500);
+  }
 });
 
 /**

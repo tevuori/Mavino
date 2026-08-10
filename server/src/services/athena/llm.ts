@@ -21,6 +21,7 @@ import prisma from "../../db/client";
 import { decryptSecret } from "../crypto";
 import { llmRateLimiter } from "./rate-limiter";
 import { getGlobalLlmConfig, getGlobalLlmSecrets, getRateLimitsForUser } from "../llm-config";
+import { getDemoLlmSecrets } from "../demo";
 
 export interface LlmUserConfig {
   /** multi-llm-ts engine id: "openai" | "deepseek" | "anthropic" | "openrouter" | "ollama" | ... */
@@ -135,6 +136,24 @@ function decryptSafe(enc: string): string | null {
  * Returns apiKey="" if nothing is configured — callers should check isLlmConfiguredFor().
  */
 export async function getUserConfig(userId: string): Promise<LlmUserConfig> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+
+  // Demo users always use the admin-configured demo LLM first, if available.
+  if (user?.role === "DEMO") {
+    const demo = await getDemoLlmSecrets();
+    if (demo) {
+      return {
+        provider: demo.provider,
+        apiKey: demo.apiKey,
+        baseURL: demo.baseUrl,
+        modelId: demo.modelId,
+      };
+    }
+  }
+
   const globalConfig = await getGlobalLlmConfig();
 
   // Global mode: use the admin-configured global key, ignore per-user keys.

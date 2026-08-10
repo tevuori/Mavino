@@ -12,6 +12,7 @@ import {
   setTierRateLimits,
   type LlmMode,
 } from "../services/llm-config";
+import { getDemoConfig, setDemoConfig, type DemoConfigInput } from "../services/demo";
 
 const adminLlm = new Hono();
 adminLlm.use("*", authMiddleware, adminMiddleware);
@@ -78,6 +79,32 @@ adminLlm.put("/rate-limits", zValidator("json", rateLimitSchema), async (c) => {
   const body = c.req.valid("json");
   await setTierRateLimits(body);
   return c.json({ ok: true });
+});
+
+// ---------- Demo mode ----------
+
+/** GET /api/admin/llm/demo — get demo config (no decrypted key). */
+adminLlm.get("/demo", async (c) => {
+  const config = await getDemoConfig();
+  return c.json(config);
+});
+
+const demoConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  apiKey: z.string().max(512).optional(),
+  provider: z.string().max(64).optional(),
+  baseUrl: z.string().max(512).optional().or(z.literal("")),
+  modelId: z.string().max(128).optional().or(z.literal("")),
+  ttlHours: z.number().int().min(1).max(720).optional(),
+  rpd: z.number().int().min(0).max(100000).optional(),
+  rpm: z.number().int().min(0).max(10000).optional(),
+});
+
+/** PUT /api/admin/llm/demo — save demo config. */
+adminLlm.put("/demo", zValidator("json", demoConfigSchema), async (c) => {
+  const body = c.req.valid("json") as DemoConfigInput;
+  const config = await setDemoConfig(body);
+  return c.json({ ok: true, config });
 });
 
 export default adminLlm;
