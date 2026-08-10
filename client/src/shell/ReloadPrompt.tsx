@@ -28,7 +28,7 @@ function PwaReloadPrompt() {
   if (!needRefresh) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9998] w-full max-w-sm transition-all duration-300 ease-out">
+    <div className="fixed bottom-16 right-4 z-[10001] w-full max-w-sm transition-all duration-300 ease-out">
       <div className="flex items-center gap-3 rounded-xl border border-edge bg-surface-2/95 p-4 shadow-2xl backdrop-blur">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
           <RefreshCw size={18} />
