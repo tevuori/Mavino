@@ -2,7 +2,7 @@
 // Purpose-built AI study workflows on top of the Athena LLM infrastructure.
 
 import { useState, useEffect } from "react";
-import { useStudyFunctions } from "./useStudyFunctions";
+import { useStudyFunctions, type MinTier } from "./useStudyFunctions";
 import {
   Brain,
   FileText,
@@ -20,6 +20,7 @@ import {
   Video,
   Highlighter,
   Network,
+  Lock,
 } from "lucide-react";
 import type { WindowInstance } from "../../store/windows";
 import type { SourceDescriptor, SourceKind, StudyLanguage } from "../../services/study";
@@ -38,6 +39,7 @@ import TeacherMode from "./TeacherMode";
 import LectureNotes from "./LectureNotes";
 import Highlights from "./Highlights";
 import KnowledgeGraph from "./KnowledgeGraph";
+import StudyFunctionLocked from "./StudyFunctionLocked";
 
 type Mode =
   | "home"
@@ -92,6 +94,7 @@ function isFunctionMode(mode: Mode) {
 
 export default function StudyApp({ win }: { win: WindowInstance }) {
   const [mode, setMode] = useState<Mode>("home");
+  const [lockedMode, setLockedMode] = useState<Mode | null>(null);
   const [language, setLanguage] = useState<StudyLanguage>(() => {
     return (localStorage.getItem("study-language") as StudyLanguage) || "en";
   });
@@ -103,12 +106,24 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
   const [initialWorkspaceId, setInitialWorkspaceId] = useState<string | null>(null);
   const [initialSessionId, setInitialSessionId] = useState<string | null>(null);
   const [initialGraphId, setInitialGraphId] = useState<string | null>(null);
-  const { enabled, loading } = useStudyFunctions();
+  const { enabled, functions, minTiers, loading } = useStudyFunctions();
 
   const isModeEnabled = (m: Mode) => !isFunctionMode(m) || loading || enabled.has(m);
   const ensureEnabled = (m: Mode): Mode => (isModeEnabled(m) ? m : "home");
+  const minTierForMode = (m: Mode): MinTier => (isFunctionMode(m) ? (minTiers[m] ?? null) : null);
 
   const activeMode = isModeEnabled(mode) ? mode : "home";
+  const selectedMode = lockedMode ?? mode;
+
+  const selectMode = (m: Mode) => {
+    if (isModeEnabled(m)) {
+      setLockedMode(null);
+      setMode(m);
+    } else {
+      // Show the upgrade card for this locked function
+      setLockedMode(m);
+    }
+  };
 
   const toggleLanguage = () => {
     setLanguage((prev) => {
@@ -204,20 +219,34 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
           </button>
         </div>
         <div className="flex flex-1 flex-col gap-0.5 p-2">
-          {MODES.filter((m) => isModeEnabled(m.id)).map((m) => {
+          {MODES.map((m) => {
             const Icon = m.icon;
-            const active = activeMode === m.id;
+            const enabledMode = isModeEnabled(m.id);
+            const minTier = minTierForMode(m.id);
+            const active = selectedMode === m.id;
             return (
               <button
                 key={m.id}
-                onClick={() => setMode(m.id)}
+                onClick={() => selectMode(m.id)}
                 className={`flex items-start gap-2.5 rounded-md px-2.5 py-2 text-left transition ${
-                  active ? "bg-accent/10 text-accent" : "text-ink-muted hover:bg-surface-3 hover:text-ink"
+                  active
+                    ? "bg-accent/10 text-accent"
+                    : enabledMode
+                      ? "text-ink-muted hover:bg-surface-3 hover:text-ink"
+                      : "text-ink-muted/50 hover:bg-surface-3/50"
                 }`}
               >
-                <Icon size={15} className="mt-0.5 shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-xs font-medium">{m.label}</span>
+                <Icon size={15} className={`mt-0.5 shrink-0 ${!enabledMode ? "opacity-40" : ""}`} />
+                <div className="flex flex-1 flex-col">
+                  <span className="flex items-center gap-1.5 text-xs font-medium">
+                    {m.label}
+                    {!enabledMode && minTier && (
+                      <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/15 px-1 py-px text-[9px] font-semibold uppercase text-amber-500">
+                        <Lock size={8} />
+                        {minTier === "pro" ? "Pro" : "Paid"}
+                      </span>
+                    )}
+                  </span>
                   <span className="text-[10px] leading-tight opacity-70">{m.desc}</span>
                 </div>
               </button>
@@ -228,7 +257,16 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
 
       {/* Main */}
       <div className="flex-1 overflow-y-auto p-5">
-        {activeMode === "chat" ? (
+        {lockedMode ? (
+          (() => {
+            const fn = functions.find((f) => f.id === lockedMode);
+            const minTier = minTierForMode(lockedMode);
+            if (fn && minTier) {
+              return <StudyFunctionLocked fn={fn} minTier={minTier} />;
+            }
+            return null;
+          })()
+        ) : activeMode === "chat" ? (
           <div className="h-full">
             <SourceChat initialChatId={initialChatId} initialWorkspaceId={initialWorkspaceId} language={language} />
           </div>
@@ -250,7 +288,7 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
         ) : (
           <div className="mx-auto max-w-none @5xl:max-w-2xl">
             {activeMode === "home" && <StudyHome onPickMode={(m, opts) => {
-              setMode(m as Mode);
+              selectMode(m as Mode);
               if (opts?.workspaceId) setInitialWorkspaceId(opts.workspaceId);
             }} />}
             {activeMode === "podcast" && <Podcast initialPodcastId={initialPodcastId} initialWorkspaceId={initialWorkspaceId} language={language} />}

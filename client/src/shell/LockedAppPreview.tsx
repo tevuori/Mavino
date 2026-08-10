@@ -9,9 +9,11 @@ interface Props {
 
 /**
  * Wraps a real app component in preview mode: renders the actual app UI
- * (so the user sees what it looks like) but overlays a paywall that blocks
- * all interactions. The overlay can be dismissed to browse the preview,
- * but a small lock badge remains to remind the user it's locked.
+ * (so the user sees what it looks like) but blocks all interactions — the
+ * app is strictly look-but-don't-touch. The paywall overlay can be
+ * dismissed to reveal the app underneath, but pointer events stay disabled
+ * so the user can browse the interface visually without controlling it.
+ * A small lock badge remains and re-opens the paywall on click.
  */
 export default function LockedAppPreview({ win }: Props) {
   const [dismissed, setDismissed] = useState(false);
@@ -25,8 +27,8 @@ export default function LockedAppPreview({ win }: Props) {
 
   return (
     <div className="relative h-full w-full">
-      {/* The real app renders underneath (read-only feel) */}
-      <div className="h-full w-full overflow-hidden" style={{ pointerEvents: dismissed ? "auto" : "none" }}>
+      {/* The real app renders underneath — always non-interactive (preview only) */}
+      <div className="h-full w-full overflow-hidden pointer-events-none select-none" style={{ filter: dismissed ? "none" : "blur-sm" }}>
         <App win={win} />
       </div>
 

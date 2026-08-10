@@ -131,3 +131,35 @@ export async function getEnabledStudyFunctionIds(userId: string): Promise<string
     return cfg.free;
   }).map((f) => f.id);
 }
+
+/**
+ * Compute the minimum tier that unlocks a function given its tier config.
+ * Returns "free" if available to free, "paid" if paid-only, "pro" if pro-only,
+ * or null if the function is disabled for all tiers.
+ */
+export function minTierForFunction(cfg: StudyFunctionTierConfig): "free" | "paid" | "pro" | null {
+  if (cfg.free) return "free";
+  if (cfg.paid) return "paid";
+  if (cfg.pro) return "pro";
+  return null;
+}
+
+/**
+ * Returns the full function list + per-tier config + the minimum tier for
+ * each function. This is public to all authenticated users (it's just
+ * feature-availability metadata, not sensitive) so the UI can show
+ * locked functions with an "Available in Paid/Pro" badge.
+ */
+export async function getStudyFunctionTierInfo(): Promise<{
+  functions: StudyFunctionDef[];
+  config: StudyFunctionConfig;
+  minTiers: Record<string, "free" | "paid" | "pro" | null>;
+}> {
+  const config = await getStudyFunctionConfig();
+  const minTiers: Record<string, "free" | "paid" | "pro" | null> = {};
+  for (const f of STUDY_HUB_FUNCTIONS) {
+    const cfg = config[f.id] ?? { free: true, paid: true, pro: true };
+    minTiers[f.id] = minTierForFunction(cfg);
+  }
+  return { functions: STUDY_HUB_FUNCTIONS, config, minTiers };
+}

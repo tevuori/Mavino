@@ -9,11 +9,12 @@
 import { useState, useEffect } from "react";
 import {
   Check, X, Sparkles, CreditCard, Loader2, AlertCircle, RefreshCw,
-  ExternalLink, Calendar, Ban,
+  ExternalLink, Calendar, Ban, Lock, GraduationCap,
 } from "lucide-react";
 import type { WindowInstance } from "../../store/windows";
 import { subscriptionsApi, type SubscriptionStatus, type SubscriptionPlan } from "../../services/subscriptions";
 import { useFeatures } from "../../store/features";
+import { studyFunctionsApi, type StudyFunctionDef } from "../../services/study-functions";
 import { APPS } from "../registry";
 
 const PLANS: Array<{
@@ -79,6 +80,8 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<SubscriptionPlan | "portal" | "cancel" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [studyFunctions, setStudyFunctions] = useState<StudyFunctionDef[]>([]);
+  const [studyMinTiers, setStudyMinTiers] = useState<Record<string, "free" | "paid" | "pro" | null>>({});
   const subscriptionTier = useFeatures((s) => s.subscriptionTier);
   const refreshFeatures = useFeatures((s) => s.refresh);
 
@@ -86,8 +89,13 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
     setLoading(true);
     setError(null);
     try {
-      const s = await subscriptionsApi.getStatus();
+      const [s, sf] = await Promise.all([
+        subscriptionsApi.getStatus(),
+        studyFunctionsApi.getMyFunctions(),
+      ]);
       setStatus(s);
+      setStudyFunctions(sf.functions ?? []);
+      setStudyMinTiers(sf.minTiers ?? {});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load subscription status");
     } finally {
@@ -353,6 +361,78 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
             })}
           </div>
         </div>
+
+        {/* Study Hub functions by tier */}
+        {studyFunctions.length > 0 && (
+          <div className="mt-8">
+            <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+              <GraduationCap size={16} className="text-accent" />
+              Study Hub AI functions by tier
+            </h3>
+            <p className="mb-3 text-xs text-ink-muted">
+              Each AI-powered Study Hub feature is unlocked at a specific plan. Your current plan:{" "}
+              <span className="font-medium capitalize text-ink">{currentPlan}</span>.
+            </p>
+            <div className="overflow-hidden rounded-xl border border-edge">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-edge bg-surface-2">
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Function
+                    </th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Free
+                    </th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Paid
+                    </th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Pro
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {studyFunctions.map((fn, i) => {
+                    const minTier = studyMinTiers[fn.id] ?? "free";
+                    const inFree = minTier === "free";
+                    const inPaid = minTier === "free" || minTier === "paid";
+                    const inPro = minTier === "free" || minTier === "paid" || minTier === "pro";
+                    const rowBg = i % 2 === 0 ? "bg-surface" : "bg-surface-2/50";
+                    return (
+                      <tr key={fn.id} className={`border-b border-edge/50 ${rowBg}`}>
+                        <td className="px-4 py-2.5">
+                          <p className="text-xs font-medium text-ink">{fn.label}</p>
+                          <p className="text-[10px] text-ink-muted">{fn.description}</p>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {inFree ? (
+                            <Check size={14} className="mx-auto text-emerald-500" />
+                          ) : (
+                            <Lock size={12} className="mx-auto text-ink-muted/30" />
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {inPaid ? (
+                            <Check size={14} className="mx-auto text-emerald-500" />
+                          ) : (
+                            <Lock size={12} className="mx-auto text-ink-muted/30" />
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {inPro ? (
+                            <Check size={14} className="mx-auto text-emerald-500" />
+                          ) : (
+                            <Lock size={12} className="mx-auto text-ink-muted/30" />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

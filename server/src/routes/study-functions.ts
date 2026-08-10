@@ -12,17 +12,25 @@ import {
   getStudyFunctionConfig,
   setStudyFunctionConfig,
   getEnabledStudyFunctionIds,
+  getStudyFunctionTierInfo,
   type StudyFunctionConfig,
 } from "../services/study-functions";
 
 const studyFunctions = new Hono();
 studyFunctions.use("*", authMiddleware);
 
-/** GET /api/study-functions — functions enabled for the current user. */
+/** GET /api/study-functions — functions enabled for the current user + tier info. */
 studyFunctions.get("/", async (c) => {
   const { userId } = c.get("auth");
-  const enabled = await getEnabledStudyFunctionIds(userId);
-  return c.json({ enabled });
+  const [enabled, tierInfo] = await Promise.all([
+    getEnabledStudyFunctionIds(userId),
+    getStudyFunctionTierInfo(),
+  ]);
+  return c.json({
+    enabled,
+    functions: tierInfo.functions,
+    minTiers: tierInfo.minTiers,
+  });
 });
 
 const admin = new Hono();

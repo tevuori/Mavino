@@ -23,6 +23,8 @@ export interface AdminConfigResponse {
 
 export interface MyFunctionsResponse {
   enabled: string[];
+  functions?: StudyFunctionDef[];
+  minTiers?: Record<string, "free" | "paid" | "pro" | null>;
 }
 
 export const studyFunctionsApi = {

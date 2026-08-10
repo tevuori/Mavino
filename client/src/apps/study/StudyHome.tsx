@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Brain, FileText, HelpCircle, Lightbulb, BookOpen, ListTodo,
   History, Sparkles, ChevronRight, TrendingUp, Clock, MessageSquare, Mic, Plus, Trash2,
-  FolderOpen, Pencil, Presentation, Video, Network,
+  FolderOpen, Pencil, Presentation, Video, Network, Lock,
 } from "lucide-react";
 import { studyApi, type StudySession } from "../../services/study";
 import { flashcardsApi } from "../../services/flashcards";
@@ -12,7 +12,7 @@ import { studyWorkspacesApi, type LearningWorkspace } from "../../services/study
 import { Loading, ErrorBanner } from "./ui";
 import WorkspaceEditor from "./WorkspaceEditor";
 import { useWindows } from "../../store/windows";
-import { useStudyFunctions } from "./useStudyFunctions";
+import { useStudyFunctions, type MinTier } from "./useStudyFunctions";
 
 interface DeckRow { id: string; name: string; color: string; _count: { cards: number }; }
 
@@ -50,9 +50,10 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const openWindow = useWindows((s) => s.open);
-  const { enabled: studyEnabled, loading: studyLoading } = useStudyFunctions();
+  const { enabled: studyEnabled, minTiers: studyMinTiers, loading: studyLoading } = useStudyFunctions();
 
   const isFunctionEnabled = (m: string) => studyLoading || studyEnabled.has(m);
+  const minTierFor = (m: string): MinTier => studyMinTiers[m] ?? null;
 
   const loadAll = () => {
     Promise.all([
@@ -109,7 +110,7 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
     { mode: "syllabus", label: "Syllabus → Tasks", icon: ListTodo, color: "text-orange-400", desc: "Extract tasks from a syllabus" },
   ];
 
-  const quickActions = allQuickActions.filter((qa) => isFunctionEnabled(qa.mode));
+  const quickActions = allQuickActions;
 
   return (
     <div className="flex flex-col gap-4">
@@ -212,22 +213,38 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {isFunctionEnabled("chat") && (
-                    <button
-                      onClick={() => launchWorkspace(ws, "chat")}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-edge bg-surface px-2 py-1.5 text-[11px] font-medium text-ink transition hover:border-accent/50 hover:text-accent"
-                    >
-                      <MessageSquare size={12} /> Ask
-                    </button>
-                  )}
-                  {isFunctionEnabled("podcast") && (
-                    <button
-                      onClick={() => launchWorkspace(ws, "podcast")}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-edge bg-surface px-2 py-1.5 text-[11px] font-medium text-ink transition hover:border-accent/50 hover:text-accent"
-                    >
-                      <Mic size={12} /> Podcast
-                    </button>
-                  )}
+                  {(() => {
+                    const chatEnabled = isFunctionEnabled("chat");
+                    const podcastEnabled = isFunctionEnabled("podcast");
+                    return (
+                      <>
+                        <button
+                          onClick={() => chatEnabled ? launchWorkspace(ws, "chat") : onPickMode("chat")}
+                          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-[11px] font-medium transition ${
+                            chatEnabled
+                              ? "border-edge bg-surface text-ink hover:border-accent/50 hover:text-accent"
+                              : "border-edge bg-surface/50 text-ink-muted/60 hover:bg-surface-3/50"
+                          }`}
+                        >
+                          <MessageSquare size={12} />
+                          Ask
+                          {!chatEnabled && <Lock size={9} className="text-amber-500" />}
+                        </button>
+                        <button
+                          onClick={() => podcastEnabled ? launchWorkspace(ws, "podcast") : onPickMode("podcast")}
+                          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-[11px] font-medium transition ${
+                            podcastEnabled
+                              ? "border-edge bg-surface text-ink hover:border-accent/50 hover:text-accent"
+                              : "border-edge bg-surface/50 text-ink-muted/60 hover:bg-surface-3/50"
+                          }`}
+                        >
+                          <Mic size={12} />
+                          Podcast
+                          {!podcastEnabled && <Lock size={9} className="text-amber-500" />}
+                        </button>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
@@ -241,15 +258,29 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
         <div className="grid grid-cols-2 gap-2">
           {quickActions.map((qa) => {
             const Icon = qa.icon;
+            const enabled = isFunctionEnabled(qa.mode);
+            const minTier = minTierFor(qa.mode);
             return (
               <button
                 key={qa.mode}
                 onClick={() => onPickMode(qa.mode)}
-                className="flex items-center gap-2.5 rounded-lg border border-edge bg-surface-2 p-3 text-left transition hover:border-accent/40 hover:bg-surface-3"
+                className={`flex items-center gap-2.5 rounded-lg border p-3 text-left transition ${
+                  enabled
+                    ? "border-edge bg-surface-2 hover:border-accent/40 hover:bg-surface-3"
+                    : "border-edge bg-surface-2/50 hover:bg-surface-3/50"
+                }`}
               >
-                <Icon size={18} className={`shrink-0 ${qa.color}`} />
-                <div className="flex flex-col">
-                  <span className="text-xs font-medium text-ink">{qa.label}</span>
+                <Icon size={18} className={`shrink-0 ${enabled ? qa.color : "text-ink-muted/40"}`} />
+                <div className="flex flex-1 flex-col">
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-ink">
+                    {qa.label}
+                    {!enabled && minTier && (
+                      <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/15 px-1 py-px text-[9px] font-semibold uppercase text-amber-500">
+                        <Lock size={8} />
+                        {minTier === "pro" ? "Pro" : "Paid"}
+                      </span>
+                    )}
+                  </span>
                   <span className="text-[10px] text-ink-muted">{qa.desc}</span>
                 </div>
               </button>
