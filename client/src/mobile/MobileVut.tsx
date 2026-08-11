@@ -41,11 +41,11 @@ export default function MobileVut({ onClose }: { onClose?: () => void }) {
     return (
       <MobileContainer>
         <MobileHeader title="VUT" subtitle="Sign in to Studis" onClose={onClose} />
-        <div className="rounded-2xl border border-white/10 bg-white/[.045] p-5">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-300">
+        <div className="rounded-2xl border border-edge bg-surface-2 p-5">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 text-accent">
             <Lock size={24} />
           </div>
-          <p className="mb-4 text-sm text-slate-400">Log in with your VUT credentials to load grades, timetable and updates.</p>
+          <p className="mb-4 text-sm text-ink-muted">Log in with your VUT credentials to load grades, timetable and updates.</p>
           <MobileInput
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -65,7 +65,7 @@ export default function MobileVut({ onClose }: { onClose?: () => void }) {
             type="button"
             onClick={() => void login()}
             disabled={loggingIn || !username.trim() || !password.trim()}
-            className="w-full rounded-2xl bg-indigo-500 py-3 text-sm font-semibold text-white disabled:opacity-50"
+            className="w-full rounded-2xl bg-accent py-3 text-sm font-semibold text-ink disabled:opacity-50"
           >
             {loggingIn ? "Signing in…" : "Sign in"}
           </button>
@@ -82,7 +82,7 @@ export default function MobileVut({ onClose }: { onClose?: () => void }) {
         onClose={onClose}
         right={
           <div className="flex gap-2">
-            <button type="button" onClick={() => void logout()} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[.06] text-white">
+            <button type="button" onClick={() => void logout()} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-ink">
               <LogOut size={20} />
             </button>
           </div>
@@ -96,7 +96,7 @@ export default function MobileVut({ onClose }: { onClose?: () => void }) {
             type="button"
             onClick={() => setTab(t)}
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium capitalize ${
-              tab === t ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+              tab === t ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
             }`}
           >
             {t}
@@ -127,23 +127,23 @@ function VutGradesView() {
   return (
     <div className="space-y-2">
       <div className="flex justify-end">
-        <button type="button" onClick={() => void load()} className="rounded-xl p-2 text-slate-400">
+        <button type="button" onClick={() => void load()} className="rounded-xl p-2 text-ink-muted">
           <RefreshCw size={18} />
         </button>
       </div>
       {loading ? <MobileLoading /> : grades.length ? grades.map((g) => (
-        <article key={`${g.courseCode}-${g.semester}`} className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
+        <article key={`${g.courseCode}-${g.semester}`} className="rounded-2xl border border-edge bg-surface-2 p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-white">{g.courseName}</p>
-              <p className="text-xs text-slate-400">{g.courseCode} · {g.semester}</p>
+              <p className="font-medium text-ink">{g.courseName}</p>
+              <p className="text-xs text-ink-muted">{g.courseCode} · {g.semester}</p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-white">{g.grade}</p>
-              <p className="text-xs text-slate-500">{g.ectsGrade}</p>
+              <p className="text-2xl font-bold text-ink">{g.grade}</p>
+              <p className="text-xs text-ink-muted">{g.ectsGrade}</p>
             </div>
           </div>
-          <p className="mt-2 text-xs text-slate-500">{g.credits} credits · attempt {g.attempt}</p>
+          <p className="mt-2 text-xs text-ink-muted">{g.credits} credits · attempt {g.attempt}</p>
         </article>
       )) : <MobileEmpty text="No grades loaded yet." />}
     </div>
@@ -172,21 +172,21 @@ function VutTimetableView() {
   return (
     <div className="space-y-2">
       <div className="flex justify-end">
-        <button type="button" onClick={() => void load()} className="rounded-xl p-2 text-slate-400">
+        <button type="button" onClick={() => void load()} className="rounded-xl p-2 text-ink-muted">
           <RefreshCw size={18} />
         </button>
       </div>
       {loading ? <MobileLoading /> : slots.length ? DAYS.map((day) => (
         grouped[day] && (
           <div key={day}>
-            <p className="mb-2 text-sm font-semibold text-indigo-300">{day}</p>
+            <p className="mb-2 text-sm font-semibold text-accent">{day}</p>
             <div className="space-y-2">
               {grouped[day].map((s, i) => (
-                <article key={`${day}-${i}`} className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
-                  <p className="font-medium text-white">{s.courseName}</p>
-                  <p className="text-xs text-slate-400">{s.courseCode} · {s.type}</p>
-                  <p className="mt-1 text-xs text-slate-500">{s.startTime} – {s.endTime} · {s.room}</p>
-                  {s.teacher && <p className="text-xs text-slate-500">{s.teacher}</p>}
+                <article key={`${day}-${i}`} className="rounded-2xl border border-edge bg-surface-2 p-4">
+                  <p className="font-medium text-ink">{s.courseName}</p>
+                  <p className="text-xs text-ink-muted">{s.courseCode} · {s.type}</p>
+                  <p className="mt-1 text-xs text-ink-muted">{s.startTime} – {s.endTime} · {s.room}</p>
+                  {s.teacher && <p className="text-xs text-ink-muted">{s.teacher}</p>}
                 </article>
               ))}
             </div>
@@ -213,16 +213,16 @@ function VutUpdatesView() {
   return (
     <div className="space-y-2">
       <div className="flex justify-end">
-        <button type="button" onClick={() => void load()} className="rounded-xl p-2 text-slate-400">
+        <button type="button" onClick={() => void load()} className="rounded-xl p-2 text-ink-muted">
           <RefreshCw size={18} />
         </button>
       </div>
       {loading ? <MobileLoading /> : updates.length ? updates.map((u, i) => (
-        <article key={`${u.subjectCode}-${i}`} className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
-          <p className="font-medium text-white">{u.title}</p>
-          <p className="text-xs text-slate-400">{u.subjectName} · {u.subjectCode}</p>
-          <p className="mt-2 text-sm text-slate-300">{u.content}</p>
-          <p className="mt-2 text-[11px] text-slate-500">{u.author} · {u.date}</p>
+        <article key={`${u.subjectCode}-${i}`} className="rounded-2xl border border-edge bg-surface-2 p-4">
+          <p className="font-medium text-ink">{u.title}</p>
+          <p className="text-xs text-ink-muted">{u.subjectName} · {u.subjectCode}</p>
+          <p className="mt-2 text-sm text-ink-muted">{u.content}</p>
+          <p className="mt-2 text-[11px] text-ink-muted">{u.author} · {u.date}</p>
         </article>
       )) : <MobileEmpty text="No updates loaded yet." />}
     </div>

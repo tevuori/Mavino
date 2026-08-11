@@ -111,7 +111,7 @@ export default function MobileReminders({ onClose }: { onClose?: () => void }) {
             type="button"
             onClick={() => setTab(t)}
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium capitalize ${
-              tab === t ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+              tab === t ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
             }`}
           >
             {t}
@@ -157,19 +157,19 @@ function ReminderCard({
   const isAthena = reminder.type === "athena";
   const { text: relText, overdue } = relativeTime(reminder.fireAt, now);
   return (
-    <article className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
+    <article className="rounded-2xl border border-edge bg-surface-2 p-4">
       <div className="flex items-start gap-3">
-        <div className={`shrink-0 pt-0.5 ${isAthena ? "text-indigo-400" : "text-amber-400"}`}>
+        <div className={`shrink-0 pt-0.5 ${isAthena ? "text-accent" : "text-amber-400"}`}>
           {isAthena ? <Sparkles size={18} /> : <BellRing size={18} />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-white">
+            <span className="text-sm font-medium text-ink">
               {reminder.title || (isAthena ? "Smart reminder" : reminder.message.slice(0, 40) || "Reminder")}
             </span>
             <span
               className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                isAthena ? "bg-indigo-500/15 text-indigo-300" : "bg-amber-500/15 text-amber-300"
+                isAthena ? "bg-accent/15 text-accent" : "bg-amber-500/15 text-amber-300"
               }`}
             >
               {isAthena ? "smart" : "basic"}
@@ -180,18 +180,18 @@ function ReminderCard({
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-ink-muted">
             {fmtTime(reminder.fireAt)}
             {showCountdown && (
-              <span className={`ml-2 ${overdue ? "text-rose-400" : "text-slate-500"}`}>· {relText}</span>
+              <span className={`ml-2 ${overdue ? "text-rose-400" : "text-ink-muted"}`}>· {relText}</span>
             )}
             {reminder.fired && reminder.firedAt && (
               <span className="ml-2 text-emerald-400">· fired {fmtTime(reminder.firedAt)}</span>
             )}
-            {reminder.cancelled && <span className="ml-2 text-slate-500">· cancelled</span>}
+            {reminder.cancelled && <span className="ml-2 text-ink-muted">· cancelled</span>}
           </p>
           {(isAthena ? reminder.prompt : reminder.message) && (
-            <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-slate-500">
+            <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-ink-muted">
               {isAthena ? `Prompt: ${reminder.prompt}` : reminder.message}
             </p>
           )}
@@ -201,7 +201,7 @@ function ReminderCard({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-xl p-2 text-slate-500 active:text-amber-400"
+              className="rounded-xl p-2 text-ink-muted active:text-amber-400"
             >
               <X size={18} />
             </button>
@@ -209,7 +209,7 @@ function ReminderCard({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-xl p-2 text-slate-500 active:text-rose-400"
+            className="rounded-xl p-2 text-ink-muted active:text-rose-400"
           >
             <Trash2 size={18} />
           </button>
@@ -282,7 +282,7 @@ function NewReminderForm({ onCreated, onCancel }: { onCreated: () => void; onCan
           type="button"
           onClick={() => setType("basic")}
           className={`flex-1 rounded-2xl py-2.5 text-sm font-medium ${
-            type === "basic" ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+            type === "basic" ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
           }`}
         >
           Basic
@@ -291,7 +291,7 @@ function NewReminderForm({ onCreated, onCancel }: { onCreated: () => void; onCan
           type="button"
           onClick={() => setType("athena")}
           className={`flex-1 rounded-2xl py-2.5 text-sm font-medium ${
-            type === "athena" ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+            type === "athena" ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
           }`}
         >
           Smart
@@ -325,16 +325,16 @@ function NewReminderForm({ onCreated, onCancel }: { onCreated: () => void; onCan
 
       <div className="mb-3 grid grid-cols-1 gap-3 @sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-400">Fire at</label>
+          <label className="mb-1 block text-xs font-medium text-ink-muted">Fire at</label>
           <input
             type="datetime-local"
             value={fireAt}
             onChange={(e) => setFireAt(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-white/[.06] px-4 py-3 text-base text-white outline-none focus:border-indigo-400/50"
+            className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none focus:border-indigo-400/50"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-400">Priority</label>
+          <label className="mb-1 block text-xs font-medium text-ink-muted">Priority</label>
           <MobileSelect value={priority} onChange={(e) => setPriority(Number(e.target.value))}>
             {PRIORITIES.map((p) => (
               <option key={p.v} value={p.v}>
@@ -358,7 +358,7 @@ function NewReminderForm({ onCreated, onCancel }: { onCreated: () => void; onCan
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 rounded-2xl bg-white/[.06] py-3 text-sm font-medium text-slate-300"
+          className="flex-1 rounded-2xl bg-surface-2 py-3 text-sm font-medium text-ink-muted"
         >
           Cancel
         </button>
@@ -366,7 +366,7 @@ function NewReminderForm({ onCreated, onCancel }: { onCreated: () => void; onCan
           type="button"
           onClick={() => void submit()}
           disabled={saving}
-          className="flex-1 rounded-2xl bg-indigo-500 py-3 text-sm font-semibold text-white disabled:opacity-50"
+          className="flex-1 rounded-2xl bg-accent py-3 text-sm font-semibold text-ink disabled:opacity-50"
         >
           {saving ? "Saving…" : "Schedule"}
         </button>

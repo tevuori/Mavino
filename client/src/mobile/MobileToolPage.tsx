@@ -21,7 +21,22 @@ import MobileAtlas from "./MobileAtlas";
 import MobileCrunch from "./MobileCrunch";
 import { MobileContainer, MobileEmpty, MobileHeader } from "./MobileUi";
 
-const SCREENS: Partial<Record<MobileTool, (props: { onClose: () => void; onOpenTool: (tool: MobileTool) => void }) => ReactNode>> = {
+/** Optional payload carried when opening a tool (e.g. a note source for Study). */
+export type MobileToolPayload = {
+  // Study source descriptor — opened from Notes "Study" menu etc.
+  study?: {
+    mode?: "summarize" | "explain" | "flashcards" | "quiz" | "study_guide" | "study";
+    sourceKind: "note" | "file" | "paste" | "url" | "moodle";
+    sourceId?: string;
+    sourceUrl?: string;
+    sourceName?: string;
+    text?: string;
+  };
+  // Files: open a specific folder
+  files?: { folderId?: string };
+};
+
+const SCREENS: Partial<Record<MobileTool, (props: { onClose: () => void; onOpenTool: (tool: MobileTool, payload?: MobileToolPayload) => void; payload?: MobileToolPayload }) => ReactNode>> = {
   notes: (props) => <MobileNotes {...props} />,
   flashcards: (props) => <MobileFlashcards {...props} />,
   habits: (props) => <MobileHabits {...props} />,
@@ -45,12 +60,14 @@ const SCREENS: Partial<Record<MobileTool, (props: { onClose: () => void; onOpenT
 
 export default function MobileToolPage({
   tool,
+  payload,
   onClose,
   onOpenTool,
 }: {
   tool: MobileTool;
+  payload?: MobileToolPayload | null;
   onClose: () => void;
-  onOpenTool: (tool: MobileTool) => void;
+  onOpenTool: (tool: MobileTool, payload?: MobileToolPayload) => void;
 }) {
   const Screen = SCREENS[tool];
   if (!Screen) {
@@ -61,5 +78,5 @@ export default function MobileToolPage({
       </MobileContainer>
     );
   }
-  return <>{Screen({ onClose, onOpenTool })}</>;
+  return <>{Screen({ onClose, onOpenTool, payload: payload ?? undefined })}</>;
 }

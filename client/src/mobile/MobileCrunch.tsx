@@ -155,7 +155,7 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
           data ? (
             <button
               onClick={deletePlan}
-              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[.06] text-red-300"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-red-300"
             >
               <Trash2 size={20} />
             </button>
@@ -170,7 +170,7 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
       )}
 
       {generating && (
-        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-200">
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/30 bg-accent/10 px-4 py-3 text-sm text-accent">
           <Sparkles size={16} className="animate-pulse" />
           Generating your study plan…
         </div>
@@ -178,20 +178,20 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
 
       {loading && (
         <div className="flex justify-center py-12">
-          <Loader2 size={24} className="animate-spin text-slate-500" />
+          <Loader2 size={24} className="animate-spin text-ink-muted" />
         </div>
       )}
 
       {/* Setup form */}
       {!loading && showSetup && !data && (
         <div className="space-y-3">
-          <p className="text-sm leading-6 text-slate-400">
+          <p className="text-sm leading-6 text-ink-muted">
             Add your upcoming exams. Crunch reads your flashcard mastery + grades, then builds a spaced-repetition plan.
           </p>
           {examRows.map((r, i) => (
-            <div key={r.id} className="rounded-2xl border border-white/10 bg-white/[.04] p-4">
+            <div key={r.id} className="rounded-2xl border border-edge bg-surface-2 p-4">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase text-slate-500">Exam {i + 1}</span>
+                <span className="text-[11px] font-semibold uppercase text-ink-muted">Exam {i + 1}</span>
                 {examRows.length > 1 && (
                   <button onClick={() => setExamRows(examRows.filter((x) => x.id !== r.id))} className="text-red-300">
                     <Trash2 size={16} />
@@ -202,31 +202,31 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
                 value={r.name}
                 onChange={(e) => setExamRows(examRows.map((x) => x.id === r.id ? { ...x, name: e.target.value } : x))}
                 placeholder="Exam name"
-                className="mb-2 w-full rounded-xl border border-white/10 bg-white/[.05] px-3 py-2.5 text-sm text-white outline-none"
+                className="mb-2 w-full rounded-xl border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none"
               />
               <input
                 type="date"
                 value={r.date}
                 onChange={(e) => setExamRows(examRows.map((x) => x.id === r.id ? { ...x, date: e.target.value } : x))}
-                className="mb-2 w-full rounded-xl border border-white/10 bg-white/[.05] px-3 py-2.5 text-sm text-white outline-none"
+                className="mb-2 w-full rounded-xl border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none"
               />
               <textarea
                 value={r.syllabus}
                 onChange={(e) => setExamRows(examRows.map((x) => x.id === r.id ? { ...x, syllabus: e.target.value } : x))}
                 placeholder="Syllabus — topics, chapters, material to cover"
                 rows={3}
-                className="w-full resize-y rounded-xl border border-white/10 bg-white/[.05] px-3 py-2.5 text-sm text-white outline-none"
+                className="w-full resize-y rounded-xl border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none"
               />
             </div>
           ))}
           <button
             onClick={() => setExamRows([...examRows, { id: `tmp_${Date.now()}`, name: "", date: "", syllabus: "" }])}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 px-4 py-3 text-sm text-slate-400"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-edge px-4 py-3 text-sm text-ink-muted"
           >
             <Plus size={16} /> Add exam
           </button>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-400">Daily target:</span>
+            <span className="text-xs text-ink-muted">Daily target:</span>
             <input
               type="number"
               value={dailyMinutes}
@@ -234,14 +234,14 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
               min={15}
               max={600}
               step={15}
-              className="w-20 rounded-xl border border-white/10 bg-white/[.05] px-3 py-2 text-sm text-white outline-none"
+              className="w-20 rounded-xl border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none"
             />
-            <span className="text-xs text-slate-400">min/day</span>
+            <span className="text-xs text-ink-muted">min/day</span>
           </div>
           <button
             onClick={generate}
             disabled={generating}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-500 px-5 py-3.5 text-sm font-semibold text-white active:scale-[.98] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-3.5 text-sm font-semibold text-ink active:scale-[.98] disabled:opacity-50"
           >
             {generating ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
             Generate plan
@@ -252,15 +252,15 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
       {/* Empty state */}
       {!loading && !data && !showSetup && !generating && (
         <div className="flex flex-col items-center gap-4 py-10 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-indigo-500/15">
-            <CalendarClock size={32} className="text-indigo-300" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-accent/15">
+            <CalendarClock size={32} className="text-accent" />
           </div>
-          <p className="max-w-xs text-sm leading-6 text-slate-400">
+          <p className="max-w-xs text-sm leading-6 text-ink-muted">
             Crunch builds an adaptive spaced-repetition study plan from your exam dates + syllabi, reading your flashcard mastery + grades.
           </p>
           <button
             onClick={() => setShowSetup(true)}
-            className="flex items-center gap-2 rounded-2xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white active:scale-[.98]"
+            className="flex items-center gap-2 rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-ink active:scale-[.98]"
           >
             <Sparkles size={16} /> Set up my exams
           </button>
@@ -272,17 +272,17 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
         <>
           {/* Stats */}
           <div className="mb-4 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl border border-white/10 bg-white/[.05] p-3 text-center">
-              <p className="text-2xl font-bold text-white">{data.stats.examCount}</p>
-              <p className="text-[11px] text-slate-400">Exams</p>
+            <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
+              <p className="text-2xl font-bold text-ink">{data.stats.examCount}</p>
+              <p className="text-[11px] text-ink-muted">Exams</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[.05] p-3 text-center">
-              <p className="text-2xl font-bold text-white">{data.stats.topicCount}</p>
-              <p className="text-[11px] text-slate-400">Topics</p>
+            <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
+              <p className="text-2xl font-bold text-ink">{data.stats.topicCount}</p>
+              <p className="text-[11px] text-ink-muted">Topics</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[.05] p-3 text-center">
-              <p className={`text-2xl font-bold ${behindPct >= 20 ? "text-amber-400" : "text-white"}`}>{behindPct}%</p>
-              <p className="text-[11px] text-slate-400">Behind</p>
+            <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
+              <p className={`text-2xl font-bold ${behindPct >= 20 ? "text-amber-400" : "text-ink"}`}>{behindPct}%</p>
+              <p className="text-[11px] text-ink-muted">Behind</p>
             </div>
           </div>
 
@@ -295,22 +295,22 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
 
           {/* Next exam */}
           {data.stats.nextExamName && data.stats.nextExamDays !== null && (
-            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3">
-              <GraduationCap size={18} className="text-indigo-300" />
+            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/20 bg-accent/10 px-4 py-3">
+              <GraduationCap size={18} className="text-accent" />
               <div>
-                <p className="text-sm font-semibold text-white">{data.stats.nextExamName}</p>
-                <p className="text-[11px] text-slate-400">in {data.stats.nextExamDays} day{data.stats.nextExamDays === 1 ? "" : "s"}</p>
+                <p className="text-sm font-semibold text-ink">{data.stats.nextExamName}</p>
+                <p className="text-[11px] text-ink-muted">in {data.stats.nextExamDays} day{data.stats.nextExamDays === 1 ? "" : "s"}</p>
               </div>
             </div>
           )}
 
           {/* Today's tasks */}
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white">Today</h2>
+            <h2 className="text-sm font-semibold text-ink">Today</h2>
             {todayDay && todayDay.tasks.length > 0 && !todayDay.tasks.every((t) => t.done) && (
               <button
                 onClick={() => completeDay(todayDay.date)}
-                className="rounded-lg bg-indigo-500/20 px-3 py-1 text-xs font-medium text-indigo-300"
+                className="rounded-lg bg-accent/15 px-3 py-1 text-xs font-medium text-accent"
               >
                 Complete all
               </button>
@@ -335,18 +335,18 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
           )}
 
           {/* Upcoming days */}
-          <h2 className="mb-2 text-sm font-semibold text-white">Upcoming</h2>
+          <h2 className="mb-2 text-sm font-semibold text-ink">Upcoming</h2>
           {upcomingDays.length === 0 ? (
             <MobileEmpty text="No upcoming tasks." />
           ) : (
             <div className="space-y-3">
               {upcomingDays.map((day) => (
-                <div key={day.date} className="rounded-2xl border border-white/10 bg-white/[.04] p-3.5">
-                  <p className="mb-2 text-xs font-semibold text-slate-300">
+                <div key={day.date} className="rounded-2xl border border-edge bg-surface-2 p-3.5">
+                  <p className="mb-2 text-xs font-semibold text-ink-muted">
                     {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                   </p>
                   {day.tasks.length === 0 ? (
-                    <p className="text-xs text-slate-500">No tasks.</p>
+                    <p className="text-xs text-ink-muted">No tasks.</p>
                   ) : (
                     <div className="space-y-1.5">
                       {day.tasks.map((task) => (
@@ -369,7 +369,7 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
           {/* Edit button */}
           <button
             onClick={() => { setShowSetup(true); void load(); }}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[.05] px-4 py-3 text-sm text-slate-300"
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-sm text-ink-muted"
           >
             <RefreshCw size={16} /> Regenerate plan
           </button>
@@ -399,24 +399,24 @@ function MobileTaskRow({
     <button
       onClick={() => onToggle(task.id, !task.done)}
       className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
-        task.done ? "border-emerald-500/20 bg-emerald-500/5" : "border-white/10 bg-white/[.03]"
+        task.done ? "border-emerald-500/20 bg-emerald-500/5" : "border-edge bg-surface-2"
       }`}
     >
-      {task.done ? <CheckCircle2 size={18} className="shrink-0 text-emerald-400" /> : <Circle size={18} className="shrink-0 text-slate-500" />}
+      {task.done ? <CheckCircle2 size={18} className="shrink-0 text-emerald-400" /> : <Circle size={18} className="shrink-0 text-ink-muted" />}
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${meta.color}20`, color: meta.color }}>
         <Icon size={14} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className={`text-sm font-medium ${task.done ? "text-slate-500 line-through" : "text-white"}`}>
+        <p className={`text-sm font-medium ${task.done ? "text-ink-muted line-through" : "text-ink"}`}>
           {isExamDay ? `${examName} — Exam day` : topicLabel}
         </p>
-        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+        <div className="flex items-center gap-2 text-[11px] text-ink-muted">
           <span style={{ color: meta.color }}>{meta.label}</span>
           {!isExamDay && <span>{examName}</span>}
           {mastery >= 0 && <span>{Math.round(mastery * 100)}% mastery</span>}
         </div>
       </div>
-      <span className="flex shrink-0 items-center gap-1 text-[11px] text-slate-400">
+      <span className="flex shrink-0 items-center gap-1 text-[11px] text-ink-muted">
         <Clock size={11} /> {fmtMinutes(task.duration)}
       </span>
     </button>

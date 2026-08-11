@@ -138,14 +138,14 @@ export default function MobileFocus({ onClose }: { onClose?: () => void }) {
     <MobileContainer>
       <MobileHeader title="Focus" subtitle="Pomodoro timer" onClose={onClose} />
 
-      <div className="mb-6 flex gap-1 rounded-full bg-white/[.06] p-1">
+      <div className="mb-6 flex gap-1 rounded-full bg-surface-2 p-1">
         {(Object.keys(PHASES) as Phase[]).map((p) => (
           <button
             key={p}
             type="button"
             onClick={() => switchPhase(p)}
             className={`flex flex-1 items-center justify-center gap-1 rounded-full px-2 py-2 text-xs font-medium transition ${
-              phase === p ? "bg-indigo-500 text-white" : "text-slate-300"
+              phase === p ? "bg-accent text-ink" : "text-ink-muted"
             }`}
           >
             {PHASES[p].icon}
@@ -156,7 +156,7 @@ export default function MobileFocus({ onClose }: { onClose?: () => void }) {
 
       <div className="relative mx-auto mb-6 flex aspect-square w-full max-w-[280px] items-center justify-center">
         <svg viewBox="0 0 280 280" className="h-full w-full -rotate-90">
-          <circle cx="140" cy="140" r={radius} fill="none" stroke="currentColor" strokeWidth="10" className="text-white/[.08]" />
+          <circle cx="140" cy="140" r={radius} fill="none" stroke="currentColor" strokeWidth="10" className="text-ink/[.08]" />
           <circle
             cx="140" cy="140" r={radius}
             fill="none" stroke={config.color}
@@ -165,14 +165,14 @@ export default function MobileFocus({ onClose }: { onClose?: () => void }) {
             style={{ strokeDashoffset: dashOffset, transition: "stroke-dashoffset 0.5s linear" }}
           />
         </svg>
-        <div className="absolute flex flex-col items-center text-white">
+        <div className="absolute flex flex-col items-center text-ink">
           <div className="mb-1 flex items-center gap-1 text-sm font-medium" style={{ color: config.color }}>
             {config.icon} {config.label}
           </div>
           <div className="font-mono text-5xl font-bold tabular-nums">
             {mm}:{ss}
           </div>
-          <p className="mt-1 text-xs text-slate-400">{running ? "Running" : "Ready"}</p>
+          <p className="mt-1 text-xs text-ink-muted">{running ? "Running" : "Ready"}</p>
         </div>
       </div>
 
@@ -180,14 +180,14 @@ export default function MobileFocus({ onClose }: { onClose?: () => void }) {
         <button
           type="button"
           onClick={reset}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[.06] text-white active:bg-white/[.1]"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-ink active:bg-surface-3"
         >
           <RotateCcw size={20} />
         </button>
         <button
           type="button"
           onClick={() => setRunning((r) => !r)}
-          className="flex h-16 w-16 items-center justify-center rounded-full text-white shadow-lg active:scale-[.98]"
+          className="flex h-16 w-16 items-center justify-center rounded-full text-ink shadow-lg active:scale-[.98]"
           style={{ backgroundColor: config.color }}
         >
           {running ? <Pause size={28} /> : <Play size={28} className="ml-0.5" />}
@@ -195,7 +195,7 @@ export default function MobileFocus({ onClose }: { onClose?: () => void }) {
         <button
           type="button"
           onClick={nextPhase}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[.06] text-white active:bg-white/[.1]"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-ink active:bg-surface-3"
         >
           <SkipForward size={20} />
         </button>
@@ -206,7 +206,7 @@ export default function MobileFocus({ onClose }: { onClose?: () => void }) {
           type="button"
           onClick={() => setDnd((v) => !v)}
           className={`flex items-center gap-1.5 rounded-2xl px-3 py-2 text-xs font-medium ${
-            dnd ? "bg-indigo-500/20 text-indigo-300" : "bg-white/[.06] text-slate-300"
+            dnd ? "bg-accent/15 text-accent" : "bg-surface-2 text-ink-muted"
           }`}
         >
           {dnd || doNotDisturb ? <VolumeX size={14} /> : <Volume2 size={14} />}
@@ -216,7 +216,7 @@ export default function MobileFocus({ onClose }: { onClose?: () => void }) {
           type="button"
           onClick={() => setMuted((v) => !v)}
           className={`flex items-center gap-1.5 rounded-2xl px-3 py-2 text-xs font-medium ${
-            muted ? "bg-white/[.06] text-slate-400" : "bg-white/[.06] text-slate-300"
+            muted ? "bg-surface-2 text-ink-muted" : "bg-surface-2 text-ink-muted"
           }`}
         >
           {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
@@ -224,16 +224,16 @@ export default function MobileFocus({ onClose }: { onClose?: () => void }) {
         </button>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/[.045] p-4 text-center">
-        <p className="text-xs text-slate-400">Today</p>
+      <div className="rounded-2xl border border-edge bg-surface-2 p-4 text-center">
+        <p className="text-xs text-ink-muted">Today</p>
         <div className="mt-2 grid grid-cols-2 gap-3">
           <div>
-            <p className="text-2xl font-bold text-white">{stats.completedFocus}</p>
-            <p className="text-[11px] text-slate-500">Sessions</p>
+            <p className="text-2xl font-bold text-ink">{stats.completedFocus}</p>
+            <p className="text-[11px] text-ink-muted">Sessions</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-white">{stats.totalFocusMinutes}</p>
-            <p className="text-[11px] text-slate-500">Minutes</p>
+            <p className="text-2xl font-bold text-ink">{stats.totalFocusMinutes}</p>
+            <p className="text-[11px] text-ink-muted">Minutes</p>
           </div>
         </div>
         <div className="mt-3 flex justify-center gap-1.5">
@@ -242,8 +242,8 @@ export default function MobileFocus({ onClose }: { onClose?: () => void }) {
               key={i}
               className={`h-2 w-2 rounded-full ${
                 i < (stats.completedFocus % 4 === 0 && stats.completedFocus > 0 ? 4 : stats.completedFocus % 4)
-                  ? "bg-indigo-500"
-                  : "bg-white/[.08]"
+                  ? "bg-accent"
+                  : "bg-surface-3"
               }`}
             />
           ))}

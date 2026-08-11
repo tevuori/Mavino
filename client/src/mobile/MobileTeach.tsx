@@ -299,7 +299,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
         <MobileContainer>
           <MobileHeader title="New lesson" subtitle="Teach Me" onBack={() => setView("list")} />
 
-          <p className="mb-2 text-sm font-semibold text-white">Sources</p>
+          <p className="mb-2 text-sm font-semibold text-ink">Sources</p>
           <div className="mb-4 space-y-2">
             {library.length === 0 ? (
               <MobileEmpty text="No study sources yet. Add materials in Study Hub first." />
@@ -313,19 +313,19 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
                     type="button"
                     onClick={() => toggleSource(s.id)}
                     className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left ${
-                      on ? "border-indigo-400/60 bg-indigo-500/15" : "border-white/10 bg-white/[.045]"
+                      on ? "border-indigo-400/60 bg-accent/15" : "border-edge bg-surface-2"
                     }`}
                   >
-                    <Icon size={18} className={on ? "text-indigo-300" : "text-slate-400"} />
-                    <span className="min-w-0 flex-1 truncate text-sm text-white">{s.name}</span>
-                    {on && <span className="text-xs text-indigo-300">Selected</span>}
+                    <Icon size={18} className={on ? "text-accent" : "text-ink-muted"} />
+                    <span className="min-w-0 flex-1 truncate text-sm text-ink">{s.name}</span>
+                    {on && <span className="text-xs text-accent">Selected</span>}
                   </button>
                 );
               })
             )}
           </div>
 
-          <p className="mb-2 text-sm font-semibold text-white">Level</p>
+          <p className="mb-2 text-sm font-semibold text-ink">Level</p>
           <div className="mb-4 flex gap-2">
             {LEVELS.map((l) => (
               <button
@@ -333,7 +333,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
                 type="button"
                 onClick={() => setStudentLevel(l)}
                 className={`flex-1 rounded-2xl py-2.5 text-sm font-medium capitalize ${
-                  studentLevel === l ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+                  studentLevel === l ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
                 }`}
               >
                 {l}
@@ -341,7 +341,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
             ))}
           </div>
 
-          <p className="mb-2 text-sm font-semibold text-white">Teaching style</p>
+          <p className="mb-2 text-sm font-semibold text-ink">Teaching style</p>
           <div className="mb-4 flex gap-2">
             {STYLES.map((st) => (
               <button
@@ -349,7 +349,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
                 type="button"
                 onClick={() => setTeachingStyle(st)}
                 className={`flex-1 rounded-2xl py-2.5 text-sm font-medium capitalize ${
-                  teachingStyle === st ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+                  teachingStyle === st ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
                 }`}
               >
                 {st}
@@ -361,12 +361,12 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
             type="button"
             onClick={() => setWithPlan((v) => !v)}
             className={`mb-4 flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm ${
-              withPlan ? "border-indigo-400/60 bg-indigo-500/15 text-white" : "border-white/10 bg-white/[.045] text-slate-300"
+              withPlan ? "border-indigo-400/60 bg-accent/15 text-ink" : "border-edge bg-surface-2 text-ink-muted"
             }`}
           >
             <span className="flex items-center gap-2"><Sparkles size={16} /> Generate a lesson plan</span>
-            <span className={`h-5 w-9 rounded-full p-0.5 transition ${withPlan ? "bg-indigo-500" : "bg-white/15"}`}>
-              <span className={`block h-4 w-4 rounded-full bg-white transition ${withPlan ? "translate-x-4" : ""}`} />
+            <span className={`h-5 w-9 rounded-full p-0.5 transition ${withPlan ? "bg-accent" : "bg-surface-3"}`}>
+              <span className={`block h-4 w-4 rounded-full bg-surface-2 transition ${withPlan ? "translate-x-4" : ""}`} />
             </span>
           </button>
 
@@ -376,7 +376,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
             type="button"
             onClick={startSession}
             disabled={selectedSourceIds.size === 0 || loadingSession}
-            className="w-full rounded-2xl bg-indigo-500 py-3 text-sm font-semibold text-white disabled:opacity-50"
+            className="w-full rounded-2xl bg-accent py-3 text-sm font-semibold text-ink disabled:opacity-50"
           >
             {loadingSession ? "Starting…" : "Start lesson"}
           </button>
@@ -392,7 +392,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
           onClose={onClose}
           right={<MobileFab onClick={() => { resetSession(); setSelectedSourceIds(new Set()); setView("new"); }} icon={<Plus size={22} />} />}
         />
-        <p className="mb-3 text-sm font-semibold text-white">Recent lessons</p>
+        <p className="mb-3 text-sm font-semibold text-ink">Recent lessons</p>
         <div className="space-y-2">
           {loadingSession ? (
             <MobileLoading />
@@ -400,19 +400,19 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
             sessions.map((s) => (
               <article
                 key={s.id}
-                className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[.045] p-4"
+                className="flex items-center gap-2 rounded-2xl border border-edge bg-surface-2 p-4"
               >
                 <button onClick={() => void loadSession(s.id)} className="flex min-w-0 flex-1 flex-col text-left">
-                  <span className="flex items-center gap-2 truncate font-medium text-white">
-                    <GraduationCap size={16} className="shrink-0 text-indigo-300" /> {s.title}
+                  <span className="flex items-center gap-2 truncate font-medium text-ink">
+                    <GraduationCap size={16} className="shrink-0 text-accent" /> {s.title}
                   </span>
-                  <span className="mt-1 text-xs text-slate-500">
+                  <span className="mt-1 text-xs text-ink-muted">
                     {s.sourceIds.length} source{s.sourceIds.length === 1 ? "" : "s"}
                   </span>
                 </button>
                 <button
                   onClick={() => void deleteSession(s.id)}
-                  className="shrink-0 rounded-xl p-2 text-slate-500 active:bg-white/[.08] active:text-red-400"
+                  className="shrink-0 rounded-xl p-2 text-ink-muted active:bg-surface-3 active:text-red-400"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -436,17 +436,17 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
       <header className="mb-2 flex items-center gap-2">
         <button
           onClick={() => { stop(); resetSession(); setView("list"); }}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/[.06] text-white active:bg-white/[.1]"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-surface-2 text-ink active:bg-surface-3"
         >
           <ChevronDown size={20} className="rotate-90" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-bold text-white">{session?.title ?? "Lesson"}</p>
+          <p className="truncate text-lg font-bold text-ink">{session?.title ?? "Lesson"}</p>
         </div>
         <button
           onClick={() => setAutoSpeak((v) => !v)}
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
-            autoSpeak ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+            autoSpeak ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
           }`}
           title={autoSpeak ? "Auto-speak on" : "Auto-speak off"}
         >
@@ -477,11 +477,11 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
         {messages.map((m, i) => (
           <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
             {m.role === "user" ? (
-              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-indigo-500 px-3.5 py-2 text-sm text-white">
+              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-accent px-3.5 py-2 text-sm text-ink">
                 {m.content}
               </div>
             ) : (
-              <div className="rounded-2xl rounded-bl-sm border border-white/10 bg-white/[.045] px-3.5 py-2.5">
+              <div className="rounded-2xl rounded-bl-sm border border-edge bg-surface-2 px-3.5 py-2.5">
                 <HighlightableMarkdown
                   content={m.content}
                   scope="teacher"
@@ -495,19 +495,19 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
                     <>
                       <button
                         onClick={() => (tts.paused ? tts.resume() : tts.pause())}
-                        className="flex items-center gap-1 rounded-lg bg-white/[.08] px-2 py-1 text-xs text-slate-200"
+                        className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs text-ink"
                       >
                         {tts.paused ? <Play size={12} /> : <Pause size={12} />}
                         {tts.paused ? "Resume" : "Pause"}
                       </button>
-                      <button onClick={() => tts.stop()} className="rounded-lg bg-white/[.08] p-1 text-slate-200">
+                      <button onClick={() => tts.stop()} className="rounded-lg bg-surface-3 p-1 text-ink">
                         <Square size={12} />
                       </button>
                     </>
                   ) : (
                     <button
                       onClick={() => speakMessage(m.content, `msg-${i}`)}
-                      className="flex items-center gap-1 rounded-lg bg-white/[.08] px-2 py-1 text-xs text-slate-200"
+                      className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs text-ink"
                     >
                       <Volume2 size={12} /> Play
                     </button>
@@ -519,7 +519,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
         ))}
 
         {streaming && (
-          <div className="rounded-2xl rounded-bl-sm border border-white/10 bg-white/[.045] px-3.5 py-2.5">
+          <div className="rounded-2xl rounded-bl-sm border border-edge bg-surface-2 px-3.5 py-2.5">
             {toolChips.length > 0 && <div className="mb-2"><ToolChipRow chips={toolChips} /></div>}
             {streamText ? (
               <HighlightableMarkdown
@@ -531,7 +531,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
                 enabled={false}
               />
             ) : (
-              <Loader2 size={16} className="animate-spin text-indigo-300" />
+              <Loader2 size={16} className="animate-spin text-accent" />
             )}
           </div>
         )}
@@ -552,7 +552,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
 
       {/* interim STT transcript */}
       {listening && (
-        <p className="mb-1 text-center text-xs text-indigo-300">{interimText || "Listening…"}</p>
+        <p className="mb-1 text-center text-xs text-accent">{interimText || "Listening…"}</p>
       )}
 
       {/* composer */}
@@ -572,7 +572,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
             type="button"
             onClick={listening ? stopListening : startListening}
             className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
-              listening ? "animate-pulse bg-red-500 text-white" : "bg-white/[.08] text-slate-200"
+              listening ? "animate-pulse bg-red-500 text-ink" : "bg-surface-3 text-ink"
             }`}
           >
             <Mic size={20} />
@@ -582,7 +582,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
           type="button"
           onClick={streaming ? stop : submit}
           disabled={!streaming && !input.trim()}
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-500 text-white disabled:opacity-50"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent text-ink disabled:opacity-50"
         >
           {streaming ? <Square size={18} /> : <Send size={18} />}
         </button>
@@ -593,23 +593,23 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
         <div className="fixed inset-0 z-50 flex items-end" onClick={() => setSheet(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
-            className="relative flex max-h-[75vh] w-full flex-col rounded-t-3xl border-t border-white/10 bg-[#0f1117] pb-[max(1rem,env(safe-area-inset-bottom))]"
+            className="relative flex max-h-[75vh] w-full flex-col rounded-t-3xl border-t border-edge bg-[#0f1117] pb-[max(1rem,env(safe-area-inset-bottom))]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-              <BookOpen size={16} className="shrink-0 text-indigo-300" />
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{sheet.name}</span>
-              <button onClick={() => setSheet(null)} className="rounded-xl p-1.5 text-slate-400 active:bg-white/[.08]">
+            <div className="flex items-center gap-2 border-b border-edge px-4 py-3">
+              <BookOpen size={16} className="shrink-0 text-accent" />
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{sheet.name}</span>
+              <button onClick={() => setSheet(null)} className="rounded-xl p-1.5 text-ink-muted active:bg-surface-3">
                 <X size={18} />
               </button>
             </div>
             <div className="overflow-y-auto px-4 py-3">
               {sheet.loading ? (
-                <div className="flex items-center gap-2 text-sm text-slate-400">
+                <div className="flex items-center gap-2 text-sm text-ink-muted">
                   <Loader2 size={14} className="animate-spin" /> Loading source…
                 </div>
               ) : sheet.error ? (
-                <p className="text-sm text-slate-400">{sheet.error}</p>
+                <p className="text-sm text-ink-muted">{sheet.error}</p>
               ) : (
                 <SourceText text={sheet.text ?? ""} highlight={sheet.highlight} />
               )}
@@ -629,14 +629,14 @@ function SourceText({ text, highlight }: { text: string; highlight?: string }) {
   }, [highlight]);
 
   if (!highlight) {
-    return <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-slate-300">{text}</pre>;
+    return <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-ink-muted">{text}</pre>;
   }
   const idx = text.toLowerCase().indexOf(highlight.toLowerCase());
   if (idx === -1) {
-    return <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-slate-300">{text}</pre>;
+    return <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-ink-muted">{text}</pre>;
   }
   return (
-    <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-slate-300">
+    <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-ink-muted">
       {text.slice(0, idx)}
       <mark ref={markRef} className="rounded bg-amber-400/30 text-amber-100">{text.slice(idx, idx + highlight.length)}</mark>
       {text.slice(idx + highlight.length)}

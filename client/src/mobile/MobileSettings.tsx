@@ -51,12 +51,12 @@ export default function MobileSettings({ onClose }: { onClose?: () => void }) {
     <MobileContainer>
       <MobileHeader title="Settings" subtitle="Account & preferences" onClose={onClose} />
 
-      <section className="mb-5 rounded-2xl border border-white/10 bg-white/[.045] p-4">
+      <section className="mb-5 rounded-2xl border border-edge bg-surface-2 p-4">
         <div className="mb-3 flex items-center gap-2">
-          <User size={18} className="text-indigo-300" />
-          <p className="text-sm font-semibold text-white">Account</p>
+          <User size={18} className="text-accent" />
+          <p className="text-sm font-semibold text-ink">Account</p>
         </div>
-        <p className="mb-2 text-xs text-slate-400">{user?.username} · {user?.role}</p>
+        <p className="mb-2 text-xs text-ink-muted">{user?.username} · {user?.role}</p>
         <MobileInput
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
@@ -71,23 +71,23 @@ export default function MobileSettings({ onClose }: { onClose?: () => void }) {
         <button
           type="button"
           onClick={() => void onPassword()}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-white/[.06] py-2.5 text-sm text-slate-300"
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-surface-2 py-2.5 text-sm text-ink-muted"
         >
           <Lock size={16} /> Change password
         </button>
       </section>
 
-      <section className="mb-5 rounded-2xl border border-white/10 bg-white/[.045] p-4">
+      <section className="mb-5 rounded-2xl border border-edge bg-surface-2 p-4">
         <div className="mb-3 flex items-center gap-2">
-          <Palette size={18} className="text-indigo-300" />
-          <p className="text-sm font-semibold text-white">Appearance</p>
+          <Palette size={18} className="text-accent" />
+          <p className="text-sm font-semibold text-ink">Appearance</p>
         </div>
         <div className="mb-3 flex gap-2">
           <button
             type="button"
             onClick={() => settings.setTheme("light")}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm ${
-              settings.theme === "light" ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+              settings.theme === "light" ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
             }`}
           >
             <Sun size={16} /> Light
@@ -96,61 +96,61 @@ export default function MobileSettings({ onClose }: { onClose?: () => void }) {
             type="button"
             onClick={() => settings.setTheme("dark")}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm ${
-              settings.theme === "dark" ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+              settings.theme === "dark" ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
             }`}
           >
             <Moon size={16} /> Dark
           </button>
         </div>
-        <label className="mb-1 block text-xs font-medium text-slate-400">Accent color</label>
+        <label className="mb-1 block text-xs font-medium text-ink-muted">Accent color</label>
         <input
           type="color"
           value={settings.accent}
           onChange={(e) => settings.setAccent(e.target.value)}
-          className="mb-3 h-11 w-full rounded-2xl border border-white/10 bg-white/[.06]"
+          className="mb-3 h-11 w-full rounded-2xl border border-edge bg-surface-2"
         />
-        <label className="mb-1 block text-xs font-medium text-slate-400">Wallpaper</label>
+        <label className="mb-1 block text-xs font-medium text-ink-muted">Wallpaper</label>
         <MobileSelect value={settings.wallpaper} onChange={(e) => settings.setWallpaper(e.target.value as WallpaperId)} className="mb-3">
           {WALLPAPERS.map((w) => <option key={w} value={w}>{w}</option>)}
         </MobileSelect>
-        <label className="mb-1 block text-xs font-medium text-slate-400">Animated background</label>
+        <label className="mb-1 block text-xs font-medium text-ink-muted">Animated background</label>
         <MobileSelect value={settings.animatedBg} onChange={(e) => settings.setAnimatedBg(e.target.value as AnimatedBgId)}>
           {ANIMATED.map((a) => <option key={a} value={a}>{a}</option>)}
         </MobileSelect>
       </section>
 
-      <section className="mb-5 rounded-2xl border border-white/10 bg-white/[.045] p-4">
+      <section className="mb-5 rounded-2xl border border-edge bg-surface-2 p-4">
         <div className="mb-3 flex items-center gap-2">
-          <Monitor size={18} className="text-indigo-300" />
-          <p className="text-sm font-semibold text-white">Mobile</p>
+          <Monitor size={18} className="text-accent" />
+          <p className="text-sm font-semibold text-ink">Mobile</p>
         </div>
-        <p className="mb-2 text-xs text-slate-400">Current mode: <span className="text-white">{formFactor.mode}</span></p>
+        <p className="mb-2 text-xs text-ink-muted">Current mode: <span className="text-ink">{formFactor.mode}</span></p>
         <button
           type="button"
           onClick={() => formFactor.refresh()}
-          className="w-full rounded-xl bg-white/[.06] py-2.5 text-sm text-slate-300"
+          className="w-full rounded-xl bg-surface-2 py-2.5 text-sm text-ink-muted"
         >
           Refresh form factor
         </button>
       </section>
 
-      <section className="mb-5 rounded-2xl border border-white/10 bg-white/[.045] p-4">
+      <section className="mb-5 rounded-2xl border border-edge bg-surface-2 p-4">
         <div className="mb-3 flex items-center gap-2">
-          <Monitor size={18} className="text-indigo-300" />
-          <p className="text-sm font-semibold text-white">Sessions</p>
+          <Monitor size={18} className="text-accent" />
+          <p className="text-sm font-semibold text-ink">Sessions</p>
         </div>
         <button
           type="button"
           onClick={() => void onDevices()}
-          className="mb-2 w-full rounded-xl bg-white/[.06] py-2.5 text-sm text-slate-300"
+          className="mb-2 w-full rounded-xl bg-surface-2 py-2.5 text-sm text-ink-muted"
         >
           Load devices
         </button>
         <div className="space-y-2">
           {devices.map((d) => (
-            <div key={d.id} className="flex items-center justify-between rounded-xl bg-white/[.04] px-3 py-2">
-              <span className="text-xs text-slate-300">{d.deviceLabel}</span>
-              <button type="button" onClick={() => void revoke(d.id)} className="rounded-lg p-1 text-slate-500 active:text-rose-400">
+            <div key={d.id} className="flex items-center justify-between rounded-xl bg-surface-2 px-3 py-2">
+              <span className="text-xs text-ink-muted">{d.deviceLabel}</span>
+              <button type="button" onClick={() => void revoke(d.id)} className="rounded-lg p-1 text-ink-muted active:text-rose-400">
                 <Trash2 size={16} />
               </button>
             </div>

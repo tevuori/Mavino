@@ -19,7 +19,7 @@ export default function MobileNtfy({ onClose }: { onClose?: () => void }) {
             type="button"
             onClick={() => setTab(t)}
             className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium capitalize ${
-              tab === t ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+              tab === t ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
             }`}
           >
             {t}
@@ -51,20 +51,20 @@ function NtfyMessages() {
   return (
     <div className="space-y-2">
       <div className="flex justify-end">
-        <button type="button" onClick={() => void load()} className="rounded-xl p-2 text-slate-400">
+        <button type="button" onClick={() => void load()} className="rounded-xl p-2 text-ink-muted">
           <RefreshCw size={18} />
         </button>
       </div>
       {loading ? <MobileLoading /> : messages.length ? messages.map((m) => (
-        <article key={m.id} className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
+        <article key={m.id} className="rounded-2xl border border-edge bg-surface-2 p-4">
           <div className="flex items-start gap-3">
-            <div className={`shrink-0 pt-0.5 ${m.direction === "out" ? "text-indigo-400" : "text-emerald-400"}`}>
+            <div className={`shrink-0 pt-0.5 ${m.direction === "out" ? "text-accent" : "text-emerald-400"}`}>
               {m.direction === "out" ? <Send size={18} /> : <MessageSquare size={18} />}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-white">{m.title}</p>
-              <p className="mt-1 text-sm text-slate-400">{m.body}</p>
-              <p className="mt-2 text-[11px] text-slate-500">{m.topic} · P{m.priority}</p>
+              <p className="font-medium text-ink">{m.title}</p>
+              <p className="mt-1 text-sm text-ink-muted">{m.body}</p>
+              <p className="mt-2 text-[11px] text-ink-muted">{m.topic} · P{m.priority}</p>
             </div>
           </div>
         </article>
@@ -93,14 +93,14 @@ function NtfySend({ onSent }: { onSent: () => void }) {
       <MobileInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className="mb-3" />
       <MobileTextarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message body" rows={4} className="mb-3" />
       <div className="mb-4">
-        <label className="mb-1 block text-xs font-medium text-slate-400">Priority (1-5)</label>
+        <label className="mb-1 block text-xs font-medium text-ink-muted">Priority (1-5)</label>
         <MobileInput type="number" min={1} max={5} value={priority} onChange={(e) => setPriority(Number(e.target.value))} />
       </div>
       <button
         type="button"
         onClick={() => void submit()}
         disabled={sending || !body.trim()}
-        className="w-full rounded-2xl bg-indigo-500 py-3 text-sm font-semibold text-white disabled:opacity-50"
+        className="w-full rounded-2xl bg-accent py-3 text-sm font-semibold text-ink disabled:opacity-50"
       >
         {sending ? "Sending…" : "Send message"}
       </button>
@@ -139,26 +139,26 @@ function NtfyCron() {
   return (
     <div className="space-y-2">
       <div className="flex justify-end">
-        <button type="button" onClick={() => void load()} className="rounded-xl p-2 text-slate-400">
+        <button type="button" onClick={() => void load()} className="rounded-xl p-2 text-ink-muted">
           <RefreshCw size={18} />
         </button>
       </div>
       {loading ? <MobileLoading /> : jobs.length ? jobs.map((job) => (
-        <article key={job.id} className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
+        <article key={job.id} className="rounded-2xl border border-edge bg-surface-2 p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-white">{job.name}</p>
-              <p className="text-xs text-slate-400">{job.cron}</p>
-              <p className="mt-1 text-[11px] text-slate-500">{job.type} · {job.enabled ? "enabled" : "paused"}</p>
+              <p className="font-medium text-ink">{job.name}</p>
+              <p className="text-xs text-ink-muted">{job.cron}</p>
+              <p className="mt-1 text-[11px] text-ink-muted">{job.type} · {job.enabled ? "enabled" : "paused"}</p>
             </div>
             <div className="flex gap-1">
-              <button type="button" onClick={() => void toggle(job)} className="rounded-xl p-2 text-slate-400">
+              <button type="button" onClick={() => void toggle(job)} className="rounded-xl p-2 text-ink-muted">
                 <Bell size={18} />
               </button>
-              <button type="button" onClick={() => void run(job)} className="rounded-xl p-2 text-slate-400">
+              <button type="button" onClick={() => void run(job)} className="rounded-xl p-2 text-ink-muted">
                 <Send size={18} />
               </button>
-              <button type="button" onClick={() => void remove(job)} className="rounded-xl p-2 text-slate-500 active:text-rose-400">
+              <button type="button" onClick={() => void remove(job)} className="rounded-xl p-2 text-ink-muted active:text-rose-400">
                 <Trash2 size={18} />
               </button>
             </div>
@@ -198,10 +198,10 @@ function NtfyStatusView() {
 
   return (
     <div>
-      <div className="mb-4 rounded-2xl border border-white/10 bg-white/[.045] p-4 text-center">
-        <BellRing size={24} className="mx-auto mb-2 text-indigo-300" />
-        <p className="text-sm font-semibold text-white">{status.enabled ? "Enabled" : "Disabled"}</p>
-        <p className="text-xs text-slate-400">{status.serverUrl}</p>
+      <div className="mb-4 rounded-2xl border border-edge bg-surface-2 p-4 text-center">
+        <BellRing size={24} className="mx-auto mb-2 text-accent" />
+        <p className="text-sm font-semibold text-ink">{status.enabled ? "Enabled" : "Disabled"}</p>
+        <p className="text-xs text-ink-muted">{status.serverUrl}</p>
       </div>
 
       <MobileInput
@@ -223,7 +223,7 @@ function NtfyStatusView() {
         className="mb-3"
       />
       <div className="mb-4">
-        <label className="mb-1 block text-xs font-medium text-slate-400">Default priority</label>
+        <label className="mb-1 block text-xs font-medium text-ink-muted">Default priority</label>
         <MobileInput
           type="number"
           value={config.defaultPriority ?? 3}
@@ -236,14 +236,14 @@ function NtfyStatusView() {
           type="checkbox"
           checked={!!config.enabled}
           onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
-          className="h-5 w-5 rounded border-white/10 bg-white/[.06] text-indigo-500"
+          className="h-5 w-5 rounded border-edge bg-surface-2 text-accent"
         />
-        <label htmlFor="ntfy-enabled" className="text-sm text-slate-300">Enabled</label>
+        <label htmlFor="ntfy-enabled" className="text-sm text-ink-muted">Enabled</label>
       </div>
       <button
         type="button"
         onClick={() => void save()}
-        className="w-full rounded-2xl bg-indigo-500 py-3 text-sm font-semibold text-white"
+        className="w-full rounded-2xl bg-accent py-3 text-sm font-semibold text-ink"
       >
         Save config
       </button>

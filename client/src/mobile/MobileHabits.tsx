@@ -109,10 +109,10 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
       onClick={() => setShowForm(false)}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4"
+        className="w-full max-w-md rounded-2xl border border-edge bg-surface p-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-3 text-lg font-semibold text-white">New habit</h2>
+        <h2 className="mb-3 text-lg font-semibold text-ink">New habit</h2>
         <MobileInput
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -121,7 +121,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
         />
 
         <div className="mb-3">
-          <p className="mb-2 text-xs font-medium text-slate-400">Icon</p>
+          <p className="mb-2 text-xs font-medium text-ink-muted">Icon</p>
           <div className="flex flex-wrap gap-2">
             {HABIT_ICONS.map((ic) => (
               <button
@@ -129,7 +129,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
                 type="button"
                 onClick={() => setIcon(ic)}
                 className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${
-                  icon === ic ? "bg-white/[.1] ring-1 ring-white/20" : "bg-white/[.06]"
+                  icon === ic ? "bg-surface-3 ring-1 ring-white/20" : "bg-surface-2"
                 }`}
               >
                 {ic}
@@ -139,14 +139,14 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
         </div>
 
         <div className="mb-3">
-          <p className="mb-2 text-xs font-medium text-slate-400">Color</p>
+          <p className="mb-2 text-xs font-medium text-ink-muted">Color</p>
           <div className="flex flex-wrap gap-2">
             {HABIT_COLORS.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => setColor(c)}
-                className={`h-8 w-8 rounded-full border-2 ${color === c ? "border-white" : "border-transparent"}`}
+                className={`h-8 w-8 rounded-full border-2 ${color === c ? "border-ink" : "border-transparent"}`}
                 style={{ backgroundColor: c }}
               />
             ))}
@@ -155,14 +155,14 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
 
         <div className="mb-3 grid grid-cols-2 gap-3">
           <div>
-            <p className="mb-2 text-xs font-medium text-slate-400">Cadence</p>
+            <p className="mb-2 text-xs font-medium text-ink-muted">Cadence</p>
             <MobileSelect value={cadence} onChange={(e) => setCadence(e.target.value as "daily" | "weekly")}>
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
             </MobileSelect>
           </div>
           <div>
-            <p className="mb-2 text-xs font-medium text-slate-400">Target</p>
+            <p className="mb-2 text-xs font-medium text-ink-muted">Target</p>
             <MobileInput
               type="number"
               min={1}
@@ -176,14 +176,14 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
           <button
             type="button"
             onClick={() => setShowForm(false)}
-            className="rounded-xl px-4 py-2 text-sm text-slate-400"
+            className="rounded-xl px-4 py-2 text-sm text-ink-muted"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => void createHabit()}
-            className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-ink"
           >
             Create
           </button>
@@ -205,18 +205,18 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
             <button
               type="button"
               onClick={() => void deleteHabit()}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[.06] text-slate-400 active:text-rose-400"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:text-rose-400"
             >
               <Trash2 size={20} />
             </button>
           }
         />
 
-        <div className="mb-6 flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[.045] p-4">
+        <div className="mb-6 flex items-center gap-4 rounded-2xl border border-edge bg-surface-2 p-4">
           <span className="text-4xl">{selected.icon}</span>
           <div className="min-w-0 flex-1">
-            <p className="text-2xl font-bold text-white">{stat?.currentStreak ?? 0} day streak</p>
-            <p className="text-sm text-slate-400">
+            <p className="text-2xl font-bold text-ink">{stat?.currentStreak ?? 0} day streak</p>
+            <p className="text-sm text-ink-muted">
               Best {stat?.longestStreak ?? 0} · Total {stat?.totalLogs ?? 0} completions
             </p>
           </div>
@@ -224,7 +224,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
             type="button"
             onClick={() => void toggleToday(selected)}
             className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 transition ${
-              done ? "border-transparent text-white" : "border-white/10 text-transparent"
+              done ? "border-transparent text-ink" : "border-edge text-transparent"
             }`}
             style={done ? { background: selected.color } : {}}
           >
@@ -233,8 +233,8 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
         </div>
 
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-300">Last 6 weeks</p>
-          <span className="text-xs text-slate-500">
+          <p className="text-sm font-semibold text-ink-muted">Last 6 weeks</p>
+          <span className="text-xs text-ink-muted">
             {selected.cadence} · target {selected.target}
           </span>
         </div>
@@ -244,7 +244,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
             return (
               <div
                 key={d}
-                className={`aspect-square rounded-sm ${logged ? "" : "bg-white/[.06]"}`}
+                className={`aspect-square rounded-sm ${logged ? "" : "bg-surface-2"}`}
                 style={logged ? { backgroundColor: selected.color } : {}}
                 title={`${d}: ${logged ? "done" : "—"}`}
               />
@@ -278,7 +278,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
                   setSelected(h);
                   setView("detail");
                 }}
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.045] p-4 active:bg-white/[.08]"
+                className="flex items-center gap-3 rounded-2xl border border-edge bg-surface-2 p-4 active:bg-surface-3"
               >
                 <button
                   type="button"
@@ -287,7 +287,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
                     void toggleToday(h);
                   }}
                   className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 transition ${
-                    done ? "border-transparent text-white" : "border-white/10 text-transparent"
+                    done ? "border-transparent text-ink" : "border-edge text-transparent"
                   }`}
                   style={done ? { background: h.color } : {}}
                 >
@@ -296,9 +296,9 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{h.icon}</span>
-                    <span className="truncate font-medium text-white">{h.name}</span>
+                    <span className="truncate font-medium text-ink">{h.name}</span>
                   </div>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-ink-muted">
                     <Flame size={12} className="mr-1 inline text-orange-500" />
                     {stat?.currentStreak ?? 0} day streak · best {stat?.longestStreak ?? 0}
                     {h.cadence === "weekly" ? " · weekly" : ""}
@@ -314,7 +314,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
                     return (
                       <div
                         key={i}
-                        className={`h-4 w-4 rounded-sm ${logged ? "" : "bg-white/[.06]"}`}
+                        className={`h-4 w-4 rounded-sm ${logged ? "" : "bg-surface-2"}`}
                         style={logged ? { backgroundColor: h.color } : {}}
                       />
                     );

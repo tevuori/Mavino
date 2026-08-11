@@ -86,16 +86,16 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
         </p>
       )}
 
-      <div className="mb-6 rounded-2xl border border-white/10 bg-white/[.045] p-6 text-center">
-        <div className="mb-2 text-4xl font-mono font-bold text-white">{fmt(seconds)}</div>
-        <p className="text-xs text-slate-400">{recording ? "Recording…" : "Ready to record"}</p>
+      <div className="mb-6 rounded-2xl border border-edge bg-surface-2 p-6 text-center">
+        <div className="mb-2 text-4xl font-mono font-bold text-ink">{fmt(seconds)}</div>
+        <p className="text-xs text-ink-muted">{recording ? "Recording…" : "Ready to record"}</p>
         <div className="mt-4 flex justify-center gap-4">
           {!recording ? (
             <button
               type="button"
               onClick={() => void start()}
               disabled={!supported}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg disabled:opacity-50"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-ink shadow-lg disabled:opacity-50"
             >
               <Mic size={32} />
             </button>
@@ -103,7 +103,7 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
             <button
               type="button"
               onClick={stop}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-ink shadow-lg"
             >
               <Square size={28} fill="currentColor" />
             </button>
@@ -111,29 +111,29 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
         </div>
       </div>
 
-      {loading && <p className="mb-4 text-center text-sm text-slate-400">Transcribing…</p>}
+      {loading && <p className="mb-4 text-center text-sm text-ink-muted">Transcribing…</p>}
 
       {error && (
         <p className="mb-4 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</p>
       )}
 
       {result && (result.note || result.transcript) && (
-        <div className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
+        <div className="rounded-2xl border border-edge bg-surface-2 p-4">
           <div className="mb-2 flex items-center gap-2">
-            <Play size={16} className="text-indigo-300" />
-            <span className="font-medium text-white">{result.note.title || "Voice note"}</span>
+            <Play size={16} className="text-accent" />
+            <span className="font-medium text-ink">{result.note.title || "Voice note"}</span>
           </div>
           {result.transcript ? (
             <MobileTextarea
               readOnly
               value={result.transcript}
               rows={5}
-              className="mb-3 border-0 bg-white/[.03]"
+              className="mb-3 border-0 bg-surface-2"
             />
           ) : (
-            <p className="mb-3 text-sm text-slate-500">No transcript available</p>
+            <p className="mb-3 text-sm text-ink-muted">No transcript available</p>
           )}
-          <p className="text-xs text-slate-500">Saved as file: {result.file?.name}</p>
+          <p className="text-xs text-ink-muted">Saved as file: {result.file?.name}</p>
         </div>
       )}
 

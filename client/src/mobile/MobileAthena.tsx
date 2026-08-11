@@ -368,12 +368,12 @@ export default function MobileAthena() {
     <div className="mx-auto flex h-full min-w-0 max-w-md flex-col px-5 pt-[max(1.5rem,env(safe-area-inset-top))]">
       {/* Header */}
       <header className="mb-3 flex items-center gap-2">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-300">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent/15 text-accent">
           <Sparkles size={20} />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold text-white">Mavino</h1>
-          <p className="truncate text-xs text-slate-400">
+          <h1 className="text-xl font-bold text-ink">Mavino</h1>
+          <p className="truncate text-xs text-ink-muted">
             {streaming ? "working…" : activeConvTitle && activeConvTitle !== "New Chat" ? activeConvTitle : "Your study copilot"}
           </p>
         </div>
@@ -381,7 +381,7 @@ export default function MobileAthena() {
           type="button"
           onClick={() => void startNewChat()}
           disabled={streaming}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[.06] text-slate-300 active:bg-white/[.1] disabled:opacity-40"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:bg-surface-3 disabled:opacity-40"
           title="New chat"
         >
           <Plus size={18} />
@@ -390,7 +390,7 @@ export default function MobileAthena() {
           type="button"
           onClick={() => setHistoryOpen(true)}
           disabled={loadingConv}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[.06] text-slate-300 active:bg-white/[.1] disabled:opacity-40"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:bg-surface-3 disabled:opacity-40"
           title="Chat history"
         >
           <History size={18} />
@@ -400,9 +400,9 @@ export default function MobileAthena() {
       {/* Messages (scrollable) */}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto pb-3">
         {turns.length === 0 ? (
-          <div className="mt-6 rounded-3xl border border-indigo-300/15 bg-indigo-500/10 p-5">
-            <p className="font-semibold text-white">What are you working on?</p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">
+          <div className="mt-6 rounded-3xl border border-accent/20 bg-accent/10 p-5">
+            <p className="font-semibold text-ink">What are you working on?</p>
+            <p className="mt-2 text-sm leading-6 text-ink-muted">
               Ask me to make a plan, clarify a concept, turn a syllabus into tasks, or help you get unstuck.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -411,7 +411,7 @@ export default function MobileAthena() {
                   key={prompt}
                   type="button"
                   onClick={() => setDraft(prompt)}
-                  className="rounded-full border border-white/10 px-3 py-2 text-xs text-indigo-200"
+                  className="rounded-full border border-edge px-3 py-2 text-xs text-accent"
                 >
                   {prompt}
                 </button>
@@ -429,19 +429,19 @@ export default function MobileAthena() {
 
       {/* Pinned attachment chip */}
       {attachment && (
-        <div className="mb-2 flex items-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-3 py-2">
+        <div className="mb-2 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2">
           {attachment.fileType === "pdf" ? (
             <FileType size={15} className="shrink-0 text-rose-400" />
           ) : (
-            <FileCode size={15} className="shrink-0 text-indigo-300" />
+            <FileCode size={15} className="shrink-0 text-accent" />
           )}
-          <span className="min-w-0 flex-1 truncate text-xs font-medium text-white">{attachment.fileName}</span>
-          <span className="shrink-0 text-[10px] text-slate-400">{(attachment.fileSize / 1024).toFixed(1)} KB</span>
+          <span className="min-w-0 flex-1 truncate text-xs font-medium text-ink">{attachment.fileName}</span>
+          <span className="shrink-0 text-[10px] text-ink-muted">{(attachment.fileSize / 1024).toFixed(1)} KB</span>
           {attachment.truncated && <span className="shrink-0 text-[10px] text-amber-400">truncated</span>}
           <button
             type="button"
             onClick={removeAttachment}
-            className="shrink-0 rounded p-0.5 text-slate-400 active:text-rose-400"
+            className="shrink-0 rounded p-0.5 text-ink-muted active:text-rose-400"
             title="Remove attachment"
           >
             <X size={14} />
@@ -457,13 +457,13 @@ export default function MobileAthena() {
       {/* Composer */}
       <form
         onSubmit={(e) => { e.preventDefault(); send(draft); }}
-        className="mb-3 flex items-end gap-2 rounded-2xl border border-white/10 bg-white/[.06] p-2"
+        className="mb-3 flex items-end gap-2 rounded-2xl border border-edge bg-surface-2 p-2"
       >
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={attaching || streaming}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[.06] text-slate-300 active:bg-white/[.1] disabled:opacity-40"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:bg-surface-3 disabled:opacity-40"
           title="Attach file (PDF, TXT, code) — pinned to conversation"
         >
           {attaching ? <Loader2 size={17} className="animate-spin" /> : <Paperclip size={18} />}
@@ -490,13 +490,13 @@ export default function MobileAthena() {
           }}
           rows={1}
           placeholder={attachment ? "Ask about the attached file…" : "Ask Mavino anything…"}
-          className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-slate-500"
+          className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-ink outline-none placeholder:text-ink-muted"
         />
         {streaming ? (
           <button
             type="button"
             onClick={stop}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-700 text-white"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-3 text-ink"
             title="Stop"
           >
             <Square size={16} />
@@ -505,7 +505,7 @@ export default function MobileAthena() {
           <button
             type="submit"
             disabled={!draft.trim() && !attachment}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white disabled:opacity-40"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-ink disabled:opacity-40"
             title="Send"
           >
             <ArrowUp size={19} />
@@ -515,23 +515,23 @@ export default function MobileAthena() {
 
       {/* History sheet */}
       {historyOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/95 backdrop-blur-xl">
+        <div className="fixed inset-0 z-50 flex flex-col bg-surface/95 backdrop-blur-xl">
           <header className="flex items-center gap-3 px-5 pb-3 pt-[max(1.5rem,env(safe-area-inset-top))]">
             <button
               type="button"
               onClick={() => setHistoryOpen(false)}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[.06] text-white active:bg-white/[.1]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface-2 text-ink active:bg-surface-3"
             >
               <X size={21} />
             </button>
             <div>
-              <p className="text-sm font-medium text-indigo-300">Previous chats</p>
-              <h1 className="text-2xl font-bold text-white">History</h1>
+              <p className="text-sm font-medium text-accent">Previous chats</p>
+              <h1 className="text-2xl font-bold text-ink">History</h1>
             </div>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
             {conversations.length === 0 ? (
-              <p className="mt-10 text-center text-sm text-slate-400">No conversations yet.</p>
+              <p className="mt-10 text-center text-sm text-ink-muted">No conversations yet.</p>
             ) : (
               <div className="space-y-2">
                 {conversations.map((conv) => (
@@ -541,17 +541,17 @@ export default function MobileAthena() {
                     onClick={() => void loadConversation(conv.id)}
                     className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left active:scale-[.99] ${
                       conv.id === activeConvId
-                        ? "border-indigo-400/40 bg-indigo-500/10"
-                        : "border-white/10 bg-white/[.045]"
+                        ? "border-indigo-400/40 bg-accent/10"
+                        : "border-edge bg-surface-2"
                     }`}
                   >
                     <MessageSquare
                       size={18}
-                      className={`shrink-0 ${conv.status === "active" ? "text-indigo-300" : "text-slate-500"}`}
+                      className={`shrink-0 ${conv.status === "active" ? "text-accent" : "text-ink-muted"}`}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-white">{conv.title}</p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="truncate text-sm font-medium text-ink">{conv.title}</p>
+                      <p className="text-[11px] text-ink-muted">
                         {new Date(conv.lastMessageAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                         {" · "}
                         {new Date(conv.lastMessageAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
@@ -561,7 +561,7 @@ export default function MobileAthena() {
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); void deleteConversation(conv.id); }}
-                      className="shrink-0 rounded-lg p-1.5 text-slate-500 active:text-rose-400"
+                      className="shrink-0 rounded-lg p-1.5 text-ink-muted active:text-rose-400"
                       title="Delete conversation"
                     >
                       <Trash2 size={16} />
@@ -595,7 +595,7 @@ function TurnBubble({ turn }: { turn: ChatTurn }) {
         )}
         <div
           className={`rounded-3xl px-4 py-3 text-sm leading-6 ${
-            isUser ? "bg-indigo-500 text-white" : "border border-white/10 bg-white/[.06] text-slate-200"
+            isUser ? "bg-accent text-ink" : "border border-edge bg-surface-2 text-ink"
           }`}
         >
           {turn.content ? (
@@ -612,7 +612,7 @@ function TurnBubble({ turn }: { turn: ChatTurn }) {
               </div>
             )
           ) : turn.pending ? (
-            <span className="flex items-center gap-1.5 text-slate-400">
+            <span className="flex items-center gap-1.5 text-ink-muted">
               <Loader2 size={13} className="animate-spin" /> thinking…
             </span>
           ) : null}
@@ -634,8 +634,8 @@ function ToolChip({ tool }: { tool: AthenaToolEvent }) {
       : tool.state === "error"
       ? "text-rose-400 border-rose-500/30 bg-rose-500/10"
       : tool.state === "canceled"
-      ? "text-slate-400 border-white/10 bg-white/[.06]"
-      : "text-indigo-300 border-indigo-400/30 bg-indigo-500/10";
+      ? "text-ink-muted border-edge bg-surface-2"
+      : "text-accent border-accent/30 bg-accent/10";
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${color}`}>
       <Wrench size={9} />

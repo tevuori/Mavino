@@ -5,7 +5,7 @@ import MobileTasks from "../../mobile/MobileTasks";
 import MobileCalendar from "../../mobile/MobileCalendar";
 import MobileAthena from "../../mobile/MobileAthena";
 import MobileLauncher, { type MobileTool } from "../../mobile/MobileLauncher";
-import MobileToolPage from "../../mobile/MobileToolPage";
+import MobileToolPage, { type MobileToolPayload } from "../../mobile/MobileToolPage";
 import { useAuth } from "../../store/auth";
 import { useSettings } from "../../store/settings";
 
@@ -14,13 +14,14 @@ export type MobileRoute = "home" | "tasks" | "calendar" | "athena" | "more";
 const TABS: { id: Exclude<MobileRoute, "more">; label: string; icon: typeof Home }[] = [
   { id: "home", label: "Home", icon: Home },
   { id: "tasks", label: "Tasks", icon: CheckSquare },
-  { id: "calendar", label: "Plan", icon: CalendarDays },
+  { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "athena", label: "Mavino", icon: Sparkles },
 ];
 
 export default function MobileShell() {
   const [route, setRoute] = useState<MobileRoute>("home");
   const [tool, setTool] = useState<MobileTool | null>(null);
+  const [toolPayload, setToolPayload] = useState<MobileToolPayload | null>(null);
   const { user, logout } = useAuth();
   const setHasOnboarded = useSettings((s) => s.setHasOnboarded);
   const isDemo = user?.role === "DEMO";
@@ -40,12 +41,24 @@ export default function MobileShell() {
   // so the tool page is replaced by the destination, not stacked under it.
   const navigate = (r: MobileRoute) => {
     setTool(null);
+    setToolPayload(null);
     setRoute(r);
   };
 
+  const openTool = (nextTool: MobileTool, payload?: MobileToolPayload) => {
+    setTool(nextTool);
+    setToolPayload(payload ?? null);
+  };
+
+  const closeTool = () => {
+    setTool(null);
+    setToolPayload(null);
+    setRoute("home");
+  };
+
   return (
-    <main className="relative flex h-full w-full overflow-hidden bg-slate-950 text-slate-100" aria-label="Mavino mobile">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(99,102,241,.22),transparent_34%),radial-gradient(circle_at_100%_18%,rgba(14,165,233,.12),transparent_28%)]" />
+    <main className="relative flex h-full w-full overflow-hidden bg-surface text-ink" aria-label="Mavino mobile">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgb(var(--accent)/.18),transparent_34%),radial-gradient(circle_at_100%_18%,rgb(var(--accent)/.08),transparent_28%)]" />
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         {isDemo && (
           <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
@@ -62,20 +75,21 @@ export default function MobileShell() {
           {tool ? (
             <MobileToolPage
               tool={tool}
-              onClose={() => { setTool(null); setRoute("home"); }}
-              onOpenTool={(nextTool) => setTool(nextTool)}
+              payload={toolPayload}
+              onClose={closeTool}
+              onOpenTool={openTool}
             />
           ) : (
             <>
-              {route === "home" && <MobileHome onNavigate={navigate} />}
+              {route === "home" && <MobileHome onNavigate={navigate} onOpenTool={openTool} />}
               {route === "tasks" && <MobileTasks />}
               {route === "calendar" && <MobileCalendar />}
               {route === "athena" && <MobileAthena />}
-              {route === "more" && <MobileLauncher onClose={() => setRoute("home")} onOpen={(nextTool) => setTool(nextTool)} />}
+              {route === "more" && <MobileLauncher onClose={() => setRoute("home")} onOpen={openTool} />}
             </>
           )}
         </section>
-        <nav className="absolute inset-x-0 bottom-0 z-20 w-full border-t border-white/10 bg-slate-950/90 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl" aria-label="Primary navigation">
+        <nav className="absolute inset-x-0 bottom-0 z-20 w-full border-t border-edge bg-surface/90 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl" aria-label="Primary navigation">
           <div className="mx-auto flex w-full max-w-md items-stretch justify-between gap-0.5">
             {TABS.map(({ id, label, icon: Icon }) => {
               const active = route === id && !tool;
@@ -84,9 +98,11 @@ export default function MobileShell() {
                   key={id}
                   type="button"
                   onClick={() => navigate(id)}
-                  className={`flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition ${active ? "bg-indigo-500/20 text-indigo-300" : "text-slate-400"}`}
+                  className={`flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition ${active ? "text-accent" : "text-ink-muted"}`}
                 >
-                  <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+                  <span className={`flex h-7 w-7 items-center justify-center rounded-full transition ${active ? "bg-accent/15" : ""}`}>
+                    <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+                  </span>
                   {label}
                 </button>
               );
@@ -94,9 +110,11 @@ export default function MobileShell() {
             <button
               type="button"
               onClick={() => navigate("more")}
-              className={`flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition ${route === "more" && !tool ? "bg-indigo-500/20 text-indigo-300" : "text-slate-400"}`}
+              className={`flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition ${route === "more" && !tool ? "text-accent" : "text-ink-muted"}`}
             >
-              <MoreHorizontal size={20} strokeWidth={route === "more" && !tool ? 2.5 : 2} />
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full transition ${route === "more" && !tool ? "bg-accent/15" : ""}`}>
+                <MoreHorizontal size={20} strokeWidth={route === "more" && !tool ? 2.5 : 2} />
+              </span>
               More
             </button>
           </div>

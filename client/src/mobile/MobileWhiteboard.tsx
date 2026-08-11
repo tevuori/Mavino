@@ -156,7 +156,7 @@ export default function MobileWhiteboard({ onClose }: { onClose?: () => void }) 
           subtitle="Whiteboard"
           onBack={() => { setSelected(null); setName(""); }}
           right={
-            <button type="button" onClick={() => void remove(selected.id)} className="rounded-xl p-2 text-slate-500 active:text-rose-400">
+            <button type="button" onClick={() => void remove(selected.id)} className="rounded-xl p-2 text-ink-muted active:text-rose-400">
               <Trash2 size={20} />
             </button>
           }
@@ -168,10 +168,10 @@ export default function MobileWhiteboard({ onClose }: { onClose?: () => void }) 
           placeholder="Whiteboard name"
           className="mb-4"
         />
-        <div className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
-          <p className="mb-2 text-sm font-semibold text-white">Preview ({elements.length} elements)</p>
+        <div className="rounded-2xl border border-edge bg-surface-2 p-4">
+          <p className="mb-2 text-sm font-semibold text-ink">Preview ({elements.length} elements)</p>
           {elements.length ? (
-            <svg viewBox="0 0 800 600" className="h-auto w-full rounded-xl bg-slate-950">
+            <svg viewBox="0 0 800 600" className="h-auto w-full rounded-xl bg-surface">
               <defs>
                 <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
                   <path d="M0,0 L0,6 L9,3 z" fill="#a5b4fc" />
@@ -180,7 +180,7 @@ export default function MobileWhiteboard({ onClose }: { onClose?: () => void }) 
               {elements.map((el, i) => renderElement(el, i))}
             </svg>
           ) : (
-            <p className="text-sm text-slate-500">No elements to preview.</p>
+            <p className="text-sm text-ink-muted">No elements to preview.</p>
           )}
         </div>
       </MobileContainer>
@@ -203,16 +203,16 @@ export default function MobileWhiteboard({ onClose }: { onClose?: () => void }) 
           whiteboards.map((w) => (
             <article
               key={w.id}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[.045] p-4"
+              className="flex items-center justify-between gap-3 rounded-2xl border border-edge bg-surface-2 p-4"
             >
               <button type="button" onClick={() => void open(w)} className="min-w-0 flex-1 text-left">
                 <div className="flex items-center gap-2">
-                  <PenTool size={18} className="shrink-0 text-indigo-300" />
-                  <span className="min-w-0 flex-1 truncate font-medium text-white">{w.name}</span>
+                  <PenTool size={18} className="shrink-0 text-accent" />
+                  <span className="min-w-0 flex-1 truncate font-medium text-ink">{w.name}</span>
                 </div>
-                <p className="mt-1 text-xs text-slate-400">{new Date(w.updatedAt).toLocaleDateString()}</p>
+                <p className="mt-1 text-xs text-ink-muted">{new Date(w.updatedAt).toLocaleDateString()}</p>
               </button>
-              <button type="button" onClick={() => void remove(w.id)} className="rounded-xl p-2 text-slate-500 active:text-rose-400">
+              <button type="button" onClick={() => void remove(w.id)} className="rounded-xl p-2 text-ink-muted active:text-rose-400">
                 <Trash2 size={18} />
               </button>
             </article>
@@ -224,12 +224,12 @@ export default function MobileWhiteboard({ onClose }: { onClose?: () => void }) 
 
       {creating && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setCreating(false)}>
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-3 text-lg font-semibold text-white">New whiteboard</h2>
+          <div className="w-full max-w-md rounded-2xl border border-edge bg-surface p-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-3 text-lg font-semibold text-ink">New whiteboard</h2>
             <MobileInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="mb-4" />
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setCreating(false)} className="rounded-xl px-4 py-2 text-sm text-slate-400">Cancel</button>
-              <button type="button" onClick={() => void create()} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white">Create</button>
+              <button type="button" onClick={() => setCreating(false)} className="rounded-xl px-4 py-2 text-sm text-ink-muted">Cancel</button>
+              <button type="button" onClick={() => void create()} className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-ink">Create</button>
             </div>
           </div>
         </div>

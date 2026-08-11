@@ -94,7 +94,7 @@ export default function MobileAtlas({ onClose, onOpenTool }: { onClose: () => vo
           <button
             onClick={build}
             disabled={building}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500 text-white disabled:opacity-50"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent text-ink disabled:opacity-50"
           >
             {building ? <Loader2 size={20} className="animate-spin" /> : <RefreshCw size={20} />}
           </button>
@@ -108,7 +108,7 @@ export default function MobileAtlas({ onClose, onOpenTool }: { onClose: () => vo
       )}
 
       {building && (
-        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-200">
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/30 bg-accent/10 px-4 py-3 text-sm text-accent">
           <Sparkles size={16} className="animate-pulse" />
           Building your knowledge graph…
         </div>
@@ -116,21 +116,21 @@ export default function MobileAtlas({ onClose, onOpenTool }: { onClose: () => vo
 
       {loading && (
         <div className="flex justify-center py-12">
-          <Loader2 size={24} className="animate-spin text-slate-500" />
+          <Loader2 size={24} className="animate-spin text-ink-muted" />
         </div>
       )}
 
       {!loading && !data && !building && (
         <div className="flex flex-col items-center gap-4 py-10 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-indigo-500/15">
-            <Network size={32} className="text-indigo-300" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-accent/15">
+            <Network size={32} className="text-accent" />
           </div>
-          <p className="max-w-xs text-sm leading-6 text-slate-400">
+          <p className="max-w-xs text-sm leading-6 text-ink-muted">
             Atlas stitches together your Study Hub graphs, notes, flashcards, tasks, and courses into one map — with weak spots highlighted.
           </p>
           <button
             onClick={build}
-            className="flex items-center gap-2 rounded-2xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white active:scale-[.98]"
+            className="flex items-center gap-2 rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-ink active:scale-[.98]"
           >
             <Sparkles size={16} /> Build my Atlas
           </button>
@@ -141,17 +141,17 @@ export default function MobileAtlas({ onClose, onOpenTool }: { onClose: () => vo
         <>
           {/* Stats */}
           <div className="mb-4 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl border border-white/10 bg-white/[.05] p-3 text-center">
-              <p className="text-2xl font-bold text-white">{data.stats.conceptCount}</p>
-              <p className="text-[11px] text-slate-400">Concepts</p>
+            <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
+              <p className="text-2xl font-bold text-ink">{data.stats.conceptCount}</p>
+              <p className="text-[11px] text-ink-muted">Concepts</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[.05] p-3 text-center">
-              <p className="text-2xl font-bold text-white">{data.stats.clusterCount}</p>
-              <p className="text-[11px] text-slate-400">Clusters</p>
+            <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
+              <p className="text-2xl font-bold text-ink">{data.stats.clusterCount}</p>
+              <p className="text-[11px] text-ink-muted">Clusters</p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[.05] p-3 text-center">
-              <p className={`text-2xl font-bold ${data.stats.weakCount > 0 ? "text-red-400" : "text-white"}`}>{data.stats.weakCount}</p>
-              <p className="text-[11px] text-slate-400">Weak</p>
+            <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
+              <p className={`text-2xl font-bold ${data.stats.weakCount > 0 ? "text-red-400" : "text-ink"}`}>{data.stats.weakCount}</p>
+              <p className="text-[11px] text-ink-muted">Weak</p>
             </div>
           </div>
 
@@ -159,7 +159,7 @@ export default function MobileAtlas({ onClose, onOpenTool }: { onClose: () => vo
             <button
               onClick={() => setFilterWeak((v) => !v)}
               className={`mb-3 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
-                filterWeak ? "bg-red-500/20 text-red-300" : "bg-white/[.06] text-slate-300"
+                filterWeak ? "bg-red-500/20 text-red-300" : "bg-surface-2 text-ink-muted"
               }`}
             >
               <TrendingDown size={15} />
@@ -201,79 +201,79 @@ function ConceptCard({
 }) {
   const totalLinks = concept.items.notes.length + concept.items.flashcardDecks.length + concept.items.tasks.length + concept.items.courses.length;
   return (
-    <div className={`rounded-2xl border bg-white/[.04] p-3.5 transition ${concept.weak ? "border-red-500/30" : "border-white/10"}`}>
+    <div className={`rounded-2xl border bg-surface-2 p-3.5 transition ${concept.weak ? "border-red-500/30" : "border-edge"}`}>
       <button onClick={onToggle} className="flex w-full items-center justify-between gap-2 text-left">
         <div className="min-w-0 flex-1">
-          <p className={`font-semibold text-white ${concept.weak ? "text-red-300" : ""}`}>{concept.label}</p>
+          <p className={`font-semibold text-ink ${concept.weak ? "text-red-300" : ""}`}>{concept.label}</p>
           <div className="mt-1 flex items-center gap-3">
-            <span className="text-[11px] capitalize text-slate-400">{concept.type}</span>
+            <span className="text-[11px] capitalize text-ink-muted">{concept.type}</span>
             <MasteryPct mastery={concept.mastery} />
-            {totalLinks > 0 && <span className="text-[11px] text-slate-500">{totalLinks} linked</span>}
+            {totalLinks > 0 && <span className="text-[11px] text-ink-muted">{totalLinks} linked</span>}
           </div>
         </div>
-        <ChevronDown size={18} className={`shrink-0 text-slate-400 transition ${expanded ? "rotate-180" : ""}`} />
+        <ChevronDown size={18} className={`shrink-0 text-ink-muted transition ${expanded ? "rotate-180" : ""}`} />
       </button>
       {expanded && (
-        <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
+        <div className="mt-3 space-y-2 border-t border-edge pt-3">
           {concept.definition && (
-            <p className="text-xs leading-5 text-slate-400">{concept.definition}</p>
+            <p className="text-xs leading-5 text-ink-muted">{concept.definition}</p>
           )}
           {totalLinks === 0 ? (
-            <p className="text-xs text-slate-500">No linked items.</p>
+            <p className="text-xs text-ink-muted">No linked items.</p>
           ) : (
             <>
               {concept.items.notes.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Notes</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Notes</p>
                   {concept.items.notes.map((n) => (
                     <button
                       key={n.id}
                       onClick={() => onOpenTool("notes")}
-                      className="flex w-full items-center gap-2 rounded-lg bg-white/[.04] px-2.5 py-2 text-left text-xs text-slate-200 active:bg-white/[.08]"
+                      className="flex w-full items-center gap-2 rounded-lg bg-surface-2 px-2.5 py-2 text-left text-xs text-ink active:bg-surface-3"
                     >
-                      <StickyNote size={13} className="shrink-0 text-slate-400" /> {n.title}
+                      <StickyNote size={13} className="shrink-0 text-ink-muted" /> {n.title}
                     </button>
                   ))}
                 </div>
               )}
               {concept.items.flashcardDecks.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Flashcards</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Flashcards</p>
                   {concept.items.flashcardDecks.map((d) => (
                     <button
                       key={d.id}
                       onClick={() => onOpenTool("flashcards")}
-                      className="flex w-full items-center gap-2 rounded-lg bg-white/[.04] px-2.5 py-2 text-left text-xs text-slate-200 active:bg-white/[.08]"
+                      className="flex w-full items-center gap-2 rounded-lg bg-surface-2 px-2.5 py-2 text-left text-xs text-ink active:bg-surface-3"
                     >
-                      <Brain size={13} className="shrink-0 text-slate-400" /> {d.name}
+                      <Brain size={13} className="shrink-0 text-ink-muted" /> {d.name}
                     </button>
                   ))}
                 </div>
               )}
               {concept.items.tasks.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Tasks</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Tasks</p>
                   {concept.items.tasks.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => onOpenTool("notes")}
-                      className="flex w-full items-center gap-2 rounded-lg bg-white/[.04] px-2.5 py-2 text-left text-xs text-slate-200 active:bg-white/[.08]"
+                      className="flex w-full items-center gap-2 rounded-lg bg-surface-2 px-2.5 py-2 text-left text-xs text-ink active:bg-surface-3"
                     >
-                      <CheckSquare size={13} className="shrink-0 text-slate-400" /> {t.title}
+                      <CheckSquare size={13} className="shrink-0 text-ink-muted" /> {t.title}
                     </button>
                   ))}
                 </div>
               )}
               {concept.items.courses.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Courses</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Courses</p>
                   {concept.items.courses.map((c) => (
                     <button
                       key={c.id}
                       onClick={() => onOpenTool("grades")}
-                      className="flex w-full items-center gap-2 rounded-lg bg-white/[.04] px-2.5 py-2 text-left text-xs text-slate-200 active:bg-white/[.08]"
+                      className="flex w-full items-center gap-2 rounded-lg bg-surface-2 px-2.5 py-2 text-left text-xs text-ink active:bg-surface-3"
                     >
-                      <GraduationCap size={13} className="shrink-0 text-slate-400" /> {c.code ? `${c.code} · ${c.name}` : c.name}
+                      <GraduationCap size={13} className="shrink-0 text-ink-muted" /> {c.code ? `${c.code} · ${c.name}` : c.name}
                     </button>
                   ))}
                 </div>

@@ -60,16 +60,16 @@ export default function MobileGrades({ onClose }: { onClose?: () => void }) {
         onClose={onClose}
       />
 
-      <div className="mb-4 rounded-2xl border border-white/10 bg-white/[.045] p-4 text-center">
-        <p className="text-xs text-slate-400">Overall GPA</p>
-        <p className="text-3xl font-bold text-white">{gpa.toFixed(2)}</p>
+      <div className="mb-4 rounded-2xl border border-edge bg-surface-2 p-4 text-center">
+        <p className="text-xs text-ink-muted">Overall GPA</p>
+        <p className="text-3xl font-bold text-ink">{gpa.toFixed(2)}</p>
       </div>
 
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
         <button
           type="button"
           onClick={() => setSemester("")}
-          className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${semester === "" ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"}`}
+          className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${semester === "" ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"}`}
         >
           All
         </button>
@@ -78,7 +78,7 @@ export default function MobileGrades({ onClose }: { onClose?: () => void }) {
             key={s}
             type="button"
             onClick={() => setSemester(s)}
-            className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${semester === s ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"}`}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${semester === s ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"}`}
           >
             {s}
           </button>
@@ -87,7 +87,7 @@ export default function MobileGrades({ onClose }: { onClose?: () => void }) {
 
       <form
         onSubmit={(e) => { e.preventDefault(); void createCourse(); }}
-        className="mb-4 rounded-2xl border border-indigo-400/30 bg-indigo-500/10 p-3"
+        className="mb-4 rounded-2xl border border-accent/30 bg-accent/10 p-3"
       >
         <MobileInput
           value={form.name}
@@ -115,11 +115,11 @@ export default function MobileGrades({ onClose }: { onClose?: () => void }) {
               key={c}
               type="button"
               onClick={() => setForm({ ...form, color: c })}
-              className={`h-6 w-6 rounded-full border-2 ${form.color === c ? "border-white" : "border-transparent"}`}
+              className={`h-6 w-6 rounded-full border-2 ${form.color === c ? "border-ink" : "border-transparent"}`}
               style={{ backgroundColor: c }}
             />
           ))}
-          <button className="ml-auto rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white">Add</button>
+          <button className="ml-auto rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-ink">Add</button>
         </div>
       </form>
 
@@ -134,26 +134,26 @@ export default function MobileGrades({ onClose }: { onClose?: () => void }) {
               <article
                 key={c.id}
                 onClick={() => setSelected(c)}
-                className="rounded-2xl border border-white/10 bg-white/[.045] p-4 active:bg-white/[.08]"
+                className="rounded-2xl border border-edge bg-surface-2 p-4 active:bg-surface-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="h-3 w-3 rounded-full" style={{ backgroundColor: c.color }} />
-                      <span className="font-medium text-white">{c.name}</span>
+                      <span className="font-medium text-ink">{c.name}</span>
                     </div>
-                    <p className="text-xs text-slate-400">{c.code} · {c.semester}</p>
+                    <p className="text-xs text-ink-muted">{c.code} · {c.semester}</p>
                   </div>
                   <div className="text-right">
                     <p className={`text-xl font-bold ${scoreColor(pct)}`}>{pct.toFixed(0)}%</p>
-                    <p className="text-xs text-slate-500">{letter}</p>
+                    <p className="text-xs text-ink-muted">{letter}</p>
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">{c.assignments.length} assignments</p>
+                <p className="mt-2 text-xs text-ink-muted">{c.assignments.length} assignments</p>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); void deleteCourse(c); }}
-                  className="mt-2 text-xs text-slate-500 active:text-rose-400"
+                  className="mt-2 text-xs text-ink-muted active:text-rose-400"
                 >
                   <Trash2 size={14} className="inline mr-1" /> Delete
                 </button>
@@ -203,14 +203,14 @@ function CourseDetail({ course, onBack, onUpdate }: { course: Course; onBack: ()
     <MobileContainer>
       <MobileHeader title={course.name} subtitle={course.code} onBack={onBack} />
 
-      <div className="mb-4 rounded-2xl border border-white/10 bg-white/[.045] p-4 text-center">
-        <p className="text-xs text-slate-400">Course grade</p>
+      <div className="mb-4 rounded-2xl border border-edge bg-surface-2 p-4 text-center">
+        <p className="text-xs text-ink-muted">Course grade</p>
         <p className={`text-3xl font-bold ${scoreColor(pct)}`}>{pct.toFixed(1)}%</p>
       </div>
 
       <form
         onSubmit={(e) => { e.preventDefault(); void add(); }}
-        className="mb-4 rounded-2xl border border-indigo-400/30 bg-indigo-500/10 p-3"
+        className="mb-4 rounded-2xl border border-accent/30 bg-accent/10 p-3"
       >
         <MobileInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Assignment" className="mb-2" />
         <div className="grid grid-cols-4 gap-2">
@@ -219,24 +219,24 @@ function CourseDetail({ course, onBack, onUpdate }: { course: Course; onBack: ()
           <MobileInput type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="Wt" />
           <MobileInput value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Cat" />
         </div>
-        <button className="mt-2 w-full rounded-xl bg-indigo-500 py-2 text-sm font-semibold text-white">Add assignment</button>
+        <button className="mt-2 w-full rounded-xl bg-accent py-2 text-sm font-semibold text-ink">Add assignment</button>
       </form>
 
       <div className="space-y-2">
         {assignments.length ? (
           assignments.map((a) => (
-            <article key={a.id} className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/[.045] p-4">
+            <article key={a.id} className="flex items-center justify-between gap-2 rounded-2xl border border-edge bg-surface-2 p-4">
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-white">{a.name}</p>
-                <p className="text-xs text-slate-400">{a.category} · weight {a.weight}</p>
+                <p className="font-medium text-ink">{a.name}</p>
+                <p className="text-xs text-ink-muted">{a.category} · weight {a.weight}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-semibold text-white">{a.score}/{a.maxScore}</p>
+                <p className="text-sm font-semibold text-ink">{a.score}/{a.maxScore}</p>
                 <p className={`text-xs ${scoreColor((a.score / a.maxScore) * 100)}`}>
                   {((a.score / a.maxScore) * 100).toFixed(0)}%
                 </p>
               </div>
-              <button type="button" onClick={() => void remove(a.id)} className="rounded-xl p-2 text-slate-500 active:text-rose-400">
+              <button type="button" onClick={() => void remove(a.id)} className="rounded-xl p-2 text-ink-muted active:text-rose-400">
                 <Trash2 size={18} />
               </button>
             </article>

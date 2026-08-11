@@ -80,13 +80,13 @@ export default function MobileEditor({ onClose }: { onClose?: () => void }) {
               type="button"
               onClick={() => void save()}
               disabled={saving}
-              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500 text-white disabled:opacity-50"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent text-ink disabled:opacity-50"
             >
               <Save size={20} />
             </button>
           }
         />
-        {saving && <p className="mb-2 text-xs text-slate-500">Saving…</p>}
+        {saving && <p className="mb-2 text-xs text-ink-muted">Saving…</p>}
         <MobileInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Filename" className="mb-3" />
         <MobileTextarea
           value={content}
@@ -107,8 +107,8 @@ export default function MobileEditor({ onClose }: { onClose?: () => void }) {
         right={<MobileFab onClick={() => setCreating(true)} icon={<Plus size={22} />} />}
       />
 
-      <div className="mb-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[.045] px-3 py-2">
-        <Search size={18} className="text-slate-500" />
+      <div className="mb-4 flex items-center gap-2 rounded-2xl border border-edge bg-surface-2 px-3 py-2">
+        <Search size={18} className="text-ink-muted" />
         <MobileInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -124,21 +124,21 @@ export default function MobileEditor({ onClose }: { onClose?: () => void }) {
           filtered.map((f) => (
             <article
               key={f.id}
-              className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.045] p-4"
+              className="flex items-center gap-3 rounded-2xl border border-edge bg-surface-2 p-4"
             >
               <button type="button" onClick={() => void open(f)} className="min-w-0 flex-1 text-left">
                 <div className="flex items-center gap-2">
-                  <FileText size={18} className="shrink-0 text-indigo-300" />
-                  <span className="min-w-0 flex-1 truncate font-medium text-white">{f.name}</span>
+                  <FileText size={18} className="shrink-0 text-accent" />
+                  <span className="min-w-0 flex-1 truncate font-medium text-ink">{f.name}</span>
                 </div>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-ink-muted">
                   {new Date(f.updatedAt).toLocaleDateString()}
                 </p>
               </button>
               <button
                 type="button"
                 onClick={() => void remove(f)}
-                className="shrink-0 rounded-xl p-2 text-slate-500 active:text-rose-400"
+                className="shrink-0 rounded-xl p-2 text-ink-muted active:text-rose-400"
               >
                 <Trash2 size={18} />
               </button>
@@ -151,12 +151,12 @@ export default function MobileEditor({ onClose }: { onClose?: () => void }) {
 
       {creating && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setCreating(false)}>
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-3 text-lg font-semibold text-white">New file</h2>
+          <div className="w-full max-w-md rounded-2xl border border-edge bg-surface p-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-3 text-lg font-semibold text-ink">New file</h2>
             <MobileInput value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="filename.txt" className="mb-4" />
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setCreating(false)} className="rounded-xl px-4 py-2 text-sm text-slate-400">Cancel</button>
-              <button type="button" onClick={() => void create()} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white">Create</button>
+              <button type="button" onClick={() => setCreating(false)} className="rounded-xl px-4 py-2 text-sm text-ink-muted">Cancel</button>
+              <button type="button" onClick={() => void create()} className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-ink">Create</button>
             </div>
           </div>
         </div>

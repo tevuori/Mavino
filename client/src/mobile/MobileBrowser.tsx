@@ -51,12 +51,12 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <div className="flex h-full flex-col bg-slate-950">
+    <div className="flex h-full flex-col bg-surface">
       <MobileContainer>
         <MobileHeader title="Browser" subtitle="Research with Mavino" onClose={onClose} />
 
-        <div className="mb-3 flex gap-2 rounded-2xl border border-white/10 bg-white/[.045] p-2">
-          <Globe size={18} className="mt-2.5 ml-2 shrink-0 text-slate-500" />
+        <div className="mb-3 flex gap-2 rounded-2xl border border-edge bg-surface-2 p-2">
+          <Globe size={18} className="mt-2.5 ml-2 shrink-0 text-ink-muted" />
           <MobileInput
             value={url}
             onChange={(e) => setUrl(e.target.value)}
@@ -67,7 +67,7 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
           <button
             type="button"
             onClick={() => { setTab("web"); go(url); }}
-            className="shrink-0 rounded-xl bg-indigo-500 px-3 text-sm font-semibold text-white"
+            className="shrink-0 rounded-xl bg-accent px-3 text-sm font-semibold text-ink"
           >
             <Search size={18} />
           </button>
@@ -77,7 +77,7 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
           <button
             type="button"
             onClick={() => setTab("web")}
-            className={`flex-1 rounded-2xl py-2 text-sm font-medium ${tab === "web" ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"}`}
+            className={`flex-1 rounded-2xl py-2 text-sm font-medium ${tab === "web" ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"}`}
           >
             Web
           </button>
@@ -86,7 +86,7 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
             onClick={() => void extract()}
             disabled={!current || loading}
             className={`flex-1 flex items-center justify-center gap-1 rounded-2xl py-2 text-sm font-medium ${
-              tab === "text" ? "bg-indigo-500 text-white" : "bg-white/[.06] text-slate-300"
+              tab === "text" ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
             } disabled:opacity-50`}
           >
             <Sparkles size={14} /> {loading ? "Reading…" : "Extract"}
@@ -94,7 +94,7 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
           <button
             type="button"
             onClick={() => void clearCookies()}
-            className="rounded-2xl bg-white/[.06] px-3 text-slate-300"
+            className="rounded-2xl bg-surface-2 px-3 text-ink-muted"
           >
             <Trash2 size={16} />
           </button>
@@ -104,20 +104,20 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
           <iframe
             src={browserApi.proxyUrl(current)}
             title="browser"
-            className="mb-4 h-96 w-full rounded-2xl border border-white/10 bg-white"
+            className="mb-4 h-96 w-full rounded-2xl border border-edge bg-surface-2"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           />
         )}
 
         {tab === "text" && (
-          <div className="rounded-2xl border border-white/10 bg-white/[.045] p-4">
+          <div className="rounded-2xl border border-edge bg-surface-2 p-4">
             {pageText ? (
               <>
-                <p className="mb-2 text-sm font-semibold text-indigo-300">{pageText.title}</p>
+                <p className="mb-2 text-sm font-semibold text-accent">{pageText.title}</p>
                 {pageText.error ? (
                   <p className="text-sm text-rose-300">{pageText.error}</p>
                 ) : (
-                  <MobileTextarea readOnly value={pageText.content} rows={12} className="border-0 bg-transparent text-slate-300" />
+                  <MobileTextarea readOnly value={pageText.content} rows={12} className="border-0 bg-transparent text-ink-muted" />
                 )}
               </>
             ) : (
@@ -133,10 +133,10 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
                 key={l.url}
                 type="button"
                 onClick={() => go(l.url)}
-                className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[.045] p-4 text-left active:bg-white/[.08]"
+                className="flex items-center gap-2 rounded-2xl border border-edge bg-surface-2 p-4 text-left active:bg-surface-3"
               >
-                <Link2 size={18} className="text-indigo-300" />
-                <span className="text-sm text-white">{l.name}</span>
+                <Link2 size={18} className="text-accent" />
+                <span className="text-sm text-ink">{l.name}</span>
               </button>
             ))}
           </div>
@@ -144,14 +144,14 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
 
         {history.length > 0 && (
           <div className="mt-4">
-            <p className="mb-2 text-xs font-semibold text-slate-500">History</p>
+            <p className="mb-2 text-xs font-semibold text-ink-muted">History</p>
             <div className="flex flex-wrap gap-2">
               {history.map((h) => (
                 <button
                   key={h}
                   type="button"
                   onClick={() => go(h)}
-                  className="max-w-[10rem] truncate rounded-full bg-white/[.06] px-3 py-1 text-xs text-slate-300"
+                  className="max-w-[10rem] truncate rounded-full bg-surface-2 px-3 py-1 text-xs text-ink-muted"
                 >
                   {h.replace(/^https?:\/\//, "")}
                 </button>
