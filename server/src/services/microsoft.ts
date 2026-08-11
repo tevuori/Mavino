@@ -32,7 +32,7 @@ const ENV_REFRESH_TOKEN = process.env.MS_REFRESH_TOKEN ?? "";
 // Redirect URI registered in the Azure app (Authentication → Web → Redirect URI).
 // Must match exactly what Microsoft has on file. Defaults to the production URL.
 const ENV_REDIRECT_URI =
-  process.env.MS_REDIRECT_URI ?? "https://athena.tevuori.eu/auth/callback";
+  process.env.MS_REDIRECT_URI ?? "https://mavino.net/auth/callback";
 
 // Reuse the JWT secret for signing OAuth state tokens (short-lived, separate audience).
 const STATE_SECRET = new TextEncoder().encode(

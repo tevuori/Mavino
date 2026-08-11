@@ -79,7 +79,7 @@ services:
       SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
       SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
       SPOTIFY_REFRESH_TOKEN: ${SPOTIFY_REFRESH_TOKEN}
-      SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI:-https://athena.tevuori.eu/auth/spotify/callback}
+      SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI:-https://mavino.net/auth/spotify/callback}
       # Mavino code execution sandbox (run_code tool). Uses gVisor (runsc)
       # runtime for kernel-level isolation — safe for public multi-user hosts.
       # Requires the Docker socket mounted below + runsc installed on the host.

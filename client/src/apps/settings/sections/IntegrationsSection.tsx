@@ -557,7 +557,7 @@ function MicrosoftCard() {
       <p className="mt-2 text-xs text-ink-muted">
         Register an app in <a href="https://portal.azure.com" target="_blank" rel="noreferrer" className="underline">Azure Portal</a> with
         <code className="text-ink"> Calendars.ReadWrite</code> + <code className="text-ink">offline_access</code> delegated permissions.
-        Add <code className="text-ink">https://athena.tevuori.eu/auth/callback</code> as a Web redirect URI.
+        Add <code className="text-ink">https://mavino.net/auth/callback</code> as a Web redirect URI.
         For personal Microsoft accounts (Outlook.com/Live/Hotmail), set "Supported account types"
         to "Personal Microsoft accounts only" and use <code className="text-ink">consumers</code> as the tenant.
         Credentials are encrypted (AES-256-GCM).

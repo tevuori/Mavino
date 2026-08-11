@@ -7,15 +7,15 @@
 #   2. Builds + starts the Docker Compose stack (client on 127.0.0.1:8080,
 #      server internal-only).
 #   3. Runs prisma migrate deploy + seed inside the server container.
-#   4. Installs the host nginx site for athena.tevuori.eu.
+#   4. Installs the host nginx site for mavino.net.
 #   5. Runs certbot to obtain + install the TLS certificate.
 #
 # Prereqs on the VPS: git, docker, docker compose, nginx, certbot,
-# python3-certbot-nginx. DNS for athena.tevuori.eu must already point here.
+# python3-certbot-nginx. DNS for mavino.net must already point here.
 
 set -euo pipefail
 
-DOMAIN="athena.tevuori.eu"
+DOMAIN="mavino.net"
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
 

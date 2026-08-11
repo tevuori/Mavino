@@ -34,7 +34,7 @@ export default function LegalSection() {
           <FileText size={15} /> Terms of Service
         </h4>
         <p className="mb-3 text-xs text-ink-muted">
-          The terms governing your use of the hosted Mavino service at athena.tevuori.eu —
+          The terms governing your use of the hosted Mavino service at mavino.net —
           acceptable use, your content, third-party services, warranties, and governing law.
         </p>
         <a
