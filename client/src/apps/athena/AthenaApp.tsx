@@ -31,6 +31,26 @@ interface ChatTurn extends AthenaMessage {
   error?: string;
 }
 
+// Merge consecutive same-role messages into one. Needed because the
+// streaming logic now splits assistant narration into separate turns at
+// tool-call boundaries, but the LLM API requires alternating user/assistant
+// messages (some providers reject consecutive same-role with 400).
+function mergeConsecutiveMessages(messages: AthenaMessage[]): AthenaMessage[] {
+  const result: AthenaMessage[] = [];
+  for (const msg of messages) {
+    const last = result[result.length - 1];
+    if (last && last.role === msg.role) {
+      result[result.length - 1] = {
+        ...last,
+        content: last.content + "\n\n" + msg.content,
+      };
+    } else {
+      result.push({ ...msg });
+    }
+  }
+  return result;
+}
+
 const SUGGESTIONS = [
   "Create a task: review lecture notes, due Friday",
   "What are my most recent files?",
@@ -870,11 +890,27 @@ export default function AthenaApp({
               const next = [...prev];
               const last = next[next.length - 1];
               if (last && last.role === "assistant") {
-                next[next.length - 1] = {
-                  ...last,
-                  content: last.content + chunk,
-                  pending: !done && last.pending,
-                };
+                // If the current assistant turn already has text AND has
+                // accumulated tool calls, the LLM is resuming narration after
+                // a tool phase. Start a new assistant turn so each text
+                // segment between tool calls is its own message bubble.
+                if (last.content.length > 0 && (last.tools?.length ?? 0) > 0) {
+                  // Mark the previous turn as done — it won't receive more
+                  // content (tools may still update via onTool).
+                  next[next.length - 1] = { ...last, pending: false };
+                  next.push({
+                    role: "assistant",
+                    content: chunk,
+                    tools: [],
+                    pending: !done,
+                  });
+                } else {
+                  next[next.length - 1] = {
+                    ...last,
+                    content: last.content + chunk,
+                    pending: !done && last.pending,
+                  };
+                }
               }
               return next;
             });
@@ -883,13 +919,33 @@ export default function AthenaApp({
           onTool: (ev) => {
             setTurns((prev) => {
               const next = [...prev];
-              const last = next[next.length - 1];
-              if (last && last.role === "assistant") {
-                const tools = [...(last.tools ?? [])];
+              // Search all assistant turns (from the end) for an existing
+              // tool with this ID — tool updates (preparing → running →
+              // completed) may arrive after a content-split has started a
+              // new turn, so the tool might live in an earlier turn.
+              let foundTurnIdx = -1;
+              for (let i = next.length - 1; i >= 0; i--) {
+                if (next[i].role !== "assistant") break;
+                if ((next[i].tools ?? []).some((t) => t.id === ev.id)) {
+                  foundTurnIdx = i;
+                  break;
+                }
+              }
+              if (foundTurnIdx >= 0) {
+                const t = next[foundTurnIdx];
+                const tools = [...(t.tools ?? [])];
                 const idx = tools.findIndex((t) => t.id === ev.id);
                 if (idx >= 0) tools[idx] = ev;
                 else tools.push(ev);
-                next[next.length - 1] = { ...last, tools };
+                next[foundTurnIdx] = { ...t, tools };
+              } else {
+                // New tool — add to the last assistant turn.
+                const last = next[next.length - 1];
+                if (last && last.role === "assistant") {
+                  const tools = [...(last.tools ?? [])];
+                  tools.push(ev);
+                  next[next.length - 1] = { ...last, tools };
+                }
               }
               return next;
             });
@@ -955,7 +1011,7 @@ export default function AthenaApp({
       // If an assistant turn has no text content (e.g. it only called
       // client-action tools like tile_windows), use a placeholder so
       // the alternation is preserved.
-      const history: AthenaMessage[] = [
+      const history: AthenaMessage[] = mergeConsecutiveMessages([
         ...turns
           .filter((t) => !t.error)
           .map((t) => {
@@ -973,7 +1029,7 @@ export default function AthenaApp({
           })
           .filter((t) => t.content.trim()),
         { role: "user", content },
-      ];
+      ]);
 
       const userTurn: ChatTurn = { role: "user", content };
       setInput("");
@@ -984,17 +1040,23 @@ export default function AthenaApp({
   sendRef.current = send;
 
   // Regenerate the assistant response at `assistantIdx` by re-running the
-  // preceding user prompt. Drops the old assistant turn (and anything after
-  // it) and re-streams a fresh response.
+  // preceding user prompt. Drops the old assistant turn(s) — which may now
+  // be multiple turns due to tool-boundary splitting — and anything after
+  // them, then re-streams a fresh response.
   const regenerate = useCallback(
     (assistantIdx: number) => {
       if (streaming) return;
-      const userTurn = turns[assistantIdx - 1];
+      // Find the nearest preceding user turn — with tool-boundary splitting
+      // there may be multiple consecutive assistant turns, so we can't
+      // assume turns[assistantIdx - 1] is the user turn.
+      let userTurnIdx = assistantIdx - 1;
+      while (userTurnIdx >= 0 && turns[userTurnIdx].role !== "user") userTurnIdx--;
+      const userTurn = turns[userTurnIdx];
       if (!userTurn || userTurn.role !== "user") return;
-      // Keep everything up to (and including) the user turn; drop the old
-      // assistant turn and any turns after it.
-      const turnsBefore = turns.slice(0, assistantIdx);
-      const history: AthenaMessage[] = [
+      // Keep everything up to (and including) the user turn; drop all
+      // assistant turns after it.
+      const turnsBefore = turns.slice(0, userTurnIdx + 1);
+      const history: AthenaMessage[] = mergeConsecutiveMessages([
         ...turnsBefore
           .slice(0, -1) // exclude the user turn we're re-sending
           .filter((t) => !t.error)
@@ -1010,7 +1072,7 @@ export default function AthenaApp({
           })
           .filter((t) => t.content.trim()),
         { role: "user", content: userTurn.content },
-      ];
+      ]);
       startStream(history, turnsBefore);
     },
     [turns, streaming, startStream]
@@ -1288,9 +1350,10 @@ export default function AthenaApp({
                 send(input);
               }
             }}
-            placeholder={attachment ? "Ask about the attached file…" : "Ask Mavino to do something…"}
+            disabled={streaming}
+            placeholder={streaming ? "Mavino is responding…" : attachment ? "Ask about the attached file…" : "Ask Mavino to do something…"}
             rows={1}
-            className="max-h-32 flex-1 resize-none rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+            className="max-h-32 flex-1 resize-none rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent disabled:opacity-50"
           />
           {streaming ? (
             <button
