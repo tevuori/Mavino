@@ -155,12 +155,14 @@ function CodemirrorPane({ paneId, source, pending, onPendingApplied, onLoadingCh
   const viewReady = useRef(false);
   const pendingRef = useRef<PaneHighlight | null>(pending);
   pendingRef.current = pending;
+  const appliedPendingRef = useRef(false);
 
   // Fetch content.
   useEffect(() => {
     let cancelled = false;
     onLoadingChange(true);
     viewReady.current = false;
+    appliedPendingRef.current = false;
     (async () => {
       try {
         if (source.appId === "notes") {
@@ -191,20 +193,25 @@ function CodemirrorPane({ paneId, source, pending, onPendingApplied, onLoadingCh
   const onCreateEditor = useCallback((view: EditorView) => {
     onCreateEditorShow(view);
     viewReady.current = true;
-    // Apply the pending highlight now that the view is ready. Issuing through
-    // the store lets the shared hook consume it (apply decoration + scroll).
+  }, [onCreateEditorShow]);
+
+  // Apply the pending highlight AFTER the content has loaded (not in
+  // onCreateEditor, which fires while content is still "" — the empty doc
+  // would clamp all offsets to 0 and the highlight would fail with "no-match").
+  useEffect(() => {
+    if (!content || !viewReady.current || appliedPendingRef.current) return;
     const p = pendingRef.current;
-    if (p) {
-      issueShowCommand(paneId, "highlight", {
-        text: p.text,
-        posStart: p.posStart,
-        posEnd: p.posEnd,
-        lineStart: p.line,
-        lineEnd: p.lineEnd,
-      });
-      onPendingApplied();
-    }
-  }, [paneId, issueShowCommand, onCreateEditorShow, onPendingApplied]);
+    if (!p) return;
+    appliedPendingRef.current = true;
+    issueShowCommand(paneId, "highlight", {
+      text: p.text,
+      posStart: p.posStart,
+      posEnd: p.posEnd,
+      lineStart: p.line,
+      lineEnd: p.lineEnd,
+    });
+    onPendingApplied();
+  }, [content, paneId, issueShowCommand, onPendingApplied]);
 
   return (
     <CodeMirror

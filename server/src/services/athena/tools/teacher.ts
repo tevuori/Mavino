@@ -89,7 +89,8 @@ export const teacherTools: ToolDef[] = [
       "Provide a sourceId (from the session's StudySource list) OR a kind+refId (note id, file id, or URL). " +
       "highlightText scrolls to and highlights the first occurrence of that text — pass a SHORT specific phrase (max ~50 chars), not a long paragraph. " +
       "highlightLine / highlightLineEnd highlight a line range (1-based) in code/text files. " +
-      "Call this RIGHT BEFORE the sentence that references the passage so the visual appears as you speak.",
+      "Call this RIGHT BEFORE the sentence that references the passage so the visual appears as you speak. " +
+      "The result includes a windowId — use it for subsequent highlight_source / focus_source / close_source calls on this source.",
     clientAction: true,
     parameters: [
       { name: "sourceId", type: "string", description: "StudySource id from the session source list" },
@@ -153,6 +154,10 @@ export const teacherTools: ToolDef[] = [
 
       const appId = appForSource(kind, file);
       const openPayload = payloadForSource(kind, refId, file);
+      // The client uses sourceRef (or name as fallback) as the window id for
+      // this source. Echo it back so the LLM can target highlight_source /
+      // focus_source / close_source at the correct window in the same turn.
+      const windowId = refId || String(args.label ?? name ?? "source");
       const requestedHighlight = args.highlightText ? String(args.highlightText) : undefined;
       const highlightLine = typeof args.highlightLine === "number" ? Number(args.highlightLine) : undefined;
       const highlightLineEnd = typeof args.highlightLineEnd === "number" ? Number(args.highlightLineEnd) : undefined;
@@ -190,6 +195,7 @@ export const teacherTools: ToolDef[] = [
       return {
         action: "show_source",
         appId,
+        windowId,
         title: String(args.label ?? name ?? "Source"),
         sourceKind: kind,
         sourceRef: refId,
