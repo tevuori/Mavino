@@ -93,6 +93,15 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      // In Capacitor (native) builds the PWA plugin is disabled, so the
+      // `virtual:pwa-register/react` virtual module is never registered.
+      // Redirect it to a no-op shim so Rollup can resolve the static import
+      // in ReloadPrompt.tsx. The shim's return values are never observed —
+      // ReloadPrompt's runtime `Capacitor.isNativePlatform()` guard returns
+      // null before `useRegisterSW` is called.
+      ...(isCapacitorBuild
+        ? { "virtual:pwa-register/react": path.resolve(__dirname, "src/pwa-register-shim.ts") }
+        : {}),
     },
   },
   build: {
