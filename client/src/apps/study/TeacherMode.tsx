@@ -28,12 +28,13 @@ import WorkspaceSourceSelector from "./WorkspaceSourceSelector";
 import HighlightableMarkdown from "./HighlightableMarkdown";
 import { ActionButton, ErrorBanner, Loading } from "./ui";
 import { useWindows } from "../../store/windows";
-import { useShowControl, type ShowResult } from "../../store/showControl";
+import { useShowControl, type ShowResult, type ShowCommand } from "../../store/showControl";
 import { useFormFactor } from "../../store/formfactor";
 import { useTeacherTts } from "./useTeacherTts";
 import { useTeacherSession } from "./useTeacherSession";
 import { prepareSpeech, segmentAtOffset, type SpeechSegment } from "./teacherSpeech";
 import { LessonAgenda, ToolChipRow, ComprehensionCard, PaceFeedbackRow, ExportMenu } from "./teachPanels";
+import TeachSourcePane, { type PaneSource, type PaneHighlight } from "./TeachSourcePane";
 import TeachErrorBoundary from "./TeachErrorBoundary";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../../services/speech";
 import type { AthenaClientAction, AthenaWindowState } from "../../services/athena";
@@ -107,6 +108,15 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [showIssue, setShowIssue] = useState<string>("");
 
+  // Side-by-side source pane (replaces floating source windows). One stable
+  // paneId backs the show-control channel; the active source is swapped via
+  // paneSource. panePending is the highlight to apply once the source loads.
+  const paneId = useRef("teach-source-pane-" + Math.random().toString(36).slice(2)).current;
+  const [paneSource, setPaneSource] = useState<PaneSource | null>(null);
+  const [panePending, setPanePending] = useState<PaneHighlight | null>(null);
+  const paneSourceRef = useRef<PaneSource | null>(null);
+  paneSourceRef.current = paneSource;
+
   // Voice: TTS (Athena speaks) + STT (student speaks)
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [listening, setListening] = useState(false);
@@ -115,14 +125,17 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const sttSupported = isSpeechRecognitionSupported();
 
   const openWindow = useWindows((s) => s.open);
-  const closeWindow = useWindows((s) => s.close);
-  const focusWindow = useWindows((s) => s.focus);
-  const minimizeWindow = useWindows((s) => s.minimize);
   const windows = useWindows((s) => s.windows);
   const focusedId = useWindows((s) => s.focusedId);
   const issueShowCommand = useShowControl((s) => s.issueCommand);
   const showResults = useShowControl((s) => s.results);
   const setSpeakingWindow = useShowControl((s) => s.setSpeakingWindow);
+  const removeShowWindow = useShowControl((s) => s.removeWindow);
+
+  // Clean up the pane's show-control state on unmount.
+  useEffect(() => {
+    return () => { removeShowWindow(paneId); };
+  }, [paneId, removeShowWindow]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const windowsRef = useRef(windows);
@@ -143,36 +156,37 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     }));
   }, [focusedId]);
 
-  /** Find an open source window by sourceRef (note/file id or url). */
-  const findSourceWindow = useCallback((sourceRef: string): string | null => {
-    const w = windowsRef.current.find((x) => {
-      const p = x.payload as Record<string, unknown> | undefined;
-      return p?.noteId === sourceRef || p?.fileId === sourceRef || p?.url === sourceRef;
-    });
-    return w?.id ?? null;
-  }, []);
-
-  /** Issue a show-control highlight/scroll command from a show_source payload. */
-  const issueShowForHighlight = useCallback((winId: string, highlight: Record<string, unknown> | undefined) => {
-    if (!highlight) {
-      issueShowCommand(winId, "scroll_to");
-      return;
-    }
-    if (typeof highlight.text === "string" && highlight.text) {
-      issueShowCommand(winId, "highlight", { text: highlight.text });
-    } else if (typeof highlight.line === "number") {
-      issueShowCommand(winId, "highlight", {
-        lineStart: highlight.line,
-        lineEnd: typeof highlight.lineEnd === "number" ? highlight.lineEnd : highlight.line,
-      });
-    } else {
-      issueShowCommand(winId, "scroll_to");
-    }
-  }, [issueShowCommand]);
-
-  // ----- source-window client actions (desktop-specific) -----
+  // ----- source pane client actions (desktop-specific) -----
+  // Sources are shown in the side-by-side TeachSourcePane (not floating
+  // windows). One stable paneId backs the show-control channel; the active
+  // source is swapped via paneSource. Per-source windowIds (== refId) let the
+  // LLM target focus_source / close_source at a specific source.
 
   const sessionRef = useRef<ReturnType<typeof useTeacherSession> | null>(null);
+  const sourceMetaRef = useRef<Record<string, { appId: string; openPayload: Record<string, unknown> }>>({});
+
+  /** Build a PaneSource from a show_source payload or a history entry + meta. */
+  const buildPaneSource = useCallback((args: {
+    windowId: string;
+    appId: string;
+    refId: string;
+    name: string;
+    kind: string;
+    openPayload: Record<string, unknown>;
+  }): PaneSource => ({
+    windowId: args.windowId,
+    appId: args.appId as PaneSource["appId"],
+    refId: args.refId,
+    name: args.name,
+    kind: args.kind,
+    openPayload: args.openPayload,
+  }), []);
+
+  /** Switch the pane to a source and apply a highlight once it loads. */
+  const switchPane = useCallback((src: PaneSource, highlight: PaneHighlight | null) => {
+    setPaneSource(src);
+    setPanePending(highlight);
+  }, []);
 
   const dispatchSourceAction = useCallback((action: AthenaClientAction) => {
     const p = action.payload as Record<string, any>;
@@ -181,53 +195,62 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     switch (act) {
       case "show_source": {
         const appId = String(p.appId ?? "viewer");
-        const openPayload = p.openPayload as Record<string, unknown> | undefined;
+        const openPayload = (p.openPayload as Record<string, unknown> | undefined) ?? {};
         const sourceRef = String(p.sourceRef ?? "");
-        const existing = findSourceWindow(sourceRef);
-        if (!existing) {
-          openWindow({
-            appId: appId as any,
-            title: String(p.title ?? "Source"),
-            icon: APP_ICONS[appId] ?? "BookOpen",
-            payload: openPayload,
-          });
-          // The new window id isn't known synchronously; issue the show command
-          // on the next tick by matching the payload.
-          setTimeout(() => {
-            const newWinId = findSourceWindow(sourceRef);
-            if (!newWinId) return;
-            issueShowForHighlight(newWinId, p.highlight);
-            setSourceHistory?.((prev) => {
-              if (prev.some((h) => h.windowId === newWinId)) return prev;
-              return [...prev, {
-                windowId: newWinId,
-                index: prev.length + 1,
-                name: String(p.title ?? "Source"),
-                kind: String(p.sourceKind ?? ""),
-                refId: sourceRef,
-                lastHighlight: p.highlight?.text as string | undefined,
-              }];
-            });
-          }, 200);
-        } else {
-          focusWindow(existing);
-          if (windowsRef.current.find((w) => w.id === existing)?.minimized) minimizeWindow(existing);
-          issueShowForHighlight(existing, p.highlight);
-          setSourceHistory?.((prev) =>
-            prev.map((h) => (h.windowId === existing ? { ...h, lastHighlight: p.highlight?.text as string | undefined } : h))
-          );
-        }
+        const name = String(p.title ?? "Source");
+        const kind = String(p.sourceKind ?? "");
+        const windowId = sourceRef || name;
+        const hl = (p.highlight as Record<string, unknown> | undefined);
+        const highlight: PaneHighlight | null = hl ? {
+          text: typeof hl.text === "string" ? hl.text : undefined,
+          posStart: typeof hl.posStart === "number" ? hl.posStart : undefined,
+          posEnd: typeof hl.posEnd === "number" ? hl.posEnd : undefined,
+          line: typeof hl.line === "number" ? hl.line : undefined,
+          lineEnd: typeof hl.lineEnd === "number" ? hl.lineEnd : undefined,
+        } : null;
+        sourceMetaRef.current[windowId] = { appId, openPayload };
+        const src = buildPaneSource({ windowId, appId, refId: sourceRef, name, kind, openPayload });
+        switchPane(src, highlight);
+        setSourceHistory?.((prev) => {
+          const idx = prev.findIndex((h) => h.windowId === windowId);
+          const entry = {
+            windowId,
+            index: idx >= 0 ? prev[idx].index : prev.length + 1,
+            name, kind, refId: sourceRef,
+            lastHighlight: highlight?.text,
+            lastPosStart: highlight?.posStart,
+            lastPosEnd: highlight?.posEnd,
+          };
+          if (idx >= 0) return prev.map((h) => (h.windowId === windowId ? { ...h, ...entry } : h));
+          return [...prev, entry];
+        });
         break;
       }
       case "show_command": {
         const winId = String(p.windowId ?? "");
         const kind = p.kind as "scroll_to" | "highlight" | "clear_highlight";
-        if (kind === "clear_highlight") {
-          issueShowCommand(winId, "clear_highlight");
-        } else if (kind === "highlight") {
-          issueShowCommand(winId, "highlight", { text: p.text, lineStart: p.lineStart, lineEnd: p.lineEnd });
+        const isActive = paneSourceRef.current?.windowId === winId;
+        const payload: Partial<ShowCommand> = {
+          text: typeof p.text === "string" ? p.text : undefined,
+          posStart: typeof p.posStart === "number" ? p.posStart : undefined,
+          posEnd: typeof p.posEnd === "number" ? p.posEnd : undefined,
+          lineStart: p.lineStart,
+          lineEnd: p.lineEnd,
+          line: p.line,
+        };
+        if (isActive) {
+          if (kind === "clear_highlight") issueShowCommand(paneId, "clear_highlight");
+          else if (kind === "highlight") issueShowCommand(paneId, "highlight", payload);
+          else issueShowCommand(paneId, "scroll_to", payload);
         } else {
-          issueShowCommand(winId, "scroll_to", { text: p.text, line: p.line });
+          // Target a background source: switch the pane to it and apply after load.
+          const entry = sessionRef.current?.sourceHistory.find((h) => h.windowId === winId);
+          const meta = sourceMetaRef.current[winId];
+          if (entry && meta) {
+            const src = buildPaneSource({ windowId: winId, appId: meta.appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload: meta.openPayload });
+            const pending: PaneHighlight | null = kind === "highlight" ? { text: payload.text, posStart: payload.posStart, posEnd: payload.posEnd, line: payload.lineStart, lineEnd: payload.lineEnd } : null;
+            switchPane(src, pending);
+          }
         }
         if (kind === "highlight" && p.text) {
           setSourceHistory?.((prev) =>
@@ -238,14 +261,35 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
       }
       case "focus_source": {
         const winId = String(p.windowId ?? "");
-        focusWindow(winId);
-        const w = windowsRef.current.find((x) => x.id === winId);
-        if (w?.minimized) minimizeWindow(w.id);
+        const entry = sessionRef.current?.sourceHistory.find((h) => h.windowId === winId);
+        const meta = sourceMetaRef.current[winId];
+        if (entry && meta) {
+          const src = buildPaneSource({ windowId: winId, appId: meta.appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload: meta.openPayload });
+          switchPane(src, entry.lastHighlight ? {
+            text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd,
+          } : null);
+        }
         break;
       }
       case "close_source": {
-        closeWindow(String(p.windowId ?? ""));
-        setSourceHistory?.((prev) => prev.filter((h) => h.windowId !== p.windowId));
+        const winId = String(p.windowId ?? "");
+        setSourceHistory?.((prev) => {
+          const next = prev.filter((h) => h.windowId !== winId);
+          // If the closed source was active, switch to the most recent remaining.
+          if (paneSourceRef.current?.windowId === winId) {
+            const last = next[next.length - 1];
+            const meta = last ? sourceMetaRef.current[last.windowId] : undefined;
+            if (last && meta) {
+              const src = buildPaneSource({ windowId: last.windowId, appId: meta.appId, refId: last.refId, name: last.name, kind: last.kind, openPayload: meta.openPayload });
+              switchPane(src, null);
+            } else {
+              setPaneSource(null);
+              setPanePending(null);
+            }
+          }
+          return next;
+        });
+        delete sourceMetaRef.current[winId];
         break;
       }
       default: {
@@ -261,7 +305,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         break;
       }
     }
-  }, [openWindow, closeWindow, focusWindow, minimizeWindow, findSourceWindow, issueShowCommand, issueShowForHighlight]);
+  }, [openWindow, buildPaneSource, switchPane, issueShowCommand, paneId]);
 
   const teach = useTeacherSession({
     language,
@@ -297,17 +341,40 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
       .find((h) => h !== undefined);
     if (cited) {
       setSpeakingWindow(cited.windowId);
-      // Highlight the passage the sentence quotes; without a quote the glow
-      // alone tells the student which source is being talked about.
-      if (seg.quote) issueShowCommand(cited.windowId, "highlight", { text: seg.quote });
+      // Re-anchor to the LAST resolved highlight for this source (exact offsets
+      // when available) so the passage stays scrolled into view as the voice
+      // plays. We do NOT highlight from seg.quote — quotes extracted from the
+      // spoken text are rarely verbatim and caused the "wrong word highlighted"
+      // glitch. Only re-issue when switching INTO this source, to avoid
+      // re-highlighting on every sentence (which flickers).
+      const switchingIn = !prev || prev.citations[0] !== seg.citations[0];
+      if (switchingIn) {
+        // Switch the pane to the cited source if it's not already active.
+        if (paneSourceRef.current?.windowId !== cited.windowId) {
+          const meta = sourceMetaRef.current[cited.windowId];
+          if (meta) {
+            const src = buildPaneSource({
+              windowId: cited.windowId, appId: meta.appId, refId: cited.refId,
+              name: cited.name, kind: cited.kind, openPayload: meta.openPayload,
+            });
+            switchPane(src, cited.lastHighlight ? {
+              text: cited.lastHighlight, posStart: cited.lastPosStart, posEnd: cited.lastPosEnd,
+            } : null);
+          }
+        } else if (typeof cited.lastPosStart === "number" && typeof cited.lastPosEnd === "number") {
+          issueShowCommand(paneId, "highlight", { posStart: cited.lastPosStart, posEnd: cited.lastPosEnd });
+        } else if (cited.lastHighlight) {
+          issueShowCommand(paneId, "highlight", { text: cited.lastHighlight });
+        }
+      }
       return;
     }
     setSpeakingWindow(null);
     // Only clear once, when leaving a source-bound sentence.
     if (prev && prev.citations.length > 0) {
-      for (const h of sourceHistoryRef.current) issueShowCommand(h.windowId, "clear_highlight");
+      issueShowCommand(paneId, "clear_highlight");
     }
-  }, [issueShowCommand, setSpeakingWindow]);
+  }, [issueShowCommand, setSpeakingWindow, paneId, buildPaneSource, switchPane]);
 
   const tts = useTeacherTts({ language, onWordBoundary });
   const ttsRef = useRef(tts);
@@ -348,7 +415,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         continue;
       }
       seenResultRef.current[winId] = res.seq;
-      const entry = sourceHistoryRef.current.find((h) => h.windowId === winId);
+      // All show commands route through paneId; look up the active source.
+      const activeWindowId = paneSourceRef.current?.windowId;
+      const entry = activeWindowId
+        ? sourceHistoryRef.current.find((h) => h.windowId === activeWindowId)
+        : sourceHistoryRef.current.find((h) => h.windowId === winId);
       const reason = res.reason ?? "no-match";
       setShowIssue(
         `Couldn't highlight in ${entry?.name ?? "the source"} — ${SHOW_FAILURE_TEXT[reason] ?? reason}. Mavino will quote the passage instead.`
@@ -411,35 +482,28 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const openCitation = useCallback((index: number) => {
     const entry = sourceHistory.find((h) => h.index === index);
     if (!entry) return;
-    const existing = findSourceWindow(entry.refId);
-    if (existing) {
-      focusWindow(existing);
-      const w = windowsRef.current.find((x) => x.id === existing);
-      if (w?.minimized) minimizeWindow(w.id);
-      if (entry.lastHighlight) issueShowCommand(existing, "highlight", { text: entry.lastHighlight });
-      return;
-    }
     const appId = entry.kind === "note" ? "notes"
       : entry.kind === "url" || entry.kind === "moodle" ? "browser"
+      : entry.kind === "file" ? "editor"
       : "viewer";
     const openPayload = entry.kind === "note" ? { noteId: entry.refId }
       : entry.kind === "file" ? { fileId: entry.refId }
       : entry.kind === "url" || entry.kind === "moodle" ? { url: entry.refId }
       : {};
-    openWindow({
-      appId: appId as any,
-      title: entry.name,
-      icon: APP_ICONS[appId] ?? "BookOpen",
-      payload: openPayload,
+    const meta = sourceMetaRef.current[entry.windowId];
+    const src = buildPaneSource({
+      windowId: entry.windowId,
+      appId: meta?.appId ?? appId,
+      refId: entry.refId,
+      name: entry.name,
+      kind: entry.kind,
+      openPayload: meta?.openPayload ?? openPayload,
     });
-    setTimeout(() => {
-      const newWinId = findSourceWindow(entry.refId);
-      if (newWinId) {
-        teach.setSourceHistory((prev) => prev.map((h) => (h.index === index ? { ...h, windowId: newWinId } : h)));
-      }
-    }, 200);
+    switchPane(src, entry.lastHighlight ? {
+      text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd,
+    } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceHistory, findSourceWindow, focusWindow, minimizeWindow, openWindow, issueShowCommand]);
+  }, [sourceHistory, buildPaneSource, switchPane]);
 
   const citationMeta = sourceHistory.map((h) => ({ index: h.index, name: h.name, kind: h.kind, refId: h.refId }));
 
@@ -909,6 +973,28 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             })}
           </div>
         )}
+      </div>
+
+      {/* Side-by-side source pane (wide screens only).
+          Replaces floating source windows — the teacher's show_source /
+          highlight_source / focus_source / close_source commands drive this
+          pane via the shared show-control channel (paneId). */}
+      <div className="hidden w-[30rem] shrink-0 @4xl:flex">
+        <TeachSourcePane
+          paneId={paneId}
+          source={paneSource}
+          pending={panePending}
+          onPendingApplied={() => setPanePending(null)}
+          onClose={() => {
+            const wid = paneSource?.windowId;
+            if (wid) {
+              teach.setSourceHistory((prev) => prev.filter((h) => h.windowId !== wid));
+              delete sourceMetaRef.current[wid];
+            }
+            setPaneSource(null);
+            setPanePending(null);
+          }}
+        />
       </div>
     </div>
   );

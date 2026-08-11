@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useCallback } from "react";
 import { EditorView, Decoration, type DecorationSet } from "@codemirror/view";
 import { StateField, StateEffect, EditorSelection, type Extension } from "@codemirror/state";
 import { useShowControl, type ShowCommand } from "../../store/showControl";
+import { findHighlightRange } from "../study/highlightRange";
 
 // StateEffect + StateField for transient highlight decorations.
 // The Teacher issues a highlight command → we dispatch this effect with the
@@ -59,7 +60,7 @@ function resolveRange(
   cmd: ShowCommand
 ): { from: number; to: number; lineRange?: boolean } | null {
   const doc = view.state.doc;
-  // Explicit character offsets.
+  // Explicit character offsets (preferred — exact, no guessing).
   if (typeof cmd.posStart === "number" && typeof cmd.posEnd === "number") {
     const from = Math.max(0, Math.min(cmd.posStart, doc.length));
     const to = Math.max(from, Math.min(cmd.posEnd, doc.length));
@@ -84,12 +85,13 @@ function resolveRange(
     const line = doc.line(n);
     return { from: line.from, to: line.to, lineRange: true };
   }
-  // Text search (first occurrence, case-insensitive).
+  // Text search: exact (first occurrence, case-insensitive), then fuzzy
+  // token-overlap so a paraphrased phrase still lands on the right passage.
   if (cmd.text) {
-    const lower = doc.toString().toLowerCase();
-    const idx = lower.indexOf(cmd.text.toLowerCase());
-    if (idx === -1) return null;
-    return { from: idx, to: idx + cmd.text.length };
+    const full = doc.toString();
+    const r = findHighlightRange(full, { text: cmd.text });
+    if (r) return { from: r.from, to: r.to };
+    return null;
   }
   return null;
 }

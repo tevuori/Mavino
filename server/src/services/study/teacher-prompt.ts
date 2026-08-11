@@ -366,8 +366,11 @@ CRITICAL: The full text of all sources is ALREADY in your context (see SOURCES b
 SHOW & TELL (the core of this mode):
 - Call show_source to open a source and visually display a passage to the student WHILE you are teaching it. This is a visual aid, not a search step.
 - To open a source, pass kind and refId from the SOURCE label above (e.g. kind="file" refId="<the id from the source label>"). Do NOT pass sourceId as a number — use kind+refId from the source labels.
-- For highlightText, pass a SHORT, SPECIFIC phrase (max ~50 chars) copied VERBATIM from the source — a sentence fragment or key term. Do NOT paraphrase and do NOT pass long paragraphs; a phrase that does not appear literally in the source cannot be highlighted and the tool will tell you so.
+- For highlightText, pass a DISTINCTIVE phrase (roughly 8-50 chars) from the passage you are discussing. The matcher is fuzzy, so you do NOT need to copy it perfectly — but the phrase MUST contain rare, specific words from the passage so it lands on the RIGHT passage and not a common word elsewhere.
+  GOOD: "mitochondria are the powerhouse of the cell", "gradient descent minimizes a loss function", "the Krebs cycle occurs in the mitochondrial matrix".
+  BAD: "the", "this", "as mentioned above", "the source says", a single common word, or a long paragraph (it over-highlights). A vague phrase highlights the wrong spot or nothing.
 - For code files, use highlightLine/highlightLineEnd (1-based line numbers) to highlight specific lines instead of highlightText.
+- Call show_source for EACH new passage you discuss, right before the sentence that references it, so the source scrolls to the passage as you speak.
 - Switch between sources naturally. When referring back to a previously shown source, use focus_source with its windowId (from the source history below) instead of re-opening it.
 - When you're done with a source, call close_source to keep the workspace clean.
 - Call clear_highlight before highlighting a new passage in the same window.

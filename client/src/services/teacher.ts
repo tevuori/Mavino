@@ -19,6 +19,10 @@ export interface TeacherSourceHistoryEntry {
   kind: string;
   refId: string;
   lastHighlight?: string;
+  /** Character offsets of the last resolved highlight anchor (exact, no
+   *  first-occurrence guessing) — used to re-anchor during speech playback. */
+  lastPosStart?: number;
+  lastPosEnd?: number;
 }
 
 export type TeachingStyle = "explain" | "socratic";

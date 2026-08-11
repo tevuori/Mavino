@@ -658,88 +658,195 @@ const TEACHER_SHOW_SCRIPT = `<script>(function(){
     currentMarks = [];
   }
 
-  // Highlight the first occurrence of text in the page body by wrapping it
-  // in mark elements. Uses a TreeWalker to find text nodes containing the
-  // search text, then splits the text node and wraps the match.
-  function highlightText(text) {
-    clearHighlights();
-    if (!text || !text.trim()) return false;
-    var needle = text.trim();
+  // Build a flat text representation of the page body: a concatenated string
+  // plus a map from char offsets back to (textNode, localOffset). This lets us
+  // find a passage that may span multiple inline text nodes (e.g. across <br>,
+  // <strong>, links) and resolve it to a DOM Range.
+  function buildTextMap() {
+    var chunks = [];
+    var nodes = [];
+    var starts = [];
     var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
       acceptNode: function(node) {
-        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        if (!node.nodeValue) return NodeFilter.FILTER_REJECT;
         var parent = node.parentElement;
         if (!parent) return NodeFilter.FILTER_REJECT;
         var tag = parent.tagName.toLowerCase();
         if (tag === "script" || tag === "style" || tag === "noscript") return NodeFilter.FILTER_REJECT;
-        return node.nodeValue.indexOf(needle) >= 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+        return NodeFilter.FILTER_ACCEPT;
       }
     });
-    var node = walker.nextNode();
-    if (!node) {
-      // Try a case-insensitive search as a fallback.
-      var lower = needle.toLowerCase();
-      walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-        acceptNode: function(n) {
-          if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-          var p = n.parentElement;
-          if (!p) return NodeFilter.FILTER_REJECT;
-          var t = p.tagName.toLowerCase();
-          if (t === "script" || t === "style" || t === "noscript") return NodeFilter.FILTER_REJECT;
-          return n.nodeValue.toLowerCase().indexOf(lower) >= 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-        }
-      });
-      node = walker.nextNode();
-      if (!node) return false;
-      // Wrap the case-insensitive match.
-      var val = node.nodeValue;
-      var idx = val.toLowerCase().indexOf(lower);
-      var matchLen = lower.length;
-      var range = document.createRange();
-      range.setStart(node, idx);
-      range.setEnd(node, idx + matchLen);
+    var n = walker.nextNode();
+    var offset = 0;
+    while (n) {
+      var val = n.nodeValue;
+      chunks.push(val);
+      nodes.push(n);
+      starts.push(offset);
+      offset += val.length;
+      n = walker.nextNode();
+    }
+    return { text: chunks.join(""), nodes: nodes, starts: starts };
+  }
+
+  // Resolve a char offset in the concatenated text to (node, localOffset).
+  function offsetToNode(map, off) {
+    var nodes = map.nodes, starts = map.starts;
+    // binary search for the last start <= off
+    var lo = 0, hi = nodes.length - 1, idx = -1;
+    while (lo <= hi) {
+      var mid = (lo + hi) >> 1;
+      if (starts[mid] <= off) { idx = mid; lo = mid + 1; } else { hi = mid - 1; }
+    }
+    if (idx < 0) return null;
+    return { node: nodes[idx], local: off - starts[idx] };
+  }
+
+  // Strip surrounding punctuation + lowercase for fuzzy token matching.
+  function tokenKey(w) {
+    return w.replace(/^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$/gu, "").toLowerCase();
+  }
+
+  // Fuzzy: find the densest cluster of phrase tokens in the concatenated text.
+  // Returns {from, to} char offsets or null when no cluster scores >= 0.5.
+  function fuzzyFind(text, phrase) {
+    var pWords = phrase.toLowerCase().split(/\\s+/).map(tokenKey).filter(Boolean);
+    if (pWords.length === 0) return null;
+    var pTokens = {};
+    for (var pi = 0; pi < pWords.length; pi++) pTokens[pWords[pi]] = true;
+    var lower = text.toLowerCase();
+    var words = [];
+    var i = 0;
+    while (i < lower.length) {
+      while (i < lower.length && /\\s/.test(lower.charAt(i))) i++;
+      if (i >= lower.length) break;
+      var start = i;
+      while (i < lower.length && !/\\s/.test(lower.charAt(i))) i++;
+      words.push({ start: start, end: i, key: tokenKey(lower.slice(start, i)) });
+    }
+    if (words.length === 0) return null;
+    var hits = [];
+    for (var k = 0; k < words.length; k++) if (pTokens[words[k].key]) hits.push(k);
+    var maxGap = Math.max(2, Math.ceil(pWords.length * 0.6));
+    var maxSpan = pWords.length * 2 + 4;
+    var best = { score: 0, start: -1, end: -1 };
+    for (var h = 0; h < hits.length; h++) {
+      var seen = {};
+      var count = 0;
+      var first = hits[h], last = hits[h];
+      seen[words[first].key] = true; count = 1;
+      for (var k2 = h + 1; k2 < hits.length; k2++) {
+        var cur = hits[k2];
+        if (cur - last > maxGap) break;
+        if (cur - first >= maxSpan) break;
+        last = cur;
+        if (!seen[words[cur].key]) { seen[words[cur].key] = true; count++; }
+      }
+      var score = count / pWords.length;
+      if (score > best.score) best = { score: score, start: first, end: last };
+    }
+    if (best.score >= 0.5 && best.start >= 0) {
+      return { from: words[best.start].start, to: words[best.end].end };
+    }
+    return null;
+  }
+
+  // Wrap a DOM Range in <mark>, handling ranges that span element boundaries
+  // (surroundContents throws on partial selections) by wrapping each text
+  // portion individually, last-to-first so earlier offsets aren't shifted.
+  function wrapRange(range) {
+    var marks = [];
+    try {
       var mark = document.createElement("mark");
       mark.className = HL_CLASS;
       range.surroundContents(mark);
-      currentMarks.push(mark);
-      mark.scrollIntoView({ behavior: "smooth", block: "center" });
-      return true;
+      marks.push(mark);
+    } catch (e) {
+      var root = range.commonAncestorContainer;
+      var walkRoot = root.nodeType === 3 ? root.parentNode : root;
+      var walker = document.createTreeWalker(walkRoot, NodeFilter.SHOW_TEXT, null);
+      var parts = [];
+      var n = walker.nextNode();
+      while (n) {
+        if (range.intersectsNode(n)) {
+          var s = 0, e = n.nodeValue.length;
+          if (n === range.startContainer) s = range.startOffset;
+          if (n === range.endContainer) e = range.endOffset;
+          if (e > s) parts.push({ node: n, s: s, e: e });
+        }
+        n = walker.nextNode();
+      }
+      for (var i = parts.length - 1; i >= 0; i--) {
+        try {
+          var mk = document.createElement("mark");
+          mk.className = HL_CLASS;
+          var r = document.createRange();
+          r.setStart(parts[i].node, parts[i].s);
+          r.setEnd(parts[i].node, parts[i].e);
+          r.surroundContents(mk);
+          marks.push(mk);
+        } catch (e2) { /* skip unwrappable */ }
+      }
     }
-    var val = node.nodeValue;
-    var idx = val.indexOf(needle);
-    var matchLen = needle.length;
+    for (var i2 = 0; i2 < marks.length; i2++) currentMarks.push(marks[i2]);
+    return marks;
+  }
+
+  // Highlight a passage in the page body. Matches across text nodes, first
+  // exactly (case-insensitive), then via fuzzy token overlap so a paraphrased
+  // phrase still lands on the right passage instead of nothing.
+  function highlightText(text) {
+    clearHighlights();
+    if (!text || !text.trim()) return false;
+    var needle = text.trim();
+    var map = buildTextMap();
+    if (!map.text) return false;
+    var lower = map.text.toLowerCase();
+    var needleLower = needle.toLowerCase();
+    var from = lower.indexOf(needleLower);
+    if (from < 0) {
+      var fuzzy = fuzzyFind(map.text, needle);
+      if (!fuzzy) return false;
+      from = fuzzy.from;
+      var to = fuzzy.to;
+      return wrapAndScroll(map, from, to);
+    }
+    return wrapAndScroll(map, from, from + needle.length);
+  }
+
+  function wrapAndScroll(map, from, to) {
+    var start = offsetToNode(map, from);
+    var end = offsetToNode(map, to - 1);
+    if (!start || !end) return false;
     var range = document.createRange();
-    range.setStart(node, idx);
-    range.setEnd(node, idx + matchLen);
-    var mark = document.createElement("mark");
-    mark.className = HL_CLASS;
-    range.surroundContents(mark);
-    currentMarks.push(mark);
-    mark.scrollIntoView({ behavior: "smooth", block: "center" });
+    range.setStart(start.node, start.local);
+    range.setEnd(end.node, end.local + 1);
+    var marks = wrapRange(range);
+    if (marks.length === 0) return false;
+    marks[0].scrollIntoView({ behavior: "smooth", block: "center" });
     return true;
   }
 
-  // Scroll to the first occurrence of text without highlighting.
+  // Scroll to a passage without highlighting (same matching as highlightText).
   function scrollToText(text) {
     if (!text || !text.trim()) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return true;
     }
     var needle = text.trim();
-    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-      acceptNode: function(node) {
-        if (!node.nodeValue) return NodeFilter.FILTER_REJECT;
-        var p = node.parentElement;
-        if (!p) return NodeFilter.FILTER_REJECT;
-        var t = p.tagName.toLowerCase();
-        if (t === "script" || t === "style") return NodeFilter.FILTER_REJECT;
-        return node.nodeValue.indexOf(needle) >= 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-      }
-    });
-    var node = walker.nextNode();
-    if (node) {
-      node.parentElement.scrollIntoView({ behavior: "smooth", block: "center" });
-      return true;
+    var map = buildTextMap();
+    if (!map.text) { window.scrollTo({ top: 0, behavior: "smooth" }); return false; }
+    var lower = map.text.toLowerCase();
+    var from = lower.indexOf(needle.toLowerCase());
+    if (from < 0) {
+      var fuzzy = fuzzyFind(map.text, needle);
+      if (!fuzzy) { window.scrollTo({ top: 0, behavior: "smooth" }); return false; }
+      from = fuzzy.from;
+    }
+    var start = offsetToNode(map, from);
+    if (start) {
+      var el = start.node.parentElement;
+      if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); return true; }
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
     return false;

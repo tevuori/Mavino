@@ -25,6 +25,7 @@ import { LessonAgenda, ToolChipRow, ComprehensionCard, PaceFeedbackRow, ExportMe
 import HighlightableMarkdown from "../apps/study/HighlightableMarkdown";
 import type { CitationMeta } from "../apps/study/CitationMarkdown";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../services/speech";
+import { findHighlightRange } from "../apps/study/highlightRange";
 import {
   MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileLoading, MobileTextarea,
 } from "./MobileUi";
@@ -46,6 +47,9 @@ interface SourceSheet {
   loading: boolean;
   text?: string;
   highlight?: string;
+  /** Character offsets of the resolved anchor (exact, preferred over text search). */
+  posStart?: number;
+  posEnd?: number;
   error?: string;
 }
 
@@ -87,7 +91,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
   }, []);
 
   const openSourceSheet = useCallback((
-    entry: { windowId: string; refId: string; name: string; kind: string; highlight?: string }
+    entry: { windowId: string; refId: string; name: string; kind: string; highlight?: string; posStart?: number; posEnd?: number }
   ) => {
     setSheet({ ...entry, loading: true });
     void (async () => {
@@ -113,29 +117,36 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
         const kind = String(p.sourceKind ?? "");
         const highlight = (p.highlight as Record<string, unknown> | undefined);
         const highlightText = typeof highlight?.text === "string" ? highlight.text : undefined;
+        const posStart = typeof highlight?.posStart === "number" ? highlight.posStart : undefined;
+        const posEnd = typeof highlight?.posEnd === "number" ? highlight.posEnd : undefined;
         // Phones have no window ids — key source history by the source ref.
         const windowId = refId || name;
         setSourceHistory?.((prev) => {
           if (prev.some((h) => h.windowId === windowId)) {
-            return prev.map((h) => (h.windowId === windowId ? { ...h, lastHighlight: highlightText } : h));
+            return prev.map((h) => (h.windowId === windowId ? {
+              ...h, lastHighlight: highlightText, lastPosStart: posStart, lastPosEnd: posEnd,
+            } : h));
           }
           return [...prev, {
-            windowId, index: prev.length + 1, name, kind, refId, lastHighlight: highlightText,
+            windowId, index: prev.length + 1, name, kind, refId,
+            lastHighlight: highlightText, lastPosStart: posStart, lastPosEnd: posEnd,
           }];
         });
-        openSourceSheet({ windowId, refId, name, kind, highlight: highlightText });
+        openSourceSheet({ windowId, refId, name, kind, highlight: highlightText, posStart, posEnd });
         break;
       }
       case "show_command": {
         const windowId = String(p.windowId ?? "");
         const kind = String(p.kind ?? "");
         const text = typeof p.text === "string" ? p.text : undefined;
+        const posStart = typeof p.posStart === "number" ? p.posStart : undefined;
+        const posEnd = typeof p.posEnd === "number" ? p.posEnd : undefined;
         if (kind === "clear_highlight") {
-          setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, highlight: undefined } : prev));
-        } else if (kind === "highlight" && text) {
-          setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, highlight: text } : prev));
+          setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, highlight: undefined, posStart: undefined, posEnd: undefined } : prev));
+        } else if (kind === "highlight" && (text || (typeof posStart === "number" && typeof posEnd === "number"))) {
+          setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, highlight: text, posStart, posEnd } : prev));
           setSourceHistory?.((prev) =>
-            prev.map((h) => (h.windowId === windowId ? { ...h, lastHighlight: text } : h))
+            prev.map((h) => (h.windowId === windowId ? { ...h, lastHighlight: text, lastPosStart: posStart, lastPosEnd: posEnd } : h))
           );
         }
         break;
@@ -147,6 +158,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
           openSourceSheet({
             windowId: entry.windowId, refId: entry.refId, name: entry.name,
             kind: entry.kind, highlight: entry.lastHighlight,
+            posStart: entry.lastPosStart, posEnd: entry.lastPosEnd,
           });
         }
         break;
@@ -184,16 +196,24 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
   const onWordBoundary = useCallback((charStart: number) => {
     const seg = segmentAtOffset(segmentsRef.current, charStart);
     if (!seg || seg === spokenSegRef.current) return;
+    const prev = spokenSegRef.current;
     spokenSegRef.current = seg;
     const cited = seg.citations
       .map((n) => sourceHistoryRef.current.find((h) => h.index === n))
       .find((h) => h !== undefined);
     if (!cited) return;
-    // Bring the cited source into the sheet and highlight the quoted passage.
-    openSourceSheet({
-      windowId: cited.windowId, refId: cited.refId, name: cited.name,
-      kind: cited.kind, highlight: seg.quote ?? cited.lastHighlight,
-    });
+    // Re-anchor to the last resolved highlight for this source (exact offsets
+    // when available). Do NOT use seg.quote — quotes from the spoken text are
+    // rarely verbatim and highlighted the wrong passage. Only re-open the sheet
+    // when switching sources, to avoid re-rendering on every sentence.
+    const switchingIn = !prev || prev.citations[0] !== seg.citations[0];
+    if (switchingIn) {
+      openSourceSheet({
+        windowId: cited.windowId, refId: cited.refId, name: cited.name,
+        kind: cited.kind, highlight: cited.lastHighlight,
+        posStart: cited.lastPosStart, posEnd: cited.lastPosEnd,
+      });
+    }
   }, [openSourceSheet]);
 
   const tts = useTeacherTts({ language, onWordBoundary });
@@ -611,7 +631,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
               ) : sheet.error ? (
                 <p className="text-sm text-ink-muted">{sheet.error}</p>
               ) : (
-                <SourceText text={sheet.text ?? ""} highlight={sheet.highlight} />
+                <SourceText text={sheet.text ?? ""} highlight={sheet.highlight} posStart={sheet.posStart} posEnd={sheet.posEnd} />
               )}
             </div>
           </div>
@@ -621,25 +641,28 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
   );
 }
 
-/** Plain-text source view with the spoken passage highlighted + scrolled into view. */
-function SourceText({ text, highlight }: { text: string; highlight?: string }) {
+/** Plain-text source view with the spoken passage highlighted + scrolled into view.
+ *  Resolves the highlight by character offset (exact) first, then exact text,
+ *  then fuzzy token-overlap so a paraphrased phrase still lands on the right
+ *  passage instead of the first occurrence of a common word. */
+function SourceText({ text, highlight, posStart, posEnd }: { text: string; highlight?: string; posStart?: number; posEnd?: number }) {
   const markRef = useRef<HTMLElement>(null);
+  const range = highlight || (typeof posStart === "number" && typeof posEnd === "number")
+    ? findHighlightRange(text, { posStart, posEnd, text: highlight })
+    : null;
+
   useEffect(() => {
     markRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [highlight]);
+  }, [range?.from, range?.to]);
 
-  if (!highlight) {
-    return <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-ink-muted">{text}</pre>;
-  }
-  const idx = text.toLowerCase().indexOf(highlight.toLowerCase());
-  if (idx === -1) {
+  if (!range) {
     return <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-ink-muted">{text}</pre>;
   }
   return (
     <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-ink-muted">
-      {text.slice(0, idx)}
-      <mark ref={markRef} className="rounded bg-amber-400/30 text-amber-100">{text.slice(idx, idx + highlight.length)}</mark>
-      {text.slice(idx + highlight.length)}
+      {text.slice(0, range.from)}
+      <mark ref={markRef} className="rounded bg-amber-400/30 text-amber-100">{text.slice(range.from, range.to)}</mark>
+      {text.slice(range.to)}
     </pre>
   );
 }

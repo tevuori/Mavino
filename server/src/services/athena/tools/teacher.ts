@@ -20,6 +20,7 @@ import path from "node:path";
 import type { ToolDef, ClientWindowInfo } from "./plugin";
 import prisma from "../../../db/client";
 import { resolveSource, type SourceKind } from "../../study/source";
+import { resolveAnchor } from "../../study/highlight-anchor";
 
 // ----- file-type → app mapping (mirrors client openTargetForFile) -----
 
@@ -75,42 +76,10 @@ function payloadForSource(
 }
 
 // ----- highlight verification -----
-
-/** Normalize whitespace/quotes so "nearly verbatim" phrases still match. */
-export function normalizeForMatch(s: string): string {
-  return s
-    .replace(/[\u2018\u2019\u201b]/g, "'")
-    .replace(/[\u201c\u201d]/g, '"')
-    .replace(/[\u2013\u2014]/g, "-")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-/**
- * Check that a highlight phrase actually occurs in the source text, and if not,
- * try to recover a verbatim substring (longest word window that does occur).
- * Returns the phrase to send to the client, or null when nothing matches.
- */
-export function resolveHighlightText(
-  requested: string,
-  sourceText: string | undefined | null
-): { text: string | null; exact: boolean } {
-  const phrase = requested.trim();
-  if (!phrase) return { text: null, exact: false };
-  if (!sourceText) return { text: phrase, exact: false }; // can't verify — pass through
-  const hay = normalizeForMatch(sourceText);
-  if (hay.includes(normalizeForMatch(phrase))) return { text: phrase, exact: true };
-  // Fall back to the longest contiguous word window of the phrase that matches.
-  const words = phrase.split(/\s+/);
-  for (let len = words.length - 1; len >= 3; len--) {
-    for (let start = 0; start + len <= words.length; start++) {
-      const candidate = words.slice(start, start + len).join(" ");
-      if (hay.includes(normalizeForMatch(candidate))) return { text: candidate, exact: false };
-    }
-  }
-  return { text: null, exact: false };
-}
+// resolveAnchor (in services/study/highlight-anchor.ts) turns an LLM-supplied
+// phrase into a verbatim span + character offsets in the source text. The
+// offsets let the client highlight the EXACT passage (no first-occurrence
+// guessing) for notes/text files, and the verbatim text is used for browser/PDF.
 
 export const teacherTools: ToolDef[] = [
   {
@@ -188,24 +157,33 @@ export const teacherTools: ToolDef[] = [
       const highlightLine = typeof args.highlightLine === "number" ? Number(args.highlightLine) : undefined;
       const highlightLineEnd = typeof args.highlightLineEnd === "number" ? Number(args.highlightLineEnd) : undefined;
 
-      // Verify the requested phrase against the cached source text so the model
-      // learns immediately when it paraphrased instead of quoting.
+      // Resolve the requested phrase to a verbatim span + character offsets in
+      // the cached source text. The offsets let the client highlight the EXACT
+      // passage (no first-occurrence guessing) for notes/text files; the
+      // verbatim text is used for browser/PDF. Fuzzy matching means a
+      // paraphrased phrase still lands on the right passage.
       let highlightText = requestedHighlight;
+      let highlightPosStart: number | undefined;
+      let highlightPosEnd: number | undefined;
       let highlightWarning: string | undefined;
       if (requestedHighlight) {
         const cached = await prisma.studySource.findFirst({
           where: { userId, kind, refId },
           select: { textCache: true },
         });
-        const resolved = resolveHighlightText(requestedHighlight, cached?.textCache);
-        if (!resolved.text) {
+        const anchor = resolveAnchor(requestedHighlight, cached?.textCache);
+        if (!anchor.text) {
           highlightText = undefined;
           highlightWarning =
-            "highlightText was not found verbatim in the source, so nothing was highlighted. " +
-            "Quote the passage inline in your reply, or retry with an exact phrase copied from the source.";
-        } else if (!resolved.exact) {
-          highlightText = resolved.text;
-          highlightWarning = `Highlighted the closest verbatim fragment ("${resolved.text}") — your phrase was not literally in the source.`;
+            "highlightText could not be matched to any passage in the source, so nothing was highlighted. " +
+            "Try a more distinctive phrase (rare words from the passage), or quote the passage inline in your reply.";
+        } else {
+          highlightText = anchor.text;
+          highlightPosStart = anchor.posStart;
+          highlightPosEnd = anchor.posEnd;
+          if (!anchor.exact) {
+            highlightWarning = `Highlighted the closest matching passage ("${anchor.text.slice(0, 60)}${anchor.text.length > 60 ? "…" : ""}") — your phrase was not literally in the source, but the match is ${Math.round(anchor.score * 100)}%.`;
+          }
         }
       }
 
@@ -218,6 +196,8 @@ export const teacherTools: ToolDef[] = [
         openPayload,
         highlight: {
           text: highlightText,
+          posStart: highlightPosStart,
+          posEnd: highlightPosEnd,
           line: highlightLine,
           lineEnd: highlightLineEnd,
         },
