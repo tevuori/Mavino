@@ -134,7 +134,10 @@ jobs:
           VERSION_CODE: ${{ steps.ver.outputs.versionCode }}
         working-directory: android
         run: |
-          ./gradlew assembleRelease \
+          # Uses the "standard" flavor (keeps REQUEST_INSTALL_PACKAGES for the
+          # in-app APK self-updater). The "play" flavor is built by the
+          # separate build-android-play.yml workflow for Play Store uploads.
+          ./gradlew assembleStandardRelease \
             -PversionName="$VERSION_NAME" \
             -PversionCode="$VERSION_CODE" \
             -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
@@ -145,9 +148,9 @@ jobs:
       - name: Locate built APK
         id: apk
         run: |
-          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          APK=$(find android/app/build/outputs/apk/standard/release -name "*.apk" | head -1)
           if [ -z "$APK" ]; then
-            echo "::error::No release APK found in android/app/build/outputs/apk/release"
+            echo "::error::No release APK found in android/app/build/outputs/apk/standard/release"
             exit 1
           fi
           echo "path=$APK" >> "$GITHUB_OUTPUT"

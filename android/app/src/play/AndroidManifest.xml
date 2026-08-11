@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Play Store flavor overlay.
+     The base manifest (src/main/AndroidManifest.xml) declares
+     REQUEST_INSTALL_PACKAGES so the standard (self-updating) build can
+     launch the system package installer for in-app APK updates via
+     ApkUpdaterPlugin. Google Play policy forbids apps from installing
+     other APKs, so the play flavor removes the permission here. With the
+     permission gone and the JS self-updater gated off by __PLAY_BUILD__,
+     ApkUpdaterPlugin is never invoked on Play installs — updates flow
+     through the Play Store instead. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission
+        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+        tools:node="remove" />
+</manifest>

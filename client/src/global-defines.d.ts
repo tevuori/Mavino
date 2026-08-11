@@ -6,6 +6,13 @@
 declare const __APP_VERSION__: string;
 /** GitHub "owner/repo" slug auto-detected from `git remote get-url origin`, or null. */
 declare const __UPDATE_REPO__: string | null;
+/**
+ * True for Google Play Store builds (VITE_PLAY_BUILD=true). Disables the
+ * in-app APK self-updater — Play policy forbids installing other APKs, so
+ * Play builds receive updates through the Play Store instead of GitHub
+ * Releases. Standard (GitHub Releases) builds compile this as false.
+ */
+declare const __PLAY_BUILD__: boolean;
 
 /** d3-force-3d (used by react-force-graph-2d internally) — no published types. */
 declare module "d3-force-3d" {

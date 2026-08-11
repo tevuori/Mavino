@@ -47,10 +47,14 @@ export interface UpdateInfo {
 
 /**
  * Returns true if running inside the Capacitor native shell AND a repo slug
- * was baked in at build time. Used by callers to gate update UI.
+ * was baked in at build time AND this is NOT a Play Store build. Used by
+ * callers to gate update UI. Play builds (VITE_PLAY_BUILD=true) compile
+ * __PLAY_BUILD__ as true and are excluded — they receive updates through
+ * the Play Store, and the in-app APK installer is disabled both here (JS)
+ * and in the play flavor's manifest (REQUEST_INSTALL_PACKAGES stripped).
  */
 export function isAutoUpdateAvailable(): boolean {
-  return Capacitor.isNativePlatform() && !!__UPDATE_REPO__;
+  return Capacitor.isNativePlatform() && !!__UPDATE_REPO__ && !__PLAY_BUILD__;
 }
 
 /** Currently-installed app version. On native: from App.getInfo(); on web: __APP_VERSION__. */

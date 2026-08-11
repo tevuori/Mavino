@@ -25,6 +25,23 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    // Two distribution flavors share the same applicationId (ai.mavino.app):
+    //   - standard: the self-updating build distributed via GitHub Releases.
+    //     Keeps REQUEST_INSTALL_PACKAGES so ApkUpdaterPlugin can launch the
+    //     system package installer for in-app APK self-updates.
+    //   - play: the Google Play Store build. Strips REQUEST_INSTALL_PACKAGES
+    //     (Play policy forbids apps installing other APKs) and disables the
+    //     in-app self-updater via the VITE_PLAY_BUILD build flag — Play builds
+    //     receive updates through the Play Store instead.
+    flavorDimensions = ["distribution"]
+    productFlavors {
+        standard {
+            dimension "distribution"
+        }
+        play {
+            dimension "distribution"
+        }
+    }
 }
 
 repositories {

@@ -35,11 +35,17 @@ function detectUpdateRepo(): string | undefined {
 const APP_VERSION = readAppVersion();
 const UPDATE_REPO = detectUpdateRepo();
 const isCapacitorBuild = process.env.VITE_CAPACITOR_BUILD === "true";
+// Play Store builds set VITE_PLAY_BUILD=true so the in-app self-updater is
+// compiled out (Play policy forbids installing other APKs; Play builds get
+// updates through the Play Store). Standard (GitHub Releases) builds leave
+// this unset, keeping the self-updater enabled.
+const isPlayBuild = process.env.VITE_PLAY_BUILD === "true";
 
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION),
     __UPDATE_REPO__: JSON.stringify(UPDATE_REPO ?? null),
+    __PLAY_BUILD__: JSON.stringify(isPlayBuild),
   },
   plugins: [
     react(),

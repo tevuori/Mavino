@@ -1,0 +1,173 @@
+name: Build & Release Android AAB (Play Store)
+
+# Builds a signed Android App Bundle (.aab) from the "play" product flavor
+# for upload to the Google Play Store. The play flavor strips
+# REQUEST_INSTALL_PACKAGES (Play policy forbids installing other APKs) and
+# the VITE_PLAY_BUILD flag disables the in-app self-updater at the JS layer
+# — Play builds receive updates through the Play Store instead.
+#
+# Output: a single signed app-play-release.aab attached to a GitHub Release
+# under the tag play-v<version>. The AAB is what you upload to Play Console
+# → Production → Create release.
+#
+# Triggers:
+#   - Push of a play-v* tag (e.g. play-v1.0.0) → builds + releases.
+#   - Manual dispatch with a version string.
+#
+# Required secrets (same keystore as the standard APK workflow — the upload
+# key is shared; Google holds the app signing key via Play App Signing):
+#   KEYSTORE_BASE64     base64-encoded upload keystore
+#   KEYSTORE_PASSWORD   keystore password
+#   KEY_ALIAS           key alias inside the keystore
+#   KEY_PASSWORD        password for that key alias
+
+on:
+  push:
+    tags:
+      - "play-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (e.g. 1.0.0, no leading v)"
+        required: true
+        type: string
+
+permissions:
+  contents: write # needed to create the GitHub Release + upload assets
+
+jobs:
+  build:
+    name: Build signed AAB (play flavor) + publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            V="${{ inputs.version }}"
+          else
+            # Strip leading "play-v" from the pushed tag.
+            V="${GITHUB_REF_NAME#play-v}"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          # versionCode formula must match the standard workflow:
+          # major*10000 + minor*100 + patch (e.g. 1.2.3 → 10203).
+          IFS='.' read -r MAJ MIN PAT <<< "$V"
+          MAJ=${MAJ:-0}; MIN=${MIN:-0}; PAT=${PAT:-0}
+          CODE=$(( MAJ * 10000 + MIN * 100 + PAT ))
+          echo "versionCode=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Resolved version=$V versionCode=$CODE"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        run: |
+          SDKMAN=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1)
+          if [ -z "$SDKMAN" ]; then
+            echo "::error::sdkmanager not found under $ANDROID_HOME/cmdline-tools"
+            exit 1
+          fi
+          echo "Using sdkmanager at: $SDKMAN"
+          yes | "$SDKMAN" --licenses >/dev/null 2>&1 || true
+          "$SDKMAN" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install root dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install client dependencies
+        run: bun install --frozen-lockfile
+        working-directory: client
+
+      - name: Build client (Vite, Play build)
+        env:
+          # Bake the version into the bundle. The native build reads the real
+          # version from App.getInfo() instead, but this is used as a fallback.
+          VITE_UPDATE_REPO: ${{ github.repository }}
+          VITE_CAPACITOR_BUILD: "true"
+          # Disable the in-app APK self-updater for Play builds. Play policy
+          # forbids installing other APKs; updates come from the Play Store.
+          VITE_PLAY_BUILD: "true"
+        run: bun run build
+        working-directory: client
+
+      - name: Sync Capacitor (copy web build into Android project)
+        run: bunx cap sync android
+
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 secret is not set. Set it in repo Settings → Secrets before running this workflow."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/mavino-release.keystore"
+          echo "Keystore decoded to $RUNNER_TEMP/mavino-release.keystore"
+
+      - name: Build signed release AAB (play flavor)
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/mavino-release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_NAME: ${{ steps.ver.outputs.version }}
+          VERSION_CODE: ${{ steps.ver.outputs.versionCode }}
+        working-directory: android
+        run: |
+          # bundleRelease produces an .aab (Android App Bundle), which is what
+          # the Play Store requires. The "play" flavor strips
+          # REQUEST_INSTALL_PACKAGES via src/play/AndroidManifest.xml.
+          ./gradlew bundlePlayRelease \
+            -PversionName="$VERSION_NAME" \
+            -PversionCode="$VERSION_CODE" \
+            -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+
+      - name: Locate built AAB
+        id: aab
+        run: |
+          AAB=$(find android/app/build/outputs/bundle/playRelease -name "*.aab" | head -1)
+          if [ -z "$AAB" ]; then
+            echo "::error::No release AAB found in android/app/build/outputs/bundle/playRelease"
+            exit 1
+          fi
+          echo "path=$AAB" >> "$GITHUB_OUTPUT"
+          # Stage under a clean, versioned name for the release asset.
+          STAGED="$RUNNER_TEMP/mavino-${{ steps.ver.outputs.version }}-play.aab"
+          cp "$AAB" "$STAGED"
+          echo "staged=$STAGED" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: play-v${{ steps.ver.outputs.version }}
+          name: Play Store v${{ steps.ver.outputs.version }}
+          body: |
+            Signed Android App Bundle (AAB) for Google Play Store upload.
+
+            **Flavor:** `play` (REQUEST_INSTALL_PACKAGES stripped, in-app
+            self-updater disabled — updates flow through the Play Store).
+
+            **How to publish:**
+            1. Download `mavino-${{ steps.ver.outputs.version }}-play.aab`
+            2. Go to Play Console → Production → Create release
+            3. Upload the AAB, fill release notes, review, start rollout.
+          generate_release_notes: false
+          files: |
+            ${{ steps.aab.outputs.staged }}
