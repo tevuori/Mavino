@@ -43,6 +43,9 @@ const highlightField = StateField.define<DecorationSet>({
             Decoration.line({ class: "cm-teacher-highlight-line" }).range(from),
           ]);
         }
+        // Defensive: an empty mark range would throw "Mark decorations may
+        // not be empty" — clear instead of crashing.
+        if (to <= from) return Decoration.none;
         return Decoration.set([
           Decoration.mark({ class: "cm-teacher-highlight" }).range(from, to),
         ]);
@@ -64,10 +67,14 @@ function resolveRange(
   if (typeof cmd.posStart === "number" && typeof cmd.posEnd === "number") {
     const from = Math.max(0, Math.min(cmd.posStart, doc.length));
     const to = Math.max(from, Math.min(cmd.posEnd, doc.length));
+    // Empty range (e.g. stale offsets clamped to doc.length) would crash
+    // CodeMirror with "Mark decorations may not be empty" — treat as no match.
+    if (to <= from) return null;
     return { from, to };
   }
   if (typeof cmd.pos === "number") {
     const p = Math.max(0, Math.min(cmd.pos, doc.length));
+    if (p >= doc.length) return null;
     return { from: p, to: Math.min(p + 1, doc.length) };
   }
   // Line range (1-based, inclusive).
