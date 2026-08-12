@@ -21,11 +21,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Activity, RefreshCw, Loader2, AlertCircle, Trash2, TrendingDown,
-  Brain, Clock, Sparkles, Target, Zap, CalendarClock, ChevronRight,
+  Brain, Clock, Sparkles, Target, CalendarClock, ChevronRight,
 } from "lucide-react";
 import {
   pulseApi,
-  type PulseState, type PulseData, type PulseConcept, type PulseExam,
+  type PulseState, type PulseConcept, type PulseExam,
   type PulseForecastPoint,
 } from "../../services/pulse";
 import { useWindows } from "../../store/windows";
@@ -36,13 +36,6 @@ import type { WindowInstance } from "../../store/windows";
 function fmtDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
-
-function readinessColor(pct: number): string {
-  if (pct < 0) return "text-ink-muted";
-  if (pct >= 80) return "text-emerald-400";
-  if (pct >= 60) return "text-amber-400";
-  return "text-red-400";
 }
 
 function readinessStroke(pct: number): string {
@@ -337,9 +330,16 @@ export default function PulseApp({ win: _win }: { win: WindowInstance }) {
     open({ appId: "flashcards", title: "Flashcards", icon: "Brain", payload: { deckId } });
   };
 
-  const addToCrunch = (_concept: PulseConcept) => {
-    // Open Crunch so the user can re-insert the at-risk concept into their plan.
-    open({ appId: "crunch", title: "Crunch", icon: "CalendarClock" });
+  const addToCrunch = (concept: PulseConcept) => {
+    // Open Crunch and surface the at-risk concept there with a "Review now" CTA.
+    // Uses the same sessionStorage signal pattern as `crunch:focus:` so the
+    // existing Crunch window is reused (not duplicated) and the concept is
+    // highlighted on load.
+    const id = open({ appId: "crunch", title: "Crunch", icon: "CalendarClock" });
+    sessionStorage.setItem(
+      `crunch:pulse-at-risk:${id}`,
+      JSON.stringify({ label: concept.label, deckIds: concept.deckIds }),
+    );
   };
 
   const data = state?.data ?? null;

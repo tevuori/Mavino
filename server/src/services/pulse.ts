@@ -140,9 +140,6 @@ const AT_RISK_THRESHOLD = 0.7;
 /** Minimum half-life (days) for a newly-learned card with no reviews. */
 const MIN_HALF_LIFE = 0.5;
 
-/** Default half-life (days) for a card with reviews but no SM-2 interval. */
-const DEFAULT_HALF_LIFE = 3;
-
 // ----- helpers -----
 
 function toDateStr(d: Date): string {
@@ -276,7 +273,6 @@ export async function startBuildPulse(
 /** Build the full PulseData forecast for a user. Deterministic — no LLM. */
 export async function buildPulseData(userId: string): Promise<PulseData> {
   const now = new Date();
-  const todayStr = toDateStr(now);
 
   // 1. Load flashcard decks + cards + reviews.
   const [decks, reviews] = await Promise.all([
@@ -419,7 +415,7 @@ export async function buildPulseData(userId: string): Promise<PulseData> {
   //    Atlas concepts link to flashcard decks by text matching. We map
   //    each concept to its linked decks' cards and aggregate mastery.
   const atlasRow = await prisma.atlasGraph.findUnique({ where: { userId } });
-  let concepts: PulseConcept[] = [];
+  const concepts: PulseConcept[] = [];
 
   if (atlasRow?.status === "ready") {
     try {

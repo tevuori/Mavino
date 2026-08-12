@@ -390,6 +390,10 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
   const [error, setError] = useState<string | null>(null);
   const [showSetup, setShowSetup] = useState(false);
   const [focusDate, setFocusDate] = useState<string | null>(null);
+  // At-risk concept surfaced by the Pulse app ("Crunch" button on an at-risk
+  // row). When set, a banner is shown with a "Review now" CTA that opens the
+  // Flashcards app on the concept's linked deck.
+  const [pulseAtRisk, setPulseAtRisk] = useState<{ label: string; deckIds: string[] } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { open } = useWindows();
 
@@ -445,6 +449,20 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
       setFocusDate(focus);
     }
   }, [state?.data, win?.id]);
+
+  // Check for an at-risk concept passed by the Pulse app's "Crunch" button.
+  useEffect(() => {
+    if (!win?.id) return;
+    const raw = sessionStorage.getItem(`crunch:pulse-at-risk:${win.id}`);
+    if (!raw) return;
+    sessionStorage.removeItem(`crunch:pulse-at-risk:${win.id}`);
+    try {
+      const parsed = JSON.parse(raw) as { label: string; deckIds: string[] };
+      setPulseAtRisk(parsed);
+    } catch {
+      // ignore malformed signal
+    }
+  }, [win?.id]);
 
   const generate = async (exams: CrunchExamInput[], dailyMinutes: number) => {
     setGenerating(true);
@@ -578,6 +596,34 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
         <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
           <TrendingDown size={14} />
           <span>You're {behindPct}% behind on your study plan. Catch up to stay on track for your exams.</span>
+        </div>
+      )}
+
+      {/* At-risk concept surfaced by Pulse */}
+      {pulseAtRisk && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+          <TrendingDown size={14} className="shrink-0" />
+          <span className="min-w-0 flex-1">
+            Pulse predicts <span className="font-semibold">{pulseAtRisk.label}</span> will drop below mastery before your exam.
+          </span>
+          {pulseAtRisk.deckIds[0] && (
+            <button
+              onClick={() => {
+                open({ appId: "flashcards", title: "Flashcards", icon: "Brain", payload: { deckId: pulseAtRisk.deckIds[0] } });
+                setPulseAtRisk(null);
+              }}
+              className="flex shrink-0 items-center gap-1 rounded-md bg-accent/15 px-2 py-1 text-[11px] font-medium text-accent transition hover:bg-accent/25"
+            >
+              <Brain size={12} /> Review now
+            </button>
+          )}
+          <button
+            onClick={() => setPulseAtRisk(null)}
+            className="shrink-0 rounded-md p-0.5 text-red-300/60 transition hover:text-red-200"
+            aria-label="Dismiss"
+          >
+            <X size={13} />
+          </button>
         </div>
       )}
 
