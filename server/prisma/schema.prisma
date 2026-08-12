@@ -80,6 +80,7 @@ model User {
   compassProjects    CompassProject[]
   compassPapers      CompassPaper[]
   compassCitations   CompassCitation[]
+  echoSessions       EchoSession[]
 }
 
 // ===== Password reset tokens =====
@@ -1371,4 +1372,55 @@ model CrunchPlan {
   updatedAt    DateTime @updatedAt
 
   @@index([userId])
+}
+
+// ===== Echo (Pro-tier live lecture companion) =====
+// A real-time lecture companion: streams audio from the client (MediaRecorder
+// chunks ~5-10s), transcribes each chunk via the OpenAI-compatible Whisper
+// endpoint, matches the running transcript against the user's Atlas concepts
+// in real time (surfacing known/weak/new terms as chips), and on stop
+// generates a structured note + flashcard suggestions for new terms.
+//
+// One row per lecture session (a user can have many over time, but only one
+// active at a time). The transcript + matched concepts + new terms are stored
+// as JSON in `transcript` / `concepts` / `newTerms`. The build pattern is
+// chunk-by-chunk (not fire-and-forget): each POST /chunk transcribes +
+// updates the row synchronously, and the client polls GET / for the live
+// view. On POST /stop, an LLM pass generates the final structured note
+// (reusing the lecture note-style prompts) and saves it as a Note linked to
+// the session.
+
+model EchoSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String   @default("")
+  // "active" | "completed" | "failed"
+  status      String   @default("active")
+  language    String   @default("en")
+  // JSON array of { start, end, text } transcript segments (absolute seconds
+  // from session start). Appended to on each chunk.
+  transcript  String   @default("[]")
+  // JSON array of matched concepts: { id, label, type, mastery, weak,
+  // firstMentionedSec, mentionCount, definition }. Re-derived from the full
+  // transcript on each chunk (cheap — text matching over the user's Atlas
+  // concept labels).
+  concepts    String   @default("[]")
+  // JSON array of new terms: phrases mentioned in the transcript that are NOT
+  // in the user's Atlas (potential new concepts). Extracted by the LLM on
+  // stop; during the live session this is empty.
+  newTerms    String   @default("[]")
+  // Set when the session is stopped and the LLM generates a structured note.
+  noteId      String?
+  durationSec Int      @default(0)
+  // JSON blob for extra info: chunkCount, wordCount, llmModel, etc.
+  meta        String   @default("{}")
+  error       String   @default("")
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
 }

@@ -19,6 +19,7 @@ import MobileEditor from "./MobileEditor";
 import MobileMoodle from "./MobileMoodle";
 import MobileAtlas from "./MobileAtlas";
 import MobileCrunch from "./MobileCrunch";
+import MobileEcho from "./MobileEcho";
 import { MobileContainer, MobileEmpty, MobileHeader } from "./MobileUi";
 
 /** Optional payload carried when opening a tool (e.g. a note source for Study). */
@@ -56,6 +57,7 @@ const SCREENS: Partial<Record<MobileTool, (props: { onClose: () => void; onOpenT
   moodle: (props) => <MobileMoodle {...props} />,
   atlas: (props) => <MobileAtlas {...props} />,
   crunch: (props) => <MobileCrunch {...props} />,
+  echo: (props) => <MobileEcho {...props} />,
 };
 
 export default function MobileToolPage({

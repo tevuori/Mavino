@@ -129,7 +129,7 @@ function slugify(s: string, fallback: string): string {
 }
 
 /** Case-insensitive whole-word / phrase substring match. */
-function textContains(haystack: string, needle: string): boolean {
+export function textContains(haystack: string, needle: string): boolean {
   if (!needle || !haystack) return false;
   // Escape regex metacharacters in the needle.
   const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -139,6 +139,19 @@ function textContains(haystack: string, needle: string): boolean {
     ? escaped
     : `\\b${escaped}\\b`;
   return new RegExp(pattern, "i").test(haystack);
+}
+
+/** Count case-insensitive occurrences of a needle in haystack (whole-word for
+ *  single-word labels, plain substring for multi-word labels). Mirrors
+ *  `textContains` but returns the match count. */
+export function countOccurrences(haystack: string, needle: string): number {
+  if (!needle || !haystack) return 0;
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = needle.includes(" ")
+    ? escaped
+    : `\\b${escaped}\\b`;
+  const matches = haystack.match(new RegExp(pattern, "gi"));
+  return matches ? matches.length : 0;
 }
 
 // ----- status / fetch -----

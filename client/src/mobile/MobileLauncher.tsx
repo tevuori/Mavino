@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, BookOpen, Brain, FileText, Flame, Folder, Globe, GraduationCap, Mic, Music2, Network, NotebookPen, PenTool, Settings, Timer, BellRing, Search, Lock, CalendarClock } from "lucide-react";
+import { ArrowLeft, BookOpen, Brain, FileText, Flame, Folder, Globe, GraduationCap, Mic, Music2, Network, NotebookPen, PenTool, Settings, Timer, BellRing, Search, Lock, CalendarClock, Radio } from "lucide-react";
 import { useFeatures, type SubscriptionTier } from "../store/features";
 import { APP_MAP } from "../apps/registry";
 import type { AppId } from "../store/windows";
 import type { MobileToolPayload } from "./MobileToolPage";
 
-export type MobileTool = "notes" | "study" | "teach" | "flashcards" | "focus" | "files" | "voice" | "grades" | "vut" | "habits" | "whiteboard" | "browser" | "reminders" | "ntfy" | "settings" | "editor" | "moodle" | "atlas" | "crunch";
+export type MobileTool = "notes" | "study" | "teach" | "flashcards" | "focus" | "files" | "voice" | "grades" | "vut" | "habits" | "whiteboard" | "browser" | "reminders" | "ntfy" | "settings" | "editor" | "moodle" | "atlas" | "crunch" | "echo";
 
 /** Maps a mobile tool id to the desktop AppId used for availability checks. */
 const TOOL_TO_APP_ID: Record<MobileTool, AppId> = {
@@ -28,6 +28,7 @@ const TOOL_TO_APP_ID: Record<MobileTool, AppId> = {
   moodle: "moodle",
   atlas: "atlas",
   crunch: "crunch",
+  echo: "echo",
 };
 
 const ALL_APPS: { id: MobileTool; name: string; description: string; icon: typeof NotebookPen }[] = [
@@ -38,6 +39,7 @@ const ALL_APPS: { id: MobileTool; name: string; description: string; icon: typeo
   { id: "ntfy", name: "Ntfy", description: "Messages and automations", icon: Music2 }, { id: "settings", name: "Settings", description: "Account and preferences", icon: Settings }, { id: "editor", name: "Editor", description: "Text and code files", icon: FileText },
   { id: "atlas", name: "Atlas", description: "Your global knowledge map", icon: Network },
   { id: "crunch", name: "Crunch", description: "Adaptive exam prep planner", icon: CalendarClock },
+  { id: "echo", name: "Echo", description: "Live lecture companion", icon: Radio },
 ];
 
 const TIER_RANK: Record<SubscriptionTier, number> = { free: 0, paid: 1, pro: 2 };

@@ -172,6 +172,24 @@ export async function workspaceSummary(userId: string): Promise<string> {
   if (compassCount > 0) {
     parts.push(`Compass: ${compassCount} research project${compassCount !== 1 ? "s" : ""}`);
   }
+  // Echo (Pro): report if a live lecture session is active so the model can
+  // proactively ask about it or surface matched concepts.
+  const echoActive = await prisma.echoSession.findFirst({
+    where: { userId, status: "active" },
+    orderBy: { startedAt: "desc" },
+  });
+  if (echoActive) {
+    try {
+      const transcript = JSON.parse(echoActive.transcript) as unknown[];
+      const concepts = JSON.parse(echoActive.concepts) as { weak?: boolean }[];
+      const wordCount = (transcript as { text: string }[]).reduce((n, s) => n + (s.text?.split(/\s+/).filter(Boolean).length ?? 0), 0);
+      const weakCount = concepts.filter((c) => c.weak).length;
+      const elapsedMin = Math.round((Date.now() - new Date(echoActive.startedAt).getTime()) / 60000);
+      parts.push(`Echo: live lecture active (${elapsedMin}m, ${wordCount} words${weakCount > 0 ? `, ${weakCount} weak concepts mentioned` : ""})`);
+    } catch {
+      // ignore malformed echo data
+    }
+  }
   return parts.join(" | ");
 }
 
@@ -305,6 +323,9 @@ export async function buildSystemPrompt(
   const compassLine = isProTier
     ? "- Compass (Pro — research & literature review assistant): compass_list_projects (list the user's research projects with paper counts), compass_get_project (get a project's full paper corpus + citation graph + review status), compass_search (search for related academic work — uses the project's research question + concepts to enrich the query), compass_citation_graph (view which papers cite which), compass_reading_gaps (analyze corpus gaps: recency, coverage, citation balance — use when the user asks what's missing), compass_draft_review (check the literature review draft status/content), open_compass (open the Compass app, optionally focused on a project). Compass is for thesis/seminar paper/literature review work — distinct from exam prep.\n"
     : "";
+  const echoLine = isProTier
+    ? "- Echo (Pro — live lecture companion): echo_active_session (check if a live lecture session is active + current transcript stats + matched concepts from Atlas), echo_session_history (list past captured lectures), echo_session_detail (get a past session's full transcript + concepts + new terms with suggested flashcards), open_echo (open the Echo app). Echo transcribes a live lecture in real time, surfaces concepts from the user's Atlas as they're mentioned (green = known, red = weak), and on stop generates a structured note + extracts new terms for flashcards. If the workspace summary shows 'Echo: live lecture active', proactively ask if they want a summary of what's been covered so far.\n"
+    : "";
   const now = new Date();
   const dateLine = `Current date/time: ${now.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short", timeZone: tz })} (ISO: ${now.toISOString()}). The user's timezone is ${tz} — interpret any wall-clock times the user mentions (e.g. "3pm", "tomorrow at 9") as being in ${tz}, and emit fireAt / dueDate timestamps as ISO 8601 with the ${tz} offset (or convert to UTC with a trailing Z). Use this as "today" when the user says "today" — do not guess the date. Calendar/task tools accept ISO 8601 timestamps (e.g. ${now.toISOString().slice(0, 10)}T00:00:00Z).`;
   return `You are Mavino, the user's personal workspace assistant living inside their Mavino Student OS desktop. You can see and act on the user's workspace through tools.
@@ -334,7 +355,7 @@ ${browserBlock}${sandboxLine}- Auto notetaking: create_notes_from_url (fetch a w
 - Profile: set_user_name (save what to call the user — use it the moment they tell you their name or ask you to change it), get_user_name
 - Memory: remember (store a fact/preference/goal the user wants you to recall in future turns), recall_memory (search stored memories), forget_memory (delete a memory), list_memories (list all). The 5 most recent memories are already in your context below.
 - Item links: list_links (list items attached to a note/task/flashcardDeck/calendarEvent/file — links are symmetric), link_items (attach two items together), unlink_items (remove an attachment). Use these when the user asks what's attached to a task/note/event, or to attach/detach items. The user creates most links by dragging one item onto another in the desktop UI.
-${mapsBlock}${atlasLine}${crunchLine}${compassLine}
+${mapsBlock}${atlasLine}${crunchLine}${compassLine}${echoLine}
 Guidelines:
 - Be concise and direct. Prefer action over explanation.
 - When the user refers to a file by name, it is most likely in the "Recently opened files" list below. Use its id with read_file/edit_file. If not found there, use search_files. If the file doesn't exist yet, use create_file.
