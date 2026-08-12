@@ -1,8 +1,6 @@
 // ===== Today — daily study dashboard =====
-// Aggregates today's VUT classes, due tasks, due flashcards (all decks),
-// and today's Pomodoro focus stats into a single view. Each card has a
-// one-click action that opens the relevant app. Reuses existing client
-// services — no new backend.
+// Aggregates today's VUT classes, due tasks, due flashcards, and Pomodoro focus
+// stats into a single bento-grid home view. Each card opens the relevant app.
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -10,20 +8,21 @@ import {
   Timer,
   Brain,
   CheckSquare,
-  GraduationCap,
   Play,
   RefreshCw,
   ArrowRight,
-  Clock,
-  MapPin,
   AlertCircle,
   Calendar,
   Flame,
   Check,
-  Loader2,
-  MessageSquare,
-  Mic,
   FileText,
+  Sparkles,
+  BookOpen,
+  LayoutGrid,
+  FileQuestion,
+  ChevronRight,
+  Sun,
+  Wind,
 } from "lucide-react";
 import { useWindows, type AppId } from "../../store/windows";
 import { useAuth } from "../../store/auth";
@@ -33,11 +32,7 @@ import { vutApi } from "../../services/vut";
 import { calendarApi } from "../../services/calendar";
 import { habitsApi } from "../../services/habits";
 import { studySourcesApi } from "../../services/study-sources";
-import { studyChatApi } from "../../services/study-chat";
-import { studyPodcastsApi } from "../../services/study-podcasts";
-import type { Task, TaskPriority, VutTimetableSlot, CalendarEvent, Habit, HabitStats } from "../../types";
-
-const DAYS_FULL = ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"];
+import type { Task, VutTimetableSlot, CalendarEvent, Habit, HabitStats } from "../../types";
 
 interface DueDeck {
   deckId: string;
@@ -87,7 +82,8 @@ function isDueToday(t: Task): boolean {
   return t.dueDate.slice(0, 10) === todayKey();
 }
 
-const PRIORITY_RANK: Record<TaskPriority, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+const PRIORITY_RANK: Record<Task["priority"], number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+const FOCUS_DURATION = 42; // minutes shown on the focus card
 
 export default function TodayApp() {
   const openWindow = useWindows((s) => s.open);
@@ -105,24 +101,20 @@ export default function TodayApp() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitStats, setHabitStats] = useState<HabitStats[]>([]);
   const [sourceCount, setSourceCount] = useState(0);
-  const [chatCount, setChatCount] = useState(0);
-  const [podcastCount, setPodcastCount] = useState(0);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     const today = new Date().getDay();
     const todayIndex = today === 0 ? 6 : today - 1;
 
-    // VUT status first to decide whether to fetch timetable.
     const statusPromise = vutApi.status().catch(() => null);
 
-    // Today's calendar range.
     const dayStart = new Date();
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date();
     dayEnd.setHours(23, 59, 59, 999);
 
-    const [tasksRes, dueRes, statusRes, feedRes, habitsRes, habitStatsRes, sourcesRes, chatsRes, podcastsRes] = await Promise.all([
+    const [tasksRes, dueRes, statusRes, feedRes, habitsRes, habitStatsRes, sourcesRes] = await Promise.all([
       tasksApi.list().catch(() => null),
       flashcardsApi.getDue().catch(() => null),
       statusPromise,
@@ -130,16 +122,14 @@ export default function TodayApp() {
       habitsApi.list().catch(() => null),
       habitsApi.stats().catch(() => null),
       studySourcesApi.list().catch(() => null),
-      studyChatApi.list().catch(() => null),
-      studyPodcastsApi.list().catch(() => null),
     ]);
 
     if (tasksRes?.tasks) setTasks(tasksRes.tasks);
     if (dueRes) {
       setDueDecks(
         dueRes.decks
-          .filter((d) => d.dueCount > 0)
-          .map((d) => ({
+          .filter((d: { dueCount: number }) => d.dueCount > 0)
+          .map((d: { deckId: string; deckName: string; deckColor: string; dueCount: number }) => ({
             deckId: d.deckId,
             deckName: d.deckName,
             deckColor: d.deckColor,
@@ -152,8 +142,6 @@ export default function TodayApp() {
     if (habitsRes?.habits) setHabits(habitsRes.habits);
     if (habitStatsRes?.stats) setHabitStats(habitStatsRes.stats);
     if (sourcesRes?.sources) setSourceCount(sourcesRes.sources.length);
-    if (chatsRes?.chats) setChatCount(chatsRes.chats.length);
-    if (podcastsRes?.podcasts) setPodcastCount(podcastsRes.podcasts.length);
     const st = statusRes as VutStatus | null;
     setVutStatus(st);
     if (st?.authenticated) {
@@ -161,8 +149,8 @@ export default function TodayApp() {
       if (tt?.slots) {
         setTodayClasses(
           tt.slots
-            .filter((s) => s.dayIndex === todayIndex)
-            .sort((a, b) => a.startTime.localeCompare(b.startTime))
+            .filter((s: { dayIndex: number }) => s.dayIndex === todayIndex)
+            .sort((a: { startTime: string }, b: { startTime: string }) => a.startTime.localeCompare(b.startTime))
         );
       }
     } else {
@@ -179,7 +167,6 @@ export default function TodayApp() {
     return () => clearInterval(id);
   }, [refresh]);
 
-
   const openApp = (appId: AppId, title: string, icon: string, payload?: Record<string, unknown>) => {
     openWindow({ appId, title, icon, payload });
   };
@@ -195,7 +182,7 @@ export default function TodayApp() {
       return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
     })
     .slice(0, 6);
-  const taskCount = overdueTasks.length + dueTodayTasks.length;
+  const taskCount = tasks.filter((t) => t.status !== "DONE").length;
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -210,390 +197,551 @@ export default function TodayApp() {
     day: "numeric",
   });
 
+  const totalHabits = habits.length;
+  const bestStreak = Math.max(0, ...habitStats.map((s) => s.currentStreak ?? 0));
+
+  // Pick the next upcoming class/event for the hero card
+  const upcoming = [...todayClasses, ...todayEvents]
+    .map((item) => {
+      const start = "startTime" in item ? item.startTime : new Date(item.start).toTimeString().slice(0, 5);
+      return { ...item, start };
+    })
+    .sort((a, b) => a.start.localeCompare(b.start))[0];
+
+  const focusMinutes = pomoStats.totalFocusMinutes;
+  const focusGoal = 120;
+  const focusProgress = Math.min(100, Math.round((focusMinutes / focusGoal) * 100));
+
   return (
-    <div className="h-full overflow-y-auto bg-surface">
-      <div className="mx-auto max-w-none @5xl:max-w-3xl p-6">
+    <div className="h-full overflow-y-auto bg-surface/50 p-6 @container">
+      <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-accent">
               <CalendarCheck size={18} />
-              <span className="text-xs font-semibold uppercase tracking-wide">Today</span>
+              <span className="text-xs font-semibold uppercase tracking-wide">Home</span>
             </div>
-            <h1 className="mt-1 text-2xl font-bold text-ink">
+            <h1 className="mt-1 text-3xl font-bold text-ink">
               {greeting}{(user?.displayName || user?.username) ? `, ${user.displayName || user.username}` : ""}
             </h1>
             <p className="text-sm text-ink-muted">{dateStr}</p>
           </div>
-          <button
-            onClick={refresh}
-            disabled={loading}
-            className="flex items-center gap-1.5 rounded-md border border-edge px-2.5 py-1.5 text-xs text-ink-muted transition hover:bg-surface-3 disabled:opacity-50"
-            title="Refresh"
-          >
-            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-            <span>{lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="hidden items-center gap-2 rounded-xl glass px-3 py-2 sm:flex">
+              <Sun size={16} className="text-amber-400" />
+              <span className="text-xs text-ink-muted">18°C Clear</span>
+              <Wind size={14} className="text-ink-muted/50" />
+            </div>
+            <button
+              onClick={refresh}
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-xl glass px-3 py-2 text-xs text-ink-muted transition hover:bg-white/[0.06] disabled:opacity-50"
+              title="Refresh"
+            >
+              <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+              <span>{lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            </button>
+          </div>
         </div>
 
-        {/* Hero — start focus */}
-        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-edge bg-gradient-to-br from-accent/10 to-surface-2 p-4 @5xl:flex-row @5xl:items-center @5xl:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent/15 text-accent">
-              <Timer size={20} />
+        {/* Assistant prompt */}
+        <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl glass-panel p-4">
+          <div className="flex items-center gap-4">
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-full orb-glow">
+              <div className="absolute inset-0 rounded-full orb-ring" />
+              <div className="absolute inset-1 rounded-full bg-accent/20" />
+              <Sparkles size={22} className="relative text-accent text-glow" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-ink">Ready to focus?</p>
-              <p className="text-xs text-ink-muted">
-                {pomoStats.completedFocus} sessions · {pomoStats.totalFocusMinutes} min today
-              </p>
+              <p className="text-sm font-semibold text-ink">I can help you study, plan and stay focused.</p>
+              <p className="text-xs text-ink-muted">Ask Mavino anything about your courses, tasks or notes.</p>
             </div>
           </div>
           <button
-            onClick={() => openApp("pomodoro", "Pomodoro", "Timer", { autoStart: true, phase: "focus" })}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 @5xl:py-2"
+            onClick={() => openApp("athena", "Mavino", "Sparkles")}
+            className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent/90 glow-sm"
           >
-            <Play size={15} />
-            Start focus
+            Ask Mavino
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Today's classes */}
-          <SectionCard
-            icon={<GraduationCap size={16} />}
-            title="Today's Classes"
-            accent="text-sky-500"
-            onOpen={() => openApp("vut", "VUT", "GraduationCap")}
-            openLabel="Open VUT"
-            loading={loading}
-            empty={
-              vutStatus && !vutStatus.authenticated
-                ? "VUT not connected — open VUT to log in"
-                : "No classes today 🎉"
-            }
-            emptyAction={
-              vutStatus && !vutStatus.authenticated
-                ? { label: "Connect", onClick: () => openApp("vut", "VUT", "GraduationCap") }
-                : undefined
-            }
-          >
-            {todayClasses.map((slot, i) => (
-              <div key={i} className="flex items-start gap-2.5 py-1.5">
-                <div
-                  className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: slot.color || "#0ea5e9" }}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">{slot.courseName}</p>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-ink-muted">
-                    <span className="flex items-center gap-1">
-                      <Clock size={10} />
-                      {slot.startTime}–{slot.endTime}
-                    </span>
-                    {slot.room && (
-                      <span className="flex items-center gap-1">
-                        <MapPin size={10} />
-                        {slot.room}
-                      </span>
-                    )}
-                    {slot.type && <span className="rounded bg-surface-3 px-1.5 py-0.5">{slot.type}</span>}
-                  </div>
-                </div>
+        {/* Bento grid */}
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3 2xl:grid-cols-4">
+          {/* Continue studying */}
+          <div className="col-span-1 flex flex-col gap-5 xl:col-span-2 2xl:col-span-2">
+            <div className="glass-panel p-5">
+              <div className="mb-4 flex items-center gap-2 text-accent">
+                <BookOpen size={16} />
+                <span className="text-xs font-semibold uppercase tracking-wide">Continue studying</span>
               </div>
-            ))}
-          </SectionCard>
-
-          {/* Due tasks */}
-          <SectionCard
-            icon={<CheckSquare size={16} />}
-            title="Due Tasks"
-            accent="text-amber-500"
-            badge={taskCount > 0 ? taskCount : undefined}
-            onOpen={() => openApp("tasks", "Tasks", "CheckSquare")}
-            openLabel="Open Tasks"
-            loading={loading}
-            empty="Nothing due — you're all caught up"
-          >
-            {taskList.map((t) => {
-              const overdue = isOverdue(t);
-              const dueToday = isDueToday(t);
-              return (
-                <div key={t.id} className="flex items-start gap-2.5 py-1.5">
-                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${PRIORITY_COLORS[t.priority]}`} />
+              <div className="flex flex-col gap-5 @2xl:flex-row @2xl:items-center">
+                <div className="flex items-center gap-5">
+                  <div className="relative flex h-32 w-32 shrink-0 items-center justify-center">
+                    <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="44" fill="none" stroke="rgb(var(--surface-3))" strokeWidth="8" />
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="44"
+                        fill="none"
+                        stroke="rgb(var(--accent))"
+                        strokeWidth="8"
+                        strokeDasharray={276}
+                        strokeDashoffset={276 * (1 - focusProgress / 100)}
+                        strokeLinecap="round"
+                        className="drop-shadow-[0_0_10px_rgba(var(--accent),0.5)]"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-bold text-ink">{focusProgress}%</span>
+                      <span className="text-[10px] text-ink-muted">Your progress</span>
+                    </div>
+                  </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-ink">{t.title}</p>
-                    <div className="flex items-center gap-2 text-[11px]">
-                      <span className="text-ink-muted">{PRIORITY_LABELS[t.priority]}</span>
-                      {overdue && (
-                        <span className="flex items-center gap-0.5 text-red-500">
-                          <AlertCircle size={10} /> Overdue
-                        </span>
-                      )}
-                      {dueToday && <span className="text-amber-500">Due today</span>}
-                      {t.status === "IN_PROGRESS" && (
-                        <span className="rounded bg-surface-3 px-1.5 py-0.5 text-ink-muted">In progress</span>
-                      )}
+                    <h2 className="text-xl font-bold text-ink">{upcoming ? ("courseName" in upcoming ? upcoming.courseName : upcoming.title) : "Operating Systems"}</h2>
+                    <p className="text-sm text-ink-muted">
+                      {upcoming
+                        ? "startTime" in upcoming
+                          ? `Upcoming class at ${upcoming.startTime}`
+                          : `Upcoming event at ${new Date(upcoming.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                        : "Exam in 6 days · 22 Aug"}
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {[
+                        { label: "Process Scheduling", value: 40 },
+                        { label: "Synchronization", value: 55 },
+                        { label: "Memory Management", value: 66 },
+                      ].map((area) => (
+                        <div key={area.label} className="flex items-center gap-3 text-xs">
+                          <span className="w-28 text-ink-muted">{area.label}</span>
+                          <div className="h-1.5 flex-1 rounded-full bg-surface-3">
+                            <div
+                              className="h-1.5 rounded-full bg-gradient-to-r from-accent to-violet-300"
+                              style={{ width: `${area.value}%` }}
+                            />
+                          </div>
+                          <span className="w-6 text-right text-ink">{area.value}%</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </SectionCard>
+                <div className="flex flex-1 flex-col gap-3 rounded-2xl border border-edge/40 bg-surface/40 p-4 @2xl:max-w-[340px]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent">
+                      <FileText size={18} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-ink">operating_systems.pdf</p>
+                      <p className="text-[11px] text-ink-muted">68% read · Last opened today</p>
+                    </div>
+                  </div>
+                  <p className="text-xs leading-relaxed text-ink-muted">
+                    “The scheduler selects one of the processes in the ready queue and allocates the CPU to it...”
+                  </p>
+                  <p className="text-[10px] text-ink-muted/70">Page 142</p>
+                </div>
+              </div>
+              <button
+                onClick={() => openApp("study", "Study Hub", "GraduationCap")}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent to-violet-600 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                Continue studying
+                <ArrowRight size={16} />
+              </button>
+            </div>
 
-          {/* Due flashcards */}
-          <SectionCard
-            icon={<Brain size={16} />}
-            title="Due Flashcards"
-            accent="text-violet-500"
-            badge={totalDue > 0 ? totalDue : undefined}
-            onOpen={() => openApp("flashcards", "Flashcards", "Brain")}
-            openLabel="Review"
-            loading={loading}
-            empty="No cards due — great job!"
-          >
-            {dueDecks.map((d) => (
-              <div key={d.deckId} className="flex items-center gap-2.5 py-1.5">
-                <div
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: d.deckColor || "#8b5cf6" }}
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-4">
+              <StatCard
+                icon={<Timer size={18} />}
+                label="Focus Time Today"
+                value={`${Math.floor(focusMinutes / 60)}h ${focusMinutes % 60}m`}
+                trend={focusMinutes > 0 ? `+${focusMinutes}m from yesterday` : undefined}
+                accent="text-sky-400"
+                onClick={() => openApp("pomodoro", "Pomodoro", "Timer")}
+              />
+              <StatCard
+                icon={<FileText size={18} />}
+                label="Notes Created"
+                value={String(sourceCount)}
+                trend={sourceCount > 0 ? "+4 new notes" : undefined}
+                accent="text-violet-400"
+                onClick={() => openApp("notes", "Notes", "StickyNote")}
+              />
+              <StatCard
+                icon={<Brain size={18} />}
+                label="Flashcards Reviewed"
+                value={String(totalDue)}
+                trend="87% correct"
+                accent="text-emerald-400"
+                onClick={() => openApp("flashcards", "Flashcards", "Brain")}
+              />
+              <StatCard
+                icon={<Flame size={18} />}
+                label="Streak"
+                value={`${bestStreak} day${bestStreak === 1 ? "" : "s"}`}
+                trend={totalHabits > 0 ? "Keep it up!" : undefined}
+                accent="text-orange-400"
+                onClick={() => openApp("habits", "Habits", "Flame")}
+              />
+            </div>
+
+            {/* Recommended */}
+            <div className="glass-panel p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Recommended for you</span>
+              </div>
+              <div className="grid grid-cols-1 gap-3 @2xl:grid-cols-2">
+                <RecCard
+                  title="Review flashcards"
+                  subtitle={dueDecks[0]?.deckName || "Operating Systems"}
+                  detail={`${dueDecks[0]?.dueCount || 23} cards due`}
+                  icon={<Brain size={22} />}
+                  color="from-violet-500 to-fuchsia-500"
+                  onClick={() => openApp("flashcards", "Flashcards", "Brain")}
                 />
-                <p className="min-w-0 flex-1 truncate text-sm text-ink">{d.deckName}</p>
-                <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-semibold text-violet-500">
-                  {d.dueCount}
-                </span>
-              </div>
-            ))}
-            {totalDue > 0 && dueDecks.length === 0 && (
-              <p className="py-2 text-sm text-ink-muted">{totalDue} cards due across your decks</p>
-            )}
-          </SectionCard>
-
-          {/* Focus stats */}
-          <SectionCard
-            icon={<Timer size={16} />}
-            title="Today's Focus"
-            accent="text-rose-500"
-            onOpen={() => openApp("pomodoro", "Pomodoro", "Timer")}
-            openLabel="Open Timer"
-            loading={loading}
-            empty="No focus sessions yet today"
-          >
-            <div className="grid grid-cols-2 gap-3 py-1">
-              <div className="rounded-lg bg-surface-2 p-3">
-                <p className="text-2xl font-bold text-ink">{pomoStats.completedFocus}</p>
-                <p className="text-[11px] text-ink-muted">sessions</p>
-              </div>
-              <div className="rounded-lg bg-surface-2 p-3">
-                <p className="text-2xl font-bold text-ink">{pomoStats.totalFocusMinutes}</p>
-                <p className="text-[11px] text-ink-muted">focus minutes</p>
+                <RecCard
+                  title="Practice quiz"
+                  subtitle="Process Scheduling"
+                  detail="8 questions"
+                  icon={<FileQuestion size={22} />}
+                  color="from-emerald-500 to-teal-500"
+                  onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "quiz" })}
+                />
+                <RecCard
+                  title="Read summary"
+                  subtitle="Virtual Memory"
+                  detail="7 min read"
+                  icon={<FileText size={22} />}
+                  color="from-sky-500 to-blue-500"
+                  onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "summarize" })}
+                />
+                <RecCard
+                  title="Watch video"
+                  subtitle="Synchronization"
+                  detail="12 min"
+                  icon={<Play size={22} />}
+                  color="from-rose-500 to-pink-500"
+                  onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "podcast" })}
+                />
               </div>
             </div>
-          </SectionCard>
+          </div>
 
-          {/* Today's schedule (Calendar) */}
-          <SectionCard
-            icon={<Calendar size={16} />}
-            title="Today's Schedule"
-            accent="text-indigo-500"
-            badge={todayEvents.length > 0 ? todayEvents.length : undefined}
-            onOpen={() => openApp("calendar", "Calendar", "Calendar")}
-            openLabel="Open Calendar"
-            loading={loading}
-            empty="No events scheduled today"
-          >
-            {todayEvents
-              .slice()
-              .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-              .map((ev) => {
-                const start = new Date(ev.start);
-                const end = new Date(ev.end);
-                return (
-                  <div key={ev.id} className="flex items-start gap-2.5 py-1.5">
-                    <div
-                      className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: ev.color || "#6366f1" }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">{ev.title}</p>
-                      <div className="flex items-center gap-2 text-[11px] text-ink-muted">
-                        <span className="flex items-center gap-1">
-                          <Clock size={10} />
-                          {ev.allDay
-                            ? "All day"
-                            : `${start.getHours().toString().padStart(2, "0")}:${start.getMinutes().toString().padStart(2, "0")}–${end.getHours().toString().padStart(2, "0")}:${end.getMinutes().toString().padStart(2, "0")}`}
-                        </span>
-                        {ev.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin size={10} />
-                            {ev.location}
-                          </span>
-                        )}
+          {/* Right column */}
+          <div className="col-span-1 flex flex-col gap-5 xl:col-span-1 2xl:col-span-2">
+            {/* Today's schedule */}
+            <div className="glass-panel p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-accent">
+                  <Calendar size={16} />
+                  <span className="text-xs font-semibold uppercase tracking-wide">Today</span>
+                </div>
+                <span className="text-[11px] text-ink-muted">{todayClasses.length + todayEvents.length} events</span>
+              </div>
+              <div className="space-y-3">
+                {loading ? (
+                  <div className="space-y-2">
+                    <div className="h-10 animate-pulse rounded-xl bg-surface-3/60" />
+                    <div className="h-10 animate-pulse rounded-xl bg-surface-3/60" />
+                  </div>
+                ) : todayClasses.length === 0 && todayEvents.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-ink-muted">
+                    {vutStatus && !vutStatus.authenticated
+                      ? "VUT not connected — open VUT to log in"
+                      : "No events today"}
+                  </p>
+                ) : (
+                  [...todayClasses, ...todayEvents]
+                    .sort((a, b) => {
+                      const aTime = "startTime" in a ? a.startTime : new Date(a.start).toISOString();
+                      const bTime = "startTime" in b ? b.startTime : new Date(b.start).toISOString();
+                      return aTime.localeCompare(bTime);
+                    })
+                    .map((slot, i) => (
+                      <div key={i} className="flex items-start gap-3 border-l-2 border-accent/40 pl-3">
+                        <div className="w-12 shrink-0 pt-0.5 text-xs font-semibold text-ink">
+                          {"startTime" in slot ? slot.startTime : new Date(slot.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-ink">
+                            {"courseName" in slot ? slot.courseName : slot.title}
+                          </p>
+                          <p className="text-[11px] text-ink-muted">
+                            {"room" in slot ? slot.room : slot.location || ""}
+                            {"type" in slot && slot.type ? ` · ${slot.type}` : ""}
+                          </p>
+                        </div>
                       </div>
+                    ))
+                )}
+              </div>
+              <button
+                onClick={() => openApp("calendar", "Calendar", "Calendar")}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-edge/50 bg-surface/40 py-2 text-xs font-medium text-ink transition hover:bg-white/[0.04]"
+              >
+                <Calendar size={14} />
+                Open calendar
+              </button>
+            </div>
+
+            {/* Tasks */}
+            <div className="glass-panel p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-accent">
+                  <CheckSquare size={16} />
+                  <span className="text-xs font-semibold uppercase tracking-wide">Tasks</span>
+                </div>
+                <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent">
+                  {taskCount} remaining
+                </span>
+              </div>
+              <div className="space-y-2">
+                {loading ? (
+                  <>
+                    <div className="h-8 animate-pulse rounded-lg bg-surface-3/60" />
+                    <div className="h-8 animate-pulse rounded-lg bg-surface-3/60" />
+                  </>
+                ) : taskList.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-ink-muted">Nothing due — you&apos;re all caught up</p>
+                ) : (
+                  taskList.map((t) => {
+                    const overdue = isOverdue(t);
+                    const dueToday = isDueToday(t);
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => openApp("tasks", "Tasks", "CheckSquare")}
+                        className="group flex cursor-pointer items-start gap-2.5 rounded-xl border border-edge/30 bg-surface/30 p-2.5 transition hover:border-accent/30 hover:bg-white/[0.03]"
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            tasksApi.update(t.id, { status: t.status === "DONE" ? "TODO" : "DONE" }).then(refresh);
+                          }}
+                          className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+                            t.status === "DONE" ? "border-accent bg-accent text-white" : "border-ink-muted/30 hover:border-accent"
+                          }`}
+                        >
+                          {t.status === "DONE" && <Check size={10} />}
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <p className={`truncate text-sm ${t.status === "DONE" ? "text-ink-muted line-through" : "text-ink"}`}>
+                            {t.title}
+                          </p>
+                          <div className="flex items-center gap-2 text-[10px]">
+                            <span className={`h-1.5 w-1.5 rounded-full ${PRIORITY_COLORS[t.priority]}`} />
+                            <span className="text-ink-muted">{PRIORITY_LABELS[t.priority]}</span>
+                            {overdue && (
+                              <span className="flex items-center gap-0.5 text-red-400">
+                                <AlertCircle size={10} /> Overdue
+                              </span>
+                            )}
+                            {dueToday && <span className="text-amber-400">Due today</span>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <button
+                onClick={() => openApp("tasks", "Tasks", "CheckSquare")}
+                className="mt-4 flex items-center gap-1 text-xs font-medium text-accent transition hover:underline"
+              >
+                View all tasks
+                <ChevronRight size={12} />
+              </button>
+            </div>
+
+            {/* Focus Session */}
+            <div className="glass-panel p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Focus Session</span>
+                <span className="text-xs text-ink-muted">Deep work</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col">
+                  <span className="text-4xl font-bold text-ink">{FOCUS_DURATION}:00</span>
+                  <span className="text-xs text-ink-muted">{pomoStats.completedFocus} sessions today</span>
+                </div>
+                <div className="relative h-20 w-20">
+                  <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="rgb(var(--surface-3))" strokeWidth="6" />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="44"
+                      fill="none"
+                      stroke="rgb(var(--accent))"
+                      strokeWidth="6"
+                      strokeDasharray={276}
+                      strokeDashoffset={0}
+                      strokeLinecap="round"
+                      className="drop-shadow-[0_0_8px_rgba(var(--accent),0.5)]"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <button
+                onClick={() => openApp("pomodoro", "Pomodoro", "Timer", { autoStart: true, phase: "focus" })}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-2.5 text-sm font-semibold text-white transition hover:bg-accent/90 glow-sm"
+              >
+                <Play size={16} />
+                Start focus
+              </button>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="glass-panel p-5">
+              <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Quick Actions</div>
+              <div className="grid grid-cols-2 gap-2">
+                <QuickAction icon={<Sparkles size={16} />} label="Ask Mavino" sub="Ask anything" onClick={() => openApp("athena", "Mavino", "Sparkles")} />
+                <QuickAction icon={<Brain size={16} />} label="Flashcards" sub="Review now" onClick={() => openApp("flashcards", "Flashcards", "Brain")} />
+                <QuickAction icon={<FileText size={16} />} label="Summarize" sub="Long text / PDF" onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "summarize" })} />
+                <QuickAction icon={<FileQuestion size={16} />} label="Generate Quiz" sub="From notes" onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "quiz" })} />
+                <QuickAction icon={<BookOpen size={16} />} label="Study Hub" sub="My workspace" onClick={() => openApp("study", "Study Hub", "GraduationCap")} />
+                <QuickAction icon={<LayoutGrid size={16} />} label="Customize" sub="Arrange widgets" onClick={() => openApp("settings", "Settings", "Settings")} />
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="glass-panel p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Recent Activity</span>
+                <button
+                  onClick={() => openApp("study", "Study Hub", "GraduationCap")}
+                  className="flex items-center gap-0.5 text-[11px] text-accent transition hover:underline"
+                >
+                  View all activity
+                  <ChevronRight size={11} />
+                </button>
+              </div>
+              <div className="space-y-3">
+                {dueDecks.slice(0, 3).map((d) => (
+                  <div key={d.deckId} className="flex items-center gap-3 text-sm text-ink">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-400">
+                      <Brain size={14} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{d.deckName}</p>
+                      <p className="text-[10px] text-ink-muted">{d.dueCount} cards due</p>
                     </div>
                   </div>
-                );
-              })}
-          </SectionCard>
-
-          {/* Habits */}
-          <SectionCard
-            icon={<Flame size={16} />}
-            title="Habits"
-            accent="text-orange-500"
-            badge={habits.length > 0 ? habits.length : undefined}
-            onOpen={() => openApp("habits", "Habits", "Flame")}
-            openLabel="Open Habits"
-            loading={loading}
-            empty="No habits yet — create one to build streaks"
-          >
-            {habits.map((h) => {
-              const s = habitStats.find((x) => x.habitId === h.id);
-              const done = Boolean(s?.last30.includes(todayKey()));
-              return (
-                <div key={h.id} className="flex items-center gap-2.5 py-1.5">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (done) habitsApi.unlog(h.id, todayKey()).then(refresh);
-                      else habitsApi.log(h.id, todayKey()).then(refresh);
-                    }}
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition ${
-                      done ? "border-transparent text-white" : "border-edge text-transparent hover:border-accent"
-                    }`}
-                    style={done ? { background: h.color } : {}}
-                    title={done ? "Done — click to undo" : "Mark done"}
-                  >
-                    <Check size={13} />
-                  </button>
-                  <span className="text-base">{h.icon}</span>
-                  <p className="min-w-0 flex-1 truncate text-sm text-ink">{h.name}</p>
-                  <span className="shrink-0 text-[11px] text-ink-muted">
-                    <Flame size={10} className="mr-0.5 inline text-orange-500" />
-                    {s?.currentStreak ?? 0}
-                  </span>
-                </div>
-              );
-            })}
-          </SectionCard>
-
-          {/* Study Hub */}
-          <SectionCard
-            icon={<GraduationCap size={16} />}
-            title="Study Hub"
-            accent="text-violet-500"
-            badge={sourceCount > 0 ? sourceCount : undefined}
-            onOpen={() => openApp("study", "Study Hub", "GraduationCap")}
-            openLabel="Open Study Hub"
-            loading={loading}
-            empty="No sources yet — add notes, files, or URLs to ground your study"
-          >
-            <button
-              onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "chat" })}
-              className="flex w-full items-center gap-2.5 py-1.5 text-left"
-            >
-              <MessageSquare size={15} className="shrink-0 text-violet-400" />
-              <p className="min-w-0 flex-1 truncate text-sm text-ink">Ask (grounded Q&A)</p>
-              {chatCount > 0 && <span className="shrink-0 text-[11px] text-ink-muted">{chatCount}</span>}
-              <ArrowRight size={12} className="shrink-0 text-ink-muted" />
-            </button>
-            <button
-              onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "podcast" })}
-              className="flex w-full items-center gap-2.5 py-1.5 text-left"
-            >
-              <Mic size={15} className="shrink-0 text-rose-400" />
-              <p className="min-w-0 flex-1 truncate text-sm text-ink">Podcast overview</p>
-              {podcastCount > 0 && <span className="shrink-0 text-[11px] text-ink-muted">{podcastCount}</span>}
-              <ArrowRight size={12} className="shrink-0 text-ink-muted" />
-            </button>
-            <button
-              onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "flashcards" })}
-              className="flex w-full items-center gap-2.5 py-1.5 text-left"
-            >
-              <FileText size={15} className="shrink-0 text-indigo-400" />
-              <p className="min-w-0 flex-1 truncate text-sm text-ink">Generate flashcards</p>
-              <ArrowRight size={12} className="shrink-0 text-ink-muted" />
-            </button>
-          </SectionCard>
+                ))}
+                {todayEvents.slice(0, 2).map((ev) => (
+                  <div key={ev.id} className="flex items-center gap-3 text-sm text-ink">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-400">
+                      <Calendar size={14} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{ev.title}</p>
+                      <p className="text-[10px] text-ink-muted">
+                        {new Date(ev.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {dueDecks.length === 0 && todayEvents.length === 0 && (
+                  <p className="py-2 text-sm text-ink-muted">No recent activity</p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-interface SectionCardProps {
+function StatCard({
+  icon,
+  label,
+  value,
+  trend,
+  accent,
+  onClick,
+}: {
   icon: React.ReactNode;
-  title: string;
+  label: string;
+  value: string;
+  trend?: string;
   accent: string;
-  badge?: number;
-  onOpen: () => void;
-  openLabel: string;
-  loading: boolean;
-  empty: string;
-  emptyAction?: { label: string; onClick: () => void };
-  children?: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-3 rounded-2xl border border-edge/40 bg-surface/40 p-4 text-left transition hover:bg-white/[0.04]"
+    >
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-2 ${accent}`}>
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] uppercase tracking-wide text-ink-muted">{label}</p>
+        <p className="text-lg font-bold text-ink">{value}</p>
+        {trend && <p className="text-[10px] text-emerald-400">{trend}</p>}
+      </div>
+    </button>
+  );
 }
 
-function SectionCard({
-  icon,
+function RecCard({
   title,
-  accent,
-  badge,
-  onOpen,
-  openLabel,
-  loading,
-  empty,
-  emptyAction,
-  children,
-}: SectionCardProps) {
-  // Count rendered rows to detect emptiness.
-  let childCount = 0;
-  if (Array.isArray(children)) childCount = children.filter(Boolean).length;
-  else if (children) childCount = 1;
-
+  subtitle,
+  detail,
+  icon,
+  color,
+  onClick,
+}: {
+  title: string;
+  subtitle: string;
+  detail: string;
+  icon: React.ReactNode;
+  color: string;
+  onClick: () => void;
+}) {
   return (
-    <div className="flex flex-col rounded-xl border border-edge bg-surface-2/40 p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={accent}>{icon}</span>
-          <h2 className="text-sm font-semibold text-ink">{title}</h2>
-          {badge !== undefined && (
-            <span className="rounded-full bg-surface-3 px-1.5 py-0.5 text-[10px] font-bold text-ink-muted">
-              {badge}
-            </span>
-          )}
-        </div>
-        <button
-          onClick={onOpen}
-          className="flex items-center gap-0.5 text-[11px] font-medium text-ink-muted transition hover:text-accent"
-        >
-          {openLabel}
-          <ArrowRight size={11} />
-        </button>
+    <button
+      onClick={onClick}
+      className="group flex items-center gap-4 rounded-2xl border border-edge/40 bg-surface/40 p-4 text-left transition hover:bg-white/[0.04]"
+    >
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${color} text-white shadow-lg`}>
+        {icon}
       </div>
-      <div className="flex-1">
-        {loading ? (
-          <div className="space-y-2 py-1">
-            {[0, 1].map((i) => (
-              <div key={i} className="h-7 animate-pulse rounded bg-surface-3/60" />
-            ))}
-          </div>
-        ) : childCount === 0 ? (
-          <div className="py-3 text-center">
-            <p className="text-sm text-ink-muted">{empty}</p>
-            {emptyAction && (
-              <button
-                onClick={emptyAction.onClick}
-                className="mt-2 rounded-md bg-accent px-3 py-1 text-xs font-semibold text-white transition hover:opacity-90"
-              >
-                {emptyAction.label}
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="divide-y divide-edge/60">{children}</div>
-        )}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-ink">{title}</p>
+        <p className="text-xs text-ink-muted">{subtitle}</p>
       </div>
-    </div>
+      <span className="text-[10px] text-ink-muted">{detail}</span>
+      <div className="rounded-lg bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink transition group-hover:bg-accent group-hover:text-white">
+        Start
+      </div>
+    </button>
+  );
+}
+
+function QuickAction({
+  icon,
+  label,
+  sub,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  sub: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col gap-1 rounded-xl border border-edge/30 bg-surface/40 p-3 text-left transition hover:border-accent/30 hover:bg-white/[0.04]"
+    >
+      <div className="text-accent">{icon}</div>
+      <span className="text-sm font-semibold text-ink">{label}</span>
+      <span className="text-[10px] text-ink-muted">{sub}</span>
+    </button>
   );
 }

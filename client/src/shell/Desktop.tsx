@@ -101,12 +101,12 @@ export default function Desktop() {
 
   return (
     <div
-      className="absolute inset-0 bottom-12"
+      className="absolute inset-0 bottom-12 left-[72px]"
       onContextMenu={onContextMenu}
       onClick={() => menu && setMenu(null)}
     >
       {/* Desktop icons — fixed-height cells so 2-line names don't break the grid */}
-      <div className="absolute left-3 top-3 grid grid-flow-col grid-rows-[repeat(auto-fill,88px)] gap-1" style={{ height: "calc(100% - 24px)" }}>
+      <div className="absolute left-5 top-5 grid grid-flow-col grid-rows-[repeat(auto-fill,96px)] gap-2" style={{ height: "calc(100% - 40px)" }}>
         {apps.filter((a) => a.pinnedToDesktop).map((app) => {
           const Icon = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number }>>)[app.icon] ?? Lucide.AppWindow;
           return (
@@ -114,17 +114,17 @@ export default function Desktop() {
               key={app.id}
               onDoubleClick={() => open({ appId: app.id, title: app.name, icon: app.icon })}
               onClick={(e) => e.stopPropagation()}
-              className="group flex h-[88px] w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition hover:bg-white/10 focus:bg-accent/20"
+              className="group flex h-[96px] w-[84px] flex-col items-center gap-2 rounded-2xl p-2 text-center transition hover:bg-white/[0.06] focus:bg-accent/15"
             >
-              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white shadow-lg backdrop-blur-sm transition group-hover:scale-105">
-                <Icon size={22} />
+              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.07] text-ink shadow-lg shadow-black/20 backdrop-blur-md transition group-hover:scale-105 group-hover:border-accent/30 group-hover:text-accent group-hover:shadow-accent/20">
+                <Icon size={24} />
                 {app.access === "preview" && (
                   <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-white/20">
                     <Lock size={9} />
                   </span>
                 )}
               </div>
-              <span className="line-clamp-2 w-full text-xs font-medium leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+              <span className="line-clamp-2 w-full text-xs font-medium leading-tight text-ink drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                 {app.name}
               </span>
             </button>

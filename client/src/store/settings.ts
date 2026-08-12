@@ -94,7 +94,7 @@ function hexToRgbTriplet(hex: string): string {
 
 const defaults: PersistedSettings = {
   theme: "dark",
-  accent: "#6366f1",
+  accent: "#8b5cf6",
   wallpaper: "aurora",
   animatedBg: "none",
   volume: 70,

@@ -95,7 +95,7 @@ export const APPS: AppDefinition[] = [
   { id: "whiteboard", name: "Whiteboard", icon: "PenTool", component: WhiteboardApp, pinnedToDesktop: true, fullscreenOnMobile: true, minTier: "free" },
   { id: "study", name: "Study Hub", icon: "GraduationCap", component: StudyApp, pinnedToDesktop: true, minTier: "free" },
   { id: "athena", name: "Mavino", icon: "Sparkles", component: AthenaApp, pinnedToDesktop: true, minTier: "free" },
-  { id: "today", name: "Today", icon: "CalendarCheck", component: TodayApp, pinnedToDesktop: true, minTier: "free" },
+  { id: "today", name: "Home", icon: "Home", component: TodayApp, pinnedToDesktop: true, minTier: "free" },
   { id: "settings", name: "Settings", icon: "Settings", component: SettingsApp, pinnedToDesktop: false, minTier: "free" },
   { id: "plans", name: "Plans", icon: "CreditCard", component: PlansApp, pinnedToDesktop: true, minTier: "free" },
 

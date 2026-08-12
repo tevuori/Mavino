@@ -213,23 +213,24 @@ const DEFAULT_SIZE: Partial<Record<AppId, WindowRect>> = {
   pulse: { x: 160, y: 70, width: 920, height: 680 },
 };
 
+const DOCK_W = 72; // fixed left AppDock width
+const TASKBAR_H = 40; // slim status-bar height
+
 function clampToViewport(rect: WindowRect): WindowRect {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight - 48; // taskbar height
+  const vw = window.innerWidth - DOCK_W;
+  const vh = window.innerHeight - TASKBAR_H;
   const width = Math.min(rect.width, vw - 20);
   const height = Math.min(rect.height, vh - 20);
-  const x = Math.max(0, Math.min(rect.x, vw - width - 4));
+  const x = Math.max(DOCK_W + 4, Math.min(rect.x, window.innerWidth - width - 4));
   const y = Math.max(0, Math.min(rect.y, vh - height - 4));
   return { x, y, width, height };
 }
 
-const TASKBAR_H = 48;
-
 /** True when a rect covers (nearly) the entire usable viewport. */
 function isFullscreenRect(rect: WindowRect): boolean {
-  const vw = window.innerWidth;
+  const vw = window.innerWidth - DOCK_W;
   const vh = window.innerHeight - TASKBAR_H;
-  return rect.width >= vw - 4 && rect.height >= vh - 4;
+  return rect.width >= vw - 4 && rect.height >= vh - 4 && rect.x <= DOCK_W + 4;
 }
 
 /**
@@ -244,7 +245,7 @@ function computeRestoredRect(win: WindowInstance): WindowRect {
   const base = prev ?? DEFAULT_SIZE[win.appId] ?? { x: 200, y: 100, width: 880, height: 600 };
   const width = Math.min(base.width, vw - 20);
   const height = Math.min(base.height, vh - 20);
-  const x = Math.max(0, Math.floor((vw - width) / 2));
+  const x = Math.max(DOCK_W + 4, Math.floor((vw - width) / 2));
   const y = Math.max(0, Math.floor((vh - height) / 2));
   return { x, y, width, height };
 }
@@ -255,16 +256,16 @@ function computeRestoredRect(win: WindowInstance): WindowRect {
  * Always-on-top, minimized, and closing windows are excluded.
  */
 function computeGridLayout(windows: WindowInstance[], workspaceId: string): Record<string, WindowRect> {
-  const vw = window.innerWidth;
+  const vw = window.innerWidth - DOCK_W;
   const vh = window.innerHeight - TASKBAR_H;
   const tileable = windows.filter(
     (w) => w.workspaceId === workspaceId && !w.alwaysOnTop && !w.minimized && !w.closing
   );
   if (tileable.length === 0) return {};
 
-  // Single window → full screen
+  // Single window → fill usable area to the right of the dock
   if (tileable.length === 1) {
-    return { [tileable[0].id]: { x: 0, y: 0, width: vw, height: vh } };
+    return { [tileable[0].id]: { x: DOCK_W, y: 0, width: vw, height: vh } };
   }
 
   const cols = Math.ceil(Math.sqrt(tileable.length));
@@ -279,7 +280,7 @@ function computeGridLayout(windows: WindowInstance[], workspaceId: string): Reco
     const isLastRow = row === rows - 1;
     const itemsInLastRow = tileable.length - row * cols;
     const width = isLastRow && itemsInLastRow < cols ? Math.floor(vw / itemsInLastRow) : cw;
-    const x = isLastRow && itemsInLastRow < cols ? col * width : col * cw;
+    const x = (isLastRow && itemsInLastRow < cols ? col * width : col * cw) + DOCK_W;
     result[win.id] = { x, y: row * ch, width, height: ch };
   });
   return result;
@@ -442,8 +443,8 @@ export const useWindows = create<WindowsState>((set, get) => ({
     set((s) => ({
       windows: s.windows.map((w) => {
         if (w.id !== id) return w;
-        const vw = window.innerWidth;
-        const vh = window.innerHeight - 48;
+        const vw = window.innerWidth - DOCK_W;
+        const vh = window.innerHeight - TASKBAR_H;
         if (zone === "none") {
           // If prevRect is missing or itself fullscreen, fall back to a
           // sensible default size so the window doesn't stay stuck fullscreen.
@@ -463,7 +464,7 @@ export const useWindows = create<WindowsState>((set, get) => ({
             ...w,
             snap: "maximized",
             prevRect: w.snap === "none" ? w.rect : w.prevRect,
-            rect: { x: 0, y: 0, width: vw, height: vh },
+            rect: { x: DOCK_W, y: 0, width: vw, height: vh },
           };
         }
         const halfW = Math.floor(vw / 2);
@@ -472,22 +473,22 @@ export const useWindows = create<WindowsState>((set, get) => ({
         let rect: WindowRect;
         switch (zone) {
           case "left":
-            rect = { x: 0, y: 0, width: halfW, height: vh };
+            rect = { x: DOCK_W, y: 0, width: halfW, height: vh };
             break;
           case "right":
-            rect = { x: halfW, y: 0, width: vw - halfW, height: vh };
+            rect = { x: DOCK_W + halfW, y: 0, width: vw - halfW, height: vh };
             break;
           case "top-left":
-            rect = { x: 0, y: 0, width: halfW, height: halfH };
+            rect = { x: DOCK_W, y: 0, width: halfW, height: halfH };
             break;
           case "top-right":
-            rect = { x: halfW, y: 0, width: vw - halfW, height: halfH };
+            rect = { x: DOCK_W + halfW, y: 0, width: vw - halfW, height: halfH };
             break;
           case "bottom-left":
-            rect = { x: 0, y: halfH, width: halfW, height: vh - halfH };
+            rect = { x: DOCK_W, y: halfH, width: halfW, height: vh - halfH };
             break;
           case "bottom-right":
-            rect = { x: halfW, y: halfH, width: vw - halfW, height: vh - halfH };
+            rect = { x: DOCK_W + halfW, y: halfH, width: vw - halfW, height: vh - halfH };
             break;
           default:
             rect = w.rect;

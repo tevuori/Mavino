@@ -236,15 +236,15 @@ export default function TasksApp(_: { win: WindowInstance }) {
   }
 
   return (
-    <div className="flex h-full flex-col bg-surface">
+    <div className="flex h-full flex-col bg-surface/50">
       {/* Header with workspace dropdown */}
-      <div className="flex items-center justify-between border-b border-edge px-4 py-2.5">
+      <div className="flex items-center justify-between border-b border-edge/40 px-4 py-2.5">
         <div className="flex items-center gap-3">
           {/* Workspace dropdown */}
           <div className="relative">
             <button
               onClick={() => setWsDropdownOpen((v) => !v)}
-              className="flex items-center gap-1.5 rounded-lg border border-edge bg-surface-2 px-2.5 py-1.5 text-sm font-semibold text-ink transition hover:bg-surface-3"
+              className="flex items-center gap-1.5 rounded-xl border border-edge/40 bg-surface-2/50 px-2.5 py-1.5 text-sm font-semibold text-ink backdrop-blur-md transition hover:bg-white/[0.04]"
             >
               {activeWs ? (
                 <>
@@ -262,11 +262,11 @@ export default function TasksApp(_: { win: WindowInstance }) {
             {wsDropdownOpen && (
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setWsDropdownOpen(false)} />
-                <div className="absolute left-0 top-full z-40 mt-1 min-w-[200px] rounded-lg border border-edge bg-surface p-1 shadow-window">
+                <div className="absolute left-0 top-full z-40 mt-1 min-w-[200px] rounded-2xl border border-edge/50 bg-surface/95 p-1 shadow-window backdrop-blur-xl">
                   {/* All Tasks */}
                   <button
                     onClick={() => selectWs(null)}
-                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition hover:bg-surface-3 ${
+                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition hover:bg-white/[0.04] ${
                       !activeWsId ? "bg-surface-3 text-ink" : "text-ink-muted"
                     }`}
                   >
@@ -279,7 +279,7 @@ export default function TasksApp(_: { win: WindowInstance }) {
                     <div key={ws.id} className="group flex items-center">
                       <button
                         onClick={() => selectWs(ws.id)}
-                        className={`flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition hover:bg-surface-3 ${
+                        className={`flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition hover:bg-white/[0.04] ${
                           activeWsId === ws.id ? "bg-surface-3 text-ink" : "text-ink-muted"
                         }`}
                       >
@@ -290,7 +290,7 @@ export default function TasksApp(_: { win: WindowInstance }) {
                       </button>
                       <button
                         onClick={() => openEditWsForm(ws)}
-                        className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-surface-3 hover:text-ink group-hover:opacity-100"
+                        className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-white/[0.04] hover:text-ink group-hover:opacity-100"
                         title="Edit workspace"
                       >
                         <Pencil size={12} />
@@ -300,7 +300,7 @@ export default function TasksApp(_: { win: WindowInstance }) {
                   <div className="my-1 border-t border-edge" />
                   <button
                     onClick={openNewWsForm}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-accent transition hover:bg-surface-3"
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-accent transition hover:bg-white/[0.04]"
                   >
                     <Plus size={14} />
                     <span>New Workspace</span>
@@ -351,7 +351,7 @@ export default function TasksApp(_: { win: WindowInstance }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-xl border border-edge bg-surface p-5 shadow-window"
+              className="w-full max-w-sm rounded-2xl border border-edge/50 bg-surface/95 p-5 shadow-window backdrop-blur-xl"
             >
               <h3 className="mb-4 text-sm font-semibold text-ink">
                 {editingWs ? "Edit Workspace" : "New Workspace"}
@@ -362,7 +362,7 @@ export default function TasksApp(_: { win: WindowInstance }) {
                 onChange={(e) => setWsName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") saveWs(); }}
                 placeholder="Workspace name (e.g. Thesis, Side Project)"
-                className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                className="mb-3 w-full rounded-xl border border-edge/40 bg-surface-2/50 px-3 py-2 text-sm text-ink outline-none backdrop-blur-sm focus:border-accent"
               />
               <div className="mb-4 flex gap-2">
                 {WS_COLORS.map((c) => (
@@ -421,8 +421,8 @@ function Column({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-xl border border-edge bg-surface-2">
-      <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-xl bg-surface-2 px-3 py-2.5">
+    <div className="flex w-72 shrink-0 flex-col rounded-2xl border border-edge/40 bg-surface-2/50 backdrop-blur-md shadow-lg">
+      <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl bg-surface-2/40 px-3 py-2.5">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-ink">{STATUS_LABELS[status]}</span>
           <span className="rounded-full bg-surface-3 px-1.5 py-0.5 text-[10px] text-ink-muted">
@@ -431,7 +431,7 @@ function Column({
         </div>
         <button
           onClick={() => setAddingTo(addingTo === status ? null : status)}
-          className="flex h-8 w-8 items-center justify-center rounded text-ink-muted hover:bg-surface-3 hover:text-ink active:bg-surface-3"
+          className="flex h-8 w-8 items-center justify-center rounded text-ink-muted hover:bg-white/[0.04] hover:text-ink active:bg-surface-3"
         >
           <Plus size={16} />
         </button>
@@ -439,7 +439,7 @@ function Column({
 
       <div
         ref={setNodeRef}
-        className={`flex-1 space-y-2 overflow-y-auto p-2 transition ${isOver ? "bg-accent/5" : ""}`}
+        className={`flex-1 space-y-2 overflow-y-auto p-2 transition ${isOver ? "bg-accent/5 rounded-b-2xl" : ""}`}
       >
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
@@ -455,7 +455,7 @@ function Column({
         </SortableContext>
 
         {addingTo === status && (
-          <div className="rounded-lg border border-accent bg-surface p-2">
+          <div className="rounded-xl border border-accent/50 bg-surface/60 p-2 backdrop-blur-sm">
             <input
               autoFocus
               value={newTitle}
@@ -482,7 +482,7 @@ function Column({
                   setAddingTo(null);
                   setNewTitle("");
                 }}
-                className="rounded px-2.5 py-1 text-xs text-ink-muted hover:bg-surface-3"
+                className="rounded px-2.5 py-1 text-xs text-ink-muted hover:bg-white/[0.04]"
               >
                 Cancel
               </button>
@@ -562,8 +562,8 @@ function TaskCard({
       onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      className={`group rounded-lg border bg-surface p-2.5 shadow-sm transition hover:border-ink-muted/30 ${
-        isOver ? "border-accent ring-2 ring-accent/30" : "border-edge"
+      className={`group rounded-xl border bg-surface/60 p-2.5 shadow-sm backdrop-blur-sm transition hover:border-ink-muted/30 ${
+        isOver ? "border-accent ring-2 ring-accent/30" : "border-edge/40"
       } ${dragging ? "shadow-window rotate-1" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -587,7 +587,7 @@ function TaskCard({
                   <button
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); setMoveOpen((v) => !v); }}
-                    className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-surface-3 hover:text-ink"
+                    className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-white/[0.04] hover:text-ink"
                     title="Move to workspace"
                   >
                     <FolderInput size={14} />
@@ -614,7 +614,7 @@ function TaskCard({
                             className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition ${
                               ws.id === task.workspaceId
                                 ? "cursor-default text-ink-muted opacity-50"
-                                : "text-ink hover:bg-surface-3"
+                                : "text-ink hover:bg-white/[0.04]"
                             }`}
                           >
                             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: ws.color }} />

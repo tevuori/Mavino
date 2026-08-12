@@ -12,11 +12,10 @@ interface Props {
 
 const MIN_W = 320;
 const MIN_H = 200;
-const TASKBAR_H = 48;
+const TASKBAR_H = 40; // matches slim status bar
+const DOCK_W = 72; // fixed left AppDock width
 const GRID_SIZE = 20; // px, for Shift+resize grid snapping
 const SNAP_EDGE = 24; // px from edge/corner to trigger snap
-
-type DragMode = "move" | "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 /** Snap value to nearest grid increment. */
 function snapToGrid(v: number): number {
@@ -28,7 +27,7 @@ function detectSnapZone(clientX: number, clientY: number): SnapZone {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   // Corner detection (priority — needs to be near both edges)
-  const nearLeft = clientX <= SNAP_EDGE;
+  const nearLeft = clientX <= DOCK_W + SNAP_EDGE;
   const nearRight = clientX >= vw - SNAP_EDGE;
   const nearTop = clientY <= SNAP_EDGE;
   const nearBottom = clientY >= vh - TASKBAR_H - SNAP_EDGE;
@@ -46,6 +45,7 @@ function detectSnapZone(clientX: number, clientY: number): SnapZone {
 export default function Window({ win, children }: Props) {
   const { focus, close, minimize, toggleMaximize, snap, setRect } = useWindows();
   const workspaces = useWindows((s) => s.workspaces);
+  const focusedId = useWindows((s) => s.focusedId);
   // Teach Me: the source the tutor's voice is currently anchored to glows.
   const speaking = useShowControl((s) => s.speakingWindowId) === win.id;
   const moveWindowToWorkspace = useWindows((s) => s.moveWindowToWorkspace);
@@ -126,10 +126,10 @@ export default function Window({ win, children }: Props) {
         }
       }
 
-      // Clamp to viewport (above taskbar)
+      // Clamp to viewport (right of dock, above taskbar)
       const maxY = window.innerHeight - TASKBAR_H - height;
       y = Math.max(0, Math.min(y, Math.max(0, maxY)));
-      x = Math.max(0, Math.min(x, window.innerWidth - width));
+      x = Math.max(DOCK_W, Math.min(x, window.innerWidth - width - 4));
 
       setRect(win.id, { x, y, width, height });
     },
@@ -162,7 +162,7 @@ export default function Window({ win, children }: Props) {
         initial={{ opacity: 1, scale: 1 }}
         animate={{ opacity: 0, scale: 0.3, y: 200 }}
         transition={{ duration: 0.18, ease: "easeIn" }}
-        className="absolute flex flex-col overflow-hidden rounded-lg border border-edge bg-surface shadow-window"
+        className="absolute flex flex-col overflow-hidden rounded-2xl border border-edge/60 bg-surface/90 shadow-window backdrop-blur-xl"
         style={{
           left: win.rect.x,
           top: win.rect.y,
@@ -173,7 +173,7 @@ export default function Window({ win, children }: Props) {
           transformOrigin: "bottom center",
         }}
       >
-        <div className="flex h-9 shrink-0 items-center border-b border-edge bg-surface-2 px-2 text-sm font-medium text-ink">
+        <div className="flex h-10 shrink-0 items-center border-b border-edge/60 bg-surface-2/80 px-3 text-sm font-medium text-ink">
           <span className="text-accent">●</span>
           <span className="truncate">{win.title}</span>
         </div>
@@ -183,7 +183,8 @@ export default function Window({ win, children }: Props) {
 
   const isMax =
     win.snap === "maximized" ||
-    (win.rect.width >= window.innerWidth - 4 &&
+    (win.rect.x <= DOCK_W + 4 &&
+      win.rect.width >= window.innerWidth - DOCK_W - 4 &&
       win.rect.height >= window.innerHeight - TASKBAR_H - 4);
   // Enable smooth CSS transitions for position/size when auto-tiling.
   // Disable during drag/resize so the window follows the cursor instantly.
@@ -203,8 +204,12 @@ export default function Window({ win, children }: Props) {
         ease: win.closing ? "easeIn" : "easeOut",
       }}
       onPointerDown={() => focus(win.id)}
-      className={`absolute flex flex-col overflow-hidden rounded-lg border bg-surface shadow-window ${
-        speaking ? "border-accent/60 ring-2 ring-accent/40" : "border-edge"
+      className={`absolute flex flex-col overflow-hidden rounded-2xl border bg-surface/85 shadow-window backdrop-blur-2xl ${
+        speaking
+          ? "border-accent/60 ring-2 ring-accent/40"
+          : win.id === focusedId
+          ? "border-accent/30 shadow-accent/10"
+          : "border-edge/50"
       }`}
       style={{
         left: win.rect.x,
@@ -230,7 +235,7 @@ export default function Window({ win, children }: Props) {
           setCtxSubmenu(false);
           setCtxMenu({ x: e.clientX, y: e.clientY });
         }}
-        className="flex h-9 shrink-0 cursor-grab select-none items-center justify-between border-b border-edge bg-surface-2 px-2 active:cursor-grabbing"
+        className="flex h-10 shrink-0 cursor-grab select-none items-center justify-between border-b border-edge/50 bg-surface-2/40 px-3 active:cursor-grabbing"
       >
         <div className="flex items-center gap-2 px-1 text-sm font-medium text-ink">
           <span className="text-accent">●</span>
@@ -240,7 +245,7 @@ export default function Window({ win, children }: Props) {
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => minimize(win.id)}
-            className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-surface-3"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition hover:bg-white/[0.08] hover:text-ink"
             title="Minimize"
           >
             <Minus size={14} />
@@ -248,7 +253,7 @@ export default function Window({ win, children }: Props) {
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => toggleMaximize(win.id)}
-            className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-surface-3"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition hover:bg-white/[0.08] hover:text-ink"
             title={isMax ? "Restore" : "Maximize"}
           >
             {isMax ? <Copy size={12} /> : <Square size={11} />}
@@ -256,7 +261,7 @@ export default function Window({ win, children }: Props) {
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => close(win.id)}
-            className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-red-500 hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition hover:bg-red-500/15 hover:text-red-400"
             title="Close"
           >
             <X size={14} />
@@ -265,7 +270,7 @@ export default function Window({ win, children }: Props) {
       </div>
 
       {/* Content */}
-      <div className="relative flex-1 overflow-hidden bg-surface @container">{children}</div>
+      <div className="relative flex-1 overflow-hidden bg-surface/60 @container">{children}</div>
 
       {/* Resize handles (hidden when maximized) */}
       {!isMax && (
@@ -323,3 +328,5 @@ export default function Window({ win, children }: Props) {
     </motion.div>
   );
 }
+
+type DragMode = "move" | "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";

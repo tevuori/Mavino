@@ -4,7 +4,7 @@
 
 /* ===== Theme tokens (CSS vars, switchable at runtime) ===== */
 :root {
-  --accent: 99 102 241; /* indigo-500 */
+  --accent: 139 92 246; /* violet-500 */
   --accent-fg: 255 255 255;
 
   /* Light theme */
@@ -17,12 +17,12 @@
 }
 
 .dark {
-  --surface: 15 23 42;
-  --surface-2: 30 41 59;
-  --surface-3: 51 65 85;
-  --ink: 241 245 249;
+  --surface: 11 16 31;
+  --surface-2: 17 23 41;
+  --surface-3: 30 38 64;
+  --ink: 245 247 250;
   --ink-muted: 148 163 184;
-  --edge: 51 65 85;
+  --edge: 40 50 80;
 }
 
 html,
@@ -32,7 +32,6 @@ body,
   margin: 0;
   overflow: hidden;
 }
-
 
 body {
   font-family: theme("fontFamily.sans");
@@ -63,6 +62,32 @@ body {
 .selectable,
 .selectable * {
   user-select: text;
+}
+
+@layer utilities {
+  .glass {
+    @apply border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl;
+    box-shadow: 0 8px 32px rgba(2, 6, 23, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .glass-panel {
+    @apply rounded-2xl border border-edge/50 bg-surface-2/50 backdrop-blur-xl shadow-xl;
+    box-shadow: 0 8px 32px rgba(2, 6, 23, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .glass-card {
+    @apply rounded-2xl border border-edge/40 bg-surface-2/40 backdrop-blur-md shadow-lg;
+  }
+  .glow {
+    box-shadow: 0 0 28px -4px rgb(var(--accent) / 0.5), 0 0 10px rgb(var(--accent) / 0.25);
+  }
+  .glow-sm {
+    box-shadow: 0 0 18px -4px rgb(var(--accent) / 0.35), 0 0 6px rgb(var(--accent) / 0.18);
+  }
+  .text-glow {
+    text-shadow: 0 0 18px rgb(var(--accent) / 0.55);
+  }
+  .gradient-glow {
+    background: radial-gradient(circle at 50% 50%, rgb(var(--accent) / 0.18), transparent 60%);
+  }
 }
 
 /* ===== Markdown body styling (used by Notes + Editor preview) ===== */
@@ -156,9 +181,25 @@ body {
   to { opacity: 1; }
 }
 
+/* ===== Glowing orb animation ===== */
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+@keyframes orb-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.orb-glow {
+  background: radial-gradient(circle at 35% 35%, rgb(var(--accent) / 0.7), rgb(var(--accent) / 0.2) 40%, transparent 70%);
+  animation: orb-pulse 4s ease-in-out infinite;
+}
+.orb-ring {
+  border: 1px solid rgb(var(--accent) / 0.35);
+  animation: orb-rotate 12s linear infinite;
+}
+
 /* ===== Interactive Teacher: CodeMirror highlight decorations ===== */
-/* Transient highlight applied by the show-control channel when Athena points
-   at a passage while teaching. Mark = inline text range; line = full line. */
 .cm-teacher-highlight {
   background: rgb(var(--accent) / 0.35);
   border-radius: 3px;
@@ -172,21 +213,16 @@ body {
 }
 
 /* ===== Interactive Teacher: browser page highlight overlay ===== */
-/* Injected into proxied pages by the content script (see services/browser.ts).
-   Defined here too so the same class works if a page reuses our styles. */
 mark.athena-teacher-highlight {
-  background: rgba(99, 102, 241, 0.4);
+  background: rgba(139, 92, 246, 0.4);
   border-radius: 3px;
-  box-shadow: 0 0 0 1.5px rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 0 1.5px rgba(139, 92, 246, 0.6);
   color: inherit;
   transition: background 0.2s ease;
   scroll-margin-block: 40vh;
 }
 
 /* ===== Study Hub: persistent user highlights (markdown <mark>) ===== */
-/* Applied by HighlightableMarkdown's post-render DOM walk. Each <mark> carries
-   data-color + data-highlight-id; the active (hovered/selected) mark gets
-   .athena-hl-active for an outline. */
 mark.athena-hl {
   border-radius: 3px;
   color: inherit;
@@ -211,4 +247,3 @@ mark.athena-hl.athena-hl-active {
 .cm-study-hl-blue    { background: rgba(96, 165, 250, 0.40); box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.55); }
 .cm-study-hl-pink    { background: rgba(244, 114, 182, 0.40); box-shadow: 0 0 0 1px rgba(244, 114, 182, 0.55); }
 .cm-study-hl-purple  { background: rgba(192, 132, 252, 0.40); box-shadow: 0 0 0 1px rgba(192, 132, 252, 0.55); }
-
