@@ -461,6 +461,18 @@ export default function AthenaApp({
       const id = openWindow({ appId: "echo", title: "Echo", icon: "Radio" });
       return id;
     };
+    // Find an open Pulse window, or open one if none exists. Returns the id.
+    const ensurePulseWindow = (): string => {
+      const wins = windowsRef.current.filter((w) => w.appId === "pulse");
+      const existing = wins.find((w) => !w.minimized) ?? wins[wins.length - 1];
+      if (existing) {
+        if (existing.minimized) minimizeWindow(existing.id);
+        focusWindow(existing.id);
+        return existing.id;
+      }
+      const id = openWindow({ appId: "pulse", title: "Pulse", icon: "Activity" });
+      return id;
+    };
     switch (act) {
       case "profile_updated": {
         // set_user_name changed the display name server-side — pull the fresh
@@ -831,6 +843,13 @@ export default function AthenaApp({
       // ===== Echo (Pro live lecture companion) =====
       case "open_echo": {
         ensureEchoWindow();
+        break;
+      }
+      // ===== Pulse (Pro predictive mastery forecast) =====
+      case "open_pulse": {
+        const id = ensurePulseWindow();
+        // Mark that this Pulse window was opened via Athena (for focus handling).
+        sessionStorage.setItem(`pulse:focus:${id}`, "1");
         break;
       }
       default: {

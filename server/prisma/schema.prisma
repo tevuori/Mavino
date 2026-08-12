@@ -81,6 +81,7 @@ model User {
   compassPapers      CompassPaper[]
   compassCitations   CompassCitation[]
   echoSessions       EchoSession[]
+  pulseForecast      PulseForecast?
 }
 
 // ===== Password reset tokens =====
@@ -1423,4 +1424,42 @@ model EchoSession {
 
   @@index([userId])
   @@index([userId, status])
+}
+
+// ===== Pulse (Pro-tier predictive forgetting-curve & mastery forecast) =====
+// A predictive analytics engine that models each concept/card's forgetting
+// curve from FlashcardReview history (SM-2 quality scores are logged per
+// review — input for an FSRS-style half-life model), then forecasts the
+// user's mastery level on each exam date given their current review
+// trajectory. Surfaces "at-risk" concepts (predicted mastery < threshold on
+// exam day) and an overall readiness score per exam.
+//
+// The forecast is deterministic (no LLM needed) — it fits an FSRS-style
+// power forgetting curve per card from the review history, projects
+// retention forward to each exam date, and aggregates per-concept and
+// per-exam readiness. Crunch exam dates are the forecast targets, so Pulse
+// and Crunch form a closed loop: Pulse tells Crunch which topics to
+// re-insert into the schedule.
+//
+// One row per user (userId is unique). The full forecast is stored as JSON
+// in `data` (PulseData). The build is fire-and-forget + polling, same
+// pattern as AtlasGraph/CrunchPlan: POST /build reserves/updates the row to
+// "building" synchronously, the (deterministic) curve fitting runs in the
+// background, and the client polls GET / until status flips to "ready".
+// `lastAlertAt` throttles "at-risk" ntfy alerts (max one per day).
+
+model PulseForecast {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // JSON-encoded PulseData: { exams, concepts, cards, generatedAt, stats }.
+  data         String   @default("{}")
+  status       String   @default("ready") // "building" | "ready" | "error"
+  error        String   @default("")
+  // Timestamp of the last "at-risk" ntfy alert (throttle: 1/day).
+  lastAlertAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
 }

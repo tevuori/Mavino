@@ -64,6 +64,7 @@ const AtlasApp = lazyImport(() => import("./atlas/AtlasApp"));
 const CrunchApp = lazyImport(() => import("./crunch/CrunchApp"));
 const CompassApp = lazyImport(() => import("./compass/CompassApp"));
 const EchoApp = lazyImport(() => import("./echo/EchoApp"));
+const PulseApp = lazyImport(() => import("./pulse/PulseApp"));
 
 export interface AppDefinition {
   id: AppId;
@@ -121,6 +122,7 @@ export const APPS: AppDefinition[] = [
   { id: "crunch", name: "Crunch", icon: "CalendarClock", component: CrunchApp, pinnedToDesktop: true, minTier: "pro" },
   { id: "compass", name: "Compass", icon: "Compass", component: CompassApp, pinnedToDesktop: true, minTier: "pro" },
   { id: "echo", name: "Echo", icon: "Radio", component: EchoApp, pinnedToDesktop: true, minTier: "pro" },
+  { id: "pulse", name: "Pulse", icon: "Activity", component: PulseApp, pinnedToDesktop: true, minTier: "pro" },
 
   // ----- Admin-granted (VUT SSO → VUT + Moodle) -----
   { id: "vut", name: "VUT", icon: "GraduationCap", component: VUTApp, pinnedToDesktop: true, requiresGrant: "vut" },

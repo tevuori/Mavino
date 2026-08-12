@@ -190,6 +190,25 @@ export async function workspaceSummary(userId: string): Promise<string> {
       // ignore malformed echo data
     }
   }
+  // Pulse (Pro): report predictive forecast status so the model can
+  // proactively warn about at-risk concepts and exam readiness.
+  const pulseRow = await prisma.pulseForecast.findUnique({ where: { userId } });
+  if (pulseRow?.status === "ready") {
+    try {
+      const pulseData = JSON.parse(pulseRow.data) as { stats?: { atRiskCount?: number; nearestReadiness?: number; nearestExamName?: string | null; nearestExamDays?: number | null; cardCount?: number; conceptCount?: number } };
+      const ps = pulseData.stats;
+      if (ps && (ps.cardCount ?? 0) > 0) {
+        const pulseParts: string[] = [`Pulse: ${ps.cardCount} cards`];
+        if (ps.nearestExamName && ps.nearestExamDays !== null) {
+          pulseParts.push(`${ps.nearestExamName} in ${ps.nearestExamDays}d, readiness ${ps.nearestReadiness}%`);
+        }
+        if ((ps.atRiskCount ?? 0) > 0) pulseParts.push(`${ps.atRiskCount} AT-RISK`);
+        parts.push(pulseParts.join(", "));
+      }
+    } catch {
+      // ignore malformed pulse data
+    }
+  }
   return parts.join(" | ");
 }
 
@@ -326,6 +345,9 @@ export async function buildSystemPrompt(
   const echoLine = isProTier
     ? "- Echo (Pro — live lecture companion): echo_active_session (check if a live lecture session is active + current transcript stats + matched concepts from Atlas), echo_session_history (list past captured lectures), echo_session_detail (get a past session's full transcript + concepts + new terms with suggested flashcards), open_echo (open the Echo app). Echo transcribes a live lecture in real time, surfaces concepts from the user's Atlas as they're mentioned (green = known, red = weak), and on stop generates a structured note + extracts new terms for flashcards. If the workspace summary shows 'Echo: live lecture active', proactively ask if they want a summary of what's been covered so far.\n"
     : "";
+  const pulseLine = isProTier
+    ? "- Pulse (Pro — predictive forgetting-curve & mastery forecast): pulse_status (check if the user's forecast is built + stats: cards, concepts, exams, at-risk count, nearest exam readiness %), pulse_at_risk (list concepts predicted to drop below mastery before the nearest exam — use when the user asks 'what will I have forgotten by the exam?' or 'am I on track?'), pulse_forecast (per-exam readiness % + forecast curve over time — use when the user asks about exam readiness for a specific exam), open_pulse (open the Pulse app). Pulse fits FSRS-style forgetting curves from flashcard review history and projects mastery forward to each Crunch exam date. If the workspace summary shows N AT-RISK, proactively warn the user and suggest reviewing those concepts now.\n"
+    : "";
   const now = new Date();
   const dateLine = `Current date/time: ${now.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short", timeZone: tz })} (ISO: ${now.toISOString()}). The user's timezone is ${tz} — interpret any wall-clock times the user mentions (e.g. "3pm", "tomorrow at 9") as being in ${tz}, and emit fireAt / dueDate timestamps as ISO 8601 with the ${tz} offset (or convert to UTC with a trailing Z). Use this as "today" when the user says "today" — do not guess the date. Calendar/task tools accept ISO 8601 timestamps (e.g. ${now.toISOString().slice(0, 10)}T00:00:00Z).`;
   return `You are Mavino, the user's personal workspace assistant living inside their Mavino Student OS desktop. You can see and act on the user's workspace through tools.
@@ -355,7 +377,7 @@ ${browserBlock}${sandboxLine}- Auto notetaking: create_notes_from_url (fetch a w
 - Profile: set_user_name (save what to call the user — use it the moment they tell you their name or ask you to change it), get_user_name
 - Memory: remember (store a fact/preference/goal the user wants you to recall in future turns), recall_memory (search stored memories), forget_memory (delete a memory), list_memories (list all). The 5 most recent memories are already in your context below.
 - Item links: list_links (list items attached to a note/task/flashcardDeck/calendarEvent/file — links are symmetric), link_items (attach two items together), unlink_items (remove an attachment). Use these when the user asks what's attached to a task/note/event, or to attach/detach items. The user creates most links by dragging one item onto another in the desktop UI.
-${mapsBlock}${atlasLine}${crunchLine}${compassLine}${echoLine}
+${mapsBlock}${atlasLine}${crunchLine}${compassLine}${echoLine}${pulseLine}
 Guidelines:
 - Be concise and direct. Prefer action over explanation.
 - When the user refers to a file by name, it is most likely in the "Recently opened files" list below. Use its id with read_file/edit_file. If not found there, use search_files. If the file doesn't exist yet, use create_file.
