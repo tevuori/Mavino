@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Brain, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, Brain, MoreVertical, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { flashcardsApi } from "../services/flashcards";
 import type { Flashcard, FlashcardDeck } from "../types";
 import {
@@ -37,6 +37,55 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
   const [reviewQueue, setReviewQueue] = useState<Flashcard[]>([]);
   const [reviewIdx, setReviewIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
+
+  // Anki import
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const importModeRef = useRef<"new" | "into">("new");
+  const importDeckIdRef = useRef<string | null>(null);
+
+  const triggerImport = (mode: "new" | "into") => {
+    importModeRef.current = mode;
+    importDeckIdRef.current = mode === "into" ? selectedDeck?.id ?? null : null;
+    setImportError(null);
+    setDeckMenu(null);
+    fileInputRef.current?.click();
+  };
+
+  const triggerImportInto = (deckId: string) => {
+    importModeRef.current = "into";
+    importDeckIdRef.current = deckId;
+    setImportError(null);
+    setDeckMenu(null);
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      if (importModeRef.current === "new") {
+        const { deck } = await flashcardsApi.importAnkiNew(file);
+        await loadDecks();
+        await openDeck(deck);
+      } else {
+        const deckId = importDeckIdRef.current;
+        if (!deckId) throw new Error("No target deck selected for import.");
+        await flashcardsApi.importAnkiInto(deckId, file);
+        const target = decks.find((d) => d.id === deckId) ?? selectedDeck;
+        if (target) await openDeck(target);
+        await loadDecks();
+      }
+    } catch (err) {
+      setImportError((err as Error).message);
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const loadDecks = useCallback(async () => {
     setLoading(true);
@@ -183,21 +232,29 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
         </header>
 
         <div className="flex flex-1 flex-col items-center justify-center">
-          <div onClick={() => setFlipped(!flipped)} className="relative w-full max-w-sm" style={{ perspective: "1000px" }}>
+          <div
+            key={card.id + (flipped ? "-back" : "-front")}
+            onClick={() => setFlipped(!flipped)}
+            className="relative w-full max-w-sm"
+            style={{ transition: "opacity 0.2s ease" }}
+          >
             <div
-              className="relative min-h-[280px] w-full rounded-3xl border border-edge p-8 text-center transition-transform duration-500"
-              style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)", backgroundColor: (selectedDeck.color || "#6366f1") + "15" }}
+              className="relative min-h-[280px] w-full rounded-3xl border border-edge p-8 text-center"
+              style={{ backgroundColor: (selectedDeck.color || "#6366f1") + "15" }}
             >
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-8" style={{ backfaceVisibility: "hidden" }}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Question</p>
-                <div className="text-xl font-medium text-ink"><MobileMarkdown content={card.front} /></div>
-                <p className="absolute bottom-6 text-xs text-ink-muted">Tap to flip</p>
-              </div>
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-8" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: selectedDeck.color }}>Answer</p>
-                <div className="text-lg text-ink"><MobileMarkdown content={card.back} /></div>
-                <p className="absolute bottom-6 text-xs text-ink-muted">How well did you know this?</p>
-              </div>
+              {!flipped ? (
+                <div className="flex h-full min-h-[280px] flex-col items-center justify-center p-8">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Question</p>
+                  <div className="text-xl font-medium text-ink"><MobileMarkdown content={card.front} /></div>
+                  <p className="absolute bottom-6 text-xs text-ink-muted">Tap to flip</p>
+                </div>
+              ) : (
+                <div className="flex h-full min-h-[280px] flex-col items-center justify-center p-8">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: selectedDeck.color }}>Answer</p>
+                  <div className="text-lg text-ink"><MobileMarkdown content={card.back} /></div>
+                  <p className="absolute bottom-6 text-xs text-ink-muted">How well did you know this?</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -251,6 +308,9 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
           <>
             <div className="fixed inset-0 z-40" onClick={() => setDeckMenu(null)} />
             <div className="absolute right-5 top-20 z-50 w-44 rounded-2xl border border-edge bg-surface p-1.5 shadow-2xl">
+              <button type="button" onClick={() => triggerImport("into")} disabled={importing} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-ink active:bg-surface-2 disabled:opacity-50">
+                <Upload size={16} /> Import .apkg
+              </button>
               <button type="button" onClick={() => openDeckForm(selectedDeck)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-ink active:bg-surface-2">
                 <Pencil size={16} /> Edit deck
               </button>
@@ -345,6 +405,15 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
             </div>
           </MobileModal>
         )}
+
+        {/* Hidden file input for Anki .apkg import (shared via ref) */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".apkg,.anki,.anki2,.anki21"
+          className="hidden"
+          onChange={(e) => void handleImportFile(e)}
+        />
       </MobileContainer>
     );
   }
@@ -356,8 +425,25 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
         title="Flashcards"
         subtitle="Study what matters"
         onClose={onClose}
-        right={<MobileFab onClick={() => openDeckForm()} icon={<Plus size={22} />} label="New deck" />}
+        right={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => triggerImport("new")}
+              disabled={importing}
+              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-surface-2 text-ink-muted active:bg-surface-3 disabled:opacity-50"
+              aria-label="Import Anki .apkg package"
+              title="Import Anki .apkg"
+            >
+              <Upload size={20} />
+            </button>
+            <MobileFab onClick={() => openDeckForm()} icon={<Plus size={22} />} label="New deck" />
+          </div>
+        }
       />
+
+      {importing && <p className="px-1 pb-2 text-sm text-accent">Importing Anki package…</p>}
+      {importError && <p className="px-1 pb-2 text-sm text-rose-400">{importError}</p>}
 
       <div className="space-y-3">
         {loading ? (
@@ -391,6 +477,9 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
             <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">{deckMenu.name}</p>
             <button type="button" onClick={() => void openDeck(deckMenu)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-ink active:bg-surface-2">
               <Brain size={18} /> Open
+            </button>
+            <button type="button" onClick={() => triggerImportInto(deckMenu.id)} disabled={importing} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-ink active:bg-surface-2 disabled:opacity-50">
+              <Upload size={18} /> Import .apkg into deck
             </button>
             <button type="button" onClick={() => openDeckForm(deckMenu)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-ink active:bg-surface-2">
               <Pencil size={18} /> Edit
@@ -426,6 +515,15 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
           </div>
         </MobileModal>
       )}
+
+      {/* Hidden file input for Anki .apkg import (shared via ref) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".apkg,.anki,.anki2,.anki21"
+        className="hidden"
+        onChange={(e) => void handleImportFile(e)}
+      />
     </MobileContainer>
   );
 }
