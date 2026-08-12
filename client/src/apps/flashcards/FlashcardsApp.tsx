@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain, Plus, Trash2, ArrowLeft, ChevronRight, RotateCcw,
-  Check, X, AlertCircle, Layers, Sparkles, FileText,
+  Check, X, AlertCircle, Layers, Sparkles, FileText, Upload,
 } from "lucide-react";
 import { flashcardsApi } from "../../services/flashcards";
 import { linksApi } from "../../services/links";
@@ -45,6 +45,12 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
   const [reviewIdx, setReviewIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [reviewStats, setReviewStats] = useState({ again: 0, hard: 0, good: 0, easy: 0 });
+
+  // Anki import state
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // "new" = create a new deck from the .apkg; "into" = add to the open deck.
+  const importModeRef = useRef<"new" | "into">("new");
 
   const loadDecks = useCallback(async () => {
     setLoading(true);
@@ -148,6 +154,38 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
     setView("review");
   };
 
+  const triggerImport = (mode: "new" | "into") => {
+    importModeRef.current = mode;
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset the input so the same file can be re-selected later.
+    e.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    setError(null);
+    try {
+      if (importModeRef.current === "new") {
+        const { deck } = await flashcardsApi.importAnkiNew(file);
+        await loadDecks();
+        openDeck(deck);
+      } else if (selectedDeck) {
+        const { imported } = await flashcardsApi.importAnkiInto(selectedDeck.id, file);
+        await loadCards(selectedDeck.id);
+        loadDecks();
+        setError(null);
+        // Reuse the error band briefly as a success toast.
+        console.info(`Imported ${imported} cards from Anki package.`);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const reviewCard = async (quality: number) => {
     const card = reviewQueue[reviewIdx];
     if (!card) return;
@@ -175,12 +213,22 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
           <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
             <Brain size={16} className="text-accent" /> Flashcard Decks
           </h2>
-          <button
-            onClick={() => setShowDeckForm(true)}
-            className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white transition hover:bg-accent/90"
-          >
-            <Plus size={14} /> New Deck
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => triggerImport("new")}
+              disabled={importing}
+              className="flex items-center gap-1 rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:bg-surface-3 hover:text-ink disabled:opacity-50"
+              title="Import an Anki .apkg package as a new deck"
+            >
+              <Upload size={14} /> {importing ? "Importing…" : "Import .apkg"}
+            </button>
+            <button
+              onClick={() => setShowDeckForm(true)}
+              className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white transition hover:bg-accent/90"
+            >
+              <Plus size={14} /> New Deck
+            </button>
+          </div>
         </div>
 
         {error && <p className="px-4 py-2 text-xs text-red-400">{error}</p>}
@@ -246,6 +294,15 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
             </div>
           )}
         </AnimatePresence>
+
+        {/* Hidden file input for Anki .apkg import (shared via ref) */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".apkg,.anki,.anki2,.anki21"
+          className="hidden"
+          onChange={(e) => void handleImportFile(e)}
+        />
       </div>
     );
   }
@@ -287,6 +344,14 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
               title="Generate AI flashcards and add them to this deck"
             >
               <Sparkles size={14} /> Generate more
+            </button>
+            <button
+              onClick={() => triggerImport("into")}
+              disabled={importing}
+              className="flex items-center gap-1 rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:bg-surface-3 hover:text-ink disabled:opacity-50"
+              title="Import cards from an Anki .apkg package into this deck"
+            >
+              <Upload size={14} /> {importing ? "Importing…" : "Import"}
             </button>
             <button
               onClick={() => setShowCardForm(true)}
@@ -372,6 +437,15 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
             </div>
           )}
         </AnimatePresence>
+
+        {/* Hidden file input for Anki .apkg import (shared via ref) */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".apkg,.anki,.anki2,.anki21"
+          className="hidden"
+          onChange={(e) => void handleImportFile(e)}
+        />
       </div>
     );
   }
@@ -412,47 +486,36 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
           <p className="mt-1 text-xs text-ink-muted">{reviewIdx + 1} of {reviewQueue.length}</p>
         </div>
 
-        {/* Flashcard with 3D flip */}
-        <div className="flex flex-1 flex-col items-center justify-center p-6" style={{ perspective: "1000px" }}>
+        {/* Flashcard — single face rendered at a time (no 3D backface-visibility,
+            which is unreliable across browsers/GPUs and causes mirrored/bleeding
+            answers). A lightweight fade conveys the flip. */}
+        <div className="flex flex-1 flex-col items-center justify-center p-6">
           <motion.div
-            key={card.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
+            key={card.id + (flipped ? "-back" : "-front")}
+            initial={{ opacity: 0, rotateY: flipped ? -90 : 90 }}
+            animate={{ opacity: 1, rotateY: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             className="relative w-full max-w-md"
+            style={{ transformStyle: "preserve-3d" }}
           >
             <div
               onClick={() => setFlipped(!flipped)}
               className="relative min-h-[280px] cursor-pointer rounded-2xl border border-edge p-8 shadow-window"
-              style={{
-                transformStyle: "preserve-3d",
-                transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
-                transition: "transform 0.5s ease",
-                backgroundColor: selectedDeck.color + "15",
-              }}
+              style={{ backgroundColor: selectedDeck.color + "15" }}
             >
-              {/* Front */}
-              <div
-                className="absolute inset-0 flex flex-col items-center justify-center p-8"
-                style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
-              >
-                <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Question</p>
-                <p className="text-center text-xl font-medium text-ink">{card.front}</p>
-                <p className="absolute bottom-4 text-xs text-ink-muted">Click to flip</p>
-              </div>
-              {/* Back */}
-              <div
-                className="absolute inset-0 flex flex-col items-center justify-center p-8"
-                style={{
-                  backfaceVisibility: "hidden",
-                  WebkitBackfaceVisibility: "hidden",
-                  transform: "rotateY(180deg)",
-                }}
-              >
-                <p className="mb-4 text-xs font-semibold uppercase tracking-wide" style={{ color: selectedDeck.color }}>Answer</p>
-                <p className="text-center text-lg text-ink">{card.back}</p>
-                <p className="absolute bottom-4 text-xs text-ink-muted">How well did you know this?</p>
-              </div>
+              {!flipped ? (
+                <div className="flex h-full min-h-[280px] flex-col items-center justify-center p-8">
+                  <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Question</p>
+                  <p className="text-center text-xl font-medium text-ink">{card.front}</p>
+                  <p className="absolute bottom-4 text-xs text-ink-muted">Click to flip</p>
+                </div>
+              ) : (
+                <div className="flex h-full min-h-[280px] flex-col items-center justify-center p-8">
+                  <p className="mb-4 text-xs font-semibold uppercase tracking-wide" style={{ color: selectedDeck.color }}>Answer</p>
+                  <p className="text-center text-lg text-ink">{card.back}</p>
+                  <p className="absolute bottom-4 text-xs text-ink-muted">How well did you know this?</p>
+                </div>
+              )}
             </div>
           </motion.div>
 

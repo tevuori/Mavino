@@ -5,6 +5,7 @@ import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
 import { appTierGate } from "../middleware/app-tier";
 import { cleanupOrphanLinks } from "../db/links";
+import { parseAnkiPackage } from "../services/anki-import";
 
 const flashcards = new Hono();
 flashcards.use("*", authMiddleware, appTierGate("flashcards"));
@@ -201,6 +202,124 @@ flashcards.get("/due", async (c) => {
   }));
   const totalDue = result.reduce((sum, d) => sum + d.dueCount, 0);
   return c.json({ decks: result, totalDue });
+});
+
+// ===== Anki (.apkg) import =====
+// Anki exports packages as .apkg (a ZIP containing a SQLite collection).
+// Users often refer to these as ".anki" files; we accept .apkg, .anki,
+// .anki2 and .anki21 extensions. The package is parsed server-side into
+// Q/A pairs and bulk-inserted as Flashcard rows.
+
+const ANKI_MAX_BYTES = 100 * 1024 * 1024; // 100 MB — apkg files can be large
+const ANKI_ACCEPTED_EXT = new Set(["apkg", "anki", "anki2", "anki21"]);
+
+function getExtension(name: string): string {
+  const dot = name.lastIndexOf(".");
+  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "";
+}
+
+/**
+ * POST /import  — multipart: file=<.apkg>
+ * Creates a NEW deck (named after the Anki deck, or the provided `name` field)
+ * and imports all parsed cards into it.
+ */
+flashcards.post("/import", async (c) => {
+  const { userId } = c.get("auth");
+  const formData = await c.req.formData();
+  const file = formData.get("file");
+  const customName = (formData.get("name") as string | null)?.trim() || null;
+
+  if (!(file instanceof File)) {
+    return c.json({ error: "No file provided. Upload an Anki .apkg package." }, 400);
+  }
+  const ext = getExtension(file.name);
+  if (!ANKI_ACCEPTED_EXT.has(ext)) {
+    return c.json({ error: `Unsupported file type ".${ext}". Expected an Anki .apkg package.` }, 415);
+  }
+  if (file.size > ANKI_MAX_BYTES) {
+    return c.json({ error: `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is ${ANKI_MAX_BYTES / 1024 / 1024} MB.` }, 413);
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let parsed;
+  try {
+    parsed = await parseAnkiPackage(bytes);
+  } catch (e) {
+    return c.json({ error: (e as Error).message }, 422);
+  }
+  if (parsed.cards.length === 0) {
+    return c.json({ error: "No cards could be extracted from this Anki package." }, 422);
+  }
+
+  const deck = await prisma.flashcardDeck.create({
+    data: {
+      name: customName || parsed.deckName || file.name.replace(/\.(apkg|anki2?|anki21)$/i, "") || "Imported Deck",
+      userId,
+    },
+  });
+
+  // Bulk-insert cards. Prisma createMany keeps this efficient for large decks.
+  await prisma.flashcard.createMany({
+    data: parsed.cards.map((card) => ({
+      deckId: deck.id,
+      front: card.front,
+      back: card.back,
+      sourceRef: card.tags ? `anki:${card.tags}` : "anki",
+    })),
+  });
+
+  const withCount = await prisma.flashcardDeck.findUnique({
+    where: { id: deck.id },
+    include: { _count: { select: { cards: true } } },
+  });
+  return c.json({ deck: withCount, imported: parsed.cards.length }, 201);
+});
+
+/**
+ * POST /decks/:id/import  — multipart: file=<.apkg>
+ * Imports parsed cards into an EXISTING deck.
+ */
+flashcards.post("/decks/:id/import", async (c) => {
+  const { userId } = c.get("auth");
+  const deck = await prisma.flashcardDeck.findFirst({
+    where: { id: c.req.param("id"), userId },
+  });
+  if (!deck) return c.json({ error: "Deck not found" }, 404);
+
+  const formData = await c.req.formData();
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return c.json({ error: "No file provided. Upload an Anki .apkg package." }, 400);
+  }
+  const ext = getExtension(file.name);
+  if (!ANKI_ACCEPTED_EXT.has(ext)) {
+    return c.json({ error: `Unsupported file type ".${ext}". Expected an Anki .apkg package.` }, 415);
+  }
+  if (file.size > ANKI_MAX_BYTES) {
+    return c.json({ error: `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is ${ANKI_MAX_BYTES / 1024 / 1024} MB.` }, 413);
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let parsed;
+  try {
+    parsed = await parseAnkiPackage(bytes);
+  } catch (e) {
+    return c.json({ error: (e as Error).message }, 422);
+  }
+  if (parsed.cards.length === 0) {
+    return c.json({ error: "No cards could be extracted from this Anki package." }, 422);
+  }
+
+  await prisma.flashcard.createMany({
+    data: parsed.cards.map((card) => ({
+      deckId: deck.id,
+      front: card.front,
+      back: card.back,
+      sourceRef: card.tags ? `anki:${card.tags}` : "anki",
+    })),
+  });
+
+  return c.json({ imported: parsed.cards.length });
 });
 
 export default flashcards;
