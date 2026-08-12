@@ -69,7 +69,7 @@ export default function Window({ win, children }: Props) {
       e.stopPropagation();
       focus(win.id);
       setIsInteracting(true);
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       dragState.current = {
         mode,
         startX: e.clientX,
@@ -141,7 +141,7 @@ export default function Window({ win, children }: Props) {
       const st = dragState.current;
       dragState.current = null;
       setIsInteracting(false);
-      (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
       const zone = snapPreviewRef.current;
       snapPreviewRef.current = "none";
       document.dispatchEvent(new CustomEvent("snap-preview", { detail: "none" }));
