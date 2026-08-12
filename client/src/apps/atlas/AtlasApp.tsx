@@ -60,6 +60,26 @@ function hexToRgb(hex: string): string {
   return [1, 2, 3].map((i) => parseInt(m[i], 16)).join(", ");
 }
 
+// ----- level-of-detail: nodes reveal progressively as you zoom in -----
+// Higher-importance concepts are always visible; lower-importance "detail"
+// nodes fade in only as you zoom closer. Weak spots are always shown.
+// Returns a 0..1 fade alpha.
+function nodeReveal(node: { weak?: boolean; importance?: number }, globalScale: number): number {
+  if (node.weak) return 1;
+  const importance = node.importance ?? 3;
+  // imp 5 → reveal at zoom 0,   imp 4 → 0.6,  imp 3 → 1.2,
+  // imp 2 → 1.8,                imp 1 → 2.4
+  const revealZoom = Math.max(0, (5 - importance) * 0.6);
+  return Math.max(0, Math.min(1, (globalScale - revealZoom) / 0.4));
+}
+
+// Node radius in graph coordinates — importance-weighted so major concepts
+// are visibly larger and dominate the overview, while minor concepts shrink
+// into the background. Scales naturally with zoom.
+function nodeRadius(node: { importance?: number }): number {
+  return 3 + Math.sqrt(Math.max(1, node.importance ?? 3)) * 3.5;
+}
+
 // ----- container size hook (same pattern as Study Hub KnowledgeGraph) -----
 function useContainerSize<T extends HTMLElement>() {
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -154,6 +174,8 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
   const { ref: canvasWrapRef, size } = useContainerSize<HTMLDivElement>();
   const buildElapsed = useElapsedSeconds(building);
   const fgRef = useRef<ForceGraphMethods | undefined>(undefined);
+  const zoomRef = useRef(1); // current globalScale, updated via onZoom for link/pointer callbacks
+  const [zoomLevel, setZoomLevel] = useState(1); // for the zoom indicator badge
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { open } = useWindows();
 
@@ -295,7 +317,7 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
     fg.d3Force("link")?.distance(50);
     // Collision detection prevents nodes from overlapping (which causes the
     // "hexagon hive" look when many nodes pile at the center).
-    fg.d3Force("collide", d3Collide().radius((n: any) => 8 + Math.sqrt(Math.max(1, n.importance ?? 3)) * 3.2 + 3));
+    fg.d3Force("collide", d3Collide().radius((n: any) => nodeRadius(n) + 3));
     // Re-heat the simulation so the new forces take effect.
     fg.d3ReheatSimulation();
     const id = setTimeout(() => fg.zoomToFit(600, 48), 300);
@@ -449,12 +471,26 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                 nodeVal={(n: NodeObject) => (n as any).importance}
                 linkLabel={(l: LinkObject) => (l as any).relation}
                 linkColor={(l: any) => {
-                  const dim = focusSet && !(focusSet.has(l.source?.id ?? l.source) && focusSet.has(l.target?.id ?? l.target));
-                  return dim ? "rgba(148, 163, 184, 0.10)" : "rgba(148, 163, 184, 0.45)";
+                  const s = l.source, t = l.target;
+                  const sid = s?.id ?? s, tid = t?.id ?? t;
+                  const sVis = s?.weak || focusId === sid || selectedConcept?.id === sid ? 1 : nodeReveal(s, zoomRef.current);
+                  const tVis = t?.weak || focusId === tid || selectedConcept?.id === tid ? 1 : nodeReveal(t, zoomRef.current);
+                  const vis = Math.min(sVis, tVis);
+                  if (vis < 0.05) return "rgba(0,0,0,0)";
+                  const dim = focusSet && !(focusSet.has(sid) && focusSet.has(tid));
+                  return dim
+                    ? `rgba(148, 163, 184, ${0.10 * vis})`
+                    : `rgba(148, 163, 184, ${0.45 * vis})`;
                 }}
                 linkWidth={(l: any) => {
-                  const active = focusSet && focusSet.has(l.source?.id ?? l.source) && focusSet.has(l.target?.id ?? l.target);
-                  return active ? 1.4 : 0.7;
+                  const s = l.source, t = l.target;
+                  const sid = s?.id ?? s, tid = t?.id ?? t;
+                  const sVis = s?.weak || focusId === sid || selectedConcept?.id === sid ? 1 : nodeReveal(s, zoomRef.current);
+                  const tVis = t?.weak || focusId === tid || selectedConcept?.id === tid ? 1 : nodeReveal(t, zoomRef.current);
+                  const vis = Math.min(sVis, tVis);
+                  if (vis < 0.05) return 0;
+                  const active = focusSet && focusSet.has(sid) && focusSet.has(tid);
+                  return active ? 1.4 : 0.7 * vis;
                 }}
                 linkDirectionalArrowLength={4}
                 linkDirectionalArrowRelPos={1}
@@ -470,21 +506,31 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                 onBackgroundClick={() => setSelectedConcept(null)}
                 cooldownTime={4000}
                 backgroundColor="rgba(0,0,0,0)"
+                onZoom={(t: { k: number }) => {
+                  zoomRef.current = t.k;
+                  const rounded = Math.round(t.k * 10) / 10;
+                  setZoomLevel((prev) => (Math.abs(prev - rounded) < 0.05 ? prev : rounded));
+                }}
                 nodeCanvasObject={(node: any, ctx, globalScale) => {
                   if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
                   const isFocused = focusId === node.id;
                   const isSelected = selectedConcept?.id === node.id;
+                  // LOD: fade nodes in progressively as you zoom in.
+                  // Focused/selected are always fully visible.
+                  const reveal = isFocused || isSelected ? 1 : nodeReveal(node, globalScale);
+                  if (reveal <= 0.01) return;
+
                   const dimmed = focusSet ? !focusSet.has(node.id) : false;
                   const isWeak = node.weak;
                   const baseColor = typeColor(node.type);
                   const rgb = hexToRgb(isWeak ? "#ef4444" : baseColor);
-                  const r = 4 + Math.sqrt(Math.max(1, node.importance ?? 3)) * 3.2;
-                  const alpha = dimmed ? 0.25 : 1;
+                  const r = nodeRadius(node);
+                  const alpha = reveal * (dimmed ? 0.25 : 1);
 
                   // Glow
-                  if (!dimmed) {
+                  if (!dimmed && reveal > 0.3) {
                     const glow = ctx.createRadialGradient(node.x, node.y, r * 0.4, node.x, node.y, r * 3.2);
-                    glow.addColorStop(0, `rgba(${rgb}, ${isFocused ? 0.55 : 0.3})`);
+                    glow.addColorStop(0, `rgba(${rgb}, ${isFocused ? 0.55 : 0.3 * reveal})`);
                     glow.addColorStop(1, `rgba(${rgb}, 0)`);
                     ctx.fillStyle = glow;
                     ctx.beginPath();
@@ -501,7 +547,7 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                   // Weak ring (pulsing red outline)
                   if (isWeak && !dimmed) {
                     ctx.lineWidth = 1.8 / globalScale;
-                    ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
+                    ctx.strokeStyle = `rgba(239, 68, 68, ${0.8 * reveal})`;
                     ctx.beginPath();
                     ctx.arc(node.x, node.y, r + 2 / globalScale, 0, 2 * Math.PI);
                     ctx.stroke();
@@ -516,31 +562,46 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                     ctx.stroke();
                   }
 
-                  // Labels
-                  const showLabel = !dimmed && (isFocused || isSelected || node.importance >= 4 || isWeak || globalScale > 2.2);
+                  // Labels — graph-coordinate font size that GROWS as you zoom in.
+                  // At low zoom only focused/selected/weak labels are readable;
+                  // at high zoom every visible node gets a label.
+                  const graphFontSize = 4 + (node.importance ?? 3) * 0.7;
+                  const screenFont = graphFontSize * globalScale;
+                  const showLabel = reveal > 0.5 && (isFocused || isSelected || isWeak || screenFont > 10);
                   if (showLabel) {
                     const label = node.label as string;
-                    const fontSize = Math.max(10, 12 / globalScale);
+                    // Focused/selected get a minimum screen-readable size.
+                    const fontSize = isFocused || isSelected
+                      ? Math.max(graphFontSize, 11 / globalScale)
+                      : graphFontSize;
                     ctx.font = `${isFocused || isSelected ? "600" : "500"} ${fontSize}px "Inter", sans-serif`;
                     const textWidth = ctx.measureText(label).width;
-                    const padX = 4 / globalScale;
-                    const padY = 2 / globalScale;
-                    const labelY = node.y + r + 4 / globalScale;
-                    ctx.fillStyle = "rgba(15, 17, 24, 0.72)";
+                    const padX = 1.5;
+                    const padY = 0.8;
+                    const labelY = node.y + r + 2;
+                    ctx.fillStyle = `rgba(15, 17, 24, ${0.72 * reveal})`;
                     ctx.beginPath();
                     const rx = textWidth / 2 + padX;
                     const ry = fontSize / 2 + padY;
-                    ctx.roundRect?.(node.x - rx, labelY, rx * 2, ry * 2, 4 / globalScale);
+                    ctx.roundRect?.(node.x - rx, labelY, rx * 2, ry * 2, 2);
                     ctx.fill();
                     ctx.textAlign = "center";
                     ctx.textBaseline = "top";
-                    ctx.fillStyle = isFocused || isSelected ? "#ffffff" : isWeak ? "rgba(252, 165, 165, 0.95)" : "rgba(226, 232, 240, 0.92)";
+                    ctx.fillStyle = isFocused || isSelected
+                      ? "#ffffff"
+                      : isWeak
+                        ? `rgba(252, 165, 165, ${0.95 * reveal})`
+                        : `rgba(226, 232, 240, ${0.92 * reveal})`;
                     ctx.fillText(label, node.x, labelY + padY);
                   }
                 }}
                 nodePointerAreaPaint={(node: any, color, ctx) => {
                   if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-                  const r = 4 + Math.sqrt(Math.max(1, node.importance ?? 3)) * 3.2;
+                  const isFocused = focusId === node.id;
+                  const isSelected = selectedConcept?.id === node.id;
+                  const reveal = isFocused || isSelected ? 1 : nodeReveal(node, zoomRef.current);
+                  if (reveal <= 0.01) return;
+                  const r = nodeRadius(node);
                   ctx.fillStyle = color;
                   ctx.beginPath();
                   ctx.arc(node.x, node.y, r + 3, 0, 2 * Math.PI);
@@ -566,6 +627,13 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                   Weak
                 </span>
               )}
+            </div>
+
+            {/* Zoom level indicator — shows current detail tier */}
+            <div className="pointer-events-none absolute bottom-2.5 right-2.5 flex items-center gap-1.5 rounded-full border border-edge/60 bg-surface/80 px-2.5 py-1 text-[10px] font-medium tabular-nums text-ink-muted backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent/70" />
+              {zoomLevel < 1 ? "Overview" : zoomLevel < 2.5 ? "Standard" : "Detail"}
+              <span className="opacity-50">· {zoomLevel.toFixed(1)}×</span>
             </div>
           </div>
 
