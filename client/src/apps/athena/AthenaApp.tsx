@@ -437,6 +437,18 @@ export default function AthenaApp({
       const id = openWindow({ appId: "crunch", title: "Crunch", icon: "CalendarClock" });
       return id;
     };
+    // Find an open Echo window, or open one if none exists. Returns the id.
+    const ensureEchoWindow = (): string => {
+      const wins = windowsRef.current.filter((w) => w.appId === "echo");
+      const existing = wins.find((w) => !w.minimized) ?? wins[wins.length - 1];
+      if (existing) {
+        if (existing.minimized) minimizeWindow(existing.id);
+        focusWindow(existing.id);
+        return existing.id;
+      }
+      const id = openWindow({ appId: "echo", title: "Echo", icon: "Radio" });
+      return id;
+    };
     switch (act) {
       case "profile_updated": {
         // set_user_name changed the display name server-side — pull the fresh
@@ -793,6 +805,11 @@ export default function AthenaApp({
         if (payload.date) {
           sessionStorage.setItem(`crunch:focus:${id}`, String(payload.date));
         }
+        break;
+      }
+      // ===== Echo (Pro live lecture companion) =====
+      case "open_echo": {
+        ensureEchoWindow();
         break;
       }
       default: {

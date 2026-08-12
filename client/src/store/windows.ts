@@ -30,6 +30,7 @@ export type AppId =
   | "marketplace"
   | "atlas"
   | "crunch"
+  | "echo"
   // Plugin apps use synthetic ids of the form `plugin:<pluginKey>`. The
   // `(string & {})` catch-all preserves autocomplete for the literal union
   // above while allowing any string for dynamically-installed plugins.
@@ -203,6 +204,7 @@ const DEFAULT_SIZE: Partial<Record<AppId, WindowRect>> = {
   moodle: { x: 120, y: 60, width: 960, height: 660 },
   maps: { x: 120, y: 60, width: 1040, height: 700 },
   plans: { x: 200, y: 80, width: 720, height: 640 },
+  echo: { x: 140, y: 60, width: 960, height: 680 },
 };
 
 function clampToViewport(rect: WindowRect): WindowRect {
