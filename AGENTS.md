@@ -751,4 +751,26 @@ A dedicated **Crunch** app (`client/src/apps/crunch/CrunchApp.tsx`) is the secon
 
 **UI:** Desktop `CrunchApp` has two modes — exam setup form (add exams with name/date/syllabus + daily study target) and day-by-day plan view (timeline of study tasks with progress checkboxes, task type icons/colors, mastery badges, "Complete all" bulk action per day, day navigation, behind-alert banner, next-exam countdown). Mobile `MobileCrunch` shows today's tasks as tappable cards + upcoming days + stats grid + behind alert + setup form.
 
+## Pulse (Pro-tier predictive forgetting-curve & mastery forecast)
+
+A dedicated **Pulse** app (`client/src/apps/pulse/PulseApp.tsx`) is the third Pro-tier-exclusive app. It's a predictive analytics engine that models each flashcard's forgetting curve from `FlashcardReview` history (SM-2 quality scores are logged per review — perfect input for an FSRS-style half-life model), then **forecasts your mastery level on each exam date** (from Crunch) given your current review trajectory. Surfaces "at-risk" concepts (predicted mastery < 70% on exam day) and an overall readiness score per exam.
+
+**Distinct from:** Analytics (backward-looking charts of past reviews), Crunch (plans what to study, doesn't predict outcomes), Atlas (current knowledge state, not future state). Pulse is forward-looking and per-concept — it tells you whether Crunch's plan is working and what's slipping. Pulse and Crunch form a closed loop: Pulse tells Crunch which topics to re-insert into the schedule.
+
+**Data model:** `PulseForecast` Prisma model — one row per user (`userId` unique), JSON `data` column containing `PulseData` (cards, concepts, exams, forecast, stats). `lastAlertAt` throttles "at-risk" ntfy alerts to once per day. Build status: `building` | `ready` | `error` (same fire-and-forget + polling pattern as AtlasGraph/CrunchPlan).
+
+**Forecast pipeline** (`services/pulse.ts` `buildPulseData`): deterministic, NO LLM needed. (1) Load all `FlashcardReview` rows grouped by card. (2) For each card, fit an FSRS-style power forgetting curve: `R(t) = (1 + t/h)^(-b)` where R is retention at time t (days since last review), h is the half-life (days until R = 50%), b is the decay exponent (FSRS default ~0.5). Half-life is estimated from the SM-2 `interval` (days, the scheduler's retention estimate) scaled by `easeFactor`, then adjusted by review quality history (avg quality / 5 → 0.7×–1.3× multiplier). (3) Load exam dates from `CrunchPlan` (the forecast targets). (4) Project each card's retention to each exam date. (5) Build concepts from `AtlasGraph` (if built — uses Atlas's deck→concept links) or fall back to one "concept" per deck. Aggregate per-concept current + predicted mastery. (6) Per-exam readiness = avg of concept masteries projected to that exam date. At-risk = predicted mastery < 0.7. (7) Forecast curve: sample overall mastery at N points from today to the farthest exam date, with exam-date markers. (8) Stats (card/concept/exam/at-risk counts, nearest exam readiness %, avg half-life).
+
+**Staleness:** `isPulseStale` checks for `FlashcardReview` rows newer than the forecast's `updatedAt`, or a `CrunchPlan` updated since the forecast (exam dates may have changed).
+
+**Athena tools** (`tools/pulse.ts`, all `proOnly: true`): `pulse_status` (check forecast + stats + exams), `pulse_at_risk` (list at-risk concepts with current/predicted mastery + days until forgotten), `pulse_forecast` (per-exam readiness % + downsampled forecast curve), `open_pulse` (client action — opens the Pulse app via `sessionStorage` key `pulse:focus:<windowId>`). The `open_pulse` client action is dispatched in `AthenaApp.tsx` alongside `open_atlas`/`open_crunch`.
+
+**Athena context:** `workspaceSummary` in `context.ts` includes Pulse card count, nearest exam name + days + readiness %, and at-risk count (with "N AT-RISK" flag if > 0). The system prompt includes a Pulse capabilities line (Pro-only, hidden for non-Pro users) that instructs Athena to proactively warn about at-risk concepts.
+
+**ntfy alerts:** `checkAtRiskAlert` (called fire-and-forget on GET /) sends an ntfy push when there are at-risk concepts AND a near exam (≤ 14 days), throttled to once per day via `lastAlertAt`.
+
+**Endpoints** (`routes/pulse.ts`): `GET /` (status + data + stale flag), `POST /build` (kick off background build — no LLM required, so no AI provider check unlike Atlas/Crunch), `GET /at-risk` (at-risk concepts only), `DELETE /` (delete forecast).
+
+**UI:** Desktop `PulseApp` has per-exam readiness gauges (circular SVG, color-coded: green ≥80%, amber ≥60%, red <60%), a forecast curve chart (pure SVG — projected mastery over time with exam-date vertical markers and a 70% at-risk threshold line), an at-risk concept feed (sorted by days until forgotten, with "Review" → opens Flashcards app on the linked deck, and "Crunch" → opens Crunch to re-insert), and a "days until forgotten" list (top 10 concepts sorted soonest-forgotten-first). Stale banner when new reviews or Crunch changes happened since last build. Empty state explains the feature + "Build my forecast" CTA (notes no AI provider needed). The app is responsive (grid breakpoints for gauges) and works on mobile.
+
 
