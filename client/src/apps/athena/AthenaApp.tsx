@@ -437,6 +437,18 @@ export default function AthenaApp({
       const id = openWindow({ appId: "crunch", title: "Crunch", icon: "CalendarClock" });
       return id;
     };
+    // Find an open Compass window, or open one if none exists. Returns the id.
+    const ensureCompassWindow = (): string => {
+      const wins = windowsRef.current.filter((w) => w.appId === "compass");
+      const existing = wins.find((w) => !w.minimized) ?? wins[wins.length - 1];
+      if (existing) {
+        if (existing.minimized) minimizeWindow(existing.id);
+        focusWindow(existing.id);
+        return existing.id;
+      }
+      const id = openWindow({ appId: "compass", title: "Compass", icon: "Compass" });
+      return id;
+    };
     switch (act) {
       case "profile_updated": {
         // set_user_name changed the display name server-side — pull the fresh
@@ -792,6 +804,15 @@ export default function AthenaApp({
         // If a date is provided, store it so the Crunch app can focus on it.
         if (payload.date) {
           sessionStorage.setItem(`crunch:focus:${id}`, String(payload.date));
+        }
+        break;
+      }
+      // ===== Compass (Pro research & literature review) =====
+      case "open_compass": {
+        const id = ensureCompassWindow();
+        // If a projectId is provided, store it so the Compass app can focus on it.
+        if (payload.projectId) {
+          sessionStorage.setItem(`compass:focus:${id}`, String(payload.projectId));
         }
         break;
       }
