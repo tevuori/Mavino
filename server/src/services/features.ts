@@ -57,6 +57,7 @@ const DEFAULT_APP_TIERS: Record<string, AppTier> = {
   // Pro tier
   atlas: "pro",
   crunch: "pro",
+  compass: "pro",
   // VUT + Moodle are grant-based, not tier-based
 };
 
@@ -67,6 +68,7 @@ export const ALL_APP_IDS: string[] = [
   "ntfy", "voice", "browser", "reminders", "analytics", "maps", "marketplace",
   "atlas",
   "crunch",
+  "compass",
   "vut", "moodle",
 ];
 

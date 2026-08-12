@@ -77,6 +77,9 @@ model User {
   installedPlugins   UserPlugin[]
   atlasGraph         AtlasGraph?
   crunchPlan         CrunchPlan?
+  compassProjects    CompassProject[]
+  compassPapers      CompassPaper[]
+  compassCitations   CompassCitation[]
 }
 
 // ===== Password reset tokens =====
@@ -1247,6 +1250,112 @@ model AtlasGraph {
 // "building" synchronously, the (potentially slow) LLM scheduling runs in
 // the background, and the client polls GET / until status flips to "ready".
 // `lastAlertAt` throttles "falling behind" ntfy alerts (max one per day).
+
+// ===== Compass (Pro-tier research & literature review assistant) =====
+// A research assistant for students doing bigger academic work (thesis,
+// seminar paper, literature review). The user creates a project with a
+// research question, adds seed papers (PDFs from Files, URLs, or manual
+// entries), and Compass builds a citation graph, finds related work via
+// web search, tracks reading progress, and drafts a structured literature
+// review with proper citations. It also identifies reading gaps.
+//
+// Unlike Atlas/Crunch (one row per user, JSON blob), Compass uses proper
+// relational models because a user can have multiple projects, each with
+// many papers and citation edges. The literature review draft uses the
+// fire-and-forget + polling pattern (like Atlas build) since LLM generation
+// is slow.
+
+model CompassProject {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  researchQuestion String         @default("")
+  notes            String         @default("") // general project notes
+  papers           CompassPaper[]
+  citations        CompassCitation[]
+  review           CompassReview?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([userId])
+}
+
+model CompassPaper {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     CompassProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  authors     String   @default("[]") // JSON array of strings
+  year        Int?
+  venue       String   @default("")
+  doi         String   @default("")
+  url         String   @default("")
+  // Source: "file" (VFile ref), "url" (fetched from web), "manual" (user-entered)
+  sourceType  String   @default("manual")
+  fileId      String?  // → VFile id (when sourceType = "file")
+  // Extracted text (abstract + body, truncated to ~30k chars for LLM processing)
+  abstract    String   @default("")
+  fullText    String   @default("")
+  // Reading status: "to_read" | "reading" | "read"
+  status      String   @default("to_read")
+  // User's annotations / notes on this paper
+  annotations String   @default("")
+  // LLM-extracted key concepts (JSON array of { label, type, definition })
+  keyConcepts String   @default("[]")
+  // Whether LLM extraction has been run on this paper
+  extracted   Boolean  @default(false)
+  // Extraction status: "idle" | "extracting" | "done" | "error"
+  extractStatus String @default("idle")
+  extractError String  @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // Back-relations for citation edges
+  outgoingCitations CompassCitation[] @relation("CitationSource")
+  incomingCitations CompassCitation[] @relation("CitationTarget")
+
+  @@index([projectId])
+  @@index([userId])
+}
+
+model CompassCitation {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       CompassProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // The citing paper (must be in the corpus)
+  sourcePaperId String
+  sourcePaper   CompassPaper @relation("CitationSource", fields: [sourcePaperId], references: [id], onDelete: Cascade)
+  // The cited paper — may or may not be in the corpus
+  targetPaperId String?
+  targetPaper   CompassPaper? @relation("CitationTarget", fields: [targetPaperId], references: [id], onDelete: SetNull)
+  // Title of the cited work (always stored, even if target is in corpus)
+  targetTitle   String
+  // The sentence/context where the citation appears
+  context       String   @default("")
+  createdAt     DateTime @default(now())
+
+  @@index([projectId])
+  @@index([sourcePaperId])
+  @@index([targetPaperId])
+}
+
+model CompassReview {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  project     CompassProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // The drafted literature review as Markdown
+  content     String   @default("")
+  // Fire-and-forget + polling pattern (like AtlasGraph)
+  status      String   @default("ready") // "building" | "ready" | "error"
+  error       String   @default("")
+  generatedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
 
 model CrunchPlan {
   id           String   @id @default(cuid())

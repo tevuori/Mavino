@@ -27,13 +27,17 @@ export default function EditorApp({ win }: { win: WindowInstance }) {
   const fileId = win.payload?.fileId as string | undefined;
   const initialName = (win.payload?.name as string) || "Untitled.txt";
   const initialFolderId = (win.payload?.folderId as string | null) ?? null;
+  // When opened with pre-supplied content (e.g. Compass "Open in Editor" on a
+  // generated literature review), start with that text as a new unsaved file.
+  // The user saves via the existing Save flow (prompts for a name → createText).
+  const initialContent = win.payload?.initialContent as string | undefined;
 
   const isDark = useSettings((s) => s.theme === "dark");
   const setTitle = useWindows((s) => s.setTitle);
 
   const [currentFileId, setCurrentFileId] = useState<string | undefined>(fileId);
   const [name, setName] = useState(initialName);
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(initialContent ?? "");
   const [savedContent, setSavedContent] = useState("");
   const [loading, setLoading] = useState(!!fileId);
   const [saving, setSaving] = useState(false);

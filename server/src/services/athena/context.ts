@@ -166,6 +166,12 @@ export async function workspaceSummary(userId: string): Promise<string> {
       // ignore malformed crunch data
     }
   }
+  // Compass (Pro): report research project count so the model can proactively
+  // suggest research-related actions.
+  const compassCount = await prisma.compassProject.count({ where: { userId } });
+  if (compassCount > 0) {
+    parts.push(`Compass: ${compassCount} research project${compassCount !== 1 ? "s" : ""}`);
+  }
   return parts.join(" | ");
 }
 
@@ -296,6 +302,9 @@ export async function buildSystemPrompt(
   const crunchLine = isProTier
     ? "- Crunch (Pro — AI exam planner): crunch_status (check if the user's exam-prep plan is generated + stats: exams, topics, behind %, next exam), crunch_today (list today's study tasks from the plan — use when the user asks what to study today), crunch_log_progress (mark a task done/not-done by id from crunch_today), open_crunch (open the Crunch app, optionally focused on a date). Crunch generates a day-by-day spaced-repetition plan from exam dates + syllabi, reads mastery from flashcard reviews + grades, and auto-adjusts as the user logs progress. If the workspace summary shows BEHIND N%, proactively warn the user and suggest opening Crunch.\n"
     : "";
+  const compassLine = isProTier
+    ? "- Compass (Pro — research & literature review assistant): compass_list_projects (list the user's research projects with paper counts), compass_get_project (get a project's full paper corpus + citation graph + review status), compass_search (search for related academic work — uses the project's research question + concepts to enrich the query), compass_citation_graph (view which papers cite which), compass_reading_gaps (analyze corpus gaps: recency, coverage, citation balance — use when the user asks what's missing), compass_draft_review (check the literature review draft status/content), open_compass (open the Compass app, optionally focused on a project). Compass is for thesis/seminar paper/literature review work — distinct from exam prep.\n"
+    : "";
   const now = new Date();
   const dateLine = `Current date/time: ${now.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short", timeZone: tz })} (ISO: ${now.toISOString()}). The user's timezone is ${tz} — interpret any wall-clock times the user mentions (e.g. "3pm", "tomorrow at 9") as being in ${tz}, and emit fireAt / dueDate timestamps as ISO 8601 with the ${tz} offset (or convert to UTC with a trailing Z). Use this as "today" when the user says "today" — do not guess the date. Calendar/task tools accept ISO 8601 timestamps (e.g. ${now.toISOString().slice(0, 10)}T00:00:00Z).`;
   return `You are Mavino, the user's personal workspace assistant living inside their Mavino Student OS desktop. You can see and act on the user's workspace through tools.
@@ -325,7 +334,7 @@ ${browserBlock}${sandboxLine}- Auto notetaking: create_notes_from_url (fetch a w
 - Profile: set_user_name (save what to call the user — use it the moment they tell you their name or ask you to change it), get_user_name
 - Memory: remember (store a fact/preference/goal the user wants you to recall in future turns), recall_memory (search stored memories), forget_memory (delete a memory), list_memories (list all). The 5 most recent memories are already in your context below.
 - Item links: list_links (list items attached to a note/task/flashcardDeck/calendarEvent/file — links are symmetric), link_items (attach two items together), unlink_items (remove an attachment). Use these when the user asks what's attached to a task/note/event, or to attach/detach items. The user creates most links by dragging one item onto another in the desktop UI.
-${mapsBlock}${atlasLine}${crunchLine}
+${mapsBlock}${atlasLine}${crunchLine}${compassLine}
 Guidelines:
 - Be concise and direct. Prefer action over explanation.
 - When the user refers to a file by name, it is most likely in the "Recently opened files" list below. Use its id with read_file/edit_file. If not found there, use search_files. If the file doesn't exist yet, use create_file.

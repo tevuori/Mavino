@@ -30,6 +30,7 @@ import { reminderTools } from "./reminders";
 import { mapTools } from "./maps";
 import { atlasTools } from "./atlas";
 import { crunchTools } from "./crunch";
+import { compassTools } from "./compass";
 import { loadPluginTools } from "../../plugins";
 
 export { AthenaToolsPlugin, type ToolDef, type ToolContext, type ClientWindowInfo } from "./plugin";
@@ -67,6 +68,7 @@ export const ALL_TOOLS: ToolDef[] = [
   ...mapTools,
   ...atlasTools,
   ...crunchTools,
+  ...compassTools,
 ];
 
 /** Roles that get access to `paidOnly` tools (sandbox, etc.).

@@ -62,6 +62,7 @@ const PlansApp = lazyImport(() => import("./plans/PlansApp"));
 const MarketplaceApp = lazyImport(() => import("./marketplace/MarketplaceApp"));
 const AtlasApp = lazyImport(() => import("./atlas/AtlasApp"));
 const CrunchApp = lazyImport(() => import("./crunch/CrunchApp"));
+const CompassApp = lazyImport(() => import("./compass/CompassApp"));
 
 export interface AppDefinition {
   id: AppId;
@@ -117,6 +118,7 @@ export const APPS: AppDefinition[] = [
   // ----- Pro tier (exclusive apps for Pro subscribers) -----
   { id: "atlas", name: "Atlas", icon: "Network", component: AtlasApp, pinnedToDesktop: true, minTier: "pro" },
   { id: "crunch", name: "Crunch", icon: "CalendarClock", component: CrunchApp, pinnedToDesktop: true, minTier: "pro" },
+  { id: "compass", name: "Compass", icon: "Compass", component: CompassApp, pinnedToDesktop: true, minTier: "pro" },
 
   // ----- Admin-granted (VUT SSO → VUT + Moodle) -----
   { id: "vut", name: "VUT", icon: "GraduationCap", component: VUTApp, pinnedToDesktop: true, requiresGrant: "vut" },
