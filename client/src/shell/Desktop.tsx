@@ -101,12 +101,12 @@ export default function Desktop() {
 
   return (
     <div
-      className="absolute inset-0 bottom-12 left-[72px]"
+      className="absolute inset-0"
       onContextMenu={onContextMenu}
       onClick={() => menu && setMenu(null)}
     >
       {/* Desktop icons — fixed-height cells so 2-line names don't break the grid */}
-      <div className="absolute left-5 top-5 grid grid-flow-col grid-rows-[repeat(auto-fill,96px)] gap-2" style={{ height: "calc(100% - 40px)" }}>
+      <div className="absolute left-5 top-5 grid grid-flow-col grid-rows-[repeat(auto-fill,96px)] gap-2" style={{ height: "calc(100% - 20px)" }}>
         {apps.filter((a) => a.pinnedToDesktop).map((app) => {
           const Icon = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number }>>)[app.icon] ?? Lucide.AppWindow;
           return (

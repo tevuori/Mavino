@@ -51,7 +51,7 @@ const STEPS: StepDef[] = [
   { id: "complete", centered: true },
 ];
 
-const TASKBAR_HEIGHT = 48;
+const TASKBAR_HEIGHT = 0; // bottom bar auto-hides, so full viewport is usable
 
 /** Computes a rect that centers a window of the given size on the current viewport. */
 function centeredRect(width: number, height: number) {

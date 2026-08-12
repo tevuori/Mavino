@@ -5,7 +5,7 @@ import { useAthenaQuick } from "../store/athenaQuick";
 import { useSettings, type AthenaRollEdge, type AthenaQuickSize } from "../store/settings";
 import { useWindows } from "../store/windows";
 
-const TASKBAR_H = 48;
+const TASKBAR_H = 0; // bottom bar auto-hides, so full viewport is usable
 const MIN_W = 360;
 const MIN_H = 240;
 // Above normal windows AND always-on-top Athena app windows (10000 + zCounter),
@@ -124,7 +124,7 @@ export default function AthenaQuickPanel() {
   const onPointerDown = useCallback(
     (mode: DragMode) => (e: React.PointerEvent) => {
       e.stopPropagation();
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       dragState.current = {
         mode,
         startX: e.clientX,
@@ -165,7 +165,7 @@ export default function AthenaQuickPanel() {
     (e: React.PointerEvent) => {
       const st = dragState.current;
       dragState.current = null;
-      (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
       if (st) {
         // Persist the final size.
         setAthenaQuickSize({ width: rect.width, height: rect.height });

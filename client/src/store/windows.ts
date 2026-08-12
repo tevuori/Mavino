@@ -213,8 +213,8 @@ const DEFAULT_SIZE: Partial<Record<AppId, WindowRect>> = {
   pulse: { x: 160, y: 70, width: 920, height: 680 },
 };
 
-const DOCK_W = 72; // fixed left AppDock width
-const TASKBAR_H = 40; // slim status-bar height
+const DOCK_W = 0; // left dock removed
+const TASKBAR_H = 0; // bottom bar auto-hides, so full viewport is usable
 
 function clampToViewport(rect: WindowRect): WindowRect {
   const vw = window.innerWidth - DOCK_W;
@@ -222,7 +222,7 @@ function clampToViewport(rect: WindowRect): WindowRect {
   const width = Math.min(rect.width, vw - 20);
   const height = Math.min(rect.height, vh - 20);
   const x = Math.max(DOCK_W + 4, Math.min(rect.x, window.innerWidth - width - 4));
-  const y = Math.max(0, Math.min(rect.y, vh - height - 4));
+  const y = Math.max(4, Math.min(rect.y, vh - height - 4));
   return { x, y, width, height };
 }
 

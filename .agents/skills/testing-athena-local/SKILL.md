@@ -59,3 +59,12 @@ Notes:
 ## Devin secrets needed
 
 None for local shell/branding/UI testing.
+
+## Testing the redesigned Mavino shell / dashboard
+
+- The local DB is PostgreSQL (via Docker Compose). Reset with `cd server && bunx prisma migrate reset --force && bun run src/db/seed.ts` if a prior run changed the seeded `admin` password.
+- If login with `admin/admin` fails, reset the password directly:
+  `bunx prisma studio` or a Prisma script that sets `User.password = bcrypt("admin")`.
+- The login form inputs are React controlled; raw `computer`/xdotool typing may not update state. Authenticate via CDP with a `fetch('/api/auth/login', ...)` call and write the returned tokens into `localStorage` under `athena.token` (and `athena.refresh` with `rememberMe=true`).
+- `client/src/wm/Window.tsx` uses `setPointerCapture(e.target)`; clicking child spans in the titlebar can break drag/resize. For automated testing, prefer the titlebar maximize/restore buttons or target the titlebar `div` precisely. This was fixed in the glow-up PR; if testing older branches, work around it.
+- Watch server logs for `401` spikes after workspace switches or after ~15 minutes of inactivity — the access token expires and apps may show empty/Unauthorized states until re-authenticated.

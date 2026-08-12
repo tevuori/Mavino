@@ -12,8 +12,8 @@ interface Props {
 
 const MIN_W = 320;
 const MIN_H = 200;
-const TASKBAR_H = 40; // matches slim status bar
-const DOCK_W = 72; // fixed left AppDock width
+const TASKBAR_H = 0; // bottom bar auto-hides, so full viewport is usable
+const DOCK_W = 0; // left dock removed
 const GRID_SIZE = 20; // px, for Shift+resize grid snapping
 const SNAP_EDGE = 24; // px from edge/corner to trigger snap
 
@@ -30,7 +30,7 @@ function detectSnapZone(clientX: number, clientY: number): SnapZone {
   const nearLeft = clientX <= DOCK_W + SNAP_EDGE;
   const nearRight = clientX >= vw - SNAP_EDGE;
   const nearTop = clientY <= SNAP_EDGE;
-  const nearBottom = clientY >= vh - TASKBAR_H - SNAP_EDGE;
+  const nearBottom = clientY >= vh - SNAP_EDGE;
   if (nearTop && nearLeft) return "top-left";
   if (nearTop && nearRight) return "top-right";
   if (nearBottom && nearLeft) return "bottom-left";
@@ -126,10 +126,10 @@ export default function Window({ win, children }: Props) {
         }
       }
 
-      // Clamp to viewport (right of dock, above taskbar)
-      const maxY = window.innerHeight - TASKBAR_H - height;
-      y = Math.max(0, Math.min(y, Math.max(0, maxY)));
-      x = Math.max(DOCK_W, Math.min(x, window.innerWidth - width - 4));
+      // Clamp to viewport (full screen now; keep a small margin for resize handles)
+      const maxY = window.innerHeight - height;
+      y = Math.max(4, Math.min(y, Math.max(4, maxY)));
+      x = Math.max(4, Math.min(x, window.innerWidth - width - 4));
 
       setRect(win.id, { x, y, width, height });
     },
@@ -183,9 +183,9 @@ export default function Window({ win, children }: Props) {
 
   const isMax =
     win.snap === "maximized" ||
-    (win.rect.x <= DOCK_W + 4 &&
-      win.rect.width >= window.innerWidth - DOCK_W - 4 &&
-      win.rect.height >= window.innerHeight - TASKBAR_H - 4);
+    (win.rect.x <= 4 &&
+      win.rect.width >= window.innerWidth - 8 &&
+      win.rect.height >= window.innerHeight - 8);
   // Enable smooth CSS transitions for position/size when auto-tiling.
   // Disable during drag/resize so the window follows the cursor instantly.
   const useTransition = win.tiling && !isInteracting;

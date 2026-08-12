@@ -316,7 +316,7 @@ export default function TasksApp(_: { win: WindowInstance }) {
       </div>
 
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-        <div className="flex flex-1 gap-3 overflow-x-auto p-3 snap-x snap-mandatory">
+        <div className="flex flex-1 gap-3 overflow-x-auto p-3">
           {STATUS_ORDER.map((status) => (
             <Column
               key={status}
@@ -421,7 +421,7 @@ function Column({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-2xl border border-edge/40 bg-surface-2/50 backdrop-blur-md shadow-lg">
+    <div className="flex min-w-[260px] flex-1 flex-col rounded-2xl border border-edge/40 bg-surface-2/50 backdrop-blur-md shadow-lg">
       <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl bg-surface-2/40 px-3 py-2.5">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-ink">{STATUS_LABELS[status]}</span>

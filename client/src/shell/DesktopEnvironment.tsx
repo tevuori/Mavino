@@ -1,7 +1,6 @@
 import Wallpaper from "./Wallpaper";
 import MusicWidget from "./MusicWidget";
 import Desktop from "./Desktop";
-import AppDock from "./AppDock";
 import Taskbar from "./Taskbar";
 import WindowLayer from "../wm/WindowLayer";
 import SnapPreview from "../wm/SnapPreview";
@@ -185,7 +184,6 @@ export default function DesktopEnvironment() {
       <div className="relative flex-1 overflow-hidden">
         <Wallpaper />
         <MusicWidget />
-        <AppDock />
         <Desktop />
         <WindowLayer />
         <AthenaQuickPanel />
