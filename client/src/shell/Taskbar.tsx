@@ -41,7 +41,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
         setHovered(false);
         return;
       }
-      // Super/Meta toggles the dock; Ctrl+Shift+A is a fallback for browsers/OSes
+      // Super/Meta toggles the dock; Ctrl+Shift+K is a fallback for browsers/OSes
       // that intercept the OS key.
       if (
         (e.key === "Meta" || e.key === "OS") &&
@@ -54,7 +54,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
         setStartOpen(false);
         setPanelOpen((v) => !v);
       }
-      if (e.ctrlKey && e.shiftKey && (e.key === "a" || e.key === "A")) {
+      if (e.ctrlKey && e.shiftKey && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
         setStartOpen(false);
         setPanelOpen((v) => !v);

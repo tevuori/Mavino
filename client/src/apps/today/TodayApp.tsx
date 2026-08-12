@@ -214,7 +214,7 @@ export default function TodayApp() {
 
   return (
     <div className="h-full overflow-y-auto bg-surface/50 p-6 @container">
-      <div className="mx-auto max-w-7xl">
+      <div className="w-full">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
@@ -267,15 +267,15 @@ export default function TodayApp() {
         </div>
 
         {/* Bento grid */}
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 @lg:grid-cols-3 @2xl:grid-cols-4">
           {/* Continue studying */}
-          <div className="col-span-1 flex flex-col gap-5 xl:col-span-2 2xl:col-span-2">
+          <div className="col-span-1 flex flex-col gap-5 @lg:col-span-2 @2xl:col-span-2">
             <div className="glass-panel p-5">
               <div className="mb-4 flex items-center gap-2 text-accent">
                 <BookOpen size={16} />
                 <span className="text-xs font-semibold uppercase tracking-wide">Continue studying</span>
               </div>
-              <div className="flex flex-col gap-5 @2xl:flex-row @2xl:items-center">
+              <div className="flex flex-col gap-5 @lg:flex-row @lg:items-center">
                 <div className="flex items-center gap-5">
                   <div className="relative flex h-32 w-32 shrink-0 items-center justify-center">
                     <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
@@ -327,7 +327,7 @@ export default function TodayApp() {
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-1 flex-col gap-3 rounded-2xl border border-edge/40 bg-surface/40 p-4 @2xl:max-w-[340px]">
+                <div className="flex flex-1 flex-col gap-3 rounded-2xl border border-edge/40 bg-surface/40 p-4 @lg:max-w-[340px]">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent">
                       <FileText size={18} />
@@ -353,7 +353,7 @@ export default function TodayApp() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 @lg:grid-cols-4">
               <StatCard
                 icon={<Timer size={18} />}
                 label="Focus Time Today"
@@ -393,7 +393,7 @@ export default function TodayApp() {
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Recommended for you</span>
               </div>
-              <div className="grid grid-cols-1 gap-3 @2xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 @md:grid-cols-2">
                 <RecCard
                   title="Review flashcards"
                   subtitle={dueDecks[0]?.deckName || "Operating Systems"}
@@ -431,7 +431,7 @@ export default function TodayApp() {
           </div>
 
           {/* Right column */}
-          <div className="col-span-1 flex flex-col gap-5 xl:col-span-1 2xl:col-span-2">
+          <div className="col-span-1 flex flex-col gap-5 @lg:col-span-1 @2xl:col-span-2">
             {/* Today's schedule */}
             <div className="glass-panel p-5">
               <div className="mb-4 flex items-center justify-between">

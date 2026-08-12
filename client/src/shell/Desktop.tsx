@@ -114,9 +114,9 @@ export default function Desktop() {
               key={app.id}
               onDoubleClick={() => open({ appId: app.id, title: app.name, icon: app.icon })}
               onClick={(e) => e.stopPropagation()}
-              className="group flex h-[96px] w-[84px] flex-col items-center gap-2 rounded-2xl p-2 text-center transition hover:bg-white/[0.06] focus:bg-accent/15"
+              className="group flex h-[96px] w-[84px] flex-col items-center gap-2 rounded-2xl p-2 text-center transition hover:bg-surface/60 focus:bg-accent/15"
             >
-              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.07] text-ink shadow-lg shadow-black/20 backdrop-blur-md transition group-hover:scale-105 group-hover:border-accent/30 group-hover:text-accent group-hover:shadow-accent/20">
+              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-surface/70 text-ink shadow-lg shadow-black/20 backdrop-blur-md transition group-hover:scale-105 group-hover:border-accent/30 group-hover:text-accent group-hover:shadow-accent/20">
                 <Icon size={24} />
                 {app.access === "preview" && (
                   <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-white/20">
