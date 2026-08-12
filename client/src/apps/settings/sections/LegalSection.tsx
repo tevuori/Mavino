@@ -80,10 +80,10 @@ export default function LegalSection() {
         <p className="text-xs text-ink-muted">
           Data Controller: Jakub Horák. For any privacy request, complaint, or question, email{" "}
           <a
-            href="mailto:me@tevuori.eu"
+            href="mailto:tevuori@mavino.net"
             className="text-accent hover:underline"
           >
-            me@tevuori.eu
+            tevuori@mavino.net
           </a>
           . You may also lodge a complaint with the Czech Data Protection Authority (ÚOOÚ).
         </p>

@@ -56,6 +56,7 @@ export default function EchoApp({ win: _win }: { win: WindowInstance }) {
   const [history, setHistory] = useState<EchoSessionStatus[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
+  const [language, setLanguage] = useState<"en" | "cs">("en");
 
   // Refs for the recording loop.
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -165,7 +166,7 @@ export default function EchoApp({ win: _win }: { win: WindowInstance }) {
     try {
       // Ensure we have an active session.
       if (!sessionIdRef.current) {
-        const s = await echoApi.start({ language: "en" });
+        const s = await echoApi.start({ language });
         sessionIdRef.current = s.id;
         setSession(s);
       }
@@ -236,7 +237,7 @@ export default function EchoApp({ win: _win }: { win: WindowInstance }) {
       setMicError(msg);
       setRecording(false);
     }
-  }, [sendChunks]);
+  }, [sendChunks, language]);
 
   /** Stop recording: send final chunks, stop the session, generate note. */
   const stopRecording = useCallback(async () => {
@@ -286,6 +287,7 @@ export default function EchoApp({ win: _win }: { win: WindowInstance }) {
   const wordCount = transcriptText.split(/\s+/).filter(Boolean).length;
   const weakConcepts = session?.concepts.filter((c) => c.weak) ?? [];
   const knownConcepts = session?.concepts.filter((c) => !c.weak) ?? [];
+  const transcriptionError = (session?.meta?.transcriptionError as string) ?? null;
 
   // ----- render -----
 
@@ -328,6 +330,12 @@ export default function EchoApp({ win: _win }: { win: WindowInstance }) {
           <AlertCircle size={14} /> Microphone access failed: {micError}
         </div>
       )}
+      {transcriptionError && recording && (
+        <div className="mx-4 mt-3 flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          <AlertCircle size={14} className="mt-0.5 shrink-0" />
+          <span>{transcriptionError}</span>
+        </div>
+      )}
 
       {view === "live" ? (
         <LiveView
@@ -339,6 +347,8 @@ export default function EchoApp({ win: _win }: { win: WindowInstance }) {
           wordCount={wordCount}
           weakConcepts={weakConcepts}
           knownConcepts={knownConcepts}
+          language={language}
+          onLanguageChange={setLanguage}
           onStart={startRecording}
           onStop={stopRecording}
           transcriptEndRef={transcriptEndRef}
@@ -367,6 +377,8 @@ function LiveView({
   wordCount,
   weakConcepts,
   knownConcepts,
+  language,
+  onLanguageChange,
   onStart,
   onStop,
   transcriptEndRef,
@@ -380,6 +392,8 @@ function LiveView({
   wordCount: number;
   weakConcepts: EchoConceptMatch[];
   knownConcepts: EchoConceptMatch[];
+  language: "en" | "cs";
+  onLanguageChange: (lang: "en" | "cs") => void;
   onStart: () => void;
   onStop: () => void;
   transcriptEndRef: React.RefObject<HTMLDivElement>;
@@ -441,12 +455,30 @@ function LiveView({
                 <Square size={16} /> Stop & finalize
               </button>
             ) : !isCompleted ? (
-              <button
-                onClick={onStart}
-                className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink transition hover:bg-accent/90"
-              >
-                <Mic size={16} /> {session ? "Resume" : "Start"} lecture
-              </button>
+              <>
+                {/* Language selector */}
+                <div className="flex items-center rounded-lg border border-edge bg-surface-2 p-0.5">
+                  {(["en", "cs"] as const).map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => onLanguageChange(lang)}
+                      className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition ${
+                        language === lang
+                          ? "bg-accent/15 text-accent"
+                          : "text-ink-muted hover:text-ink"
+                      }`}
+                    >
+                      {lang === "en" ? "EN" : "CS"}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={onStart}
+                  className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink transition hover:bg-accent/90"
+                >
+                  <Mic size={16} /> {session ? "Resume" : "Start"} lecture
+                </button>
+              </>
             ) : null}
           </div>
         </div>
@@ -482,7 +514,7 @@ function LiveView({
 
       {/* Sidebar: concepts + new terms */}
       {(session && (session.concepts.length > 0 || session.newTerms.length > 0)) && (
-        <div className="w-64 shrink-0 overflow-y-auto border-l border-edge bg-surface-1">
+        <div className="w-64 shrink-0 overflow-y-auto border-l border-edge bg-surface-2">
           {/* Concepts */}
           {session.concepts.length > 0 && (
             <div className="p-3">
@@ -586,7 +618,7 @@ function HistoryView({
           return (
             <div
               key={s.id}
-              className="group flex items-center gap-3 rounded-lg border border-edge bg-surface-1 p-3 transition hover:border-accent/40"
+              className="group flex items-center gap-3 rounded-lg border border-edge bg-surface-2 p-3 transition hover:border-accent/40"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10">
                 <Radio size={18} className="text-accent" />

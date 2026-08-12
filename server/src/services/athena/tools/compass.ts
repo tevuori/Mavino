@@ -66,6 +66,9 @@ export const compassTools: ToolDef[] = [
         citationCount: project.citations.length,
         reviewStatus: project.review?.status ?? "empty",
         reviewGeneratedAt: project.review?.generatedAt ?? null,
+        // Include the FULL review content when ready so the model can answer
+        // questions about it without a separate compass_draft_review call.
+        reviewContent: project.review?.status === "ready" ? project.review.content : "",
       };
     },
   },
@@ -142,7 +145,7 @@ export const compassTools: ToolDef[] = [
   {
     name: "compass_draft_review",
     description:
-      "Check the status of a Compass project's literature review draft — whether it's generated, building, or empty, and the content if ready. The actual generation is triggered from the Compass app UI (POST /api/compass/projects/:id/review/generate) since it's a fire-and-forget background job. Use this to check if the review is ready or to read its content.",
+      "Check the status of a Compass project's literature review draft — whether it's generated, building, or empty — and return the FULL Markdown content when ready. The actual generation is triggered from the Compass app UI (POST /api/compass/projects/:id/review/generate) since it's a fire-and-forget background job. Use this to check if the review is ready, to read its content, and to answer the user's questions about the review (e.g. 'what does my lit review say about X?', 'summarize my literature review', 'what gaps did it identify?'). The full Markdown is returned so you can quote, summarize, or reason about it.",
     proOnly: true,
     parameters: [
       { name: "projectId", type: "string", description: "The project id", required: true },
@@ -157,8 +160,10 @@ export const compassTools: ToolDef[] = [
         error: review.error,
         generatedAt: review.generatedAt,
         contentLength: review.content.length,
-        content: review.status === "ready" ? review.content.slice(0, 2000) : "",
-        note: review.status === "ready" && review.content.length > 2000 ? "Content truncated. Open the Compass app to see the full review." : undefined,
+        // Return the FULL content so the model can answer questions about it.
+        // The review is typically 800-2000 words — well within tool-result
+        // budgets. If it's unusually large, the model can still summarize it.
+        content: review.status === "ready" ? review.content : "",
       };
     },
   },

@@ -202,7 +202,7 @@ export async function processChunk(
   // Verify ownership + active status up front (cheap).
   const owned = await prisma.echoSession.findFirst({
     where: { id: sessionId, userId, status: "active" },
-    select: { id: true },
+    select: { id: true, language: true },
   });
   if (!owned) return null;
 
@@ -211,10 +211,11 @@ export async function processChunk(
   const userCfg = await getUserConfig(userId);
   const cfg = getTranscriptionConfig(userCfg);
   let newSegment: EchoTranscriptSegment | null = null;
+  let transcriptionError: string | null = null;
 
   if (cfg.apiKey) {
-    const text = await transcribeChunkSync(cfg, audioBuf, mimeType);
-    if (text) {
+    const result = await transcribeChunkSync(cfg, audioBuf, mimeType, owned.language);
+    if (result && "text" in result) {
       // Whisper /audio/transcriptions with response_format=json returns a
       // single text blob (no timestamps). We create one segment spanning the
       // chunk duration. The client sends the chunk's start offset + duration
@@ -222,9 +223,15 @@ export async function processChunk(
       newSegment = {
         start: chunkOffsetSec,
         end: chunkOffsetSec + Math.max(0, chunkDurationSec),
-        text,
+        text: result.text,
       };
+    } else if (result && "error" in result) {
+      // Store the transcription error in meta so the client can display it.
+      transcriptionError = result.error;
     }
+  } else {
+    transcriptionError = "No transcription API key configured. Set OPENAI_TRANSCRIPTION_API_KEY or configure an AI provider in Settings.";
+    console.warn("[echo] No transcription API key configured — chunk skipped.");
   }
 
   if (!newSegment) {
@@ -233,10 +240,22 @@ export async function processChunk(
     // `durationSec: { lt: newDuration }` guard avoids regressing the value if
     // chunks arrive out of order.
     const newDuration = Math.round(chunkOffsetSec + Math.max(0, chunkDurationSec));
-    await prisma.echoSession.updateMany({
-      where: { id: sessionId, userId, status: "active", durationSec: { lt: newDuration } },
-      data: { durationSec: newDuration },
-    });
+    // Store the transcription error in meta so the client can display it.
+    if (transcriptionError) {
+      const metaRow = await prisma.echoSession.findUnique({ where: { id: sessionId }, select: { meta: true } });
+      let meta: Record<string, unknown> = {};
+      try { meta = JSON.parse(metaRow?.meta ?? "{}"); } catch { /* keep default */ }
+      meta.transcriptionError = transcriptionError;
+      await prisma.echoSession.updateMany({
+        where: { id: sessionId, userId, status: "active", durationSec: { lt: newDuration } },
+        data: { durationSec: newDuration, meta: JSON.stringify(meta) },
+      });
+    } else {
+      await prisma.echoSession.updateMany({
+        where: { id: sessionId, userId, status: "active", durationSec: { lt: newDuration } },
+        data: { durationSec: newDuration },
+      });
+    }
     const row = await prisma.echoSession.findUnique({ where: { id: sessionId } });
     return row ? serialize(row) : null;
   }
@@ -266,6 +285,8 @@ export async function processChunk(
     meta.chunkCount = ((meta.chunkCount as number) ?? 0) + 1;
     meta.wordCount = transcript.reduce((n, s) => n + s.text.split(/\s+/).filter(Boolean).length, 0);
     meta.lastChunkAt = new Date().toISOString();
+    // Clear any previous transcription error since we got a successful segment.
+    delete meta.transcriptionError;
 
     await tx.echoSession.update({
       where: { id: sessionId },
@@ -283,12 +304,15 @@ export async function processChunk(
   return updated ? serialize(updated) : null;
 }
 
-/** Transcribe a single audio chunk synchronously via the Whisper endpoint. */
+/** Transcribe a single audio chunk synchronously via the Whisper endpoint.
+ *  Returns { text } on success, { error } on failure, or null if the request
+ *  itself couldn't be made (no API key). */
 async function transcribeChunkSync(
   cfg: { apiKey: string; baseURL: string },
   audioBuf: Buffer,
-  mimeType: string
-): Promise<string | null> {
+  mimeType: string,
+  language: string
+): Promise<{ text: string } | { error: string } | null> {
   const base = cfg.baseURL.replace(/\/+$/, "");
   const url = `${base}/audio/transcriptions`;
   // Map mime type to a filename extension.
@@ -303,9 +327,11 @@ async function transcribeChunkSync(
   form.append("file", new Blob([audioBuf], { type: mimeType }), filename);
   form.append("model", process.env.OPENAI_TRANSCRIPTION_MODEL ?? "whisper-1");
   form.append("response_format", "json");
-  // Hint: the chunk is likely non-English if the session language is set.
-  // (Whisper auto-detects, but this can improve accuracy for CS lectures.)
-  // form.append("language", "en"); // let Whisper auto-detect
+  // Language hint improves accuracy for non-English lectures (e.g. Czech).
+  // Whisper auto-detects, but the hint avoids misdetection on short chunks.
+  if (language && language !== "auto") {
+    form.append("language", language);
+  }
 
   try {
     const res = await fetch(url, {
@@ -316,13 +342,17 @@ async function transcribeChunkSync(
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       console.warn(`[echo] Whisper failed (${res.status}): ${text.slice(0, 200)}`);
-      return null;
+      if (res.status === 404) {
+        return { error: `Transcription endpoint not found at ${base}. Your AI provider may not support audio transcription. Set OPENAI_TRANSCRIPTION_BASE_URL and OPENAI_TRANSCRIPTION_API_KEY in .env to use a dedicated Whisper endpoint (e.g. OpenAI).` };
+      }
+      return { error: `Transcription failed (${res.status}): ${text.slice(0, 100)}` };
     }
     const data = (await res.json()) as { text?: string };
-    return (data.text ?? "").trim() || null;
+    const text = (data.text ?? "").trim();
+    return text ? { text } : null;
   } catch (err) {
     console.warn("[echo] Whisper request error:", err instanceof Error ? err.message : err);
-    return null;
+    return { error: `Transcription request failed: ${err instanceof Error ? err.message : "network error"}` };
   }
 }
 

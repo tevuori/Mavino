@@ -166,11 +166,23 @@ export async function workspaceSummary(userId: string): Promise<string> {
       // ignore malformed crunch data
     }
   }
-  // Compass (Pro): report research project count so the model can proactively
-  // suggest research-related actions.
+  // Compass (Pro): report research project count + whether a literature
+  // review draft is ready, so the model can proactively suggest research-
+  // related actions and answer questions about the review.
   const compassCount = await prisma.compassProject.count({ where: { userId } });
   if (compassCount > 0) {
-    parts.push(`Compass: ${compassCount} research project${compassCount !== 1 ? "s" : ""}`);
+    const compassParts: string[] = [`Compass: ${compassCount} research project${compassCount !== 1 ? "s" : ""}`];
+    // Find the most recently updated project with a ready review so the model
+    // knows there's a literature review it can answer questions about.
+    const compassWithReview = await prisma.compassProject.findFirst({
+      where: { userId, review: { status: "ready" } },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, title: true, review: { select: { status: true, generatedAt: true } } },
+    });
+    if (compassWithReview) {
+      compassParts.push(`review ready for "${compassWithReview.title}"`);
+    }
+    parts.push(compassParts.join(", "));
   }
   // Echo (Pro): report if a live lecture session is active so the model can
   // proactively ask about it or surface matched concepts.
@@ -340,7 +352,7 @@ export async function buildSystemPrompt(
     ? "- Crunch (Pro — AI exam planner): crunch_status (check if the user's exam-prep plan is generated + stats: exams, topics, behind %, next exam), crunch_today (list today's study tasks from the plan — use when the user asks what to study today), crunch_log_progress (mark a task done/not-done by id from crunch_today), open_crunch (open the Crunch app, optionally focused on a date). Crunch generates a day-by-day spaced-repetition plan from exam dates + syllabi, reads mastery from flashcard reviews + grades, and auto-adjusts as the user logs progress. If the workspace summary shows BEHIND N%, proactively warn the user and suggest opening Crunch.\n"
     : "";
   const compassLine = isProTier
-    ? "- Compass (Pro — research & literature review assistant): compass_list_projects (list the user's research projects with paper counts), compass_get_project (get a project's full paper corpus + citation graph + review status), compass_search (search for related academic work — uses the project's research question + concepts to enrich the query), compass_citation_graph (view which papers cite which), compass_reading_gaps (analyze corpus gaps: recency, coverage, citation balance — use when the user asks what's missing), compass_draft_review (check the literature review draft status/content), open_compass (open the Compass app, optionally focused on a project). Compass is for thesis/seminar paper/literature review work — distinct from exam prep.\n"
+    ? "- Compass (Pro — research & literature review assistant): compass_list_projects (list the user's research projects with paper counts), compass_get_project (get a project's full paper corpus + citation graph + review status + the FULL literature review Markdown when ready), compass_search (search for related academic work — uses the project's research question + concepts to enrich the query), compass_citation_graph (view which papers cite which), compass_reading_gaps (analyze corpus gaps: recency, coverage, citation balance — use when the user asks what's missing), compass_draft_review (returns the FULL literature review Markdown — use this when the user asks about their review: 'what does my lit review say about X?', 'summarize my literature review', 'what gaps did it identify?', 'improve my lit review'), open_compass (open the Compass app, optionally focused on a project). When the workspace summary shows 'review ready for \"X\"', you already know a review exists — call compass_draft_review or compass_get_project to read it before answering. Compass is for thesis/seminar paper/literature review work — distinct from exam prep.\n"
     : "";
   const echoLine = isProTier
     ? "- Echo (Pro — live lecture companion): echo_active_session (check if a live lecture session is active + current transcript stats + matched concepts from Atlas), echo_session_history (list past captured lectures), echo_session_detail (get a past session's full transcript + concepts + new terms with suggested flashcards), open_echo (open the Echo app). Echo transcribes a live lecture in real time, surfaces concepts from the user's Atlas as they're mentioned (green = known, red = weak), and on stop generates a structured note + extracts new terms for flashcards. If the workspace summary shows 'Echo: live lecture active', proactively ask if they want a summary of what's been covered so far.\n"

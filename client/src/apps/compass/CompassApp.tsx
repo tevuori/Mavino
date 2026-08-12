@@ -21,11 +21,13 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ForceGraph2D, { type NodeObject, type LinkObject } from "react-force-graph-2d";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Compass, Plus, Trash2, RefreshCw, Loader2, AlertCircle, X,
   FileText, Edit3, BookOpen, CheckCircle2, Circle, Clock,
   Search, Sparkles, ChevronLeft, Lightbulb, ExternalLink, Save,
-  Network, AlertTriangle,
+  Network, AlertTriangle, Maximize2, Download,
 } from "lucide-react";
 import {
   compassApi,
@@ -344,7 +346,7 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
         <p className="text-sm text-red-400">{error}</p>
         <button
           onClick={() => { setError(null); loadProjects(); }}
-          className="rounded-lg bg-surface-3 px-3 py-1.5 text-xs hover:bg-surface-4"
+          className="rounded-lg bg-surface-3 px-3 py-1.5 text-xs hover:brightness-110"
         >
           Retry
         </button>
@@ -392,14 +394,14 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowSearch(true)}
-            className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs hover:bg-surface-4"
+            className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs hover:brightness-110"
             title="Find related work"
           >
             <Search size={14} /> Find
           </button>
           <button
             onClick={() => setShowGaps(true)}
-            className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs hover:bg-surface-4"
+            className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs hover:brightness-110"
             title="Reading gaps"
           >
             <Lightbulb size={14} /> Gaps
@@ -422,7 +424,7 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
 
       {/* Research question */}
       {activeProject.researchQuestion && (
-        <div className="border-b border-surface-3 bg-surface-1 px-4 py-1.5">
+        <div className="border-b border-surface-3 bg-surface-2 px-4 py-1.5">
           <p className="text-xs text-ink-muted">
             <span className="font-medium text-ink">Research question:</span> {activeProject.researchQuestion}
           </p>
@@ -432,7 +434,7 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
       {/* Three-pane body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: paper list */}
-        <div className="w-64 shrink-0 overflow-y-auto border-r border-surface-3 bg-surface-1">
+        <div className="w-64 shrink-0 overflow-y-auto border-r border-surface-3 bg-surface-2">
           <PaperList
             papers={activeProject.papers}
             selectedId={selectedPaperId}
@@ -441,7 +443,7 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
         </div>
 
         {/* Center: graph or paper detail */}
-        <div className="flex-1 overflow-hidden bg-surface-0">
+        <div className="flex-1 overflow-hidden bg-surface">
           {selectedPaper ? (
             <PaperDetail
               paper={selectedPaper}
@@ -460,7 +462,7 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
         </div>
 
         {/* Right: review / gaps */}
-        <div className="w-96 shrink-0 overflow-y-auto border-l border-surface-3 bg-surface-1">
+        <div className="w-96 shrink-0 overflow-y-auto border-l border-surface-3 bg-surface-2">
           <div className="flex border-b border-surface-3">
             <button
               onClick={() => setRightTab("review")}
@@ -478,6 +480,7 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
           {rightTab === "review" ? (
             <ReviewPanel
               projectId={activeProject.id}
+              projectTitle={activeProject.title}
               review={activeProject.review}
               onGenerate={handleGenerateReview}
               onOpenEditor={(content) => open({ appId: "editor", title: "Literature Review", icon: "Code2", payload: { name: "Literature Review.md", initialContent: content } })}
@@ -573,7 +576,7 @@ function ProjectListView({
               <button
                 key={p.id}
                 onClick={() => onOpen(p.id)}
-                className="group flex flex-col gap-2 rounded-xl border border-surface-3 bg-surface-1 p-4 text-left transition hover:border-indigo-500/50 hover:bg-surface-2"
+                className="group flex flex-col gap-2 rounded-xl border border-surface-3 bg-surface-2 p-4 text-left transition hover:border-indigo-500/50 hover:bg-surface-2"
               >
                 <div className="flex items-start justify-between">
                   <h3 className="text-sm font-semibold text-ink group-hover:text-indigo-400">{p.title}</h3>
@@ -611,7 +614,7 @@ function CreateProjectDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onCancel}>
-      <div className="w-full max-w-md rounded-xl border border-surface-3 bg-surface-1 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-xl border border-surface-3 bg-surface-2 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <h3 className="mb-4 text-sm font-semibold">New Research Project</h3>
         <div className="space-y-3">
           <div>
@@ -621,7 +624,7 @@ function CreateProjectDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Literature review on transformer architectures"
-              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
             />
           </div>
           <div>
@@ -631,7 +634,7 @@ function CreateProjectDialog({
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="e.g. How have attention mechanisms evolved to handle long-range dependencies?"
               rows={3}
-              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
             />
           </div>
         </div>
@@ -788,7 +791,7 @@ function CitationGraphView({
         cooldownTicks={100}
       />
       {/* Legend */}
-      <div className="absolute bottom-2 left-2 flex flex-col gap-1 rounded-lg bg-surface-1/80 p-2 text-[10px] backdrop-blur">
+      <div className="absolute bottom-2 left-2 flex flex-col gap-1 rounded-lg bg-surface-2/80 p-2 text-[10px] backdrop-blur">
         <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-emerald-400" /> Read</div>
         <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-amber-400" /> Reading</div>
         <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-slate-400" /> To Read</div>
@@ -893,7 +896,7 @@ function PaperDetail({
       )}
 
       {/* Extraction */}
-      <div className="mb-4 rounded-lg border border-surface-3 bg-surface-1 p-3">
+      <div className="mb-4 rounded-lg border border-surface-3 bg-surface-2 p-3">
         <div className="mb-2 flex items-center justify-between">
           <h4 className="text-xs font-semibold text-ink-muted">AI Analysis</h4>
           <button
@@ -963,7 +966,7 @@ function PaperDetail({
             onChange={(e) => setAnnotations(e.target.value)}
             rows={6}
             placeholder="Add your notes about this paper…"
-            className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
           />
         ) : (
           <p className="text-sm text-ink-muted whitespace-pre-wrap">
@@ -1047,7 +1050,7 @@ function AddPaperDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onCancel}>
-      <div className="w-full max-w-lg rounded-xl border border-surface-3 bg-surface-1 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-lg rounded-xl border border-surface-3 bg-surface-2 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold">Add Paper</h3>
           <button onClick={onCancel} className="text-ink-muted hover:text-ink"><X size={16} /></button>
@@ -1103,7 +1106,7 @@ function AddPaperDialog({
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://arxiv.org/abs/..."
-              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
             />
           )}
           {tab === "manual" && (
@@ -1111,7 +1114,7 @@ function AddPaperDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Paper title *"
-              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
             />
           )}
 
@@ -1122,27 +1125,27 @@ function AddPaperDialog({
                 value={authors}
                 onChange={(e) => setAuthors(e.target.value)}
                 placeholder="Authors (comma-separated, optional)"
-                className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
               />
               <div className="flex gap-2">
                 <input
                   value={year}
                   onChange={(e) => setYear(e.target.value)}
                   placeholder="Year"
-                  className="w-24 rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  className="w-24 rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
                 />
                 <input
                   value={venue}
                   onChange={(e) => setVenue(e.target.value)}
                   placeholder="Venue (e.g. NeurIPS)"
-                  className="flex-1 rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  className="flex-1 rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
                 />
               </div>
               <input
                 value={doi}
                 onChange={(e) => setDoi(e.target.value)}
                 placeholder="DOI (optional)"
-                className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
               />
             </>
           )}
@@ -1206,7 +1209,7 @@ function SearchDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onCancel}>
-      <div className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-xl border border-surface-3 bg-surface-1 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-xl border border-surface-3 bg-surface-2 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold">Find Related Work</h3>
           <button onClick={onCancel} className="text-ink-muted hover:text-ink"><X size={16} /></button>
@@ -1220,7 +1223,7 @@ function SearchDialog({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="e.g. transformer attention mechanisms survey"
-            className="flex-1 rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            className="flex-1 rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
             autoFocus
           />
           <button
@@ -1235,7 +1238,7 @@ function SearchDialog({
         {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
         <div className="flex-1 overflow-y-auto">
           {results.map((r, i) => (
-            <div key={i} className="mb-2 rounded-lg border border-surface-3 bg-surface-0 p-3">
+            <div key={i} className="mb-2 rounded-lg border border-surface-3 bg-surface p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-indigo-400 hover:underline">
@@ -1248,7 +1251,7 @@ function SearchDialog({
                 {!r.inCorpus && !addedUrls.has(r.url) && (
                   <button
                     onClick={() => handleAdd(r)}
-                    className="shrink-0 rounded-lg bg-surface-3 px-2 py-1 text-[10px] hover:bg-surface-4"
+                    className="shrink-0 rounded-lg bg-surface-3 px-2 py-1 text-[10px] hover:brightness-110"
                   >
                     <Plus size={10} className="mr-0.5 inline" /> Add
                   </button>
@@ -1272,11 +1275,13 @@ function SearchDialog({
 
 function ReviewPanel({
   projectId,
+  projectTitle,
   review,
   onGenerate,
   onOpenEditor,
 }: {
   projectId: string;
+  projectTitle: string;
   review: CompassReview | null;
   onGenerate: () => void;
   onOpenEditor: (content: string) => void;
@@ -1284,6 +1289,9 @@ function ReviewPanel({
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showFullscreen, setShowFullscreen] = useState(false);
+  const [savingFile, setSavingFile] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setEditing(false);
@@ -1298,6 +1306,26 @@ function ReviewPanel({
       // ignore — error will show on next poll
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Save the review as a Markdown file in the user's Files (root folder).
+  // The filename is derived from the project title + a "Literature Review"
+  // suffix, sanitized for filesystem safety.
+  const handleSaveToFile = async () => {
+    if (!review || review.status !== "ready") return;
+    setSavingFile(true);
+    setSaveMsg(null);
+    try {
+      const safe = projectTitle.replace(/[^a-z0-9\-_ ]/gi, "").trim().replace(/\s+/g, "_") || "review";
+      const name = `${safe}_Literature_Review.md`;
+      await filesApi.createText({ name, folderId: null, content: review.content });
+      setSaveMsg(`Saved as "${name}"`);
+      setTimeout(() => setSaveMsg(null), 4000);
+    } catch (e) {
+      setSaveMsg(e instanceof Error ? `Failed: ${e.message}` : "Failed to save");
+    } finally {
+      setSavingFile(false);
     }
   };
 
@@ -1365,6 +1393,21 @@ function ReviewPanel({
           >
             <Edit3 size={12} />
           </button>
+          <button
+            onClick={handleSaveToFile}
+            disabled={savingFile}
+            className="flex items-center gap-1 rounded-lg p-1.5 text-ink-muted hover:bg-surface-3 hover:text-ink disabled:opacity-50"
+            title="Save as Markdown file in Files"
+          >
+            {savingFile ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+          </button>
+          <button
+            onClick={() => setShowFullscreen(true)}
+            className="flex items-center gap-1 rounded-lg p-1.5 text-ink-muted hover:bg-surface-3 hover:text-ink"
+            title="Fullscreen view"
+          >
+            <Maximize2 size={12} />
+          </button>
         </div>
         {!editing ? (
           <button
@@ -1395,115 +1438,200 @@ function ReviewPanel({
         <textarea
           value={editContent}
           onChange={(e) => setEditContent(e.target.value)}
-          className="flex-1 resize-none bg-surface-0 p-3 font-mono text-xs focus:outline-none"
+          className="flex-1 resize-none bg-surface p-3 font-mono text-xs focus:outline-none"
         />
       ) : (
         <div className="flex-1 overflow-y-auto p-4">
-          <MarkdownView content={review.content} />
+          <ReviewMarkdown content={review.content} />
         </div>
       )}
-      {review.generatedAt && (
-        <div className="border-t border-surface-3 px-3 py-1.5 text-[10px] text-ink-muted">
-          Generated {new Date(review.generatedAt).toLocaleString()}
-        </div>
+      <div className="flex items-center justify-between border-t border-surface-3 px-3 py-1.5 text-[10px] text-ink-muted">
+        {review.generatedAt ? (
+          <span>Generated {new Date(review.generatedAt).toLocaleString()}</span>
+        ) : <span />}
+        {saveMsg && <span className="text-emerald-400">{saveMsg}</span>}
+      </div>
+      {showFullscreen && (
+        <ReviewFullscreenDialog
+          title={projectTitle}
+          content={review.content}
+          onClose={() => setShowFullscreen(false)}
+        />
       )}
     </div>
   );
 }
 
-// ----- simple markdown renderer -----
+// ----- fullscreen review dialog -----
 
-function MarkdownView({ content }: { content: string }) {
-  // Lightweight Markdown rendering: headings, bold, italic, lists, paragraphs.
-  // For a full-featured editor, the user can open in the Editor app.
-  const lines = content.split("\n");
-  const elements: React.ReactNode[] = [];
-  let listItems: string[] = [];
-  let orderedList = false;
+function ReviewFullscreenDialog({
+  title,
+  content,
+  onClose,
+}: {
+  title: string;
+  content: string;
+  onClose: () => void;
+}) {
+  // Close on Escape.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
-  const flushList = () => {
-    if (listItems.length > 0) {
-      if (orderedList) {
-        elements.push(
-          <ol key={`ol-${elements.length}`} className="my-1 ml-4 list-decimal space-y-0.5 text-sm text-ink">
-            {listItems.map((item, i) => <li key={i}>{renderInline(item)}</li>)}
-          </ol>
-        );
-      } else {
-        elements.push(
-          <ul key={`ul-${elements.length}`} className="my-1 ml-4 list-disc space-y-0.5 text-sm text-ink">
-            {listItems.map((item, i) => <li key={i}>{renderInline(item)}</li>)}
-          </ul>
-        );
-      }
-      listItems = [];
-    }
-  };
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (/^#{1,6}\s/.test(line)) {
-      flushList();
-      const level = line.match(/^#+/)![0].length;
-      const text = line.replace(/^#+\s/, "");
-      const sizes = ["text-base", "text-sm", "text-sm", "text-sm", "text-xs", "text-xs"];
-      elements.push(
-        <h4 key={i} className={`mt-3 mb-1 font-semibold text-ink ${sizes[Math.min(level - 1, 5)]}`}>
-          {renderInline(text)}
-        </h4>
-      );
-    } else if (/^\d+\.\s/.test(line)) {
-      orderedList = true;
-      listItems.push(line.replace(/^\d+\.\s/, ""));
-    } else if (/^[-*]\s/.test(line)) {
-      orderedList = false;
-      listItems.push(line.replace(/^[-*]\s/, ""));
-    } else if (line.trim() === "") {
-      flushList();
-    } else {
-      flushList();
-      elements.push(
-        <p key={i} className="my-1 text-sm text-ink leading-relaxed">{renderInline(line)}</p>
-      );
-    }
-  }
-  flushList();
-
-  return <div>{elements}</div>;
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-surface" onClick={onClose}>
+      <div
+        className="flex items-center justify-between border-b border-surface-3 bg-surface-2 px-4 py-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <BookOpen size={16} className="shrink-0 text-indigo-400" />
+          <h3 className="truncate text-sm font-semibold">{title} — Literature Review</h3>
+        </div>
+        <button
+          onClick={onClose}
+          className="rounded-lg p-1.5 text-ink-muted hover:bg-surface-3 hover:text-ink"
+          title="Close (Esc)"
+        >
+          <X size={18} />
+        </button>
+      </div>
+      <div
+        className="flex-1 overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="selectable markdown-body mx-auto max-w-3xl p-8">
+          <ReviewMarkdown content={content} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function renderInline(text: string): React.ReactNode {
-  // Handle **bold**, *italic*, [link](url), and [n] citation references.
-  const parts: React.ReactNode[] = [];
-  let remaining = text;
-  let key = 0;
-  const patterns: Array<[RegExp, (m: RegExpExecArray) => React.ReactNode]> = [
-    [/\*\*(.+?)\*\*/, (m) => <strong key={key++} className="font-semibold text-ink">{m[1]}</strong>],
-    [/\*(.+?)\*/, (m) => <em key={key++}>{m[1]}</em>],
-    [/\[(\d+)\]/, (m) => <span key={key++} className="text-indigo-400">[{m[1]}]</span>],
-    [/\[([^\]]+)\]\(([^)]+)\)/, (m) => <a key={key++} href={m[2]} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">{m[1]}</a>],
-  ];
-  while (remaining.length > 0) {
-    let earliest = -1;
-    let earliestMatch: RegExpExecArray | null = null;
-    let earliestRenderer: ((m: RegExpExecArray) => React.ReactNode) | null = null;
-    for (const [pattern, renderer] of patterns) {
-      const m = pattern.exec(remaining);
-      if (m && (earliest === -1 || m.index < earliest)) {
-        earliest = m.index;
-        earliestMatch = m;
-        earliestRenderer = renderer;
+// ----- markdown renderer (react-markdown + clickable [n] citations) -----
+//
+// Uses react-markdown + remark-gfm for full GFM support (tables, task lists,
+// strikethrough, code blocks, blockquotes) styled by the shared `.markdown-body`
+// CSS. Inline `[n]` citation references emitted by the LLM are turned into
+// clickable superscript badges that scroll to the matching entry in the
+// review's References / Bibliography section (matched by a leading "[n]" token
+// in a list item). If no matching anchor is found, the badge is still styled
+// but non-clickable.
+
+function ReviewMarkdown({ content }: { content: string }) {
+  // Collect the set of citation numbers that have a corresponding entry in a
+  // "References" / "Bibliography" list, so we can render badges as links only
+  // when they resolve. We scan list-item lines starting with "[n]".
+  const refNumbers = useMemo(() => {
+    const nums = new Set<string>();
+    const lines = content.split("\n");
+    for (const line of lines) {
+      const m = line.match(/^\s*[-*]\s*\[(\d+)\]/);
+      if (m) nums.add(m[1]);
+    }
+    return nums;
+  }, [content]);
+
+  const scrollToRef = useCallback((n: string, fromEl?: Element | null) => {
+    // Find a list item whose text starts with "[n]" and scroll it into view.
+    // Scope the search to the closest .markdown-body ancestor of the clicked
+    // badge so the right container is used when both the inline panel and the
+    // fullscreen dialog are mounted.
+    const container = fromEl?.closest(".markdown-body") ?? document.querySelector(".markdown-body");
+    if (!container) return;
+    const items = container.querySelectorAll("li");
+    for (const li of items) {
+      const text = li.textContent?.trim() ?? "";
+      if (text.startsWith(`[${n}]`)) {
+        li.scrollIntoView({ behavior: "smooth", block: "center" });
+        li.classList.add("ring-2", "ring-indigo-500/60", "rounded");
+        setTimeout(() => li.classList.remove("ring-2", "ring-indigo-500/60", "rounded"), 1800);
+        return;
       }
     }
-    if (earliest === -1 || !earliestMatch || !earliestRenderer) {
-      parts.push(remaining);
-      break;
-    }
-    if (earliest > 0) parts.push(remaining.slice(0, earliest));
-    parts.push(earliestRenderer(earliestMatch));
-    remaining = remaining.slice(earliest + earliestMatch[0].length);
+  }, []);
+
+  // Custom text renderer: walk children, replacing bare "[n]" tokens with
+  // clickable citation badges. react-markdown gives us an array of strings
+  // and elements as children for text nodes.
+  const renderText = useCallback(
+    (children: React.ReactNode): React.ReactNode => {
+      if (children == null) return children;
+      if (typeof children === "string") {
+        return splitCitations(children, refNumbers, scrollToRef);
+      }
+      if (Array.isArray(children)) {
+        return children.map((c, i) =>
+          typeof c === "string" ? <span key={i}>{splitCitations(c, refNumbers, scrollToRef)}</span> : c
+        );
+      }
+      return children;
+    },
+    [refNumbers, scrollToRef]
+  );
+
+  // Note: splitCitations receives scrollToRef which takes an optional fromEl
+  // resolved from the click event target inside the badge button.
+
+  return (
+    <div className="selectable markdown-body">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          // Inject citation handling into every text-bearing element.
+          p: ({ children }) => <p>{renderText(children)}</p>,
+          li: ({ children }) => <li>{renderText(children)}</li>,
+          td: ({ children }) => <td>{renderText(children)}</td>,
+          th: ({ children }) => <th>{renderText(children)}</th>,
+          // Open external links in a new tab.
+          a: ({ href, children }) => (
+            <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+/** Split a string into text + clickable [n] citation badges. */
+function splitCitations(
+  text: string,
+  refNumbers: Set<string>,
+  scrollToRef: (n: string, fromEl?: Element | null) => void
+): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  const re = /\[(\d+)\]/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const n = m[1];
+    const hasRef = refNumbers.has(n);
+    out.push(
+      hasRef ? (
+        <button
+          key={`cite-${key++}`}
+          onClick={(e) => { e.stopPropagation(); scrollToRef(n, e.currentTarget); }}
+          className="mx-0.5 align-super text-[0.7em] font-semibold text-indigo-400 hover:text-indigo-300 hover:underline"
+          title={`Jump to reference [${n}]`}
+        >
+          [{n}]
+        </button>
+      ) : (
+        <span key={`cite-${key++}`} className="mx-0.5 align-super text-[0.7em] font-semibold text-indigo-400">
+          [{n}]
+        </span>
+      )
+    );
+    last = m.index + m[0].length;
   }
-  return <>{parts}</>;
+  if (last < text.length) out.push(text.slice(last));
+  return out;
 }
 
 // ----- gaps panel -----
@@ -1593,7 +1721,7 @@ function GapsPanel({
 
       <button
         onClick={onAddPaper}
-        className="w-full rounded-lg bg-surface-3 py-2 text-xs text-ink-muted hover:bg-surface-4"
+        className="w-full rounded-lg bg-surface-3 py-2 text-xs text-ink-muted hover:brightness-110"
       >
         + Add papers to fill gaps
       </button>
@@ -1612,7 +1740,7 @@ function GapsDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-xl border border-surface-3 bg-surface-1 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-xl border border-surface-3 bg-surface-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-surface-3 px-4 py-3">
           <h3 className="text-sm font-semibold">Reading Gaps Analysis</h3>
           <button onClick={onClose} className="text-ink-muted hover:text-ink"><X size={16} /></button>
