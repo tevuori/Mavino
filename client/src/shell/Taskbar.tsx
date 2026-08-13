@@ -11,6 +11,7 @@ import { useAccessibleApps } from "../store/features";
 import { useWindows, type AppId } from "../store/windows";
 import { useSettings } from "../store/settings";
 import { matchesShortcut } from "../store/shortcuts";
+import { getAppAccent } from "../apps/registry";
 
 interface Props {
   onOpenOverview?: () => void;
@@ -22,6 +23,8 @@ export default function Taskbar({ onOpenOverview }: Props) {
   const [hovered, setHovered] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; appId: AppId } | null>(null);
   const { open } = useWindows();
+  const windows = useWindows((s) => s.windows);
+  const activeWorkspaceId = useWindows((s) => s.activeWorkspaceId);
   const apps = useAccessibleApps();
   const dockFavorites = useSettings((s) => s.dockFavorites);
   const setDockFavorites = useSettings((s) => s.setDockFavorites);
@@ -33,6 +36,16 @@ export default function Taskbar({ onOpenOverview }: Props) {
       .map((id) => map.get(id))
       .filter((a): a is (typeof apps)[number] => !!a);
   }, [apps, dockFavorites]);
+
+  const running = useMemo(() => {
+    const set = new Set<AppId>();
+    for (const w of windows) {
+      if (!w.minimized && w.workspaceId === activeWorkspaceId) {
+        set.add(w.appId);
+      }
+    }
+    return set;
+  }, [windows, activeWorkspaceId]);
 
   const togglePinned = (appId: AppId, pinnedValue: boolean) => {
     setDockFavorites(
@@ -100,41 +113,43 @@ export default function Taskbar({ onOpenOverview }: Props) {
 
   return (
     <>
-      {/* Thin hot trigger at the bottom edge to raise the dock on hover */}
+      {/* Hot trigger at the bottom edge to raise the centered dock */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-[10000] h-1.5"
+        className="fixed bottom-0 left-0 right-0 z-[10000] h-2"
         onMouseEnter={() => setHovered(true)}
       />
 
-      {/* Bottom app launcher (GNOME-style dash) */}
+      {/* GNOME-style centered floating dock */}
       <motion.div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         initial={false}
-        animate={{ y: visible ? "0%" : "100%" }}
+        animate={{ y: visible ? 0 : "120%" }}
         transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        className="fixed bottom-0 left-0 right-0 z-[10001] flex h-24 flex-col border-t border-white/[0.06] bg-surface/80 px-4 pb-2 pt-1.5 backdrop-blur-2xl"
+        className="fixed bottom-4 left-1/2 z-[10001] flex max-w-[92vw] -translate-x-1/2 items-center gap-2 rounded-[28px] border border-white/[0.08] bg-surface/80 px-2 py-2 shadow-2xl backdrop-blur-2xl"
       >
-        <div className="flex h-8 shrink-0 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setStartOpen((v) => !v)}
-              className={`flex h-7 w-7 items-center justify-center rounded-lg transition ${
-                startOpen
-                  ? "bg-accent text-white"
-                  : "text-ink-muted hover:bg-white/[0.06] hover:text-ink"
-              }`}
-              title="All apps"
-            >
-              <AppLogo size={18} />
-            </button>
+        {/* Left: launcher + workspaces */}
+        <div className="flex items-center gap-1.5 rounded-2xl bg-white/[0.03] px-1.5 py-1.5">
+          <button
+            onClick={() => setStartOpen((v) => !v)}
+            className={`flex h-12 w-12 items-center justify-center rounded-2xl transition ${
+              startOpen
+                ? "bg-accent text-accent-fg ring-2 ring-accent/40"
+                : "bg-surface-3 text-ink hover:bg-surface-2 hover:text-accent"
+            }`}
+            title="All apps"
+          >
+            <AppLogo size={22} />
+          </button>
+          <div className="h-6 w-px bg-white/10" />
+          <div className="rounded-xl bg-surface-3/50 px-1 py-1">
             <WorkspaceSwitcher onOpenOverview={() => onOpenOverview?.()} />
           </div>
-          <SystemTray />
         </div>
 
+        {/* Center: pinned app icons, centered in the dock */}
         <div
-          className="flex flex-1 items-center gap-1 overflow-x-auto py-1"
+          className="flex flex-1 items-center justify-center gap-1.5 overflow-x-auto px-1"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {pinned.map((app) => {
@@ -145,6 +160,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
                   React.ComponentType<{ size?: number }>
                 >
               )[app.icon] ?? Lucide.AppWindow;
+            const accent = getAppAccent(app.id);
             return (
               <button
                 key={app.id}
@@ -153,28 +169,37 @@ export default function Taskbar({ onOpenOverview }: Props) {
                   e.preventDefault();
                   setContextMenu({ x: e.clientX, y: e.clientY, appId: app.id });
                 }}
-                className="group relative flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-1 text-ink transition hover:bg-white/[0.06]"
+                className="group relative flex flex-col items-center justify-center gap-1 rounded-2xl p-1.5 transition hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-accent/40"
                 title={app.name}
               >
-                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/15 text-accent shadow-sm transition group-hover:scale-105 group-hover:bg-accent/25">
-                  <Icon size={22} />
+                <div
+                  className={`relative flex h-12 w-12 items-center justify-center rounded-2xl ${accent.bg} ${accent.text} shadow-sm ring-1 ring-white/5 transition group-hover:scale-110 group-hover:shadow-lg`}
+                >
+                  <Icon size={24} />
                   {app.access === "preview" && (
                     <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-surface text-amber-500 ring-1 ring-white/10">
                       <Lock size={8} />
                     </span>
                   )}
                 </div>
-                <span className="max-w-[72px] truncate text-[10px] leading-tight text-ink-muted group-hover:text-ink">
+                {running.has(app.id) && (
+                  <span className="h-1 w-1 rounded-full bg-accent" />
+                )}
+                <span className="max-w-[64px] truncate text-[10px] leading-tight text-ink-muted transition group-hover:text-ink">
                   {app.name}
                 </span>
               </button>
             );
           })}
           {pinned.length === 0 && (
-            <span className="px-2 text-xs text-ink-muted">
-              No pinned apps
-            </span>
+            <span className="px-2 text-xs text-ink-muted">No pinned apps</span>
           )}
+        </div>
+
+        {/* Right: system tray */}
+        <div className="flex items-center gap-1.5 rounded-2xl bg-white/[0.03] px-1.5 py-1.5">
+          <div className="h-6 w-px bg-white/10" />
+          <SystemTray />
         </div>
       </motion.div>
 

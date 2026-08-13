@@ -133,6 +133,43 @@ export const APP_MAP: Record<AppId, AppDefinition> = Object.fromEntries(
   APPS.map((a) => [a.id, a])
 ) as Record<AppId, AppDefinition>;
 
+export const APP_ACCENT: Partial<Record<AppId, { bg: string; text: string }>> = {
+  notes: { bg: "bg-amber-500/25", text: "text-amber-300" },
+  tasks: { bg: "bg-emerald-500/25", text: "text-emerald-300" },
+  files: { bg: "bg-sky-500/25", text: "text-sky-300" },
+  whiteboard: { bg: "bg-violet-500/25", text: "text-violet-300" },
+  study: { bg: "bg-indigo-500/25", text: "text-indigo-300" },
+  athena: { bg: "bg-fuchsia-500/25", text: "text-fuchsia-300" },
+  today: { bg: "bg-pink-500/25", text: "text-pink-300" },
+  settings: { bg: "bg-slate-500/25", text: "text-slate-300" },
+  plans: { bg: "bg-cyan-500/25", text: "text-cyan-300" },
+  editor: { bg: "bg-zinc-500/25", text: "text-zinc-300" },
+  viewer: { bg: "bg-orange-500/25", text: "text-orange-300" },
+  pomodoro: { bg: "bg-red-500/25", text: "text-red-300" },
+  flashcards: { bg: "bg-yellow-500/25", text: "text-yellow-300" },
+  grades: { bg: "bg-lime-500/25", text: "text-lime-300" },
+  calendar: { bg: "bg-rose-500/25", text: "text-rose-300" },
+  habits: { bg: "bg-orange-500/25", text: "text-orange-300" },
+  ntfy: { bg: "bg-teal-500/25", text: "text-teal-300" },
+  voice: { bg: "bg-cyan-500/25", text: "text-cyan-300" },
+  browser: { bg: "bg-blue-500/25", text: "text-blue-300" },
+  reminders: { bg: "bg-amber-500/25", text: "text-amber-300" },
+  analytics: { bg: "bg-emerald-500/25", text: "text-emerald-300" },
+  maps: { bg: "bg-green-500/25", text: "text-green-300" },
+  marketplace: { bg: "bg-purple-500/25", text: "text-purple-300" },
+  atlas: { bg: "bg-blue-500/25", text: "text-blue-300" },
+  crunch: { bg: "bg-indigo-500/25", text: "text-indigo-300" },
+  compass: { bg: "bg-sky-500/25", text: "text-sky-300" },
+  echo: { bg: "bg-violet-500/25", text: "text-violet-300" },
+  pulse: { bg: "bg-pink-500/25", text: "text-pink-300" },
+  vut: { bg: "bg-red-500/25", text: "text-red-300" },
+  moodle: { bg: "bg-orange-500/25", text: "text-orange-300" },
+};
+
+export function getAppAccent(appId: AppId) {
+  return APP_ACCENT[appId] ?? { bg: "bg-surface-3", text: "text-ink" };
+}
+
 // ----- Plugin apps (dynamically installed from the marketplace) -----
 
 /** Prefix for synthetic plugin app ids: `plugin:<pluginKey>`. */
