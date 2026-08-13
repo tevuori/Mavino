@@ -56,7 +56,7 @@ export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
 };
 
 export const DEFAULT_SHORTCUTS: Record<ShortcutAction, Shortcut> = {
-  toggleDock: { super: true, key: "Meta" },
+  toggleDock: { key: "Meta" },
   toggleCommandPalette: { super: true, key: " " },
   toggleWorkspaceOverview: { alt: true, key: " " },
   toggleAthenaQuickPanel: { super: true, key: "y" },
