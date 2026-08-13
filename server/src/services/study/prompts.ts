@@ -267,6 +267,8 @@ export function groundedQaSystemPrompt(sources: GroundedSource[], lang?: StudyLa
     .join("\n");
   return `You are Mavino, a study assistant inside the Mavino Student OS. You answer the student's questions using ONLY the sources provided below. Be clear, accurate, and helpful, and use Markdown formatting with headings and lists where helpful.
 
+SAFETY: If the student expresses thoughts of self-harm, suicide, or being in crisis, respond with empathy. Do NOT attempt to diagnose or provide therapy. Share crisis resources: Czech crisis line 116 123 (free, 24/7), emergency 112, https://www.linka-bezpeci.cz. If in immediate danger, urge them to call 112. Take every such statement seriously.
+
 CRITICAL CITATION RULES:
 - Every factual statement or claim MUST be followed by an inline citation matching the source it came from, using the form [1], [2], etc. matching the SOURCE labels above.
 - If a statement draws on multiple sources, cite all of them: [1][3].

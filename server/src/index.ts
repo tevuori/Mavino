@@ -61,6 +61,7 @@ import { startAllSubscribers, stopAllSubscribers } from "./services/ntfy/subscri
 import { startProactiveScheduler, stopProactiveScheduler } from "./services/ntfy/proactive-scheduler";
 import { startReminderScheduler, stopReminderScheduler } from "./services/reminders/scheduler";
 import { startDemoCleanup } from "./services/demo";
+import { startRenewalReminderScheduler, stopRenewalReminderScheduler } from "./services/renewal-reminder";
 import prisma from "./db/client";
 
 const app = new Hono();
@@ -231,6 +232,8 @@ startProactiveScheduler();
 startReminderScheduler();
 // Start demo-user cleanup (removes expired DEMO accounts + cascaded data).
 startDemoCleanup();
+// Start the subscription renewal reminder scheduler (daily at 09:00).
+startRenewalReminderScheduler();
 // Start the anonymous usage-analytics flusher (writes buffered hits to DB every 30s).
 startAnalyticsFlusher();
 
@@ -261,6 +264,7 @@ async function shutdown(signal: string): Promise<void> {
   stopAllSubscribers();
   stopProactiveScheduler();
   stopReminderScheduler();
+  stopRenewalReminderScheduler();
   try {
     await prisma.$disconnect();
     console.log("[mavino-server] Prisma disconnected.");

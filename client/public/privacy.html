@@ -265,7 +265,8 @@
   <h3>4.11 SMTP (transactional email)</h3>
   <p>
     When you request a password reset, an email containing a reset link is sent to your email address
-    via the operator's configured SMTP server. No marketing emails are sent.
+    via the operator's configured SMTP server. If you have a paid subscription, a renewal reminder
+    email is sent ~3 days before your subscription renews. No marketing emails are sent.
   </p>
 
   <h3>4.12 Summary table</h3>
@@ -281,7 +282,7 @@
     <tr><td>Tavily / Brave / DuckDuckGo</td><td>Search queries</td><td>Web search</td><td>AI web search</td></tr>
     <tr><td>Arbitrary web URLs</td><td>URL fetch requests</td><td>Reading pages / in-app browser</td><td>Requesting a URL</td></tr>
     <tr><td>Ntfy server</td><td>Notification messages, token</td><td>Push notifications</td><td>Configuring Ntfy</td></tr>
-    <tr><td>SMTP server</td><td>Email address, reset link</td><td>Password reset</td><td>Requesting reset</td></tr>
+    <tr><td>SMTP server</td><td>Email address, reset link / renewal reminder</td><td>Password reset, renewal reminders</td><td>Requesting reset / paid subscription</td></tr>
   </table>
 
   <h2 id="storage">5. How and where data is stored</h2>
