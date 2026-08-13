@@ -46,11 +46,21 @@ function typeColor(type: string): string {
 }
 
 /** Hex color -> "r, g, b" for building rgba() strings at arbitrary alpha. */
+// Cached — called per-node per-frame, so the regex must not run every time.
+const _hexRgbCache = new Map<string, string>();
 function hexToRgb(hex: string): string {
+  const cached = _hexRgbCache.get(hex);
+  if (cached) return cached;
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!m) return "148, 163, 184";
-  return [1, 2, 3].map((i) => parseInt(m[i], 16)).join(", ");
+  const result = m ? [1, 2, 3].map((i) => parseInt(m[i], 16)).join(", ") : "148, 163, 184";
+  _hexRgbCache.set(hex, result);
+  return result;
 }
+// Pre-populate cache for the fixed type colors.
+Object.values(TYPE_COLORS).forEach(hexToRgb);
+
+// Cache for label text widths — measureText is expensive per-frame.
+const _labelWidthCache = new Map<string, number>();
 
 /**
  * Track a container's size so the force graph canvas fills it responsively.
@@ -335,6 +345,18 @@ export default function KnowledgeGraph({ initialGraphId, language, onOpenMode }:
   const focusId = hoveredId ?? selectedConcept?.id ?? null;
   const focusSet = focusId ? neighborsOf.get(focusId) ?? null : null;
 
+  // Refs mirror the focus state so the canvas callbacks can be stable
+  // useCallbacks with [] deps — avoiding callback recreation on every
+  // React re-render (which triggers ForceGraph2D re-processing).
+  const focusIdRef = useRef(focusId);
+  focusIdRef.current = focusId;
+  const focusSetRef = useRef(focusSet);
+  focusSetRef.current = focusSet;
+  const selectedConceptRef = useRef(selectedConcept);
+  selectedConceptRef.current = selectedConcept;
+  const conceptByIdRef = useRef(conceptById);
+  conceptByIdRef.current = conceptById;
+
   // Nicely frame the whole graph once it (re)loads.
   useEffect(() => {
     if (!data) return;
@@ -359,6 +381,115 @@ export default function KnowledgeGraph({ initialGraphId, language, onOpenMode }:
   ];
 
   const actions = allActions.filter((a) => studyLoading || studyEnabled.has(a.mode));
+
+  // ===== Stable callbacks for ForceGraph2D =====
+  const nodeLabelCallback = useCallback(() => "", []);
+  const nodeValCallback = useCallback((n: NodeObject) => (n as any).importance, []);
+  const linkLabelCallback = useCallback((l: LinkObject) => (l as any).relation, []);
+  const linkArrowColorCallback = useCallback(() => "rgba(148, 163, 184, 0.55)", []);
+  const linkParticleColorCallback = useCallback(() => "rgb(var(--accent))", []);
+
+  const linkColorCallback = useCallback((l: any) => {
+    const fs = focusSetRef.current;
+    const dim = fs && !(fs.has(l.source?.id ?? l.source) && fs.has(l.target?.id ?? l.target));
+    return dim ? "rgba(148, 163, 184, 0.12)" : "rgba(148, 163, 184, 0.55)";
+  }, []);
+
+  const linkWidthCallback = useCallback((l: any) => {
+    const fs = focusSetRef.current;
+    const active = fs && fs.has(l.source?.id ?? l.source) && fs.has(l.target?.id ?? l.target);
+    return active ? 1.6 : 0.8;
+  }, []);
+
+  const linkParticlesCallback = useCallback((l: any) => {
+    const fs = focusSetRef.current;
+    const active = fs && fs.has(l.source?.id ?? l.source) && fs.has(l.target?.id ?? l.target);
+    return active ? 3 : 0;
+  }, []);
+
+  const handleNodeClick = useCallback((n: NodeObject) => {
+    setSelectedConcept(conceptByIdRef.current.get(String((n as any).id)) ?? null);
+    const x = (n as any).x, y = (n as any).y;
+    if (typeof x === "number" && typeof y === "number") fgRef.current?.centerAt(x, y, 500);
+  }, []);
+
+  const handleNodeHover = useCallback((n: NodeObject | null) => {
+    setHoveredId(n ? String((n as any).id) : null);
+  }, []);
+
+  const handleBackgroundClick = useCallback(() => setSelectedConcept(null), []);
+
+  const nodeCanvasCallback = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+    const fid = focusIdRef.current;
+    const sel = selectedConceptRef.current;
+    const fs = focusSetRef.current;
+    const isFocused = fid === node.id;
+    const isSelected = sel?.id === node.id;
+    const dimmed = fs ? !fs.has(node.id) : false;
+    const color = typeColor(node.type);
+    const rgb = hexToRgb(color);
+    const r = 4 + Math.sqrt(Math.max(1, node.importance ?? 3)) * 3.2;
+    const alpha = dimmed ? 0.28 : 1;
+
+    // Glow — simple semi-transparent arc instead of createRadialGradient.
+    if (!dimmed) {
+      ctx.fillStyle = `rgba(${rgb}, ${isFocused ? 0.18 : 0.1})`;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r * 2.4, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    // Node body.
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+    ctx.fillStyle = `rgba(${rgb}, ${alpha})`;
+    ctx.fill();
+
+    // Selection / hover ring.
+    if (isSelected || (isFocused && !sel)) {
+      ctx.lineWidth = 1.6 / globalScale;
+      ctx.strokeStyle = isSelected ? "rgba(255,255,255,0.95)" : `rgba(${rgb}, 0.9)`;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r + 2.5 / globalScale, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+
+    // Labels.
+    const showLabel = !dimmed && (isFocused || isSelected || node.importance >= 4 || globalScale > 2.2);
+    if (showLabel) {
+      const label = node.label as string;
+      const fontSize = Math.max(10, 12 / globalScale);
+      ctx.font = `${isFocused || isSelected ? "600" : "500"} ${fontSize}px "Inter", sans-serif`;
+      let textWidth = _labelWidthCache.get(label);
+      if (textWidth === undefined) {
+        textWidth = ctx.measureText(label).width;
+        _labelWidthCache.set(label, textWidth);
+      }
+      const padX = 4 / globalScale;
+      const padY = 2 / globalScale;
+      const labelY = node.y + r + 4 / globalScale;
+      ctx.fillStyle = "rgba(15, 17, 24, 0.72)";
+      const rx = textWidth / 2 + padX;
+      const ry = fontSize / 2 + padY;
+      ctx.beginPath();
+      ctx.roundRect?.(node.x - rx, labelY, rx * 2, ry * 2, 4 / globalScale);
+      ctx.fill();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillStyle = isFocused || isSelected ? "#ffffff" : "rgba(226, 232, 240, 0.92)";
+      ctx.fillText(label, node.x, labelY + padY);
+    }
+  }, []);
+
+  const nodePointerAreaCallback = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
+    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+    const r = 4 + Math.sqrt(Math.max(1, node.importance ?? 3)) * 3.2;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r + 3, 0, 2 * Math.PI);
+    ctx.fill();
+  }, []);
 
   return (
     <div className="flex h-full flex-col gap-3 p-4">
@@ -457,106 +588,26 @@ export default function KnowledgeGraph({ initialGraphId, language, onOpenMode }:
                 height={size.height}
                 nodeId="id"
                 nodeRelSize={4}
-                nodeLabel={() => ""}
-                nodeVal={(n: NodeObject) => (n as any).importance}
-                linkLabel={(l: LinkObject) => (l as any).relation}
-                linkColor={(l: any) => {
-                  const dim = focusSet && !(focusSet.has(l.source?.id ?? l.source) && focusSet.has(l.target?.id ?? l.target));
-                  return dim ? "rgba(148, 163, 184, 0.12)" : "rgba(148, 163, 184, 0.55)";
-                }}
-                linkWidth={(l: any) => {
-                  const active = focusSet && focusSet.has(l.source?.id ?? l.source) && focusSet.has(l.target?.id ?? l.target);
-                  return active ? 1.6 : 0.8;
-                }}
+                nodeLabel={nodeLabelCallback}
+                nodeVal={nodeValCallback}
+                linkLabel={linkLabelCallback}
+                linkColor={linkColorCallback}
+                linkWidth={linkWidthCallback}
                 linkDirectionalArrowLength={5}
                 linkDirectionalArrowRelPos={1}
-                linkDirectionalArrowColor={() => "rgba(148, 163, 184, 0.55)"}
-                linkDirectionalParticles={(l: any) => {
-                  const active = focusSet && focusSet.has(l.source?.id ?? l.source) && focusSet.has(l.target?.id ?? l.target);
-                  return active ? 3 : 0;
-                }}
+                linkDirectionalArrowColor={linkArrowColorCallback}
+                linkDirectionalParticles={linkParticlesCallback}
                 linkDirectionalParticleWidth={2.2}
                 linkDirectionalParticleSpeed={0.006}
-                linkDirectionalParticleColor={() => "rgb(var(--accent))"}
+                linkDirectionalParticleColor={linkParticleColorCallback}
                 linkCurvature={0.15}
-                onNodeClick={(n: NodeObject) => {
-                  setSelectedConcept(conceptById.get(String((n as any).id)) ?? null);
-                  const x = (n as any).x, y = (n as any).y;
-                  if (typeof x === "number" && typeof y === "number") fgRef.current?.centerAt(x, y, 500);
-                }}
-                onNodeHover={(n: NodeObject | null) => setHoveredId(n ? String((n as any).id) : null)}
-                onBackgroundClick={() => setSelectedConcept(null)}
-                cooldownTime={4000}
+                onNodeClick={handleNodeClick}
+                onNodeHover={handleNodeHover}
+                onBackgroundClick={handleBackgroundClick}
+                cooldownTime={1500}
                 backgroundColor="rgba(0,0,0,0)"
-                nodeCanvasObject={(node: any, ctx, globalScale) => {
-                  // Positions aren't assigned yet on the very first simulation
-                  // ticks — bail out rather than pass NaN to canvas APIs.
-                  if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-                  const isFocused = focusId === node.id;
-                  const isSelected = selectedConcept?.id === node.id;
-                  const dimmed = focusSet ? !focusSet.has(node.id) : false;
-                  const color = typeColor(node.type);
-                  const rgb = hexToRgb(color);
-                  const r = 4 + Math.sqrt(Math.max(1, node.importance ?? 3)) * 3.2;
-                  const alpha = dimmed ? 0.28 : 1;
-
-                  // Soft outer glow for a "constellation" feel.
-                  if (!dimmed) {
-                    const glow = ctx.createRadialGradient(node.x, node.y, r * 0.4, node.x, node.y, r * 3.2);
-                    glow.addColorStop(0, `rgba(${rgb}, ${isFocused ? 0.55 : 0.3})`);
-                    glow.addColorStop(1, `rgba(${rgb}, 0)`);
-                    ctx.fillStyle = glow;
-                    ctx.beginPath();
-                    ctx.arc(node.x, node.y, r * 3.2, 0, 2 * Math.PI);
-                    ctx.fill();
-                  }
-
-                  // Node body.
-                  ctx.beginPath();
-                  ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-                  ctx.fillStyle = `rgba(${rgb}, ${alpha})`;
-                  ctx.fill();
-
-                  // Selection / hover ring.
-                  if (isSelected || (isFocused && !selectedConcept)) {
-                    ctx.lineWidth = 1.6 / globalScale;
-                    ctx.strokeStyle = isSelected ? "rgba(255,255,255,0.95)" : `rgba(${rgb}, 0.9)`;
-                    ctx.beginPath();
-                    ctx.arc(node.x, node.y, r + 2.5 / globalScale, 0, 2 * Math.PI);
-                    ctx.stroke();
-                  }
-
-                  // Labels: always for important/focused/selected nodes, otherwise
-                  // only once zoomed in enough to avoid clutter on dense graphs.
-                  const showLabel = !dimmed && (isFocused || isSelected || node.importance >= 4 || globalScale > 2.2);
-                  if (showLabel) {
-                    const label = node.label as string;
-                    const fontSize = Math.max(10, 12 / globalScale);
-                    ctx.font = `${isFocused || isSelected ? "600" : "500"} ${fontSize}px "Inter", sans-serif`;
-                    const textWidth = ctx.measureText(label).width;
-                    const padX = 4 / globalScale;
-                    const padY = 2 / globalScale;
-                    const labelY = node.y + r + 4 / globalScale;
-                    ctx.fillStyle = "rgba(15, 17, 24, 0.72)";
-                    ctx.beginPath();
-                    const rx = textWidth / 2 + padX;
-                    const ry = fontSize / 2 + padY;
-                    ctx.roundRect?.(node.x - rx, labelY, rx * 2, ry * 2, 4 / globalScale);
-                    ctx.fill();
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "top";
-                    ctx.fillStyle = isFocused || isSelected ? "#ffffff" : "rgba(226, 232, 240, 0.92)";
-                    ctx.fillText(label, node.x, labelY + padY);
-                  }
-                }}
-                nodePointerAreaPaint={(node: any, color, ctx) => {
-                  if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-                  const r = 4 + Math.sqrt(Math.max(1, node.importance ?? 3)) * 3.2;
-                  ctx.fillStyle = color;
-                  ctx.beginPath();
-                  ctx.arc(node.x, node.y, r + 3, 0, 2 * Math.PI);
-                  ctx.fill();
-                }}
+                nodeCanvasObject={nodeCanvasCallback}
+                nodePointerAreaPaint={nodePointerAreaCallback}
               />
             )}
 
