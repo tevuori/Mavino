@@ -21,6 +21,8 @@ import {
   GraduationCap,
   CreditCard,
   Puzzle,
+  Keyboard,
+  Activity,
 } from "lucide-react";
 import { useAuth } from "../../store/auth";
 import type { WindowInstance } from "../../store/windows";
@@ -47,6 +49,8 @@ import DataStorageSection from "./sections/DataStorageSection";
 import AboutSection from "./sections/AboutSection";
 import DateTimeSection from "./sections/DateTimeSection";
 import LegalSection from "./sections/LegalSection";
+import ShortcutsSection from "./sections/ShortcutsSection";
+import PerformanceAnalysisSection from "./sections/PerformanceAnalysisSection";
 
 interface SectionDef {
   id: string;
@@ -61,6 +65,7 @@ interface SectionDef {
 const SECTIONS: SectionDef[] = [
   { id: "appearance", label: "Appearance", icon: <Palette size={15} /> },
   { id: "wallpaper", label: "Wallpaper", icon: <Image size={15} /> },
+  { id: "shortcuts", label: "Shortcuts", icon: <Keyboard size={15} /> },
   { id: "animated-bg", label: "Animated BG", icon: <Film size={15} /> },
   { id: "account", label: "Account", icon: <User size={15} /> },
   { id: "date-time", label: "Date & Time", icon: <Clock size={15} /> },
@@ -77,6 +82,7 @@ const SECTIONS: SectionDef[] = [
   { id: "storage-admin", label: "Storage Quotas", icon: <Database size={15} />, adminOnly: true },
   { id: "study-hub", label: "Study Hub", icon: <GraduationCap size={15} />, adminOnly: true },
   { id: "error-logs", label: "Error Logs", icon: <AlertTriangle size={15} />, adminOnly: true },
+  { id: "performance", label: "Performance", icon: <Activity size={15} />, adminOnly: true },
   { id: "analytics", label: "Analytics", icon: <BarChart3 size={15} />, adminOnly: true },
   { id: "data", label: "Data & Storage", icon: <Database size={15} /> },
   { id: "legal", label: "Legal", icon: <Shield size={15} /> },
@@ -100,6 +106,7 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
     if (active === null) return null;
     if (active === "appearance") return <AppearanceSection />;
     if (active === "wallpaper") return <WallpaperSection />;
+    if (active === "shortcuts") return <ShortcutsSection />;
     if (active === "animated-bg") return <AnimatedBgSection />;
     if (active === "account") return <AccountSection />;
     if (active === "date-time") return <DateTimeSection />;
@@ -116,6 +123,7 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
     if (active === "storage-admin" && isAdmin) return <StorageAdminSection />;
     if (active === "study-hub" && isAdmin) return <StudyHubSection />;
     if (active === "error-logs" && isAdmin) return <ErrorLogSection />;
+    if (active === "performance" && isAdmin) return <PerformanceAnalysisSection />;
     if (active === "analytics" && isAdmin) return <AnalyticsSection />;
     if (active === "data") return <DataStorageSection />;
     if (active === "legal") return <LegalSection />;

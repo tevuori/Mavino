@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { useWindows } from "../store/windows";
+import { useSettings } from "../store/settings";
+import { matchesShortcut } from "../store/shortcuts";
 import * as Lucide from "lucide-react";
 
-/** Alt+Tab (and Shift+Alt+Tab) window switcher overlay. */
+/** Alt+Tab (and Shift+Alt+Tab) window switcher overlay. Uses the configurable cycleWindows shortcut. */
 export default function AltTabSwitcher() {
   const { windows, focusedId, cycleFocus } = useWindows();
   const activeWorkspaceId = useWindows((s) => s.activeWorkspaceId);
+  const cycleShortcut = useSettings((s) => s.shortcuts.cycleWindows);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -13,7 +16,7 @@ export default function AltTabSwitcher() {
     let timer: number | undefined;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey && e.key === "Tab") {
+      if (matchesShortcut(e, cycleShortcut)) {
         e.preventDefault();
         if (!tabDown) {
           tabDown = true;
@@ -24,7 +27,13 @@ export default function AltTabSwitcher() {
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "Alt") {
+      // Release when the shortcut's modifier(s) are lifted.
+      const mods = [cycleShortcut.alt, cycleShortcut.ctrl, cycleShortcut.meta, cycleShortcut.super]
+        .filter(Boolean).length;
+      const altReleased = e.key === "Alt" && (cycleShortcut.alt || mods === 0);
+      const ctrlReleased = (e.key === "Control") && (cycleShortcut.ctrl || cycleShortcut.super);
+      const metaReleased = (e.key === "Meta" || e.key === "OS") && (cycleShortcut.meta || cycleShortcut.super);
+      if (altReleased || ctrlReleased || metaReleased) {
         tabDown = false;
         timer = window.setTimeout(() => setVisible(false), 120);
       }
@@ -37,7 +46,7 @@ export default function AltTabSwitcher() {
       window.removeEventListener("keyup", onKeyUp);
       window.clearTimeout(timer);
     };
-  }, [cycleFocus]);
+  }, [cycleFocus, cycleShortcut]);
 
   if (!visible) return null;
 

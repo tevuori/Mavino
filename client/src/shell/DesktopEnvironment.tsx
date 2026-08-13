@@ -14,6 +14,7 @@ import { useWindows } from "../store/windows";
 import { useAthenaQuick } from "../store/athenaQuick";
 import { useSettings } from "../store/settings";
 import { useAuth } from "../store/auth";
+import { useShortcut } from "../store/shortcuts";
 import { useEffect, useState } from "react";
 
 export default function DesktopEnvironment() {
@@ -42,131 +43,38 @@ export default function DesktopEnvironment() {
     }
   }, [isDemo, setHasOnboarded, open]);
 
-  // Win + Y → toggle Athena quick panel (rolls in from the selected edge)
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key === "y" || e.key === "Y")) {
-        e.preventDefault();
-        toggleAthenaQuick();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [toggleAthenaQuick]);
+  // Configurable keyboard shortcuts (via useShortcut hook)
+  useShortcut("toggleAthenaQuickPanel", () => toggleAthenaQuick());
+  useShortcut("toggleFullscreen", () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  });
+  useShortcut("toggleWorkspaceOverview", () => setOverviewOpen((v) => !v));
 
-  // Win + F → toggle true fullscreen via the Fullscreen API.
-  // Unlike F11, Firefox does not reveal its toolbar on cursor hover when
-  // fullscreen is entered via the API, so this is a kiosk-style fullscreen.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key === "f" || e.key === "F")) {
-        e.preventDefault();
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen?.().catch(() => {});
-        } else {
-          document.exitFullscreen?.().catch(() => {});
-        }
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  // Window management shortcuts
+  useShortcut("snapWindowLeft", () => { if (focusedId) snap(focusedId, "left"); });
+  useShortcut("snapWindowRight", () => { if (focusedId) snap(focusedId, "right"); });
+  useShortcut("snapWindowTopLeft", () => { if (focusedId) snap(focusedId, "top-left"); });
+  useShortcut("snapWindowTopRight", () => { if (focusedId) snap(focusedId, "top-right"); });
+  useShortcut("maximizeWindow", () => { if (focusedId) snap(focusedId, "maximized"); });
+  useShortcut("toggleMaximize", () => { if (focusedId) toggleMaximize(focusedId); });
+  useShortcut("minimizeWindow", () => { if (focusedId) useWindows.getState().minimize(focusedId); });
+  useShortcut("restoreWindow", () => {
+    if (focusedId) {
+      const w = useWindows.getState().windows.find((x) => x.id === focusedId);
+      if (w && w.snap !== "none") snap(focusedId, "none");
+    }
+  });
+  useShortcut("closeWindow", () => { if (focusedId) close(focusedId); });
 
-  // Keyboard shortcuts for window management
-  //   Win + Arrow keys  → snap to grid zones
-  //   Win + Shift+Up    → maximize/restore
-  //   Win + Shift+Down  → minimize
-  //   Win + W           → close focused window
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      // Require Meta (Win/Cmd) key for window shortcuts
-      if (!e.metaKey && !e.ctrlKey) return;
-      // Don't interfere when typing in inputs
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
-        return;
-      }
-      if (!focusedId) return;
-
-      const key = e.key;
-      // Win + Arrow keys (with Shift for quadrants)
-      if (key === "ArrowLeft" && e.shiftKey) {
-        e.preventDefault();
-        snap(focusedId, "top-left");
-      } else if (key === "ArrowRight" && e.shiftKey) {
-        e.preventDefault();
-        snap(focusedId, "top-right");
-      } else if (key === "ArrowLeft") {
-        e.preventDefault();
-        snap(focusedId, "left");
-      } else if (key === "ArrowRight") {
-        e.preventDefault();
-        snap(focusedId, "right");
-      } else if (key === "ArrowUp" && e.shiftKey) {
-        e.preventDefault();
-        toggleMaximize(focusedId);
-      } else if (key === "ArrowUp") {
-        e.preventDefault();
-        snap(focusedId, "maximized");
-      } else if (key === "ArrowDown" && e.shiftKey) {
-        e.preventDefault();
-        useWindows.getState().minimize(focusedId);
-      } else if (key === "ArrowDown") {
-        e.preventDefault();
-        // Restore from maximized/snap, or minimize if already normal
-        const w = useWindows.getState().windows.find((x) => x.id === focusedId);
-        if (w && w.snap !== "none") {
-          snap(focusedId, "none");
-        }
-      } else if (key === "w" || key === "W") {
-        e.preventDefault();
-        close(focusedId);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [focusedId, snap, toggleMaximize, close]);
-
-  // Workspace keyboard shortcuts (Ctrl-based to avoid Super/GNOME conflicts):
-  //   Ctrl+Alt+PgUp / Ctrl+Alt+PgDn  → switch to prev/next workspace
-  //   Ctrl+Shift+PgUp / Ctrl+Shift+PgDn → move focused window to prev/next workspace
-  //   Alt+Space                       → toggle workspace overview
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      // Don't interfere when typing in inputs
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
-        return;
-      }
-
-      // Alt+Space → toggle overview (no Ctrl/Meta required)
-      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key === " ") {
-        e.preventDefault();
-        setOverviewOpen((v) => !v);
-        return;
-      }
-
-      // Ctrl-based workspace shortcuts — explicitly exclude Meta (Super) so
-      // they don't fire when GNOME intercepts Super+PgUp/PgDn at the OS level.
-      if (!e.ctrlKey || e.metaKey) return;
-
-      if (e.altKey && !e.shiftKey && e.key === "PageUp") {
-        e.preventDefault();
-        switchRelative(-1);
-      } else if (e.altKey && !e.shiftKey && e.key === "PageDown") {
-        e.preventDefault();
-        switchRelative(1);
-      } else if (e.shiftKey && !e.altKey && e.key === "PageUp") {
-        e.preventDefault();
-        moveFocusedRelative(-1);
-      } else if (e.shiftKey && !e.altKey && e.key === "PageDown") {
-        e.preventDefault();
-        moveFocusedRelative(1);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [switchRelative, moveFocusedRelative]);
+  // Workspace shortcuts
+  useShortcut("previousWorkspace", () => switchRelative(-1));
+  useShortcut("nextWorkspace", () => switchRelative(1));
+  useShortcut("moveWindowPreviousWorkspace", () => moveFocusedRelative(-1));
+  useShortcut("moveWindowNextWorkspace", () => moveFocusedRelative(1));
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">

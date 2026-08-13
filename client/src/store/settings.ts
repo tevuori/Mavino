@@ -1,4 +1,7 @@
 import { create } from "zustand";
+import { DEFAULT_SHORTCUTS, DEFAULT_DOCK_FAVORITES } from "./shortcuts";
+import type { ShortcutAction, Shortcut } from "./shortcuts";
+import type { AppId } from "./windows";
 
 export type ThemeMode = "light" | "dark";
 export type WallpaperId = "aurora" | "sunset" | "ocean" | "forest" | "mesh" | "mono";
@@ -41,6 +44,10 @@ interface SettingsState {
   autoChillOnIdle: boolean;
   /** Whether the user has completed the first-run onboarding tour. */
   hasOnboarded: boolean;
+  /** User-configurable keyboard shortcuts. */
+  shortcuts: Record<ShortcutAction, Shortcut>;
+  /** App IDs pinned to the taskbar. */
+  dockFavorites: AppId[];
   setTheme: (t: ThemeMode) => void;
   setAccent: (hex: string) => void;
   setWallpaper: (w: WallpaperId) => void;
@@ -52,6 +59,9 @@ interface SettingsState {
   setAthenaQuickSize: (s: AthenaQuickSize) => void;
   setAutoChillOnIdle: (b: boolean) => void;
   setHasOnboarded: (b: boolean) => void;
+  setShortcut: (action: ShortcutAction, shortcut: Shortcut) => void;
+  resetShortcuts: () => void;
+  setDockFavorites: (favorites: AppId[]) => void;
 }
 
 const STORAGE_KEY = "athena.settings";
@@ -68,6 +78,8 @@ interface PersistedSettings {
   athenaQuickSize: AthenaQuickSize | null;
   autoChillOnIdle: boolean;
   hasOnboarded: boolean;
+  shortcuts: Record<ShortcutAction, Shortcut>;
+  dockFavorites: AppId[];
 }
 
 function load(): Partial<PersistedSettings> {
@@ -104,9 +116,18 @@ const defaults: PersistedSettings = {
   athenaQuickSize: null,
   autoChillOnIdle: false,
   hasOnboarded: false,
+  shortcuts: { ...DEFAULT_SHORTCUTS },
+  dockFavorites: [...DEFAULT_DOCK_FAVORITES] as AppId[],
 };
 
 const loaded = { ...defaults, ...load() };
+// Merge nested defaults so new settings fields are back-filled on old stored data.
+if (!loaded.shortcuts || Object.keys(loaded.shortcuts).length === 0) {
+  loaded.shortcuts = { ...DEFAULT_SHORTCUTS };
+}
+if (!loaded.dockFavorites || loaded.dockFavorites.length === 0) {
+  loaded.dockFavorites = [...DEFAULT_DOCK_FAVORITES] as AppId[];
+}
 
 /** Apply theme + accent to <html> as CSS vars / classes. */
 export function applySettings(s: PersistedSettings) {
@@ -167,5 +188,19 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setHasOnboarded: (hasOnboarded) => {
     set({ hasOnboarded });
     persist({ ...get(), hasOnboarded } as PersistedSettings);
+  },
+  setShortcut: (action, shortcut) => {
+    const shortcuts = { ...get().shortcuts, [action]: shortcut };
+    set({ shortcuts });
+    persist({ ...get(), shortcuts } as PersistedSettings);
+  },
+  resetShortcuts: () => {
+    const shortcuts = { ...DEFAULT_SHORTCUTS };
+    set({ shortcuts });
+    persist({ ...get(), shortcuts } as PersistedSettings);
+  },
+  setDockFavorites: (dockFavorites) => {
+    set({ dockFavorites });
+    persist({ ...get(), dockFavorites } as PersistedSettings);
   },
 }));

@@ -12,6 +12,9 @@ import { useNotifications } from "../store/notifications";
 import { api } from "../services/api";
 import { useRecorder, fmtDuration } from "../apps/voice/useRecorder";
 import { voiceApi } from "../services/voice";
+import { useShortcut, formatShortcut } from "../store/shortcuts";
+import { useSettings } from "../store/settings";
+import { useQuickCapture } from "../store/quickCapture";
 
 interface CaptureResponse {
   target: "task" | "note" | "flashcard" | "athena" | "study";
@@ -28,7 +31,8 @@ const TARGET_LABELS: Record<string, string> = {
 };
 
 export default function QuickCapture() {
-  const [open, setOpen] = useState(false);
+  const open = useQuickCapture((s) => s.open);
+  const setOpen = useQuickCapture((s) => s.setOpen);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -37,20 +41,19 @@ export default function QuickCapture() {
   const { open: openWindow } = useWindows();
   const pushNotification = useNotifications((s) => s.push);
   const rec = useRecorder();
+  const quickCaptureShortcut = useSettings((s) => s.shortcuts.toggleQuickCapture);
 
+  // Configurable shortcut to toggle Quick Capture
+  useShortcut("toggleQuickCapture", () => setOpen(!open));
+
+  // Escape closes the overlay
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.code === "KeyN" || e.key === "N" || e.key === "n")) {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
-      if (e.key === "Escape") {
-        setOpen(false);
-      }
+      if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [setOpen]);
 
   useEffect(() => {
     if (open) {
@@ -189,7 +192,7 @@ export default function QuickCapture() {
             <div className="flex items-center gap-2 border-b border-edge px-3 py-2 text-accent">
               <Zap size={16} />
               <span className="text-xs font-semibold uppercase tracking-wide">Quick Capture</span>
-              <span className="ml-auto text-[10px] text-ink-muted">Ctrl+Shift+N · Esc to close</span>
+              <span className="ml-auto text-[10px] text-ink-muted">{formatShortcut(quickCaptureShortcut)} · Esc to close</span>
             </div>
             <div className="p-3">
               {voiceMode ? (

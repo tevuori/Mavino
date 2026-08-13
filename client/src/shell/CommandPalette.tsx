@@ -10,6 +10,9 @@ import { useWindows, type AppId } from "../store/windows";
 import { useAccessibleApps } from "../store/features";
 import { api } from "../services/api";
 import { openTargetForFile, isImageFile, isPdfFile, isAudioFile, isVideoFile, isTextFile } from "../services/files";
+import { useShortcut, formatShortcut } from "../store/shortcuts";
+import { useQuickCapture } from "../store/quickCapture";
+import { useSettings } from "../store/settings";
 import type { Note, Task, VFile } from "../types";
 
 interface SearchResult {
@@ -95,16 +98,13 @@ export default function CommandPalette() {
     });
   }, [open]);
 
-  // Keyboard shortcut: Ctrl+Space (or Cmd+Space on Mac)
+  // Configurable keyboard shortcut for command palette toggle
+  useShortcut("toggleCommandPalette", () => setOpen((v) => !v));
+
+  // Escape closes the palette
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.code === "Space") {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
-      if (e.key === "Escape") {
-        setOpen(false);
-      }
+      if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -272,13 +272,10 @@ export default function CommandPalette() {
       },
       {
         title: "Quick Capture",
-        subtitle: "Capture anything (Ctrl+Shift+N)",
+        subtitle: `Capture anything (${formatShortcut(useSettings.getState().shortcuts.toggleQuickCapture)})`,
         icon: <Zap size={18} className="text-yellow-400" />,
         action: () => {
-          // Trigger the Quick Capture overlay via its hotkey.
-          window.dispatchEvent(new KeyboardEvent("keydown", {
-            key: "N", code: "KeyN", shiftKey: true, ctrlKey: true, bubbles: true,
-          }));
+          useQuickCapture.getState().toggle();
           setOpen(false);
         },
         keywords: ["capture", "quick", "inbox", "idea", "note", "task"],

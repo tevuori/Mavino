@@ -9,6 +9,7 @@ import {
 import { useWindows } from "../store/windows";
 import { useAuth } from "../store/auth";
 import { useSettings } from "../store/settings";
+import { formatShortcut } from "../store/shortcuts";
 import { isAppAvailable } from "../store/features";
 import { APP_MAP } from "../apps/registry";
 import { aiApi } from "../services/ai";
@@ -399,7 +400,7 @@ function DesktopStep() {
         <FeatureRow icon={<Folder size={16} />} text="Double-click desktop icons to open apps" />
         <FeatureRow icon={<SettingsIcon size={16} />} text="Use the taskbar at the bottom to launch apps and check the clock" />
         <FeatureRow icon={<Keyboard size={16} />} text="Drag windows by their title bar. Snap to edges with Win+Arrow keys" />
-        <FeatureRow icon={<Sparkles size={16} />} text="Press Ctrl+Space anytime for the command palette (Spotlight search)" />
+        <FeatureRow icon={<Sparkles size={16} />} text="Press the command palette shortcut anytime for Spotlight-style search" />
       </div>
       <p className="mt-4 text-sm text-ink-muted">Now let's explore some apps...</p>
     </div>
@@ -635,14 +636,16 @@ function SettingsGuideStep({ icon, title, section, description, tips }: {
 }
 
 function ShortcutsStep() {
-  const shortcuts = [
-    { keys: "Ctrl+Space", desc: "Command palette (search apps, notes, tasks, calculate)" },
-    { keys: "Win+Y", desc: "Toggle Mavino quick panel" },
-    { keys: "Ctrl+Shift+N", desc: "Quick capture — new note from anywhere" },
-    { keys: "Win+← / →", desc: "Snap window to left/right half" },
-    { keys: "Win+↑", desc: "Maximize window" },
-    { keys: "Win+W", desc: "Close focused window" },
-    { keys: "Alt+Tab", desc: "Switch between windows" },
+  const shortcuts = useSettings((s) => s.shortcuts);
+  const rows = [
+    { action: shortcuts.toggleCommandPalette, desc: "Command palette (search apps, notes, tasks, calculate)" },
+    { action: shortcuts.toggleAthenaQuickPanel, desc: "Toggle Mavino quick panel" },
+    { action: shortcuts.toggleQuickCapture, desc: "Quick capture — new note from anywhere" },
+    { action: shortcuts.snapWindowLeft, desc: "Snap window to left half" },
+    { action: shortcuts.snapWindowRight, desc: "Snap window to right half" },
+    { action: shortcuts.maximizeWindow, desc: "Maximize window" },
+    { action: shortcuts.closeWindow, desc: "Close focused window" },
+    { action: shortcuts.cycleWindows, desc: "Switch between windows" },
   ];
   return (
     <div className="text-center">
@@ -652,10 +655,10 @@ function ShortcutsStep() {
       <h2 className="mb-1 text-xl font-bold text-ink">Handy Shortcuts</h2>
       <p className="mb-4 text-sm text-ink-muted">Learn these to navigate Mavino like a pro.</p>
       <div className="space-y-2 text-left">
-        {shortcuts.map((s) => (
-          <div key={s.keys} className="flex items-center justify-between rounded-lg border border-edge bg-surface-2 px-3 py-2">
+        {rows.map((s, i) => (
+          <div key={i} className="flex items-center justify-between rounded-lg border border-edge bg-surface-2 px-3 py-2">
             <span className="text-xs text-ink-muted">{s.desc}</span>
-            <kbd className="rounded border border-edge bg-surface-3 px-2 py-0.5 text-[11px] font-mono text-ink">{s.keys}</kbd>
+            <kbd className="rounded border border-edge bg-surface-3 px-2 py-0.5 text-[11px] font-mono text-ink">{formatShortcut(s.action)}</kbd>
           </div>
         ))}
       </div>
