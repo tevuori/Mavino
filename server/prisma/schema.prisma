@@ -82,6 +82,20 @@ model User {
   compassCitations   CompassCitation[]
   echoSessions       EchoSession[]
   pulseForecast      PulseForecast?
+  // Pro-tier: Forge (AI practice problem generator)
+  forgeProblemSets   ForgeProblemSet[]
+  forgeProblems      ForgeProblem[]
+  forgeAttempts      ForgeAttempt[]
+  // Pro-tier: Concept Bridge (interdisciplinary connection surfacer)
+  conceptBridges     ConceptBridge[]
+  // Pro-tier: Scribe (thesis/essay writing coach)
+  scribeDocuments    ScribeDocument[]
+  scribeFeedbacks    ScribeFeedback[]
+  // Pro-tier: Circle (shared study spaces)
+  studyGroups        StudyGroupMember[]
+  ownedStudyGroups   StudyGroup[]
+  sharedDeckShares   SharedDeck[]      @relation("SharedDeckShares")
+  sharedFolderShares SharedNoteFolder[] @relation("SharedFolderShares")
 }
 
 // ===== Password reset tokens =====
@@ -1463,4 +1477,259 @@ model PulseForecast {
   updatedAt    DateTime @updatedAt
 
   @@index([userId])
+}
+
+// ===== Forge: AI practice problem generator (Pro tier) =====
+// Generates graded practice problems (multiple-choice, short-answer, and
+// step-by-step) from sources (Moodle PDFs, notes, Atlas concepts, or free
+// text). Each problem has a hidden worked solution. The student solves,
+// submits, and gets line-by-line feedback. Wrong steps trigger a
+// micro-explanation and a follow-up "variant" problem targeting the same
+// misconception. Difficulty adapts to PulseForecast mastery signals.
+//
+// A ProblemSet groups problems generated for a specific source/topic. Each
+// Problem belongs to a set and has a type, difficulty, prompt, options (for
+// MCQ), answer, worked solution, and linked concept ids (from Atlas). An
+// Attempt records each student submission with per-step feedback + a score.
+// Forge integrates with Pulse (writes at-risk entries) and Atlas (reads weak
+// concepts for targeting).
+
+model ForgeProblemSet {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  // "mcq" | "short_answer" | "step_by_step" | "mixed"
+  format      String   @default("mixed")
+  // "easy" | "medium" | "hard" | "adaptive"
+  difficulty  String   @default("adaptive")
+  // Source description: { kind: "note"|"file"|"atlas"|"text"|"moodle", refId, name }
+  source      String   @default("{}")
+  // JSON array of concept ids (from Atlas) this set targets
+  conceptIds  String   @default("[]")
+  // Number of problems in the set
+  count       Int      @default(0)
+  problems    ForgeProblem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ForgeProblem {
+  id          String   @id @default(cuid())
+  setId       String
+  set         ForgeProblemSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // "mcq" | "short_answer" | "step_by_step"
+  type        String
+  difficulty  String   @default("medium") // "easy" | "medium" | "hard"
+  prompt      String
+  // JSON array of options (for MCQ): [{ id, text }]
+  options     String   @default("[]")
+  // The correct answer (option id for MCQ, text for short_answer, JSON steps for step_by_step)
+  answer      String
+  // Full worked solution (Markdown)
+  solution    String
+  // JSON array of concept ids this problem tests
+  conceptIds  String   @default("[]")
+  // JSON hint that can be revealed
+  hint        String   @default("")
+  attempts    ForgeAttempt[]
+  createdAt   DateTime @default(now())
+
+  @@index([setId])
+  @@index([userId])
+}
+
+model ForgeAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problemId   String
+  problem     ForgeProblem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  setId       String
+  // The student's submitted answer
+  submitted   String   @default("")
+  // "correct" | "partial" | "incorrect"
+  result      String   @default("incorrect")
+  // 0..1
+  score       Float    @default(0)
+  // JSON: per-step feedback from the LLM
+  feedback    String   @default("{}")
+  // Whether a variant problem was generated for this attempt
+  variantGenerated Boolean @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([problemId])
+  @@index([userId, createdAt])
+}
+
+// ===== Concept Bridge: interdisciplinary connection surfacer (Pro tier) =====
+// A background job that runs over AtlasGraph periodically, finds cross-course
+// concept connections (shared prerequisites, shared applications, analogies),
+// and stores them as labeled edges. These are surfaced as weekly "Did you know?"
+// cards, inline hints in Notes, and Atlas graph edges.
+//
+// Each Bridge connects two concepts (from the user's Atlas) with a
+// relationship type + LLM-generated explanation. The `seen` flag tracks
+// whether the user has viewed the bridge (for surfacing new ones).
+
+model ConceptBridge {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // The two concept ids (from AtlasGraph) connected by this bridge
+  conceptAId  String
+  conceptALabel String
+  conceptBId  String
+  conceptBLabel String
+  // "prerequisite" | "shared_application" | "analogy" | "contrasts" | "generalizes"
+  relation    String   @default("analogy")
+  // LLM-generated explanation of the connection
+  explanation String   @default("")
+  // Source labels: which courses/graphs each concept came from
+  sourceA     String   @default("")
+  sourceB     String   @default("")
+  seen        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, conceptAId, conceptBId])
+  @@index([userId])
+  @@index([userId, seen])
+}
+
+// ===== Scribe: thesis/essay writing coach (Pro tier) =====
+// A writing coach that works on the user's Notes / Editor documents. It
+// analyzes outlines, gives paragraph-level feedback, detects citation gaps
+// against the Compass library, and checks for self-plagiarism against past
+// notes. Integrates with Compass (citation graph) and Atlas (concept coverage).
+//
+// A ScribeDocument is a draft the user wants feedback on. It can be linked to
+// a CompassProject (for citation gap detection). ScribeFeedback stores each
+// feedback pass (fire-and-forget + polling, like CompassReview).
+
+model ScribeDocument {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  // The draft text (Markdown)
+  content     String   @default("")
+  // Optional Compass project id for citation gap detection
+  compassProjectId String @default("")
+  // "essay" | "thesis" | "report" | "literature_review" | "other"
+  docType     String   @default("essay")
+  // The research question / thesis statement
+  thesisStatement String @default("")
+  feedbacks   ScribeFeedback[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ScribeFeedback {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    ScribeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // "outline" | "draft" | "citations" | "full"
+  feedbackType String @default("full")
+  // The full feedback as Markdown
+  content     String   @default("")
+  // JSON: structured issues [{ severity, section, issue, suggestion }]
+  issues      String   @default("[]")
+  // Fire-and-forget + polling pattern
+  status      String   @default("ready") // "building" | "ready" | "error"
+  error       String   @default("")
+  // Overall score 0..100
+  score       Int      @default(0)
+  generatedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([documentId])
+  @@index([userId])
+}
+
+// ===== Circle: shared study spaces (Pro tier) =====
+// Opt-in shared spaces where a small group of classmates can share flashcard
+// decks, notes folders, and compete on Forge problem sets. One student
+// creates a group, invites others, and shared resources become accessible
+// to all members. Each member's SM-2 review state is private; only the deck
+// content is shared.
+//
+// A StudyGroup has an owner (creator) and members. SharedDeck and
+// SharedNoteFolder link a group to existing FlashcardDecks / NoteFolders,
+// with a permission level (read/write). The original owner retains ownership
+// of the underlying resource.
+
+model StudyGroup {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  description String   @default("")
+  // Invite code for joining (generated on creation)
+  inviteCode  String   @unique
+  // "active" | "archived"
+  status      String   @default("active")
+  members     StudyGroupMember[]
+  sharedDecks SharedDeck[]
+  sharedNoteFolders SharedNoteFolder[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+model StudyGroupMember {
+  id          String   @id @default(cuid())
+  groupId     String
+  group       StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // "owner" | "admin" | "member"
+  role        String   @default("member")
+  joinedAt    DateTime @default(now())
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+}
+
+model SharedDeck {
+  id          String   @id @default(cuid())
+  groupId     String
+  group       StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  // The original deck being shared
+  deckId      String
+  // The user who shared the deck (must be the deck owner)
+  sharedBy    String
+  sharedByUser User   @relation("SharedDeckShares", fields: [sharedBy], references: [id], onDelete: Cascade)
+  // "read" | "write"
+  permission  String   @default("read")
+  createdAt   DateTime @default(now())
+
+  @@unique([groupId, deckId])
+  @@index([groupId])
+}
+
+model SharedNoteFolder {
+  id          String   @id @default(cuid())
+  groupId     String
+  group       StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  folderId    String
+  sharedBy    String
+  sharedByUser User   @relation("SharedFolderShares", fields: [sharedBy], references: [id], onDelete: Cascade)
+  permission  String   @default("read")
+  createdAt   DateTime @default(now())
+
+  @@unique([groupId, folderId])
+  @@index([groupId])
 }

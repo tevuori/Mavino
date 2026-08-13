@@ -473,6 +473,54 @@ export default function AthenaApp({
       const id = openWindow({ appId: "pulse", title: "Pulse", icon: "Activity" });
       return id;
     };
+    // Find an open Forge window, or open one if none exists. Returns the id.
+    const ensureForgeWindow = (): string => {
+      const wins = windowsRef.current.filter((w) => w.appId === "forge");
+      const existing = wins.find((w) => !w.minimized) ?? wins[wins.length - 1];
+      if (existing) {
+        if (existing.minimized) minimizeWindow(existing.id);
+        focusWindow(existing.id);
+        return existing.id;
+      }
+      const id = openWindow({ appId: "forge", title: "Forge", icon: "Flame" });
+      return id;
+    };
+    // Find an open Concept Bridge window, or open one if none exists. Returns the id.
+    const ensureBridgeWindow = (): string => {
+      const wins = windowsRef.current.filter((w) => w.appId === "bridge");
+      const existing = wins.find((w) => !w.minimized) ?? wins[wins.length - 1];
+      if (existing) {
+        if (existing.minimized) minimizeWindow(existing.id);
+        focusWindow(existing.id);
+        return existing.id;
+      }
+      const id = openWindow({ appId: "bridge", title: "Concept Bridge", icon: "Link2" });
+      return id;
+    };
+    // Find an open Scribe window, or open one if none exists. Returns the id.
+    const ensureScribeWindow = (): string => {
+      const wins = windowsRef.current.filter((w) => w.appId === "scribe");
+      const existing = wins.find((w) => !w.minimized) ?? wins[wins.length - 1];
+      if (existing) {
+        if (existing.minimized) minimizeWindow(existing.id);
+        focusWindow(existing.id);
+        return existing.id;
+      }
+      const id = openWindow({ appId: "scribe", title: "Scribe", icon: "PenLine" });
+      return id;
+    };
+    // Find an open Circle window, or open one if none exists. Returns the id.
+    const ensureCircleWindow = (): string => {
+      const wins = windowsRef.current.filter((w) => w.appId === "circle");
+      const existing = wins.find((w) => !w.minimized) ?? wins[wins.length - 1];
+      if (existing) {
+        if (existing.minimized) minimizeWindow(existing.id);
+        focusWindow(existing.id);
+        return existing.id;
+      }
+      const id = openWindow({ appId: "circle", title: "Circle", icon: "Users" });
+      return id;
+    };
     switch (act) {
       case "profile_updated": {
         // set_user_name changed the display name server-side — pull the fresh
@@ -850,6 +898,38 @@ export default function AthenaApp({
         const id = ensurePulseWindow();
         // Mark that this Pulse window was opened via Athena (for focus handling).
         sessionStorage.setItem(`pulse:focus:${id}`, "1");
+        break;
+      }
+      // ===== Forge (Pro AI practice problem generator) =====
+      case "open_forge": {
+        const id = ensureForgeWindow();
+        // If a setId is provided, store it so the Forge app can focus on it.
+        if (payload.setId) {
+          sessionStorage.setItem(`forge:focus:${id}`, String(payload.setId));
+        }
+        break;
+      }
+      // ===== Concept Bridge (Pro interdisciplinary connection surfacer) =====
+      case "open_bridge": {
+        ensureBridgeWindow();
+        break;
+      }
+      // ===== Scribe (Pro thesis/essay writing coach) =====
+      case "open_scribe": {
+        const id = ensureScribeWindow();
+        // If a documentId is provided, store it so the Scribe app can focus on it.
+        if (payload.documentId) {
+          sessionStorage.setItem(`scribe:focus:${id}`, String(payload.documentId));
+        }
+        break;
+      }
+      // ===== Circle (Pro shared study spaces) =====
+      case "open_circle": {
+        const id = ensureCircleWindow();
+        // If a groupId is provided, store it so the Circle app can focus on it.
+        if (payload.groupId) {
+          sessionStorage.setItem(`circle:focus:${id}`, String(payload.groupId));
+        }
         break;
       }
       default: {

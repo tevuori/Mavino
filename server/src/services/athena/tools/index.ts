@@ -33,6 +33,10 @@ import { crunchTools } from "./crunch";
 import { compassTools } from "./compass";
 import { echoTools } from "./echo";
 import { pulseTools } from "./pulse";
+import { forgeTools } from "./forge";
+import { bridgeTools } from "./bridge";
+import { scribeTools } from "./scribe";
+import { circleTools } from "./circle";
 import { loadPluginTools } from "../../plugins";
 
 export { AthenaToolsPlugin, type ToolDef, type ToolContext, type ClientWindowInfo } from "./plugin";
@@ -73,6 +77,10 @@ export const ALL_TOOLS: ToolDef[] = [
   ...compassTools,
   ...echoTools,
   ...pulseTools,
+  ...forgeTools,
+  ...bridgeTools,
+  ...scribeTools,
+  ...circleTools,
 ];
 
 /** Roles that get access to `paidOnly` tools (sandbox, etc.).

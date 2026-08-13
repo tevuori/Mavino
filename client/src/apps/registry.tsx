@@ -65,6 +65,10 @@ const CrunchApp = lazyImport(() => import("./crunch/CrunchApp"));
 const CompassApp = lazyImport(() => import("./compass/CompassApp"));
 const EchoApp = lazyImport(() => import("./echo/EchoApp"));
 const PulseApp = lazyImport(() => import("./pulse/PulseApp"));
+const ForgeApp = lazyImport(() => import("./forge/ForgeApp"));
+const BridgeApp = lazyImport(() => import("./bridge/BridgeApp"));
+const ScribeApp = lazyImport(() => import("./scribe/ScribeApp"));
+const CircleApp = lazyImport(() => import("./circle/CircleApp"));
 
 export interface AppDefinition {
   id: AppId;
@@ -123,6 +127,10 @@ export const APPS: AppDefinition[] = [
   { id: "compass", name: "Compass", icon: "Compass", component: CompassApp, pinnedToDesktop: true, minTier: "pro" },
   { id: "echo", name: "Echo", icon: "Radio", component: EchoApp, pinnedToDesktop: true, minTier: "pro" },
   { id: "pulse", name: "Pulse", icon: "Activity", component: PulseApp, pinnedToDesktop: true, minTier: "pro" },
+  { id: "forge", name: "Forge", icon: "Flame", component: ForgeApp, pinnedToDesktop: true, minTier: "pro" },
+  { id: "bridge", name: "Concept Bridge", icon: "Link2", component: BridgeApp, pinnedToDesktop: true, minTier: "pro" },
+  { id: "scribe", name: "Scribe", icon: "PenLine", component: ScribeApp, pinnedToDesktop: true, minTier: "pro" },
+  { id: "circle", name: "Circle", icon: "Users", component: CircleApp, pinnedToDesktop: true, minTier: "pro" },
 
   // ----- Admin-granted (VUT SSO → VUT + Moodle) -----
   { id: "vut", name: "VUT", icon: "GraduationCap", component: VUTApp, pinnedToDesktop: true, requiresGrant: "vut" },

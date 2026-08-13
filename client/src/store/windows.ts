@@ -33,6 +33,10 @@ export type AppId =
   | "compass"
   | "echo"
   | "pulse"
+  | "forge"
+  | "bridge"
+  | "scribe"
+  | "circle"
   // Plugin apps use synthetic ids of the form `plugin:<pluginKey>`. The
   // `(string & {})` catch-all preserves autocomplete for the literal union
   // above while allowing any string for dynamically-installed plugins.

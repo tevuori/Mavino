@@ -60,6 +60,10 @@ const DEFAULT_APP_TIERS: Record<string, AppTier> = {
   compass: "pro",
   echo: "pro",
   pulse: "pro",
+  forge: "pro",
+  bridge: "pro",
+  scribe: "pro",
+  circle: "pro",
   // VUT + Moodle are grant-based, not tier-based
 };
 
@@ -73,6 +77,10 @@ export const ALL_APP_IDS: string[] = [
   "compass",
   "echo",
   "pulse",
+  "forge",
+  "bridge",
+  "scribe",
+  "circle",
   "vut", "moodle",
 ];
 
