@@ -401,8 +401,12 @@ teacher.post("/:id/assess", zValidator("json", assessSchema), async (c) => {
 
 // ---------- Title generation ----------
 
+const titleBodySchema = z.object({
+  title: z.string().max(200).optional(),
+}).optional().default({});
+
 /** POST /:id/title — derive a short topic title from the first exchange. */
-teacher.post("/:id/title", async (c) => {
+teacher.post("/:id/title", zValidator("json", titleBodySchema), async (c) => {
   const { userId } = c.get("auth");
   const row = await prisma.teacherSession.findFirst({ where: { id: c.req.param("id"), userId } });
   if (!row) return c.json({ error: "Session not found" }, 404);

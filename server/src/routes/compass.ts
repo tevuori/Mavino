@@ -7,6 +7,8 @@
 // users below Pro (the client shows a paywall preview instead).
 
 import { Hono } from "hono";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "../middleware/auth";
 import { isAppAvailableFor } from "../services/features";
 import { isLlmConfiguredFor, acquireLlmModel, LlmError } from "../services/athena/llm";
@@ -41,6 +43,47 @@ async function compassGate(c: any, next: any) {
 
 compass.use("*", compassGate);
 
+const createProjectSchema = z.object({
+  title: z.string().max(1000).optional(),
+  researchQuestion: z.string().max(10000).optional(),
+});
+
+const updateProjectSchema = z.object({
+  title: z.string().max(1000).optional(),
+  researchQuestion: z.string().max(10000).optional(),
+  notes: z.string().max(50000).optional(),
+});
+
+const addPaperSchema = z.object({
+  sourceType: z.enum(["file", "url", "manual"]).optional(),
+  fileId: z.string().max(500).optional(),
+  url: z.string().max(2000).optional(),
+  title: z.string().max(1000).optional(),
+  authors: z.array(z.string().max(500)).optional(),
+  year: z.number().int().optional(),
+  venue: z.string().max(1000).optional(),
+  doi: z.string().max(500).optional(),
+});
+
+const updatePaperSchema = z.object({
+  title: z.string().max(1000).optional(),
+  authors: z.array(z.string().max(500)).optional(),
+  year: z.number().int().optional(),
+  venue: z.string().max(1000).optional(),
+  doi: z.string().max(500).optional(),
+  url: z.string().max(2000).optional(),
+  status: z.string().max(100).optional(),
+  annotations: z.string().max(50000).optional(),
+});
+
+const searchSchema = z.object({
+  query: z.string().max(1000).optional(),
+});
+
+const updateReviewSchema = z.object({
+  content: z.string().max(100000).optional(),
+});
+
 // ----- projects -----
 
 /** GET /projects — list the user's research projects. */
@@ -51,9 +94,9 @@ compass.get("/projects", async (c) => {
 });
 
 /** POST /projects — create a new research project. */
-compass.post("/projects", async (c) => {
+compass.post("/projects", zValidator("json", createProjectSchema), async (c) => {
   const { userId } = c.get("auth");
-  const body = await c.req.json().catch(() => ({})) as { title?: string; researchQuestion?: string };
+  const body = c.req.valid("json");
   if (!body.title?.trim()) return c.json({ error: "Project title is required." }, 400);
   const project = await createProject(userId, { title: body.title, researchQuestion: body.researchQuestion });
   return c.json({ project }, 201);
@@ -68,9 +111,9 @@ compass.get("/projects/:id", async (c) => {
 });
 
 /** PATCH /projects/:id — update project metadata. */
-compass.patch("/projects/:id", async (c) => {
+compass.patch("/projects/:id", zValidator("json", updateProjectSchema), async (c) => {
   const { userId } = c.get("auth");
-  const body = await c.req.json().catch(() => ({})) as { title?: string; researchQuestion?: string; notes?: string };
+  const body = c.req.valid("json");
   try {
     const project = await updateProject(userId, c.req.param("id"), body);
     return c.json({ project });
@@ -89,18 +132,9 @@ compass.delete("/projects/:id", async (c) => {
 // ----- papers -----
 
 /** POST /projects/:id/papers — add a paper to a project. */
-compass.post("/projects/:id/papers", async (c) => {
+compass.post("/projects/:id/papers", zValidator("json", addPaperSchema), async (c) => {
   const { userId } = c.get("auth");
-  const body = await c.req.json().catch(() => ({})) as {
-    sourceType?: "file" | "url" | "manual";
-    fileId?: string;
-    url?: string;
-    title?: string;
-    authors?: string[];
-    year?: number;
-    venue?: string;
-    doi?: string;
-  };
+  const body = c.req.valid("json");
   if (!body.sourceType || !["file", "url", "manual"].includes(body.sourceType)) {
     return c.json({ error: "sourceType must be 'file', 'url', or 'manual'." }, 400);
   }
@@ -131,9 +165,9 @@ compass.post("/projects/:id/papers", async (c) => {
 });
 
 /** PATCH /projects/:id/papers/:paperId — update paper metadata/status/annotations. */
-compass.patch("/projects/:id/papers/:paperId", async (c) => {
+compass.patch("/projects/:id/papers/:paperId", zValidator("json", updatePaperSchema), async (c) => {
   const { userId } = c.get("auth");
-  const body = await c.req.json().catch(() => ({}));
+  const body = c.req.valid("json");
   try {
     const paper = await updatePaper(userId, c.req.param("paperId"), body);
     return c.json({ paper });
@@ -182,9 +216,9 @@ compass.post("/projects/:id/papers/:paperId/extract", async (c) => {
 // ----- related-work search -----
 
 /** POST /projects/:id/search — search for related work. */
-compass.post("/projects/:id/search", async (c) => {
+compass.post("/projects/:id/search", zValidator("json", searchSchema), async (c) => {
   const { userId } = c.get("auth");
-  const body = await c.req.json().catch(() => ({})) as { query?: string };
+  const body = c.req.valid("json");
   if (!body.query?.trim()) return c.json({ error: "query is required" }, 400);
   try {
     const results = await searchRelatedWork(userId, c.req.param("id"), body.query);
@@ -242,9 +276,9 @@ compass.post("/projects/:id/review/generate", async (c) => {
 });
 
 /** PATCH /projects/:id/review — manually edit the review content. */
-compass.patch("/projects/:id/review", async (c) => {
+compass.patch("/projects/:id/review", zValidator("json", updateReviewSchema), async (c) => {
   const { userId } = c.get("auth");
-  const body = await c.req.json().catch(() => ({})) as { content?: string };
+  const body = c.req.valid("json");
   if (body.content === undefined) return c.json({ error: "content is required" }, 400);
   try {
     const review = await updateReviewContent(userId, c.req.param("id"), body.content);

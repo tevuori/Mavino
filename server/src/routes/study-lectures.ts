@@ -13,6 +13,7 @@ import { authMiddleware } from "../middleware/auth";
 import { studyFunctionMiddleware } from "../middleware/study-functions";
 import { runLecturePipeline } from "../services/study/lecture/pipeline";
 import { getStorageStatus } from "../services/storage-quota";
+import { detectAndValidateMime } from "../services/upload-security";
 
 const lectures = new Hono();
 lectures.use("*", authMiddleware, studyFunctionMiddleware("lecture"));
@@ -139,6 +140,12 @@ lectures.post("/upload", async (c) => {
   const absPath = path.join(UPLOAD_DIR, storageKey);
   await mkdir(path.dirname(absPath), { recursive: true });
   const buf = Buffer.from(await video.arrayBuffer());
+
+  // Magic number validation — reject executables disguised as video.
+  const { mime: detectedMime, blocked: mimeBlocked } = await detectAndValidateMime(buf, video.type);
+  if (mimeBlocked) {
+    return c.json({ error: `File content does not match a safe type (detected: ${detectedMime}). Upload rejected.` }, 415);
+  }
 
   // Enforce role-based storage quota before writing the video to disk.
   const quota = await getStorageStatus(userId, buf.length);

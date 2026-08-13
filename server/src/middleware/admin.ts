@@ -1,6 +1,7 @@
 import type { Context, Next } from "hono";
 import prisma from "../db/client";
 import { authMiddleware } from "./auth";
+import { setRlsAdmin } from "../db/rls";
 
 /** Loads the user and 403s if not an admin. */
 export async function adminMiddleware(c: Context, next: Next) {
@@ -13,6 +14,8 @@ export async function adminMiddleware(c: Context, next: Next) {
     return c.json({ error: "Admin access required" }, 403);
   }
   c.set("auth", { ...c.get("auth"), role: user.role });
+  // Elevate the RLS context so admin queries can see all users' data.
+  setRlsAdmin(true);
   await next();
 }
 
@@ -27,6 +30,8 @@ export async function adminOrManagerMiddleware(c: Context, next: Next) {
     return c.json({ error: "Admin or manager access required" }, 403);
   }
   c.set("auth", { ...c.get("auth"), role: user.role });
+  // Elevate the RLS context so admin/manager queries can see all users' data.
+  setRlsAdmin(true);
   await next();
 }
 

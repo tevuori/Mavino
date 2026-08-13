@@ -16,6 +16,7 @@ import {
 } from "../services/totp";
 import { sendPasswordResetEmail } from "../services/email";
 import { getDemoConfig, isDemoReady, createDemoUser } from "../services/demo";
+import { verifyTurnstileToken, getTurnstileSiteKey, isTurnstileEnabled } from "../services/turnstile";
 
 const auth = new Hono();
 
@@ -25,12 +26,14 @@ const loginSchema = z.object({
   rememberMe: z.boolean().optional().default(false),
   deviceFingerprint: z.string().max(256).optional().default(""),
   deviceLabel: z.string().max(256).optional().default(""),
+  turnstileToken: z.string().optional(),
 });
 
 const registerSchema = z.object({
   username: z.string().min(2).max(32),
   password: z.string().min(4).max(128),
   displayName: z.string().max(64).optional().default(""),
+  turnstileToken: z.string().optional(),
 });
 
 function publicUser(u: {
@@ -75,7 +78,12 @@ const loginLimiter = rateLimit({ max: 5, windowMs: 15_000 });
 
 /** POST /auth/login */
 auth.post("/login", loginLimiter, zValidator("json", loginSchema), async (c) => {
-  const { username, password, rememberMe, deviceFingerprint, deviceLabel } = c.req.valid("json");
+  const { username, password, rememberMe, deviceFingerprint, deviceLabel, turnstileToken } = c.req.valid("json");
+  // Verify Cloudflare Turnstile token (skipped in development if not configured).
+  const turnstileOk = await verifyTurnstileToken(turnstileToken, c.req.header("x-real-ip") ?? undefined);
+  if (!turnstileOk) {
+    return c.json({ error: "Bot verification failed. Please try again." }, 403);
+  }
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     return c.json({ error: "Invalid username or password" }, 401);
@@ -157,6 +165,15 @@ auth.post(
  * Returns whether self-registration is open (for the login screen to show/hide
  * the "Create account" form). Bootstrap mode (zero users) always returns true.
  */
+/** GET /auth/turnstile-config — returns the Turnstile site key for the client widget.
+ *  When Turnstile is not configured (no env vars), returns { enabled: false }. */
+auth.get("/turnstile-config", (c) => {
+  return c.json({
+    enabled: isTurnstileEnabled(),
+    siteKey: getTurnstileSiteKey(),
+  });
+});
+
 auth.get("/registration-status", async (c) => {
   const userCount = await prisma.user.count();
   if (userCount === 0) {
@@ -233,6 +250,12 @@ auth.post("/demo", demoLimiter, zValidator("json", demoSchema), async (c) => {
  * Otherwise returns 403.
  */
 auth.post("/register", rateLimit({ max: 5, windowMs: 60_000 }), zValidator("json", registerSchema), async (c) => {
+  const { turnstileToken } = c.req.valid("json");
+  // Verify Cloudflare Turnstile token (skipped in development if not configured).
+  const turnstileOk = await verifyTurnstileToken(turnstileToken, c.req.header("x-real-ip") ?? undefined);
+  if (!turnstileOk) {
+    return c.json({ error: "Bot verification failed. Please try again." }, 403);
+  }
   const userCount = await prisma.user.count();
   const isBootstrap = userCount === 0;
 

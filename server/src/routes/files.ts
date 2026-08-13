@@ -12,6 +12,7 @@ import { decryptSecret } from "../services/crypto";
 import { fetchWithVutSession } from "../services/vut";
 import { fetchMoodlePage, fetchResourceContent } from "../services/moodle";
 import { getStorageStatus } from "../services/storage-quota";
+import { detectAndValidateMime } from "../services/upload-security";
 
 /** True if the file is an integration-managed virtual file (e.g. Moodle). */
 function isManagedExternal(record: { externalUrl: string | null; source: string }): boolean {
@@ -354,51 +355,6 @@ const BLOCKED_UPLOAD_EXT = new Set([
   "vbs", "vba", "vb", "wsf", "wsh", "hta", "cpl",
   "apk", "deb", "rpm", "dmg", "pkg",
 ]);
-
-/**
- * MIME types detected by `file-type` that are considered dangerous and should
- * be blocked even if the extension isn't in the blocklist. This catches files
- * that have been renamed to a safe extension but are actually executables.
- */
-const BLOCKED_MIME_TYPES = new Set([
-  "application/x-msdownload", // .exe
-  "application/x-msdos-program", // .exe/.com
-  "application/x-executable", // Linux ELF
-  "application/x-sharedlib", // .so
-  "application/x-mach-binary", // macOS Mach-O
-  "application/java-archive", // .jar
-  "application/vnd.android.package-archive", // .apk
-  "application/x-debian-package", // .deb
-  "application/x-rpm", // .rpm
-  "application/x-java-applet", // .class
-]);
-
-/**
- * Sniff the actual file type from its magic bytes and compare against the
- * declared MIME type. Returns the detected MIME type (to override the
- * client-provided one) or null if the file type couldn't be determined.
- *
- * If the detected MIME is in the blocklist, the upload is rejected regardless
- * of the extension.
- */
-async function detectAndValidateMime(buf: ArrayBuffer, declaredMime: string): Promise<{ mime: string; blocked: boolean }> {
-  // file-type needs a Uint8Array — only sniff the first 4KB for efficiency.
-  const header = new Uint8Array(buf.slice(0, 4096));
-  const { fileTypeFromBuffer } = await import("file-type");
-  const detected = await fileTypeFromBuffer(header);
-
-  if (!detected) {
-    // Can't detect — text files, empty files, etc. Trust the client type.
-    return { mime: declaredMime || "application/octet-stream", blocked: false };
-  }
-
-  const detectedMime = detected.mime;
-  const blocked = BLOCKED_MIME_TYPES.has(detectedMime);
-
-  // Use the detected MIME type instead of the client-provided one — the
-  // client can lie, but magic bytes can't (for files file-type recognizes).
-  return { mime: detectedMime, blocked };
-}
 
 /** POST /files/upload  multipart: file + optional folderId */
 files.post("/upload", async (c) => {

@@ -7,9 +7,9 @@ interface AuthState {
   user: User | null;
   token: string | null;
   status: "loading" | "authenticated" | "unauthenticated";
-  login: (username: string, password: string, rememberMe?: boolean) => Promise<void>;
+  login: (username: string, password: string, rememberMe?: boolean, turnstileToken?: string) => Promise<void>;
   loginWithTotp: (challengeToken: string, totpCode: string, rememberMe?: boolean) => Promise<void>;
-  register: (username: string, password: string, displayName?: string) => Promise<void>;
+  register: (username: string, password: string, displayName?: string, turnstileToken?: string) => Promise<void>;
   tryDemo: () => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -23,12 +23,12 @@ export const useAuth = create<AuthState>((set, get) => ({
   token: getToken(),
   status: "loading",
 
-  login: async (username, password, rememberMe = true) => {
+  login: async (username, password, rememberMe = true, turnstileToken?: string) => {
     const fingerprint = rememberMe ? await getFingerprint() : "";
     const data = await api.post<
       | { token: string; refreshToken: string | null; user: User }
       | { totpRequired: true; challengeToken: string; user: User }
-    >("/api/auth/login", { username, password, rememberMe, deviceFingerprint: fingerprint });
+    >("/api/auth/login", { username, password, rememberMe, deviceFingerprint: fingerprint, turnstileToken });
     // If 2FA is required, throw a special error so the LoginScreen can show
     // the TOTP input. The challenge token is attached to the error.
     if ("totpRequired" in data) {
@@ -52,11 +52,11 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ token: data.token, user: data.user, status: "authenticated" });
   },
 
-  register: async (username, password, displayName) => {
+  register: async (username, password, displayName, turnstileToken?: string) => {
     // Bootstrap-only endpoint (first admin). After that it 403s.
     const data = await api.post<{ token: string; refreshToken: string | null; user: User }>(
       "/api/auth/register",
-      { username, password, displayName }
+      { username, password, displayName, turnstileToken }
     );
     setToken(data.token);
     setRefreshToken(data.refreshToken);

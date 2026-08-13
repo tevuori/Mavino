@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { LogIn, Loader2, Server, UserPlus, ShieldCheck, Mail, Sparkles } from "lucide-react";
 import { useAuth } from "../store/auth";
@@ -6,6 +6,7 @@ import { Capacitor } from "@capacitor/core";
 import { getBaseUrl, setBaseUrl } from "../services/api";
 import { api } from "../services/api";
 import AppLogo from "./AppLogo";
+import TurnstileWidget from "./TurnstileWidget";
 
 export default function LoginScreen() {
   const { login, loginWithTotp, register, tryDemo } = useAuth();
@@ -16,6 +17,10 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Cloudflare Turnstile bot protection token
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const onTurnstileToken = useCallback((token: string) => setTurnstileToken(token), []);
 
   // Demo state
   const [demoStatus, setDemoStatus] = useState<{ enabled: boolean; configured: boolean } | null>(null);
@@ -103,7 +108,7 @@ export default function LoginScreen() {
 
     setBusy(true);
     try {
-      await login(username, password, rememberMe);
+      await login(username, password, rememberMe, turnstileToken || undefined);
     } catch (err) {
       const e = err as Error & { totpChallenge?: string };
       if (e.totpChallenge) {
@@ -153,7 +158,7 @@ export default function LoginScreen() {
     setError(null);
     setBusy(true);
     try {
-      await register(regUsername, regPassword, regDisplayName.trim() || undefined);
+      await register(regUsername, regPassword, regDisplayName.trim() || undefined, turnstileToken || undefined);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -358,6 +363,8 @@ export default function LoginScreen() {
               <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
             )}
 
+            <TurnstileWidget onToken={onTurnstileToken} className="flex justify-center" />
+
             <button
               type="submit"
               disabled={busy}
@@ -420,6 +427,8 @@ export default function LoginScreen() {
             {error && (
               <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
             )}
+
+            <TurnstileWidget onToken={onTurnstileToken} className="flex justify-center" />
 
             <button
               type="submit"

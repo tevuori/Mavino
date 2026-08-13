@@ -7,6 +7,8 @@
 // users below Pro (the client shows a paywall preview instead).
 
 import { Hono } from "hono";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "../middleware/auth";
 import { isAppAvailableFor } from "../services/features";
 import { isLlmConfiguredFor, acquireLlmModel, LlmError } from "../services/athena/llm";
@@ -34,11 +36,16 @@ async function echoGate(c: any, next: any) {
 
 echo.use("*", echoGate);
 
+const startSessionSchema = z.object({
+  title: z.string().max(1000).optional(),
+  language: z.enum(["en", "cs"]).optional(),
+});
+
 /** POST /sessions — start a new live lecture session (or reuse the active one).
  *  Body: { title?: string, language?: "en" | "cs" } */
-echo.post("/sessions", async (c) => {
+echo.post("/sessions", zValidator("json", startSessionSchema), async (c) => {
   const { userId } = c.get("auth");
-  const body = await c.req.json().catch(() => ({})) as { title?: string; language?: string };
+  const body = c.req.valid("json");
   const session = await startSession(userId, {
     title: body.title,
     language: body.language === "cs" ? "cs" : "en",

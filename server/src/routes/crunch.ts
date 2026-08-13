@@ -6,6 +6,8 @@
 // users below Pro (the client shows a paywall preview instead).
 
 import { Hono } from "hono";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "../middleware/auth";
 import { isAppAvailableFor } from "../services/features";
 import { isLlmConfiguredFor, acquireLlmModel, LlmError } from "../services/athena/llm";
@@ -34,6 +36,30 @@ async function crunchGate(c: any, next: any) {
 
 crunch.use("*", crunchGate);
 
+const crunchExamSchema = z.object({
+  id: z.string().max(200).optional(),
+  name: z.string().max(1000),
+  date: z.string().max(50),
+  courseId: z.string().max(200).optional(),
+  syllabus: z.string().max(50000),
+  color: z.string().max(50).optional(),
+});
+
+const generateCrunchSchema = z.object({
+  exams: z.array(crunchExamSchema).optional(),
+  dailyMinutes: z.number().int().optional(),
+});
+
+const logProgressSchema = z.object({
+  taskId: z.string().max(200),
+  done: z.boolean().optional(),
+  duration: z.number().optional(),
+});
+
+const dayCompleteSchema = z.object({
+  date: z.string().max(50),
+});
+
 /** GET / — the user's crunch plan (status + data if ready). Also triggers a
  *  behind-alert check (fire-and-forget) so alerts fire when the user views
  *  the plan or Athena checks status. */
@@ -48,7 +74,7 @@ crunch.get("/", async (c) => {
 
 /** POST /generate — kick off a background plan generation. Returns immediately
  *  with status "building"; the client polls GET / until ready. */
-crunch.post("/generate", async (c) => {
+crunch.post("/generate", zValidator("json", generateCrunchSchema), async (c) => {
   const { userId } = c.get("auth");
   const configured = await isLlmConfiguredFor(userId);
   if (!configured) {
@@ -63,7 +89,7 @@ crunch.post("/generate", async (c) => {
     }
     return c.json({ error: e instanceof Error ? e.message : "LLM error" }, 500);
   }
-  const body = await c.req.json().catch(() => ({})) as CrunchGenerateInput;
+  const body = c.req.valid("json") as CrunchGenerateInput;
   if (!body.exams || !Array.isArray(body.exams) || body.exams.length === 0) {
     return c.json({ error: "Provide at least one exam with a name and date." }, 400);
   }
@@ -79,9 +105,9 @@ crunch.post("/generate", async (c) => {
 });
 
 /** POST /progress — log progress on a single task (mark done/not-done). */
-crunch.post("/progress", async (c) => {
+crunch.post("/progress", zValidator("json", logProgressSchema), async (c) => {
   const { userId } = c.get("auth");
-  const body = await c.req.json().catch(() => ({})) as LogProgressInput;
+  const body = c.req.valid("json") as LogProgressInput;
   if (!body.taskId) return c.json({ error: "taskId is required" }, 400);
   const data = await logProgress(userId, body);
   if (!data) return c.json({ error: "Task not found or plan not ready" }, 404);
@@ -89,9 +115,9 @@ crunch.post("/progress", async (c) => {
 });
 
 /** POST /day-complete — mark all tasks on a given date as done. */
-crunch.post("/day-complete", async (c) => {
+crunch.post("/day-complete", zValidator("json", dayCompleteSchema), async (c) => {
   const { userId } = c.get("auth");
-  const body = await c.req.json().catch(() => ({})) as { date: string };
+  const body = c.req.valid("json");
   if (!body.date) return c.json({ error: "date is required (YYYY-MM-DD)" }, 400);
   const data = await logDayComplete(userId, body.date);
   if (!data) return c.json({ error: "Day not found or plan not ready" }, 404);

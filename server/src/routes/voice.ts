@@ -24,6 +24,7 @@ import { canonicalPair } from "../db/links";
 import path from "node:path";
 import { mkdir, writeFile, readFile, stat } from "node:fs/promises";
 import { getStorageStatus } from "../services/storage-quota";
+import { detectAndValidateMime } from "../services/upload-security";
 
 const voice = new Hono();
 voice.use("*", authMiddleware, appTierGate("voice"));
@@ -181,6 +182,12 @@ voice.post("/", async (c) => {
   const absPath = path.join(UPLOAD_DIR, storageKey);
   await mkdir(path.dirname(absPath), { recursive: true });
   const audioBuf = Buffer.from(await audio.arrayBuffer());
+
+  // Magic number validation — reject executables disguised as audio.
+  const { mime: detectedMime, blocked: mimeBlocked } = await detectAndValidateMime(audioBuf, mimeType);
+  if (mimeBlocked) {
+    return c.json({ error: `File content does not match a safe type (detected: ${detectedMime}). Upload rejected.` }, 415);
+  }
 
   // Enforce role-based storage quota before writing audio to disk.
   const quota = await getStorageStatus(userId, audioBuf.length);

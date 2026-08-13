@@ -74,7 +74,9 @@ ntfy.delete("/config", async (c) => {
 
 // ---------- Test / send / messages ----------
 
-ntfy.post("/test", async (c) => {
+const testSchema = z.object({}).optional().default({});
+
+ntfy.post("/test", zValidator("json", testSchema), async (c) => {
   const { userId } = c.get("auth");
   const cfg = await decryptNtfyConfig(userId);
   if (!cfg) return c.json({ error: "Ntfy is not configured." }, 400);

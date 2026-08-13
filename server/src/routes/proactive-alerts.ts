@@ -94,8 +94,10 @@ proactive.put("/", zValidator("json", configSchema), async (c) => {
   return c.json({ config: cfg });
 });
 
+const testSchema = z.object({}).optional().default({});
+
 /** POST /api/proactive-alerts/test — fire a one-off briefing now and return the generated text. */
-proactive.post("/test", async (c) => {
+proactive.post("/test", zValidator("json", testSchema), async (c) => {
   const { userId } = c.get("auth");
   try {
     const body = await runProactiveAlertNow(userId);

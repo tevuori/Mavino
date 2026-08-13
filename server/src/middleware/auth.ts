@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 import { verifyToken } from "../services/jwt";
+import { runWithRls } from "../db/rls";
 
 export interface AuthVars {
   userId: string;
@@ -29,7 +30,9 @@ export async function authMiddleware(c: Context, next: Next) {
     return c.json({ error: "Unauthorized" }, 401);
   }
   c.set("auth", { userId: payload.sub, username: payload.username });
-  await next();
+  // Wrap the entire downstream chain in an RLS context so that all Prisma
+  // queries are automatically scoped to this user by PostgreSQL RLS.
+  return runWithRls(payload.sub, false, () => next());
 }
 
 /** Like authMiddleware, but also accepts a ?token= query parameter as a
@@ -51,7 +54,7 @@ export async function authMiddlewareWithQuery(c: Context, next: Next) {
     return c.json({ error: "Unauthorized" }, 401);
   }
   c.set("auth", { userId: payload.sub, username: payload.username });
-  await next();
+  return runWithRls(payload.sub, false, () => next());
 }
 
 /** Optional auth: attaches auth if a valid token is present, but never blocks. */
@@ -62,6 +65,7 @@ export async function optionalAuth(c: Context, next: Next) {
     const payload = await verifyToken(token);
     if (payload) {
       c.set("auth", { userId: payload.sub, username: payload.username });
+      return runWithRls(payload.sub, false, () => next());
     }
   }
   await next();

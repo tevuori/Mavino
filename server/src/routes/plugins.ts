@@ -68,8 +68,10 @@ plugins.get("/installed", marketplaceGate, async (c) => {
 
 // ----- install / uninstall / toggle -----
 
+const installSchema = z.object({}).optional().default({});
+
 /** POST /api/plugins/:pluginKey/install — install a plugin. */
-plugins.post("/:pluginKey/install", marketplaceGate, async (c) => {
+plugins.post("/:pluginKey/install", marketplaceGate, zValidator("json", installSchema), async (c) => {
   const { userId } = c.get("auth");
   const pluginKey = c.req.param("pluginKey")!;
   try {
