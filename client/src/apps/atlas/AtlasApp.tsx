@@ -54,11 +54,19 @@ function typeColor(type: string): string {
   return TYPE_COLORS[type] ?? TYPE_COLORS.other;
 }
 
+// Cache hexToRgb results — called per-node per-frame, so the regex must not run every time.
+const _hexRgbCache = new Map<string, string>();
 function hexToRgb(hex: string): string {
+  const cached = _hexRgbCache.get(hex);
+  if (cached) return cached;
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!m) return "148, 163, 184";
-  return [1, 2, 3].map((i) => parseInt(m[i], 16)).join(", ");
+  const result = m ? [1, 2, 3].map((i) => parseInt(m[i], 16)).join(", ") : "148, 163, 184";
+  _hexRgbCache.set(hex, result);
+  return result;
 }
+// Pre-populate cache for the fixed type colors + weak color.
+Object.values(TYPE_COLORS).forEach(hexToRgb);
+hexToRgb("#ef4444");
 
 // ----- level-of-detail: nodes reveal progressively as you zoom in -----
 // Higher-importance concepts are always visible; lower-importance "detail"
@@ -79,6 +87,9 @@ function nodeReveal(node: { weak?: boolean; importance?: number }, globalScale: 
 function nodeRadius(node: { importance?: number }): number {
   return 3 + Math.sqrt(Math.max(1, node.importance ?? 3)) * 3.5;
 }
+
+// Cache for label text widths — measureText is expensive when called per-node per-frame.
+const _labelWidthCache = new Map<string, number>();
 
 // ----- container size hook (same pattern as Study Hub KnowledgeGraph) -----
 function useContainerSize<T extends HTMLElement>() {
@@ -301,6 +312,18 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
   const focusId = hoveredId ?? selectedConcept?.id ?? null;
   const focusSet = focusId ? neighborsOf.get(focusId) ?? null : null;
 
+  // Refs mirror the focus state so the canvas callbacks (nodeCanvasObject, etc.)
+  // can be stable useCallbacks with [] deps — avoiding callback recreation on
+  // every React re-render (which itself triggers ForceGraph2D re-processing).
+  const focusIdRef = useRef(focusId);
+  focusIdRef.current = focusId;
+  const focusSetRef = useRef(focusSet);
+  focusSetRef.current = focusSet;
+  const selectedConceptRef = useRef(selectedConcept);
+  selectedConceptRef.current = selectedConcept;
+  const conceptByIdRef = useRef(conceptById);
+  conceptByIdRef.current = conceptById;
+
   // Configure the d3-force simulation when data loads or filter changes.
   // Atlas has many disconnected concepts (from different source graphs with
   // no cross-graph links), which collapse to a single clump under the default
@@ -336,6 +359,167 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
   const openCourse = (id: string) => open({ appId: "grades", title: "Grades", icon: "GraduationCap", payload: { courseId: id } });
 
   const weakCount = data?.stats.weakCount ?? 0;
+
+  // ===== Stable callbacks for ForceGraph2D =====
+  // These use refs (focusIdRef, focusSetRef, etc.) instead of closure variables
+  // so they can be useCallback with [] deps. This prevents ForceGraph2D from
+  // re-processing its internal render pipeline on every React state change
+  // (e.g. when zoomLevel updates via onZoom).
+
+  const nodeLabelCallback = useCallback(() => "", []);
+  const nodeValCallback = useCallback((n: NodeObject) => (n as any).importance, []);
+  const linkLabelCallback = useCallback((l: LinkObject) => (l as any).relation, []);
+  const linkArrowColorCallback = useCallback(() => "rgba(148, 163, 184, 0.45)", []);
+
+  const linkColorCallback = useCallback((l: any) => {
+    const s = l.source, t = l.target;
+    const sid = s?.id ?? s, tid = t?.id ?? t;
+    const fid = focusIdRef.current;
+    const selId = selectedConceptRef.current?.id;
+    const sVis = s?.weak || fid === sid || selId === sid ? 1 : nodeReveal(s, zoomRef.current);
+    const tVis = t?.weak || fid === tid || selId === tid ? 1 : nodeReveal(t, zoomRef.current);
+    const vis = Math.min(sVis, tVis);
+    if (vis < 0.05) return "rgba(0,0,0,0)";
+    const fs = focusSetRef.current;
+    const dim = fs && !(fs.has(sid) && fs.has(tid));
+    return dim
+      ? `rgba(148, 163, 184, ${0.10 * vis})`
+      : `rgba(148, 163, 184, ${0.45 * vis})`;
+  }, []);
+
+  const linkWidthCallback = useCallback((l: any) => {
+    const s = l.source, t = l.target;
+    const sid = s?.id ?? s, tid = t?.id ?? t;
+    const fid = focusIdRef.current;
+    const selId = selectedConceptRef.current?.id;
+    const sVis = s?.weak || fid === sid || selId === sid ? 1 : nodeReveal(s, zoomRef.current);
+    const tVis = t?.weak || fid === tid || selId === tid ? 1 : nodeReveal(t, zoomRef.current);
+    const vis = Math.min(sVis, tVis);
+    if (vis < 0.05) return 0;
+    const fs = focusSetRef.current;
+    const active = fs && fs.has(sid) && fs.has(tid);
+    return active ? 1.4 : 0.7 * vis;
+  }, []);
+
+  const handleNodeClick = useCallback((n: NodeObject) => {
+    const c = conceptByIdRef.current.get(String((n as any).id));
+    if (c) setSelectedConcept(c);
+    const x = (n as any).x, y = (n as any).y;
+    if (typeof x === "number" && typeof y === "number") fgRef.current?.centerAt(x, y, 500);
+  }, []);
+
+  const handleNodeHover = useCallback((n: NodeObject | null) => {
+    setHoveredId(n ? String((n as any).id) : null);
+  }, []);
+
+  const handleBackgroundClick = useCallback(() => setSelectedConcept(null), []);
+
+  const handleZoom = useCallback((t: { k: number }) => {
+    zoomRef.current = t.k;
+    const rounded = Math.round(t.k * 10) / 10;
+    setZoomLevel((prev) => (Math.abs(prev - rounded) < 0.05 ? prev : rounded));
+  }, []);
+
+  const nodeCanvasCallback = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+    const fid = focusIdRef.current;
+    const sel = selectedConceptRef.current;
+    const fs = focusSetRef.current;
+    const isFocused = fid === node.id;
+    const isSelected = sel?.id === node.id;
+    const reveal = isFocused || isSelected ? 1 : nodeReveal(node, globalScale);
+    if (reveal <= 0.01) return;
+
+    const dimmed = fs ? !fs.has(node.id) : false;
+    const isWeak = node.weak;
+    const baseColor = typeColor(node.type);
+    const rgb = hexToRgb(isWeak ? "#ef4444" : baseColor);
+    const r = nodeRadius(node);
+    const alpha = reveal * (dimmed ? 0.25 : 1);
+
+    // Glow — use a simple semi-transparent arc instead of createRadialGradient
+    // (gradient creation is one of the most expensive canvas operations).
+    if (!dimmed && reveal > 0.3) {
+      ctx.fillStyle = `rgba(${rgb}, ${(isFocused ? 0.18 : 0.1 * reveal)})`;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r * 2.4, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    // Body
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+    ctx.fillStyle = `rgba(${rgb}, ${alpha})`;
+    ctx.fill();
+
+    // Weak ring (red outline)
+    if (isWeak && !dimmed) {
+      ctx.lineWidth = 1.8 / globalScale;
+      ctx.strokeStyle = `rgba(239, 68, 68, ${0.8 * reveal})`;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r + 2 / globalScale, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+
+    // Selection / hover ring
+    if (isSelected || (isFocused && !sel)) {
+      ctx.lineWidth = 1.6 / globalScale;
+      ctx.strokeStyle = isSelected ? "rgba(255,255,255,0.95)" : `rgba(${rgb}, 0.9)`;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r + 2.5 / globalScale, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+
+    // Labels — graph-coordinate font size that GROWS as you zoom in.
+    const graphFontSize = 4 + (node.importance ?? 3) * 0.7;
+    const screenFont = graphFontSize * globalScale;
+    const showLabel = reveal > 0.5 && (isFocused || isSelected || isWeak || screenFont > 10);
+    if (showLabel) {
+      const label = node.label as string;
+      const fontSize = isFocused || isSelected
+        ? Math.max(graphFontSize, 11 / globalScale)
+        : graphFontSize;
+      ctx.font = `${isFocused || isSelected ? "600" : "500"} ${fontSize}px "Inter", sans-serif`;
+      // Cache text width — measureText is expensive per-frame.
+      let textWidth = _labelWidthCache.get(label);
+      if (textWidth === undefined) {
+        textWidth = ctx.measureText(label).width;
+        _labelWidthCache.set(label, textWidth);
+      }
+      const padX = 1.5;
+      const padY = 0.8;
+      const labelY = node.y + r + 2;
+      ctx.fillStyle = `rgba(15, 17, 24, ${0.72 * reveal})`;
+      const rx = textWidth / 2 + padX;
+      const ry = fontSize / 2 + padY;
+      ctx.beginPath();
+      ctx.roundRect?.(node.x - rx, labelY, rx * 2, ry * 2, 2);
+      ctx.fill();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillStyle = isFocused || isSelected
+        ? "#ffffff"
+        : isWeak
+          ? `rgba(252, 165, 165, ${0.95 * reveal})`
+          : `rgba(226, 232, 240, ${0.92 * reveal})`;
+      ctx.fillText(label, node.x, labelY + padY);
+    }
+  }, []);
+
+  const nodePointerAreaCallback = useCallback((node: any, color: string, ctx: CanvasRenderingContext2D) => {
+    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+    const fid = focusIdRef.current;
+    const sel = selectedConceptRef.current;
+    const isFocused = fid === node.id;
+    const isSelected = sel?.id === node.id;
+    const reveal = isFocused || isSelected ? 1 : nodeReveal(node, zoomRef.current);
+    if (reveal <= 0.01) return;
+    const r = nodeRadius(node);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r + 3, 0, 2 * Math.PI);
+    ctx.fill();
+  }, []);
 
   return (
     <div className="flex h-full flex-col gap-3 p-4">
@@ -467,146 +651,23 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                 height={size.height}
                 nodeId="id"
                 nodeRelSize={4}
-                nodeLabel={() => ""}
-                nodeVal={(n: NodeObject) => (n as any).importance}
-                linkLabel={(l: LinkObject) => (l as any).relation}
-                linkColor={(l: any) => {
-                  const s = l.source, t = l.target;
-                  const sid = s?.id ?? s, tid = t?.id ?? t;
-                  const sVis = s?.weak || focusId === sid || selectedConcept?.id === sid ? 1 : nodeReveal(s, zoomRef.current);
-                  const tVis = t?.weak || focusId === tid || selectedConcept?.id === tid ? 1 : nodeReveal(t, zoomRef.current);
-                  const vis = Math.min(sVis, tVis);
-                  if (vis < 0.05) return "rgba(0,0,0,0)";
-                  const dim = focusSet && !(focusSet.has(sid) && focusSet.has(tid));
-                  return dim
-                    ? `rgba(148, 163, 184, ${0.10 * vis})`
-                    : `rgba(148, 163, 184, ${0.45 * vis})`;
-                }}
-                linkWidth={(l: any) => {
-                  const s = l.source, t = l.target;
-                  const sid = s?.id ?? s, tid = t?.id ?? t;
-                  const sVis = s?.weak || focusId === sid || selectedConcept?.id === sid ? 1 : nodeReveal(s, zoomRef.current);
-                  const tVis = t?.weak || focusId === tid || selectedConcept?.id === tid ? 1 : nodeReveal(t, zoomRef.current);
-                  const vis = Math.min(sVis, tVis);
-                  if (vis < 0.05) return 0;
-                  const active = focusSet && focusSet.has(sid) && focusSet.has(tid);
-                  return active ? 1.4 : 0.7 * vis;
-                }}
+                nodeLabel={nodeLabelCallback}
+                nodeVal={nodeValCallback}
+                linkLabel={linkLabelCallback}
+                linkColor={linkColorCallback}
+                linkWidth={linkWidthCallback}
                 linkDirectionalArrowLength={4}
                 linkDirectionalArrowRelPos={1}
-                linkDirectionalArrowColor={() => "rgba(148, 163, 184, 0.45)"}
+                linkDirectionalArrowColor={linkArrowColorCallback}
                 linkCurvature={0.15}
-                onNodeClick={(n: NodeObject) => {
-                  const c = conceptById.get(String((n as any).id));
-                  if (c) setSelectedConcept(c);
-                  const x = (n as any).x, y = (n as any).y;
-                  if (typeof x === "number" && typeof y === "number") fgRef.current?.centerAt(x, y, 500);
-                }}
-                onNodeHover={(n: NodeObject | null) => setHoveredId(n ? String((n as any).id) : null)}
-                onBackgroundClick={() => setSelectedConcept(null)}
-                cooldownTime={4000}
+                onNodeClick={handleNodeClick}
+                onNodeHover={handleNodeHover}
+                onBackgroundClick={handleBackgroundClick}
+                cooldownTime={1500}
                 backgroundColor="rgba(0,0,0,0)"
-                onZoom={(t: { k: number }) => {
-                  zoomRef.current = t.k;
-                  const rounded = Math.round(t.k * 10) / 10;
-                  setZoomLevel((prev) => (Math.abs(prev - rounded) < 0.05 ? prev : rounded));
-                }}
-                nodeCanvasObject={(node: any, ctx, globalScale) => {
-                  if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-                  const isFocused = focusId === node.id;
-                  const isSelected = selectedConcept?.id === node.id;
-                  // LOD: fade nodes in progressively as you zoom in.
-                  // Focused/selected are always fully visible.
-                  const reveal = isFocused || isSelected ? 1 : nodeReveal(node, globalScale);
-                  if (reveal <= 0.01) return;
-
-                  const dimmed = focusSet ? !focusSet.has(node.id) : false;
-                  const isWeak = node.weak;
-                  const baseColor = typeColor(node.type);
-                  const rgb = hexToRgb(isWeak ? "#ef4444" : baseColor);
-                  const r = nodeRadius(node);
-                  const alpha = reveal * (dimmed ? 0.25 : 1);
-
-                  // Glow
-                  if (!dimmed && reveal > 0.3) {
-                    const glow = ctx.createRadialGradient(node.x, node.y, r * 0.4, node.x, node.y, r * 3.2);
-                    glow.addColorStop(0, `rgba(${rgb}, ${isFocused ? 0.55 : 0.3 * reveal})`);
-                    glow.addColorStop(1, `rgba(${rgb}, 0)`);
-                    ctx.fillStyle = glow;
-                    ctx.beginPath();
-                    ctx.arc(node.x, node.y, r * 3.2, 0, 2 * Math.PI);
-                    ctx.fill();
-                  }
-
-                  // Body
-                  ctx.beginPath();
-                  ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-                  ctx.fillStyle = `rgba(${rgb}, ${alpha})`;
-                  ctx.fill();
-
-                  // Weak ring (pulsing red outline)
-                  if (isWeak && !dimmed) {
-                    ctx.lineWidth = 1.8 / globalScale;
-                    ctx.strokeStyle = `rgba(239, 68, 68, ${0.8 * reveal})`;
-                    ctx.beginPath();
-                    ctx.arc(node.x, node.y, r + 2 / globalScale, 0, 2 * Math.PI);
-                    ctx.stroke();
-                  }
-
-                  // Selection / hover ring
-                  if (isSelected || (isFocused && !selectedConcept)) {
-                    ctx.lineWidth = 1.6 / globalScale;
-                    ctx.strokeStyle = isSelected ? "rgba(255,255,255,0.95)" : `rgba(${rgb}, 0.9)`;
-                    ctx.beginPath();
-                    ctx.arc(node.x, node.y, r + 2.5 / globalScale, 0, 2 * Math.PI);
-                    ctx.stroke();
-                  }
-
-                  // Labels — graph-coordinate font size that GROWS as you zoom in.
-                  // At low zoom only focused/selected/weak labels are readable;
-                  // at high zoom every visible node gets a label.
-                  const graphFontSize = 4 + (node.importance ?? 3) * 0.7;
-                  const screenFont = graphFontSize * globalScale;
-                  const showLabel = reveal > 0.5 && (isFocused || isSelected || isWeak || screenFont > 10);
-                  if (showLabel) {
-                    const label = node.label as string;
-                    // Focused/selected get a minimum screen-readable size.
-                    const fontSize = isFocused || isSelected
-                      ? Math.max(graphFontSize, 11 / globalScale)
-                      : graphFontSize;
-                    ctx.font = `${isFocused || isSelected ? "600" : "500"} ${fontSize}px "Inter", sans-serif`;
-                    const textWidth = ctx.measureText(label).width;
-                    const padX = 1.5;
-                    const padY = 0.8;
-                    const labelY = node.y + r + 2;
-                    ctx.fillStyle = `rgba(15, 17, 24, ${0.72 * reveal})`;
-                    ctx.beginPath();
-                    const rx = textWidth / 2 + padX;
-                    const ry = fontSize / 2 + padY;
-                    ctx.roundRect?.(node.x - rx, labelY, rx * 2, ry * 2, 2);
-                    ctx.fill();
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "top";
-                    ctx.fillStyle = isFocused || isSelected
-                      ? "#ffffff"
-                      : isWeak
-                        ? `rgba(252, 165, 165, ${0.95 * reveal})`
-                        : `rgba(226, 232, 240, ${0.92 * reveal})`;
-                    ctx.fillText(label, node.x, labelY + padY);
-                  }
-                }}
-                nodePointerAreaPaint={(node: any, color, ctx) => {
-                  if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-                  const isFocused = focusId === node.id;
-                  const isSelected = selectedConcept?.id === node.id;
-                  const reveal = isFocused || isSelected ? 1 : nodeReveal(node, zoomRef.current);
-                  if (reveal <= 0.01) return;
-                  const r = nodeRadius(node);
-                  ctx.fillStyle = color;
-                  ctx.beginPath();
-                  ctx.arc(node.x, node.y, r + 3, 0, 2 * Math.PI);
-                  ctx.fill();
-                }}
+                onZoom={handleZoom}
+                nodeCanvasObject={nodeCanvasCallback}
+                nodePointerAreaPaint={nodePointerAreaCallback}
               />
             )}
 
