@@ -30,6 +30,7 @@ const ACTION_ORDER: ShortcutAction[] = [
   "nextWorkspace",
   "moveWindowPreviousWorkspace",
   "moveWindowNextWorkspace",
+  "cycleWindows",
 ];
 
 export default function ShortcutsSection() {

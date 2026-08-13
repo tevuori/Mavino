@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { useWindows } from "../store/windows";
+import { useSettings } from "../store/settings";
+import { matchesShortcut } from "../store/shortcuts";
 import * as Lucide from "lucide-react";
 
-/** Alt+Tab (and Shift+Alt+Tab) window switcher overlay. */
+/** Alt+Tab (and Shift+Alt+Tab) window switcher overlay.
+ *  Uses the configurable `cycleWindows` shortcut (default: Alt+Tab). */
 export default function AltTabSwitcher() {
   const { windows, focusedId, cycleFocus } = useWindows();
   const activeWorkspaceId = useWindows((s) => s.activeWorkspaceId);
+  const cycleShortcut = useSettings((s) => s.shortcuts.cycleWindows);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -13,7 +17,7 @@ export default function AltTabSwitcher() {
     let timer: number | undefined;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey && e.key === "Tab") {
+      if (matchesShortcut(e, cycleShortcut)) {
         e.preventDefault();
         if (!tabDown) {
           tabDown = true;
@@ -24,7 +28,14 @@ export default function AltTabSwitcher() {
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "Alt") {
+      // Close the overlay when the modifier key is released.
+      // For the default Alt+Tab, that's Alt; for a Ctrl-based shortcut, Ctrl; etc.
+      if (
+        (cycleShortcut.alt && e.key === "Alt") ||
+        (cycleShortcut.ctrl && e.key === "Control") ||
+        (cycleShortcut.meta && e.key === "Meta") ||
+        (cycleShortcut.super && (e.key === "Meta" || e.key === "Control"))
+      ) {
         tabDown = false;
         timer = window.setTimeout(() => setVisible(false), 120);
       }
@@ -37,7 +48,7 @@ export default function AltTabSwitcher() {
       window.removeEventListener("keyup", onKeyUp);
       window.clearTimeout(timer);
     };
-  }, [cycleFocus]);
+  }, [cycleFocus, cycleShortcut]);
 
   if (!visible) return null;
 

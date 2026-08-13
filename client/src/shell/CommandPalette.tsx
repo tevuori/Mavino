@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useShortcut } from "../store/shortcuts";
+import { useShortcut, formatShortcut } from "../store/shortcuts";
+import { useSettings } from "../store/settings";
+import { useQuickCapture } from "../store/quickCapture";
 import {
   Search, CornerDownLeft, AppWindow, StickyNote, CheckSquare,
   Calculator, Play, Brain, GraduationCap, Timer, Folder, Settings as SettingsIcon,
@@ -79,6 +81,8 @@ export default function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null);
   const { open: openWindow } = useWindows();
   const apps = useAccessibleApps();
+  const toggleQuickCapture = useQuickCapture((s) => s.toggle);
+  const quickCaptureShortcut = useSettings((s) => s.shortcuts.toggleQuickCapture);
 
   // Load notes + tasks + files when palette opens
   useEffect(() => {
@@ -269,13 +273,10 @@ export default function CommandPalette() {
       },
       {
         title: "Quick Capture",
-        subtitle: "Capture anything (Ctrl+Shift+N)",
+        subtitle: `Capture anything (${formatShortcut(quickCaptureShortcut)})`,
         icon: <Zap size={18} className="text-yellow-400" />,
         action: () => {
-          // Trigger the Quick Capture overlay via its hotkey.
-          window.dispatchEvent(new KeyboardEvent("keydown", {
-            key: "N", code: "KeyN", shiftKey: true, ctrlKey: true, bubbles: true,
-          }));
+          toggleQuickCapture();
           setOpen(false);
         },
         keywords: ["capture", "quick", "inbox", "idea", "note", "task"],
@@ -357,7 +358,7 @@ export default function CommandPalette() {
     }
 
     return out.slice(0, 12);
-  }, [query, notes, tasks, fileList, openWindow, apps]);
+  }, [query, notes, tasks, fileList, openWindow, apps, toggleQuickCapture, quickCaptureShortcut]);
 
   // Reset selection when results change
   useEffect(() => {

@@ -121,30 +121,12 @@ export default function Taskbar({ onOpenOverview }: Props) {
         setHovered(false);
         return;
       }
-      // Super/Meta always toggles the dock (GNOME-style).
-      if (
-        (e.key === "Meta" || e.key === "OS") &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !e.shiftKey &&
-        !e.repeat
-      ) {
-        e.preventDefault();
-        setStartOpen(false);
-        setPanelOpen((v) => !v);
-        return;
-      }
-      // Configured shortcut, plus a Ctrl+Shift+K fallback for browsers that intercept Super.
+      // Configurable dock toggle shortcut (default: Super/Meta).
       if (matchesShortcut(e, toggleDockShortcut)) {
         e.preventDefault();
         setStartOpen(false);
         setPanelOpen((v) => !v);
         return;
-      }
-      if (e.ctrlKey && e.shiftKey && (e.key === "k" || e.key === "K")) {
-        e.preventDefault();
-        setStartOpen(false);
-        setPanelOpen((v) => !v);
       }
     };
     window.addEventListener("keydown", onKey);

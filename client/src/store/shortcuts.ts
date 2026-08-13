@@ -20,7 +20,8 @@ export type ShortcutAction =
   | "previousWorkspace"
   | "nextWorkspace"
   | "moveWindowPreviousWorkspace"
-  | "moveWindowNextWorkspace";
+  | "moveWindowNextWorkspace"
+  | "cycleWindows";
 
 export interface Shortcut {
   /** Accept either Ctrl or Meta/Super/Win (OS-agnostic). */
@@ -53,6 +54,7 @@ export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
   nextWorkspace: "Next workspace",
   moveWindowPreviousWorkspace: "Move window to previous workspace",
   moveWindowNextWorkspace: "Move window to next workspace",
+  cycleWindows: "Cycle windows (Alt+Tab)",
 };
 
 export const DEFAULT_SHORTCUTS: Record<ShortcutAction, Shortcut> = {
@@ -75,6 +77,7 @@ export const DEFAULT_SHORTCUTS: Record<ShortcutAction, Shortcut> = {
   nextWorkspace: { ctrl: true, alt: true, key: "PageDown" },
   moveWindowPreviousWorkspace: { ctrl: true, shift: true, key: "PageUp" },
   moveWindowNextWorkspace: { ctrl: true, shift: true, key: "PageDown" },
+  cycleWindows: { alt: true, key: "Tab" },
 };
 
 /** Default set of favorites shown in the bottom dock. */
@@ -119,6 +122,8 @@ export function formatKey(key: string): string {
   if (key === "ArrowRight") return "→";
   if (key === "PageUp") return "PgUp";
   if (key === "PageDown") return "PgDn";
+  if (key === "Tab") return "Tab";
+  if (key === "Escape") return "Esc";
   if (key.length === 1 && key === key.toLowerCase() && /[a-z]/.test(key)) {
     return key.toUpperCase();
   }

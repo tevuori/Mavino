@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useShortcut } from "../store/shortcuts";
+import { useQuickCapture } from "../store/quickCapture";
 import { Zap, Loader2, CheckCircle2, AlertCircle, Mic, Square } from "lucide-react";
 import { useWindows, type AppId } from "../store/windows";
 import { useNotifications } from "../store/notifications";
@@ -29,7 +30,9 @@ const TARGET_LABELS: Record<string, string> = {
 };
 
 export default function QuickCapture() {
-  const [open, setOpen] = useState(false);
+  const open = useQuickCapture((s) => s.open);
+  const setOpen = useQuickCapture((s) => s.setOpen);
+  const toggleQuickCapture = useQuickCapture((s) => s.toggle);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -39,7 +42,7 @@ export default function QuickCapture() {
   const pushNotification = useNotifications((s) => s.push);
   const rec = useRecorder();
 
-  useShortcut("toggleQuickCapture", () => setOpen((v) => !v));
+  useShortcut("toggleQuickCapture", () => toggleQuickCapture());
 
   // Close on Escape.
   useEffect(() => {
@@ -48,7 +51,7 @@ export default function QuickCapture() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [setOpen]);
 
   useEffect(() => {
     if (open) {

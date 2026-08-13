@@ -12,6 +12,7 @@ import { useSettings } from "../store/settings";
 import { isAppAvailable } from "../store/features";
 import { APP_MAP } from "../apps/registry";
 import { aiApi } from "../services/ai";
+import { formatShortcut } from "../store/shortcuts";
 
 // ===== Onboarding step definitions =====
 
@@ -398,8 +399,8 @@ function DesktopStep() {
       <div className="mx-auto max-w-md space-y-3 text-left">
         <FeatureRow icon={<Folder size={16} />} text="Double-click desktop icons to open apps" />
         <FeatureRow icon={<SettingsIcon size={16} />} text="Launch apps from the dock at the bottom; check the clock in the top bar" />
-        <FeatureRow icon={<Keyboard size={16} />} text="Drag windows by their title bar. Snap to edges with Win+Arrow keys" />
-        <FeatureRow icon={<Sparkles size={16} />} text="Press Ctrl+Space anytime for the command palette (Spotlight search)" />
+        <FeatureRow icon={<Keyboard size={16} />} text="Drag windows by their title bar. Snap to edges with configurable shortcuts" />
+        <FeatureRow icon={<Sparkles size={16} />} text="Press the command palette shortcut anytime (configurable in Settings)" />
       </div>
       <p className="mt-4 text-sm text-ink-muted">Now let's explore some apps...</p>
     </div>
@@ -635,14 +636,15 @@ function SettingsGuideStep({ icon, title, section, description, tips }: {
 }
 
 function ShortcutsStep() {
+  const userShortcuts = useSettings((s) => s.shortcuts);
   const shortcuts = [
-    { keys: "Ctrl+Space", desc: "Command palette (search apps, notes, tasks, calculate)" },
-    { keys: "Win+Y", desc: "Toggle Mavino quick panel" },
-    { keys: "Ctrl+Shift+N", desc: "Quick capture — new note from anywhere" },
-    { keys: "Win+← / →", desc: "Snap window to left/right half" },
-    { keys: "Win+↑", desc: "Maximize window" },
-    { keys: "Win+W", desc: "Close focused window" },
-    { keys: "Alt+Tab", desc: "Switch between windows" },
+    { keys: formatShortcut(userShortcuts.toggleCommandPalette), desc: "Command palette (search apps, notes, tasks, calculate)" },
+    { keys: formatShortcut(userShortcuts.toggleAthenaQuickPanel), desc: "Toggle Mavino quick panel" },
+    { keys: formatShortcut(userShortcuts.toggleQuickCapture), desc: "Quick capture — new note from anywhere" },
+    { keys: `${formatShortcut(userShortcuts.snapWindowLeft)} / ${formatShortcut(userShortcuts.snapWindowRight)}`, desc: "Snap window to left/right half" },
+    { keys: formatShortcut(userShortcuts.maximizeWindow), desc: "Maximize window" },
+    { keys: formatShortcut(userShortcuts.closeWindow), desc: "Close focused window" },
+    { keys: formatShortcut(userShortcuts.cycleWindows), desc: "Switch between windows" },
   ];
   return (
     <div className="text-center">
@@ -672,7 +674,7 @@ function CompleteStep() {
       <h2 className="mb-2 text-2xl font-bold text-ink">You're All Set!</h2>
       <p className="mx-auto mt-2 max-w-sm text-sm text-ink-muted">
         Your workspace is ready. Start exploring — open apps from the dock, ask Mavino for help,
-        or press Ctrl+Space to search.
+        or open the command palette to search.
       </p>
       <p className="mt-4 text-xs text-ink-muted/70">
         You can revisit settings anytime by opening the Settings app.
