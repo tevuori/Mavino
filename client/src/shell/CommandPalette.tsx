@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useShortcut } from "../store/shortcuts";
 import {
   Search, CornerDownLeft, AppWindow, StickyNote, CheckSquare,
   Calculator, Play, Brain, GraduationCap, Timer, Folder, Settings as SettingsIcon,
@@ -95,16 +96,12 @@ export default function CommandPalette() {
     });
   }, [open]);
 
-  // Keyboard shortcut: Ctrl+Space (or Cmd+Space on Mac)
+  useShortcut("toggleCommandPalette", () => setOpen((v) => !v));
+
+  // Close on Escape.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.code === "Space") {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
-      if (e.key === "Escape") {
-        setOpen(false);
-      }
+      if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

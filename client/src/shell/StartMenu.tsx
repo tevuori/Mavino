@@ -1,20 +1,23 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Lucide from "lucide-react";
-import { Search, Power, LogOut, Lock } from "lucide-react";
+import { Search, Power, LogOut, Lock, Pin, PinOff } from "lucide-react";
 import { useAccessibleApps } from "../store/features";
-import { useWindows } from "../store/windows";
+import { useWindows, type AppId } from "../store/windows";
 import { useAuth } from "../store/auth";
+import { useSettings } from "../store/settings";
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  onTogglePin?: (appId: AppId, pinned: boolean) => void;
 }
 
-export default function StartMenu({ open, onClose }: Props) {
+export default function StartMenu({ open, onClose, onTogglePin }: Props) {
   const { open: openWindow } = useWindows();
   const { user, logout } = useAuth();
   const apps = useAccessibleApps();
+  const dockFavorites = useSettings((s) => s.dockFavorites);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -71,22 +74,36 @@ export default function StartMenu({ open, onClose }: Props) {
             <div className="mb-4 grid grid-cols-4 gap-2">
               {filtered.map((app) => {
                 const Icon = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number }>>)[app.icon] ?? Lucide.AppWindow;
+                const isPinned = dockFavorites.includes(app.id);
                 return (
-                  <button
+                  <div
                     key={app.id}
-                    onClick={() => launch(app)}
-                    className="flex flex-col items-center gap-1.5 rounded-lg p-3 transition hover:bg-surface-3"
+                    className="group relative flex flex-col items-center gap-1.5 rounded-lg p-3 transition hover:bg-surface-3"
                   >
-                    <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
-                      <Icon size={22} />
-                      {app.access === "preview" && (
-                        <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-edge">
-                          <Lock size={9} />
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs text-ink">{app.name}</span>
-                  </button>
+                    <button
+                      onClick={() => launch(app)}
+                      className="flex flex-col items-center gap-1.5"
+                    >
+                      <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent transition group-hover:bg-accent/25">
+                        <Icon size={22} />
+                        {app.access === "preview" && (
+                          <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-edge">
+                            <Lock size={9} />
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-ink">{app.name}</span>
+                    </button>
+                    <button
+                      onClick={() => onTogglePin?.(app.id, !isPinned)}
+                      className={`absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition group-hover:opacity-100 ${
+                        isPinned ? "text-accent opacity-100" : "text-ink-muted hover:text-ink"
+                      }`}
+                      title={isPinned ? "Unpin from dock" : "Pin to dock"}
+                    >
+                      {isPinned ? <Pin size={12} /> : <PinOff size={12} />}
+                    </button>
+                  </div>
                 );
               })}
               {filtered.length === 0 && (

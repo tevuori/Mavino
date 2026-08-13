@@ -6,8 +6,11 @@ import AppLogo from "./AppLogo";
 import StartMenu from "./StartMenu";
 import SystemTray from "./SystemTray";
 import WorkspaceSwitcher from "../wm/WorkspaceSwitcher";
+import ContextMenu, { type MenuItem } from "./ContextMenu";
 import { useAccessibleApps } from "../store/features";
-import { useWindows } from "../store/windows";
+import { useWindows, type AppId } from "../store/windows";
+import { useSettings } from "../store/settings";
+import { matchesShortcut } from "../store/shortcuts";
 
 interface Props {
   onOpenOverview?: () => void;
@@ -17,13 +20,27 @@ export default function Taskbar({ onOpenOverview }: Props) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; appId: AppId } | null>(null);
   const { open } = useWindows();
   const apps = useAccessibleApps();
+  const dockFavorites = useSettings((s) => s.dockFavorites);
+  const setDockFavorites = useSettings((s) => s.setDockFavorites);
+  const toggleDockShortcut = useSettings((s) => s.shortcuts.toggleDock);
 
-  const pinned = useMemo(
-    () => apps.filter((a) => a.pinnedToDesktop),
-    [apps]
-  );
+  const pinned = useMemo(() => {
+    const map = new Map(apps.map((a) => [a.id, a]));
+    return dockFavorites
+      .map((id) => map.get(id))
+      .filter((a): a is (typeof apps)[number] => !!a);
+  }, [apps, dockFavorites]);
+
+  const togglePinned = (appId: AppId, pinnedValue: boolean) => {
+    setDockFavorites(
+      pinnedValue
+        ? [...dockFavorites.filter((id) => id !== appId), appId]
+        : dockFavorites.filter((id) => id !== appId)
+    );
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -41,8 +58,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
         setHovered(false);
         return;
       }
-      // Super/Meta toggles the dock; Ctrl+Shift+K is a fallback for browsers/OSes
-      // that intercept the OS key.
+      // Super/Meta always toggles the dock (GNOME-style).
       if (
         (e.key === "Meta" || e.key === "OS") &&
         !e.ctrlKey &&
@@ -53,6 +69,14 @@ export default function Taskbar({ onOpenOverview }: Props) {
         e.preventDefault();
         setStartOpen(false);
         setPanelOpen((v) => !v);
+        return;
+      }
+      // Configured shortcut, plus a Ctrl+Shift+K fallback for browsers that intercept Super.
+      if (matchesShortcut(e, toggleDockShortcut)) {
+        e.preventDefault();
+        setStartOpen(false);
+        setPanelOpen((v) => !v);
+        return;
       }
       if (e.ctrlKey && e.shiftKey && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
@@ -62,7 +86,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [toggleDockShortcut]);
 
   const launch = (app: (typeof apps)[number]) => {
     open({ appId: app.id, title: app.name, icon: app.icon });
@@ -72,6 +96,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
   };
 
   const visible = panelOpen || hovered || startOpen;
+  const contextApp = pinned.find((a) => a.id === contextMenu?.appId);
 
   return (
     <>
@@ -124,6 +149,10 @@ export default function Taskbar({ onOpenOverview }: Props) {
               <button
                 key={app.id}
                 onClick={() => launch(app)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({ x: e.clientX, y: e.clientY, appId: app.id });
+                }}
                 className="group relative flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-1 text-ink transition hover:bg-white/[0.06]"
                 title={app.name}
               >
@@ -155,7 +184,23 @@ export default function Taskbar({ onOpenOverview }: Props) {
           setStartOpen(false);
           setPanelOpen(false);
         }}
+        onTogglePin={togglePinned}
       />
+
+      {contextMenu && contextApp && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: "Unpin from dock",
+              icon: <Lucide.PinOff size={16} />,
+              onClick: () => togglePinned(contextApp.id, false),
+            },
+          ] as MenuItem[]}
+        />
+      )}
     </>
   );
 }

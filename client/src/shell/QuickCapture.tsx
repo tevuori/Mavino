@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useShortcut } from "../store/shortcuts";
 import { Zap, Loader2, CheckCircle2, AlertCircle, Mic, Square } from "lucide-react";
 import { useWindows, type AppId } from "../store/windows";
 import { useNotifications } from "../store/notifications";
@@ -38,15 +39,12 @@ export default function QuickCapture() {
   const pushNotification = useNotifications((s) => s.push);
   const rec = useRecorder();
 
+  useShortcut("toggleQuickCapture", () => setOpen((v) => !v));
+
+  // Close on Escape.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.code === "KeyN" || e.key === "N" || e.key === "n")) {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
-      if (e.key === "Escape") {
-        setOpen(false);
-      }
+      if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
