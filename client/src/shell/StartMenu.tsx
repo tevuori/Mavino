@@ -57,7 +57,7 @@ export default function StartMenu({ open, onClose, onTogglePin }: Props) {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 16, opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="fixed bottom-28 left-1/2 z-[11001] w-[540px] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-3xl border border-white/[0.08] bg-surface/90 p-5 shadow-2xl backdrop-blur-2xl"
+            className="fixed bottom-20 left-2 z-[11001] w-[540px] max-w-[calc(100vw-1rem)] origin-bottom-left rounded-3xl border border-white/[0.08] bg-surface/90 p-5 shadow-2xl backdrop-blur-2xl"
           >
             {/* Search */}
             <div className="mb-5 flex items-center gap-3 rounded-2xl border border-edge bg-surface-2 px-4 py-3">

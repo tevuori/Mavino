@@ -397,7 +397,7 @@ function DesktopStep() {
       <h2 className="mb-3 text-xl font-bold text-ink">Your Desktop</h2>
       <div className="mx-auto max-w-md space-y-3 text-left">
         <FeatureRow icon={<Folder size={16} />} text="Double-click desktop icons to open apps" />
-        <FeatureRow icon={<SettingsIcon size={16} />} text="Use the taskbar at the bottom to launch apps and check the clock" />
+        <FeatureRow icon={<SettingsIcon size={16} />} text="Launch apps from the dock at the bottom; check the clock in the top bar" />
         <FeatureRow icon={<Keyboard size={16} />} text="Drag windows by their title bar. Snap to edges with Win+Arrow keys" />
         <FeatureRow icon={<Sparkles size={16} />} text="Press Ctrl+Space anytime for the command palette (Spotlight search)" />
       </div>
@@ -450,7 +450,7 @@ function MoreAppsStep() {
         <Sparkles size={28} />
       </div>
       <h2 className="mb-1 text-xl font-bold text-ink">And Much More</h2>
-      <p className="mb-4 text-sm text-ink-muted">10+ apps to power your studies. Open them anytime from the taskbar or command palette.</p>
+      <p className="mb-4 text-sm text-ink-muted">10+ apps to power your studies. Open them anytime from the dock or command palette.</p>
       <div className="grid grid-cols-2 gap-2 text-left">
         {apps.map((a) => (
           <div key={a.name} className="flex items-start gap-2 rounded-lg border border-edge bg-surface-2 p-2">
@@ -671,7 +671,7 @@ function CompleteStep() {
       </div>
       <h2 className="mb-2 text-2xl font-bold text-ink">You're All Set!</h2>
       <p className="mx-auto mt-2 max-w-sm text-sm text-ink-muted">
-        Your workspace is ready. Start exploring — open apps from the taskbar, ask Mavino for help,
+        Your workspace is ready. Start exploring — open apps from the dock, ask Mavino for help,
         or press Ctrl+Space to search.
       </p>
       <p className="mt-4 text-xs text-ink-muted/70">

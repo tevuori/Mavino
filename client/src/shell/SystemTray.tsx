@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Volume2, VolumeX, Wifi, BatteryFull, BellOff } from "lucide-react";
+import { Bell, Volume2, VolumeX, BellOff } from "lucide-react";
 import { useSettings } from "../store/settings";
 import { useNotifications } from "../store/notifications";
 
@@ -31,12 +31,6 @@ export default function SystemTray() {
       >
         {volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
       </button>
-      <div className="hidden h-7 w-7 items-center justify-center text-ink-muted sm:flex" title="Network">
-        <Wifi size={15} />
-      </div>
-      <div className="hidden h-7 w-7 items-center justify-center text-ink-muted sm:flex" title="Battery">
-        <BatteryFull size={15} />
-      </div>
 
       {/* Notifications bell */}
       <button
