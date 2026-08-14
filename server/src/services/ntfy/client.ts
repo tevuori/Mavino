@@ -22,6 +22,10 @@ export interface NtfyPublishOptions {
   priority?: number; // 1-5
   tags?: string;
   clickUrl?: string;
+  // Render the body as Markdown in clients that support it (ntfy web/PWA).
+  // Sets the `Markdown: yes` header. Default true, since most bodies are
+  // Athena-generated Markdown; plain text renders identically either way.
+  markdown?: boolean;
 }
 
 export interface NtfyMessage {
@@ -90,6 +94,11 @@ export async function publish(
   if (opts.clickUrl) {
     const c = sanitizeHeader(opts.clickUrl);
     if (c) headers["Click"] = c;
+  }
+  // Enable Markdown rendering by default — ntfy otherwise shows raw **bold**,
+  // # headings, etc. as literal text. Plain-text bodies are unaffected.
+  if (opts.markdown !== false) {
+    headers["Markdown"] = "yes";
   }
 
   const res = await fetch(url, {
