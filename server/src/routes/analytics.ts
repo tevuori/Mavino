@@ -19,6 +19,7 @@ import { adminGuard } from "../middleware/admin";
 import { authMiddleware } from "../middleware/auth";
 import { appTierGate } from "../middleware/app-tier";
 import { flushAnalytics, dayBucket } from "../services/analytics";
+import { deliverNotification } from "../services/notifications";
 
 const analytics = new Hono();
 
@@ -481,6 +482,21 @@ analytics.get("/me", authMiddleware, appTierGate("analytics"), async (c) => {
       create: { userId, unlockedAchievements: JSON.stringify(Array.from(unlockedSet)) },
       update: { unlockedAchievements: JSON.stringify(Array.from(unlockedSet)) },
     });
+    // Create persistent notifications for each newly unlocked achievement.
+    for (const id of newlyUnlocked) {
+      const a = ACHIEVEMENTS.find((x) => x.id === id);
+      if (a) {
+        void deliverNotification(userId, {
+          category: "achievement",
+          title: "Achievement unlocked!",
+          body: `${a.label} — ${a.description}`,
+          icon: a.icon,
+          linkApp: "analytics",
+          linkPayload: JSON.stringify({ achievementId: id }),
+          tags: "star,trophy",
+        }).catch(() => {});
+      }
+    }
   }
   const achievements = ACHIEVEMENTS.map((a) => ({
     id: a.id,

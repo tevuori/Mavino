@@ -46,6 +46,7 @@ import forge from "./routes/forge";
 import bridge from "./routes/bridge";
 import scribe from "./routes/scribe";
 import circle from "./routes/circle";
+import notifications from "./routes/notifications";
 import studyLectures from "./routes/study-lectures";
 import settings from "./routes/settings";
 import features from "./routes/features";
@@ -62,6 +63,7 @@ import { startScheduler, stopScheduler } from "./services/ntfy/scheduler";
 import { startAllSubscribers, stopAllSubscribers } from "./services/ntfy/subscriber";
 import { startProactiveScheduler, stopProactiveScheduler } from "./services/ntfy/proactive-scheduler";
 import { startReminderScheduler, stopReminderScheduler } from "./services/reminders/scheduler";
+import { startNotificationScheduler, stopNotificationScheduler } from "./services/notifications/scheduler";
 import { startDemoCleanup } from "./services/demo";
 import { startRenewalReminderScheduler, stopRenewalReminderScheduler } from "./services/renewal-reminder";
 import prisma from "./db/client";
@@ -220,6 +222,7 @@ app.route("/api/forge", forge);
 app.route("/api/bridge", bridge);
 app.route("/api/scribe", scribe);
 app.route("/api/circle", circle);
+app.route("/api/notifications", notifications);
 app.route("/api/client-errors", clientErrors);
 app.route("/api/admin/errors", adminErrors);
 app.route("/api/admin/llm", adminLlm);
@@ -234,6 +237,8 @@ startAllSubscribers().catch((e) =>
 startProactiveScheduler();
 // Start the one-shot reminder scheduler.
 startReminderScheduler();
+// Start the persistent notification scheduler (task due + calendar upcoming).
+startNotificationScheduler();
 // Start demo-user cleanup (removes expired DEMO accounts + cascaded data).
 startDemoCleanup();
 // Start the subscription renewal reminder scheduler (daily at 09:00).
@@ -268,6 +273,7 @@ async function shutdown(signal: string): Promise<void> {
   stopAllSubscribers();
   stopProactiveScheduler();
   stopReminderScheduler();
+  stopNotificationScheduler();
   stopRenewalReminderScheduler();
   try {
     await prisma.$disconnect();

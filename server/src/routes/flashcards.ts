@@ -6,6 +6,7 @@ import { authMiddleware } from "../middleware/auth";
 import { appTierGate } from "../middleware/app-tier";
 import { cleanupOrphanLinks } from "../db/links";
 import { parseAnkiPackage } from "../services/anki-import";
+import { getAccessibleDecks, checkDeckAccess } from "../services/circle";
 
 const flashcards = new Hono();
 flashcards.use("*", authMiddleware, appTierGate("flashcards"));
@@ -19,12 +20,31 @@ const deckSchema = z.object({
 
 flashcards.get("/decks", async (c) => {
   const { userId } = c.get("auth");
-  const decks = await prisma.flashcardDeck.findMany({
+  const ownDecks = await prisma.flashcardDeck.findMany({
     where: { userId },
     include: { _count: { select: { cards: true } } },
     orderBy: { updatedAt: "desc" },
   });
-  return c.json({ decks });
+  // Merge in decks shared with this user via Circle groups.
+  const shared = await getAccessibleDecks(userId);
+  const sharedDeckIds = shared.map((s) => s.deckId);
+  const sharedDecks = sharedDeckIds.length > 0
+    ? await prisma.flashcardDeck.findMany({
+        where: { id: { in: sharedDeckIds } },
+        include: { _count: { select: { cards: true } } },
+      })
+    : [];
+  const sharedMap = new Map(shared.map((s) => [s.deckId, s]));
+  const sharedResult = sharedDecks.map((d) => {
+    const s = sharedMap.get(d.id)!;
+    return {
+      ...d,
+      shared: true,
+      sharedPermission: s.permission,
+      sharedGroupName: s.groupName,
+    };
+  });
+  return c.json({ decks: [...ownDecks, ...sharedResult] });
 });
 
 flashcards.post("/decks", zValidator("json", deckSchema), async (c) => {
@@ -59,22 +79,39 @@ const cardSchema = z.object({
 
 flashcards.get("/decks/:id/cards", async (c) => {
   const { userId } = c.get("auth");
-  const deck = await prisma.flashcardDeck.findFirst({
-    where: { id: c.req.param("id"), userId },
+  const deckId = c.req.param("id");
+  // Own deck?
+  let deck = await prisma.flashcardDeck.findFirst({
+    where: { id: deckId, userId },
   });
-  if (!deck) return c.json({ error: "Deck not found" }, 404);
+  let sharedPermission: "read" | "write" | null = null;
+  if (!deck) {
+    // Otherwise check Circle shared access.
+    const access = await checkDeckAccess(userId, deckId);
+    if (!access.hasAccess) return c.json({ error: "Deck not found" }, 404);
+    deck = await prisma.flashcardDeck.findUnique({ where: { id: deckId } });
+    if (!deck) return c.json({ error: "Deck not found" }, 404);
+    sharedPermission = access.permission;
+  }
   const cards = await prisma.flashcard.findMany({
     where: { deckId: deck.id },
     orderBy: { dueDate: "asc" },
   });
-  return c.json({ cards });
+  return c.json({ cards, sharedDeckPermission: sharedPermission });
 });
 
 flashcards.post("/decks/:id/cards", zValidator("json", cardSchema), async (c) => {
   const { userId } = c.get("auth");
-  const deck = await prisma.flashcardDeck.findFirst({
-    where: { id: c.req.param("id"), userId },
-  });
+  const deckId = c.req.param("id");
+  let deck = await prisma.flashcardDeck.findFirst({ where: { id: deckId, userId } });
+  if (!deck) {
+    const access = await checkDeckAccess(userId, deckId);
+    if (access.hasAccess && access.permission === "write") {
+      deck = await prisma.flashcardDeck.findUnique({ where: { id: deckId } });
+    } else if (access.hasAccess) {
+      return c.json({ error: "This shared deck is read-only" }, 403);
+    }
+  }
   if (!deck) return c.json({ error: "Deck not found" }, 404);
   const card = await prisma.flashcard.create({
     data: { ...c.req.valid("json"), deckId: deck.id },
@@ -90,8 +127,12 @@ flashcards.patch("/cards/:cardId", zValidator("json", cardSchema.partial()), asy
     where: { id: cardId },
     include: { deck: true },
   });
-  if (!card || card.deck.userId !== userId) {
-    return c.json({ error: "Not found" }, 404);
+  if (!card) return c.json({ error: "Not found" }, 404);
+  if (card.deck.userId !== userId) {
+    // Allow editing if the deck is shared with write access.
+    const access = await checkDeckAccess(userId, card.deckId);
+    if (!access.hasAccess) return c.json({ error: "Not found" }, 404);
+    if (access.permission !== "write") return c.json({ error: "This shared deck is read-only" }, 403);
   }
   const updated = await prisma.flashcard.update({
     where: { id: cardId },
@@ -107,8 +148,11 @@ flashcards.delete("/cards/:cardId", async (c) => {
     where: { id: cardId },
     include: { deck: true },
   });
-  if (!card || card.deck.userId !== userId) {
-    return c.json({ error: "Not found" }, 404);
+  if (!card) return c.json({ error: "Not found" }, 404);
+  if (card.deck.userId !== userId) {
+    const access = await checkDeckAccess(userId, card.deckId);
+    if (!access.hasAccess) return c.json({ error: "Not found" }, 404);
+    if (access.permission !== "write") return c.json({ error: "This shared deck is read-only" }, 403);
   }
   await prisma.flashcard.delete({ where: { id: cardId } });
   return c.json({ ok: true });
@@ -129,8 +173,11 @@ flashcards.post("/cards/:cardId/review", zValidator("json", reviewSchema), async
     where: { id: cardId },
     include: { deck: true },
   });
-  if (!card || card.deck.userId !== userId) {
-    return c.json({ error: "Not found" }, 404);
+  if (!card) return c.json({ error: "Not found" }, 404);
+  if (card.deck.userId !== userId) {
+    // Allow reviewing cards in a shared deck (read access is enough to study).
+    const access = await checkDeckAccess(userId, card.deckId);
+    if (!access.hasAccess) return c.json({ error: "Not found" }, 404);
   }
 
   // SM-2 algorithm

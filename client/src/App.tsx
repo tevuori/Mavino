@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "./store/auth";
 import { useFeatures } from "./store/features";
 import { usePlugins } from "./store/plugins";
+import { startNotificationPolling, stopNotificationPolling } from "./store/notifications";
 import { useFormFactor, initFormFactorListeners } from "./store/formfactor";
 import { installGlobalErrorHandlers } from "./services/errorReporter";
 import { cleanupStaleServiceWorkersInDev } from "./services/sw-cleanup";
@@ -42,6 +43,9 @@ export default function App() {
     if (status === "authenticated") {
       void loadFeatures();
       void loadPlugins();
+      startNotificationPolling();
+    } else {
+      stopNotificationPolling();
     }
   }, [status, loadFeatures, loadPlugins]);
 

@@ -10,13 +10,13 @@ export const notesApi = {
   deleteFolder: (id: string) => api.delete(`/api/notes/folders/${id}`),
 
   list: (params?: { q?: string; folderId?: string | null }) =>
-    api.get<{ notes: Note[] }>(
+    api.get<{ notes: Note[]; sharedFolderPermission?: "read" | "write" }>(
       `/api/notes${params ? "?" + new URLSearchParams(
         Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
           .map(([k, v]) => [k, String(v)])
       ).toString() : ""}`
     ),
-  get: (id: string) => api.get<{ note: Note }>(`/api/notes/${id}`),
+  get: (id: string) => api.get<{ note: Note; sharedFolderPermission?: "read" | "write" }>(`/api/notes/${id}`),
   create: (data: Partial<Note>) => api.post<{ note: Note }>("/api/notes", data),
   update: (id: string, data: Partial<Note>) =>
     api.patch<{ note: Note }>(`/api/notes/${id}`, data),

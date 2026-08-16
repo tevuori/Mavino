@@ -22,6 +22,7 @@ import {
   shareNoteFolder,
   unshareNoteFolder,
   getAccessibleDecks,
+  getAccessibleFolders,
 } from "../services/circle";
 
 const circle = new Hono();
@@ -210,6 +211,13 @@ circle.get("/decks", async (c) => {
   const { userId } = c.get("auth");
   const decks = await getAccessibleDecks(userId);
   return c.json({ decks });
+});
+
+/** GET /folders — list all note folders accessible to the user via shared groups. */
+circle.get("/folders", async (c) => {
+  const { userId } = c.get("auth");
+  const folders = await getAccessibleFolders(userId);
+  return c.json({ folders });
 });
 
 export default circle;

@@ -14,6 +14,10 @@
 // the app focused on a specific set.
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import {
   Flame, Plus, Trash2, RefreshCw, Loader2, AlertCircle, X,
   ChevronLeft, ChevronRight, CheckCircle2, XCircle, AlertTriangle,
@@ -53,6 +57,27 @@ const SOURCE_ICONS: Record<string, typeof FileText> = {
   atlas: Network,
   text: Type,
 };
+
+/** Renders Markdown content (with GFM + math support) inline. */
+function MarkdownText({ content, className = "" }: { content: string; className?: string }) {
+  return (
+    <div className={`selectable markdown-body prose-sm max-w-none ${className}`}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={{
+          a: ({ href, children }) => (
+            <a href={href} target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:opacity-80">
+              {children}
+            </a>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 // ----- main component -----
 
@@ -414,7 +439,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
 
           {/* Prompt */}
           <div className="mb-6 rounded-xl border border-surface-3 bg-surface-2 p-4">
-            <p className="text-sm text-ink whitespace-pre-wrap">{problem.prompt}</p>
+            <MarkdownText content={problem.prompt} className="text-sm text-ink" />
           </div>
 
           {/* Hint */}
@@ -428,7 +453,8 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
           )}
           {showHint[problem.id] && problem.hint && (
             <div className="mb-4 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-300">
-              <span className="font-medium">Hint:</span> {problem.hint}
+              <span className="font-medium">Hint:</span>{" "}
+              <MarkdownText content={problem.hint} className="text-xs text-amber-300" />
             </div>
           )}
 
@@ -505,7 +531,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
                     Score: {(attempt.score * 100).toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-sm text-ink">{attempt.feedback.summary}</p>
+                <MarkdownText content={attempt.feedback.summary} className="text-sm text-ink" />
 
                 {/* Per-step feedback */}
                 {attempt.feedback.steps && attempt.feedback.steps.length > 0 && (
@@ -517,10 +543,10 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
                         ) : (
                           <XCircle className="mt-0.5 shrink-0 text-red-400" size={12} />
                         )}
-                        <div>
-                          <span className="text-ink">{step.step}</span>
+                        <div className="min-w-0 flex-1">
+                          <MarkdownText content={step.step} className="text-xs text-ink" />
                           {!step.correct && (
-                            <p className="mt-0.5 text-ink-muted">{step.explanation}</p>
+                            <MarkdownText content={step.explanation} className="mt-0.5 text-xs text-ink-muted" />
                           )}
                         </div>
                       </div>
@@ -531,7 +557,8 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
                 {/* Misconception */}
                 {attempt.feedback.misconception && (
                   <div className="mt-3 rounded-lg bg-surface-2/50 p-2 text-xs text-ink-muted">
-                    <span className="font-medium text-ink">Misconception:</span> {attempt.feedback.misconception}
+                    <span className="font-medium text-ink">Misconception:</span>{" "}
+                    <MarkdownText content={attempt.feedback.misconception} className="text-xs text-ink-muted" />
                   </div>
                 )}
               </div>
@@ -542,7 +569,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
                   <h4 className="mb-2 flex items-center gap-1 text-xs font-medium text-ink">
                     <Award size={12} /> Worked Solution
                   </h4>
-                  <p className="text-sm text-ink-muted whitespace-pre-wrap">{problem.solution}</p>
+                  <MarkdownText content={problem.solution} className="text-sm text-ink-muted" />
                 </div>
               )}
 

@@ -94,6 +94,7 @@ model User {
   ownedStudyGroups   StudyGroup[]
   sharedDeckShares   SharedDeck[]      @relation("SharedDeckShares")
   sharedFolderShares SharedNoteFolder[] @relation("SharedFolderShares")
+  notifications       Notification[]
 }
 
 // ===== Password reset tokens =====
@@ -1691,4 +1692,29 @@ model SharedNoteFolder {
 
   @@unique([groupId, folderId])
   @@index([groupId])
+}
+
+// ===== Notifications (persistent, in-app + ntfy push) =====
+// Persistent per-user notifications surfaced in the system tray bell and
+// (optionally) pushed to the user's phone via ntfy. Categories:
+//   task_due, task_overdue, calendar_upcoming, circle_join, circle_share,
+//   achievement, system
+// `linkApp` + `linkPayload` let the user click a notification to open the
+// relevant app (e.g. "tasks" with { taskId }). `icon` is a lucide icon name.
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    String   // task_due | task_overdue | calendar_upcoming | circle_join | circle_share | achievement | system
+  title       String
+  body        String   @default("")
+  icon        String   @default("Bell") // lucide icon name
+  linkApp     String   @default("")     // app id to open when clicked
+  linkPayload String   @default("")     // JSON payload for opening
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, read, createdAt])
+  @@index([userId, createdAt])
 }

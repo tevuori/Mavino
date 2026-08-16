@@ -16,6 +16,7 @@
 // allows editing the deck/folder content but not deleting the share.
 
 import prisma from "../db/client";
+import { deliverNotification } from "./notifications";
 
 // ----- types -----
 
@@ -270,6 +271,29 @@ export async function joinGroup(userId: string, inviteCode: string): Promise<{ i
   await prisma.studyGroupMember.create({
     data: { groupId: group.id, userId, role: "member" },
   });
+
+  // Notify all existing members that a new member joined.
+  const joiner = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true, displayName: true },
+  });
+  const existingMembers = await prisma.studyGroupMember.findMany({
+    where: { groupId: group.id, userId: { not: userId } },
+    select: { userId: true },
+  });
+  const joinerName = joiner?.displayName || joiner?.username || "Someone";
+  for (const m of existingMembers) {
+    void deliverNotification(m.userId, {
+      category: "circle_join",
+      title: `New member in ${group.name}`,
+      body: `${joinerName} joined your study group.`,
+      icon: "Users",
+      linkApp: "circle",
+      linkPayload: JSON.stringify({ groupId: group.id }),
+      tags: "users",
+    }).catch(() => {});
+  }
+
   return { id: group.id, name: group.name };
 }
 
@@ -352,6 +376,24 @@ export async function shareDeck(
   await prisma.sharedDeck.create({
     data: { groupId, deckId, sharedBy: userId, permission },
   });
+
+  // Notify all group members (except the sharer) about the new shared deck.
+  const members = await prisma.studyGroupMember.findMany({
+    where: { groupId, userId: { not: userId } },
+    select: { userId: true },
+  });
+  const group = await prisma.studyGroup.findUnique({ where: { id: groupId }, select: { name: true } });
+  for (const m of members) {
+    void deliverNotification(m.userId, {
+      category: "circle_share",
+      title: `New deck shared in ${group?.name ?? "group"}`,
+      body: `${deck.name} was shared to the group (${permission} access).`,
+      icon: "Layers",
+      linkApp: "circle",
+      linkPayload: JSON.stringify({ groupId, deckId }),
+      tags: "layers",
+    }).catch(() => {});
+  }
 }
 
 export async function unshareDeck(userId: string, groupId: string, deckId: string): Promise<void> {
@@ -398,6 +440,24 @@ export async function shareNoteFolder(
   await prisma.sharedNoteFolder.create({
     data: { groupId, folderId, sharedBy: userId, permission },
   });
+
+  // Notify all group members (except the sharer) about the new shared folder.
+  const members = await prisma.studyGroupMember.findMany({
+    where: { groupId, userId: { not: userId } },
+    select: { userId: true },
+  });
+  const group = await prisma.studyGroup.findUnique({ where: { id: groupId }, select: { name: true } });
+  for (const m of members) {
+    void deliverNotification(m.userId, {
+      category: "circle_share",
+      title: `New notes folder shared in ${group?.name ?? "group"}`,
+      body: `${folder.name} was shared to the group (${permission} access).`,
+      icon: "FolderOpen",
+      linkApp: "circle",
+      linkPayload: JSON.stringify({ groupId, folderId }),
+      tags: "folder",
+    }).catch(() => {});
+  }
 }
 
 export async function unshareNoteFolder(userId: string, groupId: string, folderId: string): Promise<void> {
@@ -458,6 +518,64 @@ export async function checkDeckAccess(userId: string, deckId: string): Promise<{
   const groupIds = memberships.map((m) => m.groupId);
   const shared = await prisma.sharedDeck.findFirst({
     where: { groupId: { in: groupIds }, deckId },
+  });
+  if (!shared) return { hasAccess: false, permission: null };
+  return { hasAccess: true, permission: shared.permission as "read" | "write" };
+}
+
+/** Get the shared note folders accessible to a user (from all their groups). */
+export async function getAccessibleFolders(userId: string): Promise<{ folderId: string; folderName: string; noteCount: number; groupName: string; sharedByName: string; permission: string }[]> {
+  const memberships = await prisma.studyGroupMember.findMany({
+    where: { userId },
+    select: { groupId: true },
+  });
+  if (memberships.length === 0) return [];
+  const groupIds = memberships.map((m) => m.groupId);
+  const shared = await prisma.sharedNoteFolder.findMany({
+    where: { groupId: { in: groupIds } },
+    include: { group: { select: { name: true } } },
+  });
+  const folderIds = shared.map((s) => s.folderId);
+  const folders = folderIds.length > 0
+    ? await prisma.noteFolder.findMany({
+        where: { id: { in: folderIds } },
+        include: { _count: { select: { notes: true } } },
+      })
+    : [];
+  const folderMap = new Map(folders.map((f) => [f.id, f]));
+  // Sharer names.
+  const sharerIds = [...new Set(shared.map((s) => s.sharedBy))];
+  const sharers = sharerIds.length > 0
+    ? await prisma.user.findMany({ where: { id: { in: sharerIds } }, select: { id: true, username: true, displayName: true } })
+    : [];
+  const sharerMap = new Map(sharers.map((s) => [s.id, s]));
+  return shared
+    .map((s) => {
+      const folder = folderMap.get(s.folderId);
+      if (!folder) return null;
+      const sharer = sharerMap.get(s.sharedBy);
+      return {
+        folderId: s.folderId,
+        folderName: folder.name,
+        noteCount: folder._count.notes,
+        groupName: s.group.name,
+        sharedByName: sharer?.displayName || sharer?.username || "Unknown",
+        permission: s.permission,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+}
+
+/** Check if a user has access to a shared note folder (via group membership). */
+export async function checkFolderAccess(userId: string, folderId: string): Promise<{ hasAccess: boolean; permission: "read" | "write" | null }> {
+  const memberships = await prisma.studyGroupMember.findMany({
+    where: { userId },
+    select: { groupId: true },
+  });
+  if (memberships.length === 0) return { hasAccess: false, permission: null };
+  const groupIds = memberships.map((m) => m.groupId);
+  const shared = await prisma.sharedNoteFolder.findFirst({
+    where: { groupId: { in: groupIds }, folderId },
   });
   if (!shared) return { hasAccess: false, permission: null };
   return { hasAccess: true, permission: shared.permission as "read" | "write" };

@@ -10,7 +10,7 @@ export const flashcardsApi = {
   deleteDeck: (id: string) => api.delete(`/api/flashcards/decks/${id}`),
 
   listCards: (deckId: string) =>
-    api.get<{ cards: Flashcard[] }>(`/api/flashcards/decks/${deckId}/cards`),
+    api.get<{ cards: Flashcard[]; sharedDeckPermission?: "read" | "write" }>(`/api/flashcards/decks/${deckId}/cards`),
   createCard: (deckId: string, data: { front: string; back: string }) =>
     api.post<{ card: Flashcard }>(`/api/flashcards/decks/${deckId}/cards`, data),
   updateCard: (cardId: string, data: Partial<{ front: string; back: string }>) =>

@@ -12,7 +12,7 @@ import {
   Search, Plus, Pin, Trash2, FolderPlus, FileText, Tag,
   Download, Loader2, Folder, Pencil, Columns2, Eye, Check,
   ImageIcon, Paperclip, MoreVertical, GraduationCap, X,
-  Sparkles,
+  Sparkles, Users,
 } from "lucide-react";
 import { notesApi } from "../../services/notes";
 import { filesApi } from "../../services/files";
@@ -50,6 +50,8 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
   const [mode, setMode] = useState<EditorMode>("split");
   const [noteLinkSignal, setNoteLinkSignal] = useState(0);
   const [showFromPdf, setShowFromPdf] = useState(false);
+  // Permission of the currently-viewed shared folder (null for own folders).
+  const [sharedFolderPermission, setSharedFolderPermission] = useState<"read" | "write" | null>(null);
 
   // Overlay sidebars — shown as toggled overlays when the window is too narrow
   // for them to sit inline (controlled by container queries).
@@ -82,6 +84,14 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
     [notes, selectedId]
   );
 
+  // Whether the currently-selected folder is a Circle-shared folder.
+  const activeFolder = useMemo(
+    () => folders.find((f) => f.id === selectedFolder) ?? null,
+    [folders, selectedFolder]
+  );
+  const isSharedFolder = !!activeFolder?.shared;
+  const isReadOnlyShared = isSharedFolder && activeFolder?.sharedPermission !== "write";
+
   const loadFolders = useCallback(async () => {
     try {
       const { folders } = await notesApi.listFolders();
@@ -94,11 +104,12 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
   const loadNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const { notes } = await notesApi.list({
+      const res = await notesApi.list({
         q: query || undefined,
         folderId: selectedFolder ?? undefined,
       });
-      setNotes(notes);
+      setNotes(res.notes);
+      setSharedFolderPermission(res.sharedFolderPermission ?? null);
     } catch (e) {
       console.error("Failed to load notes", e);
     } finally {
@@ -480,21 +491,24 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
           <div className="flex gap-1">
             <button
               onClick={() => createNote()}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent py-1.5 text-xs font-medium text-accent-fg hover:opacity-90"
+              disabled={isReadOnlyShared}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent py-1.5 text-xs font-medium text-accent-fg hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Plus size={13} /> New
             </button>
             <button
               onClick={() => setShowFromPdf(true)}
-              className="flex items-center justify-center rounded-lg border border-edge px-2 py-1.5 text-ink-muted hover:bg-surface-3 hover:text-accent"
+              disabled={isReadOnlyShared}
+              className="flex items-center justify-center rounded-lg border border-edge px-2 py-1.5 text-ink-muted hover:bg-surface-3 hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
               title="Generate notes from a PDF with AI"
             >
               <Sparkles size={14} />
             </button>
             <button
               onClick={createFolder}
-              className="flex items-center justify-center rounded-lg border border-edge px-2 py-1.5 text-ink-muted hover:bg-surface-3"
-              title="New folder"
+              disabled={isSharedFolder}
+              className="flex items-center justify-center rounded-lg border border-edge px-2 py-1.5 text-ink-muted hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-40"
+              title={isSharedFolder ? "Can't create subfolders in a shared folder" : "New folder"}
             >
               <FolderPlus size={14} />
             </button>
@@ -510,7 +524,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
           >
             <Folder size={14} /> All notes
           </button>
-          {folders.map((f) => (
+          {folders.filter((f) => !f.shared).map((f) => (
             <div
               key={f.id}
               className={`group mb-0.5 flex w-full items-center gap-1 rounded-md px-1.5 py-1.5 text-left text-xs ${
@@ -553,6 +567,35 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
               )}
             </div>
           ))}
+          {folders.some((f) => f.shared) && (
+            <>
+              <div className="mt-2 mb-1 flex items-center gap-1 px-1.5 text-[9px] font-semibold uppercase tracking-wide text-ink-muted">
+                <Users size={10} /> Shared with me
+              </div>
+              {folders.filter((f) => f.shared).map((f) => (
+                <div
+                  key={f.id}
+                  className={`group mb-0.5 flex w-full items-center gap-1 rounded-md px-1.5 py-1.5 text-left text-xs ${
+                    selectedFolder === f.id ? "bg-accent/15 text-accent" : "text-ink hover:bg-surface-3"
+                  }`}
+                  title={f.sharedGroupName ? `Shared via ${f.sharedGroupName}` : undefined}
+                >
+                  <Users size={13} className="shrink-0 text-emerald-400" />
+                  <button
+                    onClick={() => setSelectedFolder(f.id)}
+                    className="flex-1 truncate text-left"
+                  >
+                    {f.name}
+                  </button>
+                  <span className={`shrink-0 rounded px-1 py-0 text-[8px] font-medium ${
+                    f.sharedPermission === "write" ? "bg-emerald-500/15 text-emerald-400" : "bg-surface-3 text-ink-muted"
+                  }`}>
+                    {f.sharedPermission === "write" ? "write" : "read"}
+                  </span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       </div>
 
@@ -613,25 +656,29 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
               <GraduationCap size={12} /> Add to Study Guide
             </button>
             <div className="my-1 border-t border-edge" />
-            <button
-              onClick={() => {
-                const n = notes.find((x) => x.id === noteMenu.noteId);
-                if (n) togglePin(n);
-                setNoteMenu(null);
-              }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-3"
-            >
-              <Pin size={12} /> {notes.find((x) => x.id === noteMenu.noteId)?.pinned ? "Unpin" : "Pin"}
-            </button>
-            <button
-              onClick={() => {
-                deleteNote(noteMenu.noteId);
-                setNoteMenu(null);
-              }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-surface-3"
-            >
-              <Trash2 size={12} /> Delete
-            </button>
+            {!isReadOnlyShared && (
+              <button
+                onClick={() => {
+                  const n = notes.find((x) => x.id === noteMenu.noteId);
+                  if (n) togglePin(n);
+                  setNoteMenu(null);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-3"
+              >
+                <Pin size={12} /> {notes.find((x) => x.id === noteMenu.noteId)?.pinned ? "Unpin" : "Pin"}
+              </button>
+            )}
+            {!isReadOnlyShared && (
+              <button
+                onClick={() => {
+                  deleteNote(noteMenu.noteId);
+                  setNoteMenu(null);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-surface-3"
+              >
+                <Trash2 size={12} /> Delete
+              </button>
+            )}
           </div>
         </>
       )}
@@ -790,7 +837,8 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
                 onChange={(e) => updateNote(selected.id, { title: e.target.value })}
                 onBlur={() => void flushSave(selected.id)}
                 placeholder="Note title"
-                className="flex-1 bg-transparent text-sm font-semibold text-ink outline-none"
+                readOnly={isReadOnlyShared}
+                className="flex-1 bg-transparent text-sm font-semibold text-ink outline-none read-only:bg-transparent"
               />
               <LinkBadge type="note" id={selected.id} refreshSignal={noteLinkSignal} />
               <input
@@ -800,22 +848,26 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
                 className="hidden"
                 onChange={onImagePicked}
               />
-              <button
-                onClick={() => imageInputRef.current?.click()}
-                className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-surface-3"
-                title="Insert image"
-              >
-                <ImageIcon size={14} />
-              </button>
-              <button
-                onClick={() => togglePin(selected)}
-                className={`flex h-7 w-7 items-center justify-center rounded ${
-                  selected.pinned ? "text-accent" : "text-ink-muted hover:bg-surface-3"
-                }`}
-                title="Pin"
-              >
-                <Pin size={14} />
-              </button>
+              {!isReadOnlyShared && (
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-surface-3"
+                  title="Insert image"
+                >
+                  <ImageIcon size={14} />
+                </button>
+              )}
+              {!isReadOnlyShared && (
+                <button
+                  onClick={() => togglePin(selected)}
+                  className={`flex h-7 w-7 items-center justify-center rounded ${
+                    selected.pinned ? "text-accent" : "text-ink-muted hover:bg-surface-3"
+                  }`}
+                  title="Pin"
+                >
+                  <Pin size={14} />
+                </button>
+              )}
               <div className="mr-1 flex items-center rounded-lg border border-edge">
                 <ToolToggle active={mode === "edit"} onClick={() => setMode("edit")} title="Editor only">
                   <Pencil size={13} />
@@ -841,13 +893,15 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
               >
                 PDF
               </button>
-              <button
-                onClick={() => deleteNote(selected.id)}
-                className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-red-500 hover:text-white"
-                title="Delete"
-              >
-                <Trash2 size={14} />
-              </button>
+              {!isReadOnlyShared && (
+                <button
+                  onClick={() => deleteNote(selected.id)}
+                  className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-red-500 hover:text-white"
+                  title="Delete"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-2 border-b border-edge bg-surface-2 px-3 py-1.5">
@@ -870,7 +924,8 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
                 onChange={(e) => updateNote(selected.id, { tags: e.target.value })}
                 onBlur={() => void flushSave(selected.id)}
                 placeholder="tags, comma, separated"
-                className="flex-1 bg-transparent text-xs text-ink outline-none placeholder:text-ink-muted"
+                readOnly={isReadOnlyShared}
+                className="flex-1 bg-transparent text-xs text-ink outline-none placeholder:text-ink-muted read-only:bg-transparent"
               />
             </div>
 
@@ -885,6 +940,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
               onChange={(content) => updateNote(selected.id, { content })}
               onBlur={() => void flushSave(selected.id)}
               onDrop={onEditorDrop}
+              readOnly={isReadOnlyShared}
             />
           </>
         ) : (
@@ -968,6 +1024,7 @@ function NoteEditor({
   onChange,
   onBlur,
   onDrop,
+  readOnly = false,
 }: {
   note: Note;
   mode: EditorMode;
@@ -979,9 +1036,10 @@ function NoteEditor({
   onChange: (content: string) => void;
   onBlur: () => void;
   onDrop?: (e: React.DragEvent) => void;
+  readOnly?: boolean;
 }) {
-  const showEditor = mode === "edit" || mode === "split";
-  const showPreview = mode === "preview" || mode === "split";
+  const showEditor = (mode === "edit" || mode === "split") && !readOnly;
+  const showPreview = mode === "preview" || mode === "split" || readOnly;
 
   return (
     <div

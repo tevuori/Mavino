@@ -63,6 +63,15 @@ export interface AccessibleDeck {
   permission: string;
 }
 
+export interface AccessibleFolder {
+  folderId: string;
+  folderName: string;
+  noteCount: number;
+  groupName: string;
+  sharedByName: string;
+  permission: string;
+}
+
 export const circleApi = {
   listGroups: () => api.get<{ groups: StudyGroupSummary[] }>("/api/circle/groups"),
 
@@ -100,4 +109,6 @@ export const circleApi = {
     api.delete<{ ok: boolean }>(`/api/circle/groups/${groupId}/folders/${folderId}`),
 
   accessibleDecks: () => api.get<{ decks: AccessibleDeck[] }>("/api/circle/decks"),
+
+  accessibleFolders: () => api.get<{ folders: AccessibleFolder[] }>("/api/circle/folders"),
 };

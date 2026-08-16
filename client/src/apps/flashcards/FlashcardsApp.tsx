@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain, Plus, Trash2, ArrowLeft, ChevronRight, RotateCcw,
-  Check, X, AlertCircle, Layers, Sparkles, FileText, Upload,
+  Check, X, AlertCircle, Layers, Sparkles, FileText, Upload, Users,
 } from "lucide-react";
 import { flashcardsApi } from "../../services/flashcards";
 import { linksApi } from "../../services/links";
@@ -46,6 +46,9 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
   const [flipped, setFlipped] = useState(false);
   const [reviewStats, setReviewStats] = useState({ again: 0, hard: 0, good: 0, easy: 0 });
 
+  // Permission of the currently-open shared deck (null for own decks).
+  const [sharedDeckPermission, setSharedDeckPermission] = useState<"read" | "write" | null>(null);
+
   // Anki import state
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -84,8 +87,9 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
   const loadCards = useCallback(async (deckId: string) => {
     setLoading(true);
     try {
-      const { cards } = await flashcardsApi.listCards(deckId);
-      setCards(cards);
+      const res = await flashcardsApi.listCards(deckId);
+      setCards(res.cards);
+      setSharedDeckPermission(res.sharedDeckPermission ?? null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -98,6 +102,10 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
     setView("cards");
     loadCards(deck.id);
   };
+
+  // Whether the open deck is a Circle-shared deck.
+  const isSharedDeck = !!selectedDeck?.shared;
+  const isReadOnlyShared = isSharedDeck && sharedDeckPermission !== "write";
 
   const createDeck = async () => {
     if (!deckName.trim()) return;
@@ -248,7 +256,7 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
                   key={deck.id}
                   deck={deck}
                   onOpen={() => openDeck(deck)}
-                  onDelete={() => confirmDeleteDeck(deck)}
+                  onDelete={deck.shared ? undefined : () => confirmDeleteDeck(deck)}
                 />
               ))}
             </div>
@@ -319,6 +327,11 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
             <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
               <div className="h-3 w-3 rounded-full" style={{ backgroundColor: selectedDeck.color }} />
               {selectedDeck.name}
+              {isSharedDeck && (
+                <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-medium text-emerald-400" title={`Shared via ${selectedDeck.sharedGroupName ?? "Circle"}`}>
+                  <Users size={9} /> {sharedDeckPermission === "write" ? "write" : "read"}
+                </span>
+              )}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -330,35 +343,41 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
                 <Brain size={14} /> Study
               </button>
             )}
-            <button
-              onClick={() => {
-                if (!selectedDeck) return;
-                openWindow({
-                  appId: "study",
-                  title: "Study Hub",
-                  icon: "GraduationCap",
-                  payload: { mode: "flashcards", appendDeckId: selectedDeck.id, appendDeckName: selectedDeck.name },
-                });
-              }}
-              className="flex items-center gap-1 rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:bg-surface-3 hover:text-ink"
-              title="Generate AI flashcards and add them to this deck"
-            >
-              <Sparkles size={14} /> Generate more
-            </button>
-            <button
-              onClick={() => triggerImport("into")}
-              disabled={importing}
-              className="flex items-center gap-1 rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:bg-surface-3 hover:text-ink disabled:opacity-50"
-              title="Import cards from an Anki .apkg package into this deck"
-            >
-              <Upload size={14} /> {importing ? "Importing…" : "Import"}
-            </button>
-            <button
-              onClick={() => setShowCardForm(true)}
-              className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white transition hover:bg-accent/90"
-            >
-              <Plus size={14} /> Add Card
-            </button>
+            {!isReadOnlyShared && (
+              <button
+                onClick={() => {
+                  if (!selectedDeck) return;
+                  openWindow({
+                    appId: "study",
+                    title: "Study Hub",
+                    icon: "GraduationCap",
+                    payload: { mode: "flashcards", appendDeckId: selectedDeck.id, appendDeckName: selectedDeck.name },
+                  });
+                }}
+                className="flex items-center gap-1 rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:bg-surface-3 hover:text-ink"
+                title="Generate AI flashcards and add them to this deck"
+              >
+                <Sparkles size={14} /> Generate more
+              </button>
+            )}
+            {!isReadOnlyShared && (
+              <button
+                onClick={() => triggerImport("into")}
+                disabled={importing}
+                className="flex items-center gap-1 rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:bg-surface-3 hover:text-ink disabled:opacity-50"
+                title="Import cards from an Anki .apkg package into this deck"
+              >
+                <Upload size={14} /> {importing ? "Importing…" : "Import"}
+              </button>
+            )}
+            {!isReadOnlyShared && (
+              <button
+                onClick={() => setShowCardForm(true)}
+                className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white transition hover:bg-accent/90"
+              >
+                <Plus size={14} /> Add Card
+              </button>
+            )}
           </div>
         </div>
 
@@ -391,12 +410,14 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
                       }`}>
                         {isDue ? "Due" : `${card.interval}d`}
                       </span>
-                      <button
-                        onClick={() => deleteCard(card.id)}
-                        className="text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {!isReadOnlyShared && (
+                        <button
+                          onClick={() => deleteCard(card.id)}
+                          className="text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -577,7 +598,7 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
   return null;
 }
 
-function DeckCard({ deck, onOpen, onDelete }: { deck: FlashcardDeck & { _count: { cards: number } }; onOpen: () => void; onDelete: () => void }) {
+function DeckCard({ deck, onOpen, onDelete }: { deck: FlashcardDeck & { _count: { cards: number } }; onOpen: () => void; onDelete?: () => void }) {
   const [refreshSignal, setRefreshSignal] = useState(0);
   const { onDragOver, onDragEnter, onDragLeave, onDrop, isOver } = useLinkDrop(
     "flashcardDeck",
@@ -601,8 +622,13 @@ function DeckCard({ deck, onOpen, onDelete }: { deck: FlashcardDeck & { _count: 
         isOver ? "border-accent ring-2 ring-accent/30" : "border-edge"
       }`}
     >
+      {deck.shared && (
+        <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-medium text-emerald-400" title={`Shared via ${deck.sharedGroupName ?? "Circle"}`}>
+          <Users size={9} /> {deck.sharedPermission === "write" ? "Shared · write" : "Shared · read"}
+        </div>
+      )}
       <button
-        draggable
+        draggable={!deck.shared}
         onDragStart={(e) => {
           e.stopPropagation();
           setLinkPayload(e, { type: "flashcardDeck", id: deck.id, title: deck.name });
@@ -628,16 +654,18 @@ function DeckCard({ deck, onOpen, onDelete }: { deck: FlashcardDeck & { _count: 
         <LinkDragHandle type="flashcardDeck" id={deck.id} title={deck.name} className="opacity-60" />
         <div className="flex items-center gap-1">
           <LinkBadge type="flashcardDeck" id={deck.id} refreshSignal={refreshSignal} />
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            title="Delete deck"
-            className="text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
-          >
-            <Trash2 size={14} />
-          </button>
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              title="Delete deck"
+              className="text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </div>
     </div>

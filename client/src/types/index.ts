@@ -77,6 +77,11 @@ export interface NoteFolder {
   name: string;
   parentId: string | null;
   position: number;
+  /** Present when this folder is shared with the user via a Circle group. */
+  shared?: boolean;
+  sharedPermission?: "read" | "write";
+  sharedGroupName?: string;
+  sharedByName?: string;
 }
 
 export interface Note {
@@ -177,6 +182,10 @@ export interface FlashcardDeck {
   createdAt: string;
   updatedAt: string;
   _count?: { cards: number };
+  /** Present when this deck is shared with the user via a Circle group. */
+  shared?: boolean;
+  sharedPermission?: "read" | "write";
+  sharedGroupName?: string;
 }
 
 export interface Flashcard {
@@ -406,4 +415,34 @@ export interface AnalyticsDashboard {
   };
   achievements: Achievement[];
   newlyUnlocked: string[];
+}
+
+// ===== Notifications (persistent, in-app + ntfy push) =====
+
+export type NotificationCategory =
+  | "task_due"
+  | "task_overdue"
+  | "calendar_upcoming"
+  | "circle_join"
+  | "circle_share"
+  | "achievement"
+  | "system";
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  icon: string; // lucide icon name
+  linkApp: string; // app id to open when clicked
+  linkPayload: string; // JSON payload
+  read: boolean;
+  createdAt: string; // ISO
+}
+
+export interface NotificationSettings {
+  enabled: boolean;
+  ntfy: boolean;
+  categories: Record<NotificationCategory, boolean>;
 }
