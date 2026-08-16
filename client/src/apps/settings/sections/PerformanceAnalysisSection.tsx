@@ -1,15 +1,31 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import {
   Activity, Gauge, Cpu, MemoryStick, Clock, Network, Zap,
   AlertTriangle, CheckCircle, Trash2, CircleDot,
 } from "lucide-react";
-import { usePerformanceMonitor, type PerfSample } from "../usePerformanceMonitor";
+import { usePerformanceStore } from "../../../store/performance";
+import type { PerfSample } from "../usePerformanceMonitor";
 import { SectionHeader, Card, ToggleRow } from "../ui";
 
 export default function PerformanceAnalysisSection() {
-  const [enabled, setEnabled] = useState(false);
-  const { samples, summary, running, clear } = usePerformanceMonitor(enabled);
+  const enabled = usePerformanceStore((s) => s.enabled);
+  const setEnabled = usePerformanceStore((s) => s.setEnabled);
+  const samples = usePerformanceStore((s) => s.samples);
+  const summary = usePerformanceStore((s) => s.summary);
+  const running = usePerformanceStore((s) => s.running);
+  const clear = usePerformanceStore((s) => s.clear);
   const logEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Fallback summary when the store hasn't been populated yet (e.g. before the
+  // runner component syncs its first sample).
+  const s = summary ?? {
+    avgFps: 0, minFps: 0, maxFps: 0,
+    avgLagMs: 0, maxLagMs: 0,
+    totalLongTasks: 0, longestTaskMs: 0,
+    avgHeapMB: null, maxHeapMB: null,
+    avgDomNodes: 0, samples: 0,
+    stable: true, issues: [] as string[],
+  };
 
   // Auto-scroll the log to the latest entry.
   useEffect(() => {
@@ -29,32 +45,32 @@ export default function PerformanceAnalysisSection() {
           label="Enable performance monitoring"
           description={running ? "Collecting metrics every 2 seconds…" : "Turn on to start gathering real-time performance data"}
           on={enabled}
-          onClick={() => setEnabled((v) => !v)}
+          onClick={() => setEnabled(!enabled)}
         />
       </div>
 
       {enabled && (
         <>
           {/* Stability verdict */}
-          <Card className={`mb-4 ${summary.stable ? "border-emerald-500/30" : "border-amber-500/30"}`}>
+          <Card className={`mb-4 ${s.stable ? "border-emerald-500/30" : "border-amber-500/30"}`}>
             <div className="flex items-center gap-3">
-              {summary.samples < 3 ? (
+              {s.samples < 3 ? (
                 <>
                   <CircleDot size={24} className="animate-pulse text-accent" />
                   <div>
                     <p className="text-sm font-semibold text-ink">Collecting data…</p>
                     <p className="text-xs text-ink-muted">
-                      {summary.samples} sample{summary.samples === 1 ? "" : "s"} gathered — need at least 3 for assessment
+                      {s.samples} sample{s.samples === 1 ? "" : "s"} gathered — need at least 3 for assessment
                     </p>
                   </div>
                 </>
-              ) : summary.stable ? (
+              ) : s.stable ? (
                 <>
                   <CheckCircle size={24} className="text-emerald-500" />
                   <div>
                     <p className="text-sm font-semibold text-emerald-400">App is stable</p>
                     <p className="text-xs text-ink-muted">
-                      No performance issues detected across {summary.samples} samples
+                      No performance issues detected across {s.samples} samples
                     </p>
                   </div>
                 </>
@@ -64,7 +80,7 @@ export default function PerformanceAnalysisSection() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-amber-400">App is unstable</p>
                     <p className="text-xs text-ink-muted">
-                      {summary.issues.length} issue{summary.issues.length === 1 ? "" : "s"} detected — see log below
+                      {s.issues.length} issue{s.issues.length === 1 ? "" : "s"} detected — see log below
                     </p>
                   </div>
                 </>
@@ -80,9 +96,9 @@ export default function PerformanceAnalysisSection() {
             </div>
 
             {/* Issues list */}
-            {summary.issues.length > 0 && (
+            {s.issues.length > 0 && (
               <div className="mt-3 space-y-1.5 border-t border-edge pt-3">
-                {summary.issues.map((issue, i) => (
+                {s.issues.map((issue, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-amber-300">
                     <AlertTriangle size={12} className="mt-0.5 shrink-0" />
                     <span>{issue}</span>
@@ -97,33 +113,33 @@ export default function PerformanceAnalysisSection() {
             <StatCard
               icon={<Gauge size={16} />}
               label="Avg FPS"
-              value={summary.avgFps > 0 ? String(summary.avgFps) : "—"}
-              sub={summary.minFps > 0 ? `min ${summary.minFps} · max ${summary.maxFps}` : "measuring…"}
-              status={summary.avgFps >= 55 ? "good" : summary.avgFps >= 40 ? "warn" : summary.avgFps > 0 ? "bad" : "neutral"}
+              value={s.avgFps > 0 ? String(s.avgFps) : "—"}
+              sub={s.minFps > 0 ? `min ${s.minFps} · max ${s.maxFps}` : "measuring…"}
+              status={s.avgFps >= 55 ? "good" : s.avgFps >= 40 ? "warn" : s.avgFps > 0 ? "bad" : "neutral"}
             />
             <StatCard
               icon={<Clock size={16} />}
               label="Event Loop Lag"
-              value={`${summary.avgLagMs}ms`}
-              sub={`max ${summary.maxLagMs}ms`}
-              status={summary.maxLagMs <= 50 ? "good" : summary.maxLagMs <= 100 ? "warn" : "bad"}
+              value={`${s.avgLagMs}ms`}
+              sub={`max ${s.maxLagMs}ms`}
+              status={s.maxLagMs <= 50 ? "good" : s.maxLagMs <= 100 ? "warn" : "bad"}
             />
             <StatCard
               icon={<Zap size={16} />}
               label="Long Tasks"
-              value={String(summary.totalLongTasks)}
-              sub={summary.longestTaskMs > 0 ? `longest ${summary.longestTaskMs}ms` : "none >50ms"}
-              status={summary.totalLongTasks <= 2 ? "good" : summary.totalLongTasks <= 10 ? "warn" : "bad"}
+              value={String(s.totalLongTasks)}
+              sub={s.longestTaskMs > 0 ? `longest ${s.longestTaskMs}ms` : "none >50ms"}
+              status={s.totalLongTasks <= 2 ? "good" : s.totalLongTasks <= 10 ? "warn" : "bad"}
             />
             <StatCard
               icon={<MemoryStick size={16} />}
               label="JS Heap"
-              value={summary.avgHeapMB !== null ? `${summary.avgHeapMB}MB` : "N/A"}
-              sub={summary.maxHeapMB !== null ? `max ${summary.maxHeapMB}MB` : "Chromium only"}
+              value={s.avgHeapMB !== null ? `${s.avgHeapMB}MB` : "N/A"}
+              sub={s.maxHeapMB !== null ? `max ${s.maxHeapMB}MB` : "Chromium only"}
               status={
-                summary.maxHeapMB === null ? "neutral"
-                : summary.maxHeapMB <= 100 ? "good"
-                : summary.maxHeapMB <= 200 ? "warn" : "bad"
+                s.maxHeapMB === null ? "neutral"
+                : s.maxHeapMB <= 100 ? "good"
+                : s.maxHeapMB <= 200 ? "warn" : "bad"
               }
             />
           </div>

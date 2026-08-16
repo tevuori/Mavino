@@ -14,6 +14,7 @@ import DesktopEnvironment from "./shell/DesktopEnvironment";
 import MobileShell from "./shell/mobile/MobileShell";
 import UpdateDialog from "./shell/UpdateDialog";
 import ReloadPrompt from "./shell/ReloadPrompt";
+import PerformanceMonitorRunner from "./shell/PerformanceMonitorRunner";
 import GlobalErrorBoundary from "./shell/GlobalErrorBoundary";
 
 type Phase = "boot" | "app";
@@ -84,6 +85,10 @@ export default function App() {
   return (
     <GlobalErrorBoundary>
       {mode === "phone" ? <MobileShell /> : <DesktopEnvironment />}
+      {/* Performance monitor runner — rendered at the app level so it keeps
+          running even when the Settings window is closed. Reads `enabled`
+          from the performance store and writes samples back to it. */}
+      <PerformanceMonitorRunner />
       {/* Rendered once at the top level. Reads from the useUpdater store and
           is a no-op on web/PWA builds (the store is never populated there). */}
       <UpdateDialog />
