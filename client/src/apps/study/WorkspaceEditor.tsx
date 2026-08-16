@@ -21,7 +21,6 @@ const KIND_ICON: Record<string, typeof FileText> = {
   note: FileText,
   file: FileIcon,
   paste: FileText,
-  moodle: GraduationCap,
   url: Link2,
 };
 

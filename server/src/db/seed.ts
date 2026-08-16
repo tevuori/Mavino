@@ -161,8 +161,7 @@ async function main() {
     ],
   });
 
-  // Note: Grade Tracker starts empty. Use "Sync from VUT" in the Grades app
-  // to import real grades from VUT Studis, or add courses manually.
+  // Note: Grade Tracker starts empty. Add courses manually.
 
   console.log("Seed complete.");
 }

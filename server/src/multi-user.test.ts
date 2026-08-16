@@ -48,7 +48,7 @@ describe("multi-user data isolation", () => {
       "ItemLink", "RefreshToken", "StudySource", "StudyChat",
       "Podcast", "LearningWorkspace", "TeacherSession", "Reminder",
       "LectureJob", "FocusSession", "FlashcardReview", "StudyHighlight",
-      "MoodleSync", "Trip", "HikingTour", "PasswordResetToken",
+      "Trip", "HikingTour", "PasswordResetToken",
     ];
     // Every one of these models has a userId field in the schema.
     // This test documents the expectation and will fail if someone adds

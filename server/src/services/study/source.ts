@@ -1,15 +1,13 @@
 // ===== Study Hub source resolution =====
 // Resolves a source descriptor ({ kind, id?, text?, url? }) to plain text
-// content from a note, a text file or PDF on disk, a fetched web URL, pasted
-// text, or a Moodle resource. Reused by all study workflows so the LLM always
-// receives clean source text. Also provides resolveAndCache() to persist the
-// extracted text as a StudySource for reuse across grounded Q&A / podcasts.
+// content from a note, a text file or PDF on disk, a fetched web URL, or pasted
+// text. Reused by all study workflows so the LLM always receives clean source
+// text. Also provides resolveAndCache() to persist the extracted text as a
+// StudySource for reuse across grounded Q&A / podcasts.
 
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 import prisma from "../../db/client";
-import { decryptSecret } from "../crypto";
-import { fetchResourceContent } from "../moodle";
 import { fetchUrl } from "../fetcher";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
@@ -24,7 +22,7 @@ const TEXT_EXT = new Set([
   "tsv", "log", "js", "jsx", "ts", "tsx",
 ]);
 
-export type SourceKind = "note" | "file" | "paste" | "moodle" | "url";
+export type SourceKind = "note" | "file" | "paste" | "url";
 
 export interface SourceDescriptor {
   kind: SourceKind;
@@ -32,9 +30,9 @@ export interface SourceDescriptor {
   id?: string;
   /** Pasted text (required for kind "paste"). */
   text?: string;
-  /** Moodle resource URL or web URL (required for kind "moodle" / "url"). */
+  /** Web URL (required for kind "url"). */
   url?: string;
-  /** Moodle resource / URL display name (optional, for display). */
+  /** URL display name (optional, for display). */
   name?: string;
 }
 
@@ -69,7 +67,7 @@ function isPdfFile(name: string, mime: string): boolean {
 /**
  * Strip NUL bytes and other C0 control characters (keeping \n, \r, \t) that
  * Postgres' text type rejects outright ("invalid byte sequence for encoding
- * UTF8: 0x00"). PDF extraction (and occasionally scraped HTML/Moodle pages)
+ * UTF8: 0x00"). PDF extraction (and occasionally scraped HTML pages)
  * can produce embedded NULs that would otherwise crash the StudySource
  * upsert. Applied before truncation so every resolveSource() caller —
  * including plain resolveSource() callers that never touch the DB — gets
@@ -106,7 +104,7 @@ export async function resolveSource(
   userId: string,
   src: SourceDescriptor
 ): Promise<ResolvedSource> {
-  if (src.kind === "paste" || (!src.id && src.text != null && src.kind !== "url" && src.kind !== "moodle")) {
+  if (src.kind === "paste" || (!src.id && src.text != null && src.kind !== "url")) {
     const text = String(src.text ?? "");
     const t = truncate(text);
     return { name: "Pasted text", text: t.text, ref: "paste", truncated: t.truncated, kind: "paste" };
@@ -151,26 +149,6 @@ export async function resolveSource(
       ref: src.url,
       truncated: page.truncated,
       kind: "url",
-    };
-  }
-
-  if (src.kind === "moodle") {
-    if (!src.url) throw new Error("Moodle resource URL is required");
-    // Get VUT credentials for Moodle SSO.
-    const creds = await prisma.vutCredentials.findUnique({ where: { userId } });
-    if (!creds) throw new Error("VUT credentials not configured. Log in via the VUT app first.");
-    const password = decryptSecret(creds.passwordEnc);
-    const content = await fetchResourceContent(userId, src.url, {
-      username: creds.username,
-      password,
-    });
-    const t = truncate(content.text);
-    return {
-      name: src.name || content.name || "Moodle resource",
-      text: t.text,
-      ref: src.url,
-      truncated: t.truncated,
-      kind: "moodle",
     };
   }
 

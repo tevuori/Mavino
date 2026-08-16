@@ -56,7 +56,6 @@ const APP_ICONS: Record<string, React.ReactNode> = {
   pomodoro: <Timer size={18} />,
   flashcards: <Brain size={18} />,
   grades: <GraduationCap size={18} />,
-  vut: <GraduationCap size={18} />,
   editor: <Code2 size={18} />,
   viewer: <Eye size={18} />,
 };

@@ -602,23 +602,17 @@ export default function FilesApp(_: { win: WindowInstance }) {
       setSelected(new Set([file.id]));
       setLastSelected(file.id);
     }
-    // Moodle-managed virtual files are read-only (synced via the Moodle app).
-    const isMoodle = file.source === "moodle" && !!file.externalUrl;
     const items: MenuItem[] = [
       { label: "Open", icon: <FileSymlink size={14} />, onClick: () => openFile(file) },
       ...(isImageFile(file) || isPdfFile(file) || isAudioFile(file) || isVideoFile(file) ? [{ label: "Open in Viewer", icon: <ImageIcon size={14} />, onClick: () => openWindow({ appId: "viewer", title: file.name, icon: "Eye", payload: { fileId: file.id } }) }] : []),
-      ...(isTextFile(file) && !isMoodle ? [{ label: "Open in Editor", icon: <FileCode size={14} />, onClick: () => openWindow({ appId: "editor", title: file.name, icon: "Code2", payload: { fileId: file.id } }) }] : []),
+      ...(isTextFile(file) ? [{ label: "Open in Editor", icon: <FileCode size={14} />, onClick: () => openWindow({ appId: "editor", title: file.name, icon: "Code2", payload: { fileId: file.id } }) }] : []),
       { separator: true },
       { label: "Download", icon: <Download size={14} />, onClick: () => download(file) },
-      ...(isMoodle ? [] : [
-        { label: "Rename", icon: <Pencil size={14} />, onClick: () => setRenaming({ type: "file", id: file.id, value: file.name }) },
-        { label: "Duplicate", icon: <Copy size={14} />, onClick: () => duplicateFile(file) },
-      ]),
+      { label: "Rename", icon: <Pencil size={14} />, onClick: () => setRenaming({ type: "file", id: file.id, value: file.name }) },
+      { label: "Duplicate", icon: <Copy size={14} />, onClick: () => duplicateFile(file) },
       { label: file.starred ? "Unstar" : "Star", icon: <Star size={14} />, onClick: () => toggleStar(file) },
-      ...(isMoodle ? [] : [
-        { separator: true },
-        { label: "Delete", icon: <Trash2 size={14} />, danger: true, onClick: () => deleteFile(file) },
-      ]),
+      { separator: true },
+      { label: "Delete", icon: <Trash2 size={14} />, danger: true, onClick: () => deleteFile(file) },
     ];
     setContextMenu({ x: e.clientX, y: e.clientY, items });
   }, [selected, openFile, openWindow, download, duplicateFile, toggleStar, deleteFile]);
@@ -1087,7 +1081,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
                     <span className="line-clamp-2 w-full text-center text-xs text-ink">{file.name}</span>
                   )}
                   <span className="text-[10px] text-ink-muted">
-                    {file.source === "moodle" && file.externalUrl ? "Moodle" : formatBytes(file.size)}
+                    {formatBytes(file.size)}
                   </span>
                   <div className="absolute right-1 top-1 hidden items-center gap-0.5 group-hover:flex">
                     <button
@@ -1096,14 +1090,12 @@ export default function FilesApp(_: { win: WindowInstance }) {
                     >
                       <Download size={12} />
                     </button>
-                    {!(file.source === "moodle" && file.externalUrl) && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteFile(file); }}
-                        className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-red-500 hover:text-white"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteFile(file); }}
+                      className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-red-500 hover:text-white"
+                    >
+                      <Trash2 size={12} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1197,13 +1189,10 @@ export default function FilesApp(_: { win: WindowInstance }) {
                           <span className="text-ink">{file.name}</span>
                         )}
                         {file.starred && <Star size={10} className="fill-amber-400 text-amber-400" />}
-                        {file.source === "moodle" && file.externalUrl && (
-                          <span className="rounded bg-indigo-500/10 px-1 py-0.5 text-[9px] font-medium text-indigo-400">Moodle</span>
-                        )}
                       </div>
                     </td>
                     <td className="px-2 py-1.5 text-ink-muted">
-                      {file.source === "moodle" && file.externalUrl ? "—" : formatBytes(file.size)}
+                      {formatBytes(file.size)}
                     </td>
                     <td className="px-2 py-1.5 text-ink-muted">{new Date(file.updatedAt).toLocaleDateString()}</td>
                   </tr>

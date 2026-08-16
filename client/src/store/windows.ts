@@ -10,7 +10,6 @@ export type AppId =
   | "pomodoro"
   | "flashcards"
   | "grades"
-  | "vut"
   | "editor"
   | "viewer"
   | "athena"
@@ -24,7 +23,6 @@ export type AppId =
   | "browser"
   | "reminders"
   | "analytics"
-  | "moodle"
   | "maps"
   | "plans"
   | "marketplace"
@@ -193,7 +191,6 @@ const DEFAULT_SIZE: Partial<Record<AppId, WindowRect>> = {
   pomodoro: { x: 300, y: 100, width: 420, height: 560 },
   flashcards: { x: 160, y: 80, width: 880, height: 600 },
   grades: { x: 140, y: 70, width: 920, height: 620 },
-  vut: { x: 120, y: 60, width: 960, height: 660 },
   editor: { x: 160, y: 70, width: 920, height: 640 },
   viewer: { x: 200, y: 90, width: 820, height: 620 },
   athena: { x: 200, y: 90, width: 760, height: 620 },
@@ -207,7 +204,6 @@ const DEFAULT_SIZE: Partial<Record<AppId, WindowRect>> = {
   browser: { x: 120, y: 60, width: 1000, height: 680 },
   reminders: { x: 240, y: 100, width: 780, height: 620 },
   analytics: { x: 140, y: 70, width: 980, height: 680 },
-  moodle: { x: 120, y: 60, width: 960, height: 660 },
   maps: { x: 120, y: 60, width: 1040, height: 700 },
   plans: { x: 200, y: 80, width: 720, height: 640 },
   atlas: { x: 120, y: 60, width: 1040, height: 700 },
@@ -314,7 +310,7 @@ export const useWindows = create<WindowsState>((set, get) => ({
       return existing.id;
     }
     // App availability guard: refuse to open apps the user can't access
-    // (tier too low with no preview, VUT not granted, or admin kill-switched).
+    // (tier too low with no preview, or admin kill-switched).
     // Preview-mode apps are allowed to open — the window content is wrapped
     // in a paywall overlay by the window renderer. This catches deep links /
     // Athena tool dispatch that bypass the filtered launch surfaces.

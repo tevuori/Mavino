@@ -392,7 +392,6 @@ ${habitsLine}${focusLine}- Study Hub (full access — every Study Hub feature is
   • Quiz answering: answer_quiz_question (grade a single answer for a quiz started with start_quiz)
   • History: list_study_sessions (recent Study Hub activity log)
   • Navigation: open_study_hub (open the Study Hub app with an optional preselected mode, or deep-link to a specific chat/podcast/workspace/teacher session by id)
-- Moodle: list_moodle_courses (lists enrolled VUT Moodle courses), get_moodle_course_contents (lists sections + activities in a course), read_moodle_resource (fetches text content of a Moodle page/file). Requires VUT credentials. Use these to find study materials on Moodle, then generate_flashcards or summarize from them.
 - Window management: open_app, close_window, focus_window, minimize_window, resize_window, move_window, list_open_windows, tile_windows
 - Workspaces: save_workspace, open_workspace, list_workspaces, delete_workspace
 ${ntfyLine}${remindersLine}- Web: web_search (search the web via DuckDuckGo — returns titles + snippets), fetch_url (fetch a page and extract its main article text), research (multi-step: search → fetch top pages → synthesize a cited answer with [1]/[2] inline citations). Prefer 'research' for thorough factual questions; use 'web_search' for quick lookups.

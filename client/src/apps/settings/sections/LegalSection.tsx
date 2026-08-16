@@ -16,7 +16,7 @@ export default function LegalSection() {
         </h4>
         <p className="mb-3 text-xs text-ink-muted">
           How Mavino collects, stores, and processes your personal data — including what is sent to
-          LLM providers, ElevenLabs, Microsoft Graph, VUT/Moodle, and other third parties, and your
+          LLM providers, ElevenLabs, Microsoft Graph, and other third parties, and your
           GDPR rights.
         </p>
         <a

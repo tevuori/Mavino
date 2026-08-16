@@ -35,7 +35,7 @@ export default function App() {
     return cleanup;
   }, [refresh]);
 
-  // Load feature flags (subscription tier, VUT grant, disabled apps) once
+  // Load feature flags (subscription tier, disabled apps) once
   // authenticated so launch surfaces filter correctly. Also load installed
   // plugins so they appear in the taskbar / start menu / desktop.
   useEffect(() => {

@@ -113,9 +113,9 @@
 
   <h3>2.2 Academic data</h3>
   <ul>
-    <li><strong>Grades &amp; assignments</strong> — course names, codes, scores, weights, and categories (synced from VUT or entered manually).</li>
-    <li><strong>Timetable</strong> — class times and locations (synced from VUT or entered manually).</li>
-    <li><strong>Calendar events</strong> — titles, descriptions, times, and locations from manual entry, tasks, VUT, assignments, ICS imports, Moodle, or Microsoft Graph.</li>
+    <li><strong>Grades &amp; assignments</strong> — course names, codes, scores, weights, and categories (entered manually).</li>
+    <li><strong>Timetable</strong> — class times and locations (entered manually).</li>
+    <li><strong>Calendar events</strong> — titles, descriptions, times, and locations from manual entry, tasks, assignments, ICS imports, or Microsoft Graph.</li>
   </ul>
 
   <h3>2.3 Notes, tasks &amp; study content</h3>
@@ -123,7 +123,7 @@
     <li><strong>Notes</strong> — full markdown content (including LaTeX), titles, tags, and folder structure.</li>
     <li><strong>Tasks</strong> — titles, descriptions, due dates, priorities, statuses, and recurrence rules.</li>
     <li><strong>Flashcards</strong> — front/back content and spaced-repetition review history (SM-2 algorithm state).</li>
-    <li><strong>Study Hub data</strong> — chat conversations with the AI assistant, source texts extracted from your notes/files/pastes/Moodle/web URLs, study sessions, highlights, and teacher-mode sessions.</li>
+    <li><strong>Study Hub data</strong> — chat conversations with the AI assistant, source texts extracted from your notes/files/pastes/web URLs, study sessions, highlights, and teacher-mode sessions.</li>
     <li><strong>AI memories</strong> — facts and preferences the assistant remembers about you (you can view and delete these in the app).</li>
   </ul>
 
@@ -132,13 +132,11 @@
     <li><strong>Uploaded files</strong> — documents, images, PDFs, and other files you upload, stored on the server's disk.</li>
     <li><strong>Voice recordings</strong> — audio you record in the Voice app (webm/ogg/mp4/wav) is <strong>persisted on the server</strong> and linked to a transcribed note. See <a href="#voice">Section 4.3</a> for where audio is sent for transcription.</li>
     <li><strong>Lecture videos</strong> — video files you submit for the lecture-to-notes pipeline are processed and then the temporary working files are deleted.</li>
-    <li><strong>Moodle materials</strong> — virtual file references (not the file bytes) for materials synced from Moodle; the bytes are streamed on-demand from Moodle.</li>
   </ul>
 
   <h3>2.5 Third-party credentials you provide</h3>
   <p>To enable integrations, you may store credentials that Mavino uses on your behalf. All are <strong>encrypted at rest with AES-256-GCM</strong>:</p>
   <ul>
-    <li><strong>VUT username &amp; password</strong> — for VUT SSO login, grades/timetable sync, and Moodle ride-along authentication.</li>
     <li><strong>LLM provider API key</strong> (and optional fallback) — for the AI assistant. Provider may be OpenAI, Anthropic, OpenRouter, DeepSeek, Groq, Mistral, Google, xAI, Meta, Cerebras, or a local Ollama instance.</li>
     <li><strong>ElevenLabs API key</strong> — for text-to-speech.</li>
     <li><strong>Microsoft Graph OAuth credentials</strong> (client ID, client secret, refresh token, tenant ID) — for Outlook calendar sync.</li>
@@ -185,7 +183,7 @@
   <p><strong>What is sent:</strong></p>
   <ul>
     <li>Your chat conversation history (messages, including any files/notes you attach).</li>
-    <li>Source content for Study Hub — extracted text from your notes, uploaded files, pasted text, Moodle resources, and fetched web pages.</li>
+    <li>Source content for Study Hub — extracted text from your notes, uploaded files, pasted text, and fetched web pages.</li>
     <li>Context about your calendar, tasks, habits, due flashcards, and AI memories (so the assistant can give relevant answers).</li>
     <li>Your custom AI instructions.</li>
     <li>Raw voice transcripts (for the cleanup pass) and lecture video transcripts / slide OCR text.</li>
@@ -219,36 +217,27 @@
     (<code>graph.microsoft.com</code>). Your refresh token is exchanged at Microsoft's token endpoint.
   </p>
 
-  <h3>4.5 VUT SSO &amp; Moodle (Brno University of Technology)</h3>
-  <p>
-    If you connect the VUT integration, Mavino logs in to VUT (<code>vut.cz</code> / <code>id.vut.cz</code>)
-    using your stored VUT username and password, then fetches your grades, timetable, and updates.
-    The VUT session is reused to authenticate to Moodle (<code>moodle.vut.cz</code>) via OIDC
-    ride-along — no separate Moodle credentials are stored. Session cookies are held in memory only
-    (25-minute TTL) and are never persisted to disk.
-  </p>
-
-  <h3>4.6 Mapy.cz (maps &amp; route planning)</h3>
+  <h3>4.5 Mapy.cz (maps &amp; route planning)</h3>
   <p>
     If you use the Maps app, your geocoding queries, routing requests (start/end/waypoints), and POI
     searches are sent to the mapy.com REST API (<code>api.mapy.com</code>) using your stored API key.
     Tile images are loaded directly by your browser with the API key as a query parameter.
   </p>
 
-  <h3>4.7 Spotify (music playback)</h3>
+  <h3>4.6 Spotify (music playback)</h3>
   <p>
     If you connect Spotify, Mavino uses your OAuth credentials to control playback and fetch track
     metadata via the Spotify Web API. Track names/artists are also sent to LRCLIB
     (<code>lrclib.net</code>) to fetch synced lyrics.
   </p>
 
-  <h3>4.8 Web search (Tavily / Brave / DuckDuckGo)</h3>
+  <h3>4.7 Web search (Tavily / Brave / DuckDuckGo)</h3>
   <p>
     When the AI assistant or Study Hub performs a web search, your search query (and an optional
     region code) is sent to Tavily, Brave, or DuckDuckGo. No other personal data is included.
   </p>
 
-  <h3>4.9 URL fetching &amp; in-app browser</h3>
+  <h3>4.8 URL fetching &amp; in-app browser</h3>
   <p>
     When you ask the assistant to read a web page or use the in-app Browser app, Mavino fetches the
     URL you provide. The request includes a User-Agent header and, for the Browser app, a per-user
@@ -256,27 +245,26 @@
     network ranges.
   </p>
 
-  <h3>4.10 Ntfy (push notifications)</h3>
+  <h3>4.9 Ntfy (push notifications)</h3>
   <p>
     If you configure Ntfy, notification messages (title, body, tags, priority) are sent to your
     configured Ntfy server (default <code>ntfy.sh</code>) along with an optional bearer token.
   </p>
 
-  <h3>4.11 SMTP (transactional email)</h3>
+  <h3>4.10 SMTP (transactional email)</h3>
   <p>
     When you request a password reset, an email containing a reset link is sent to your email address
     via the operator's configured SMTP server. If you have a paid subscription, a renewal reminder
     email is sent ~3 days before your subscription renews. No marketing emails are sent.
   </p>
 
-  <h3>4.12 Summary table</h3>
+  <h3>4.11 Summary table</h3>
   <table>
     <tr><th>Recipient</th><th>Data sent</th><th>Purpose</th><th>Activated by</th></tr>
     <tr><td>LLM provider (your choice)</td><td>Chat history, note/file content, transcripts, context</td><td>AI features</td><td>Using AI features</td></tr>
     <tr><td>ElevenLabs</td><td>Text to synthesize, voice ID</td><td>Text-to-speech</td><td>Teach Me / podcasts</td></tr>
     <tr><td>Whisper transcription endpoint</td><td>Audio file bytes</td><td>Voice/lecture transcription</td><td>Recording voice / submitting video</td></tr>
     <tr><td>Microsoft Graph</td><td>Calendar events, OAuth tokens</td><td>Calendar sync</td><td>Connecting MS Calendar</td></tr>
-    <tr><td>VUT / Moodle</td><td>VUT username &amp; password, session cookies, academic data</td><td>Grades, timetable, course sync</td><td>Connecting VUT</td></tr>
     <tr><td>Mapy.cz</td><td>Geocoding/routing/POI queries, API key</td><td>Maps &amp; trip planning</td><td>Using Maps app</td></tr>
     <tr><td>Spotify / LRCLIB</td><td>OAuth tokens, track metadata</td><td>Music playback &amp; lyrics</td><td>Connecting Spotify</td></tr>
     <tr><td>Tavily / Brave / DuckDuckGo</td><td>Search queries</td><td>Web search</td><td>AI web search</td></tr>
@@ -289,7 +277,7 @@
   <ul>
     <li><strong>Database:</strong> PostgreSQL 16, running on the hosted server (EU / Czech Republic VPS). All structured data (account, notes, tasks, grades, calendar, chat history, etc.) is stored here.</li>
     <li><strong>File storage:</strong> Uploaded files and voice recordings are stored on the server's disk (Docker volume).</li>
-    <li><strong>Cache / rate limiting:</strong> Redis 7 is used for rate-limiting and ephemeral caching. No personal data is persisted in Redis beyond short-lived session cookies (VUT/Moodle: 25 min; in-app browser: 24 h).</li>
+    <li><strong>Cache / rate limiting:</strong> Redis 7 is used for rate-limiting and ephemeral caching. No personal data is persisted in Redis beyond short-lived session cookies (in-app browser: 24 h).</li>
     <li><strong>Backups:</strong> Daily encrypted backups are retained for 14 days (see <a href="#retention">Section 6</a>).</li>
     <li><strong>Encryption at rest:</strong> All third-party credentials and TOTP secrets are encrypted with AES-256-GCM before being written to the database. Passwords are bcrypt-hashed (salt rounds 10).</li>
     <li><strong>In transit:</strong> All traffic to and from <code>mavino.net</code> is encrypted with TLS (terminated by nginx / Let's Encrypt).</li>
@@ -302,7 +290,7 @@
     <li><strong>Backups:</strong> Daily backups are retained for <strong>14 days</strong>, then automatically deleted. After you delete your account, your data may persist in a backup for up to 14 days before being permanently gone.</li>
     <li><strong>Refresh tokens:</strong> Rotated on each use and expire automatically; revocable per-device at any time.</li>
     <li><strong>Password-reset tokens:</strong> Expire after 1 hour.</li>
-    <li><strong>Session cookies (VUT/Moodle/browser):</strong> In-memory only, 25 min (VUT/Moodle) or 24 h (browser) TTL, never persisted.</li>
+    <li><strong>Session cookies (browser):</strong> In-memory only, 24 h TTL, never persisted.</li>
     <li><strong>Anonymous usage stats:</strong> Aggregate daily counts, no user ID, retained indefinitely.</li>
   </ul>
 
@@ -383,7 +371,6 @@
     <li><strong>ElevenLabs</strong> (USA/UK) — SCCs.</li>
     <li><strong>Spotify</strong> (Sweden/EU) — no transfer issue.</li>
     <li><strong>Mapy.cz</strong> (Czech Republic/EU) — no transfer issue.</li>
-    <li><strong>VUT / Moodle</strong> (Czech Republic/EU) — no transfer issue.</li>
     <li><strong>Tavily, Brave, DuckDuckGo, LRCLIB, ntfy.sh</strong> (USA) — SCCs.</li>
     <li><strong>Ollama (self-hosted)</strong> — no transfer if hosted in the EU.</li>
   </ul>

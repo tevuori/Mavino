@@ -1,23 +1,18 @@
 // ===== Feature flags routes =====
-// Per-user subscription tier, app tier assignments, admin global app
-// kill-switch, and admin per-user VUT access grants. Backed by
-// services/features.ts (Setting key/value rows).
+// Per-user subscription tier, app tier assignments, and admin global app
+// kill-switch. Backed by services/features.ts (Setting key/value rows).
 
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "../middleware/auth";
-import { adminMiddleware, adminOrManagerMiddleware } from "../middleware/admin";
-import prisma from "../db/client";
+import { adminMiddleware } from "../middleware/admin";
 import {
   ALL_APP_IDS,
-  VUT_GRANT_APPS,
   UNDISABLEABLE_APPS,
   getAppTiers,
   setAppTier,
   setAppTiers,
-  getVutGrant,
-  setVutGrant,
   getGlobalDisabledApps,
   setGlobalDisabledApps,
   getSubscriptionTier,
@@ -32,7 +27,6 @@ function appCatalog(appTiers: Record<string, AppTier>) {
   return ALL_APP_IDS.map((id) => ({
     id,
     minTier: appTiers[id] ?? "free",
-    requiresGrant: VUT_GRANT_APPS.has(id) ? "vut" : undefined,
     undisableable: UNDISABLEABLE_APPS.has(id),
   }));
 }
@@ -42,15 +36,13 @@ function appCatalog(appTiers: Record<string, AppTier>) {
 /** GET /api/features — current user's feature state. */
 features.get("/", async (c) => {
   const { userId } = c.get("auth");
-  const [subscriptionTier, vutGranted, disabled, appTiers] = await Promise.all([
+  const [subscriptionTier, disabled, appTiers] = await Promise.all([
     getSubscriptionTier(userId),
-    getVutGrant(userId),
     getGlobalDisabledApps(),
     getAppTiers(),
   ]);
   return c.json({
     subscriptionTier,
-    vutGranted,
     disabledApps: Array.from(disabled),
     appTiers,
   });
@@ -105,29 +97,6 @@ admin.put("/tiers/bulk", adminMiddleware, zValidator("json", bulkTierSchema), as
   await setAppTiers(assignments as Record<string, AppTier>);
   const appTiers = await getAppTiers();
   return c.json({ appTiers });
-});
-
-// ----- admin: per-user VUT grants (admin or manager) -----
-
-/** GET /api/features/admin/users/:userId/grants — a user's access grants. */
-admin.get("/users/:userId/grants", adminOrManagerMiddleware, async (c) => {
-  const userId = c.req.param("userId")!;
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
-  if (!user) return c.json({ error: "User not found" }, 404);
-  const vut = await getVutGrant(userId);
-  return c.json({ vut });
-});
-
-const grantSchema = z.object({ vut: z.boolean() });
-
-/** PUT /api/features/admin/users/:userId/grants — set a user's VUT access. */
-admin.put("/users/:userId/grants", adminOrManagerMiddleware, zValidator("json", grantSchema), async (c) => {
-  const userId = c.req.param("userId")!;
-  const { vut } = c.req.valid("json");
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
-  if (!user) return c.json({ error: "User not found" }, 404);
-  await setVutGrant(userId, vut);
-  return c.json({ vut });
 });
 
 features.route("/admin", admin);

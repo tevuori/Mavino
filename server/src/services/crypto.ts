@@ -8,7 +8,7 @@ import * as crypto from "crypto";
 // compromising JWT_SECRET does not also compromise all encrypted credentials.
 // Generate one with: openssl rand -hex 32
 //
-// MIGRATION: If you already have encrypted data (VUT passwords, API keys, etc.)
+// MIGRATION: If you already have encrypted data (API keys, etc.)
 // and want to switch from JWT_SECRET to ENCRYPTION_KEY, you must either:
 //   (a) set ENCRYPTION_KEY to the same value as JWT_SECRET (no re-encryption
 //       needed, but no separation benefit), or

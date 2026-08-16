@@ -4,8 +4,6 @@
 
 import { type ToolDef, paidOnly } from "./plugin";
 import prisma from "../../../db/client";
-import { fetchTimetable, isVutAuthenticated } from "../../../services/vut";
-import { getVutGrant } from "../../../services/features";
 import { isMicrosoftConfiguredFor, listEvents as msListEvents } from "../../../services/microsoft";
 
 // Calendar is a Paid-tier app — all calendar tools are paid-only.
@@ -113,7 +111,7 @@ export const calendarTools: ToolDef[] = paidOnly([
   {
     name: "find_free_slots",
     description:
-      "Find free time slots on a given day, accounting for the user's calendar events and (if connected) VUT timetable classes. Returns available windows of at least the requested duration.",
+      "Find free time slots on a given day, accounting for the user's calendar events. Returns available windows of at least the requested duration.",
     parameters: [
       { name: "date", type: "string", description: "ISO 8601 date (e.g. 2026-07-22)", required: true },
       { name: "durationMinutes", type: "number", description: "Minimum slot length in minutes (default 60)" },
@@ -133,27 +131,6 @@ export const calendarTools: ToolDef[] = paidOnly([
         orderBy: { start: "asc" },
       });
       for (const e of events) busy.push({ start: e.start, end: e.end });
-
-      // Merge VUT classes for the day if authenticated + granted access.
-      if (isVutAuthenticated(userId) && (await getVutGrant(userId))) {
-        try {
-          const slots = await fetchTimetable(userId);
-          const dayIndex = dayStart.getDay();
-          const targetIdx = dayIndex === 0 ? 6 : dayIndex - 1;
-          for (const s of slots) {
-            if (s.dayIndex !== targetIdx) continue;
-            const [sh, sm] = s.startTime.split(":").map(Number);
-            const [eh, em] = s.endTime.split(":").map(Number);
-            const start = new Date(dayStart);
-            start.setUTCHours(sh, sm, 0, 0);
-            const end = new Date(dayStart);
-            end.setUTCHours(eh, em, 0, 0);
-            busy.push({ start, end });
-          }
-        } catch {
-          // ignore VUT errors — just use calendar
-        }
-      }
 
       busy.sort((a, b) => a.start.getTime() - b.start.getTime());
       const free: { start: string; end: string; minutes: number }[] = [];

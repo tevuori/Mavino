@@ -10,13 +10,11 @@ import MobileFocus from "./MobileFocus";
 import MobileFiles from "./MobileFiles";
 import MobileVoice from "./MobileVoice";
 import MobileGrades from "./MobileGrades";
-import MobileVut from "./MobileVut";
 import MobileWhiteboard from "./MobileWhiteboard";
 import MobileBrowser from "./MobileBrowser";
 import MobileNtfy from "./MobileNtfy";
 import MobileSettings from "./MobileSettings";
 import MobileEditor from "./MobileEditor";
-import MobileMoodle from "./MobileMoodle";
 import MobileAtlas from "./MobileAtlas";
 import MobileCrunch from "./MobileCrunch";
 import MobileEcho from "./MobileEcho";
@@ -27,7 +25,7 @@ export type MobileToolPayload = {
   // Study source descriptor — opened from Notes "Study" menu etc.
   study?: {
     mode?: "summarize" | "explain" | "flashcards" | "quiz" | "study_guide" | "study";
-    sourceKind: "note" | "file" | "paste" | "url" | "moodle";
+    sourceKind: "note" | "file" | "paste" | "url";
     sourceId?: string;
     sourceUrl?: string;
     sourceName?: string;
@@ -48,13 +46,11 @@ const SCREENS: Partial<Record<MobileTool, (props: { onClose: () => void; onOpenT
   files: (props) => <MobileFiles {...props} />,
   voice: (props) => <MobileVoice {...props} />,
   grades: (props) => <MobileGrades {...props} />,
-  vut: (props) => <MobileVut {...props} />,
   whiteboard: (props) => <MobileWhiteboard {...props} />,
   browser: (props) => <MobileBrowser {...props} />,
   ntfy: (props) => <MobileNtfy {...props} />,
   settings: (props) => <MobileSettings {...props} />,
   editor: (props) => <MobileEditor {...props} />,
-  moodle: (props) => <MobileMoodle {...props} />,
   atlas: (props) => <MobileAtlas {...props} />,
   crunch: (props) => <MobileCrunch {...props} />,
   echo: (props) => <MobileEcho {...props} />,

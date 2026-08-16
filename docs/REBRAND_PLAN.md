@@ -6,8 +6,8 @@
 ## 1. Why rebrand
 
 Athena started as a "Student OS" but the codebase outgrew that label a long time
-ago. Of the 22 apps in `client/src/apps/registry.tsx`, only ~5 are genuinely
-student-specific (Grades, VUT, Moodle, Study Hub, Flashcards). The rest — Tasks,
+ago. Of the 22 apps in `client/src/apps/registry.tsx`, only ~3 are genuinely
+student-specific (Grades, Study Hub, Flashcards). The rest — Tasks,
 Notes, Files, Calendar, Habits, Reminders, Browser, Voice Notes, Whiteboard,
 Athena AI, Analytics, Pomodoro — are general-purpose personal productivity.
 
@@ -60,7 +60,7 @@ It is the cheapest, highest-leverage part of the whole plan.
 | `README.md` header | `Athena — Student OS` / `productivity dashboard for students` | `Athena — Personal AI OS` / `self-hosted desktop-style assistant for students, freelancers, and self-trackers` |
 | `AGENTS.md:1-3` | `Athena — Student OS` / `desktop-environment-style productivity dashboard for students` | `Athena — Personal AI OS` / `self-hosted desktop-style personal assistant (students, freelancers, self-trackers)` |
 
-The student-specific apps (VUT, Moodle, Grades) keep their existing copy — they
+The student-specific apps (Grades, Study Hub, Flashcards) keep their existing copy — they
 are still student tools, just no longer the *whole* product.
 
 ### 2.2 First-run mode picker
@@ -94,8 +94,6 @@ Suggested default pin sets:
 | Pomodoro | pin | pin | pin |
 | Flashcards | pin | – | – |
 | Grades | pin | – | – |
-| VUT | pin | – | – |
-| Moodle | pin | – | – |
 | Study Hub | pin | – | – |
 | Analytics | pin | pin | pin |
 | Browser | pin | pin | pin |
@@ -118,7 +116,7 @@ categories with section headers:
 
 - **Productivity** — Tasks, Calendar, Notes, Files, Reminders, Browser
 - **Focus & Time** — Pomodoro, Time Tracking *(new)*
-- **Learning** — Study Hub, Flashcards, Grades, VUT, Moodle
+- **Learning** — Study Hub, Flashcards, Grades
 - **Self & Growth** — Habits, Goals *(new)*, Journal *(new)*, Health Log *(new)*,
   Analytics
 - **Money** — Finance *(new)*
@@ -437,7 +435,7 @@ visibility. Promote to a DB column later if it needs to sync across devices.
 - **Profile picker rigidity.** Users won't fit neatly into one persona.
   Mitigation: profiles only set defaults; everything is editable in
   Settings → Profile & Apps.
-- **Student features feeling deprioritized.** Mitigation: keep VUT/Moodle/
+- **Student features feeling deprioritized.** Mitigation: keep
   Grades/Study Hub pinned by default in the Student profile and featured in
   marketing. They are the differentiator, not a relic.
 - **Email integration effort.** MS Graph Mail is real work (token refresh,

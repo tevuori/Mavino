@@ -154,7 +154,7 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
       setInitialSource({ kind: sk, id: p.sourceId });
     } else if (sk === "paste" && typeof p.text === "string") {
       setInitialSource({ kind: "paste", text: p.text });
-    } else if ((sk === "moodle" || sk === "url") && typeof p.sourceUrl === "string") {
+    } else if (sk === "url" && typeof p.sourceUrl === "string") {
       setInitialSource({ kind: sk, url: p.sourceUrl, name: typeof p.sourceName === "string" ? p.sourceName : undefined });
     }
     if (typeof p.appendDeckId === "string" && typeof p.appendDeckName === "string") {

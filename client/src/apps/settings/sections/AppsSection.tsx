@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { LayoutGrid, Loader2, Power, ShieldCheck, KeyRound } from "lucide-react";
+import { LayoutGrid, Loader2, Power, ShieldCheck } from "lucide-react";
 import { featuresAdminApi, type AdminAppEntry } from "../../../services/features";
 import { useFeatures } from "../../../store/features";
 import { APP_MAP } from "../../registry";
@@ -54,9 +54,8 @@ export default function AppsSection() {
 
   const nameFor = (id: string) => (APP_MAP as Record<string, { name: string }>)[id]?.name ?? id;
 
-  const free = apps.filter((a) => a.minTier === "free" && !a.requiresGrant);
-  const paid = apps.filter((a) => (a.minTier === "paid" || a.minTier === "pro") && !a.requiresGrant);
-  const grant = apps.filter((a) => a.requiresGrant === "vut");
+  const free = apps.filter((a) => a.minTier === "free");
+  const paid = apps.filter((a) => a.minTier === "paid" || a.minTier === "pro");
 
   const renderRow = (app: AdminAppEntry) => {
     const isDisabled = disabled.has(app.id);
@@ -69,17 +68,12 @@ export default function AppsSection() {
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
             <span className="truncate">{nameFor(app.id)}</span>
-            {app.requiresGrant === "vut" && (
-              <KeyRound size={12} className="shrink-0 text-amber-500" aria-label="Admin-granted" />
-            )}
             {app.undisableable && (
               <ShieldCheck size={12} className="shrink-0 text-accent" aria-label="Always on" />
             )}
           </p>
           <p className="text-xs text-ink-muted">
-            {app.requiresGrant === "vut"
-              ? "Admin-granted per user"
-              : app.minTier === "free"
+            {app.minTier === "free"
               ? "Free tier"
               : app.minTier === "pro"
               ? "Pro tier"
@@ -112,7 +106,7 @@ export default function AppsSection() {
       <SectionHeader
         icon={<LayoutGrid size={18} />}
         title="App Availability"
-        description="Temporarily disable any app for everyone (global kill switch). Disabled apps disappear from the taskbar, start menu, and command palette for all users. Core apps can be disabled too, except Settings. VUT/Moodle access is granted per user in the Users section."
+        description="Temporarily disable any app for everyone (global kill switch). Disabled apps disappear from the taskbar, start menu, and command palette for all users. Core apps can be disabled too, except Settings."
       />
 
       {loading ? (
@@ -130,11 +124,6 @@ export default function AppsSection() {
             Paid / Pro tier
           </h4>
           <Card className="mb-4 p-0">{paid.map(renderRow)}</Card>
-
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Admin-granted
-          </h4>
-          <Card className="p-0">{grant.map(renderRow)}</Card>
         </>
       )}
 

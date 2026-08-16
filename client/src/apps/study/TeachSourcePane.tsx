@@ -314,7 +314,7 @@ function ViewerPane({ paneId, source, pending, onPendingApplied, onLoadingChange
   );
 }
 
-// ----- browser / moodle URL: proxied iframe + postMessage bridge -----
+// ----- browser URL: proxied iframe + postMessage bridge -----
 
 function BrowserPane({ paneId, source, pending, onPendingApplied, onLoadingChange, onError }: ContentProps) {
   const commands = useShowControl((s) => s.commands);

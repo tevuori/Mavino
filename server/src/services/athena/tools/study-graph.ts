@@ -16,9 +16,9 @@ const rawStudyGraphTools: ToolDef[] = [
       "Build (or reuse a cached) knowledge graph from one or more sources: concepts with definitions and facts, plus typed relationships between them, all cited to the source material. This is the same structured representation the Study Hub uses to derive flashcards, quizzes, summaries, explanations, and study guides — build it once, then reuse the returned graphId for those tools (or pass graphId directly to open_study_hub). Returns a compact overview (concept/relationship counts, top concepts) rather than the full graph — use get_concept_graph for the full structure.",
     destructive: true,
     parameters: [
-      { name: "kind", type: "string", description: "Source kind", enum: ["note", "file", "paste", "url", "moodle"], required: true },
+      { name: "kind", type: "string", description: "Source kind", enum: ["note", "file", "paste", "url"], required: true },
       { name: "id", type: "string", description: "Note id or file id (required for kind note/file)" },
-      { name: "url", type: "string", description: "URL (required for kind url/moodle)" },
+      { name: "url", type: "string", description: "URL (required for kind url)" },
       { name: "text", type: "string", description: "Pasted text (required for kind paste)" },
       { name: "name", type: "string", description: "Optional display name" },
     ],

@@ -54,7 +54,7 @@ function appForSource(
   file?: { name: string; mimeType: string } | null
 ): "notes" | "editor" | "viewer" | "browser" {
   if (kind === "note") return "notes";
-  if (kind === "url" || kind === "moodle") return "browser";
+  if (kind === "url" ) return "browser";
   if (kind === "file" && file) {
     if (isTextFile(file.name, file.mimeType)) return "editor";
     if (isPdfFile(file.name, file.mimeType) || isImageFile(file.mimeType)) return "viewer";
@@ -71,7 +71,7 @@ function payloadForSource(
 ): Record<string, unknown> {
   if (kind === "note") return { noteId: refId };
   if (kind === "file") return { fileId: refId };
-  if (kind === "url" || kind === "moodle") return { url: refId };
+  if (kind === "url" ) return { url: refId };
   return {};
 }
 
@@ -94,7 +94,7 @@ export const teacherTools: ToolDef[] = [
     clientAction: true,
     parameters: [
       { name: "sourceId", type: "string", description: "StudySource id from the session source list" },
-      { name: "kind", type: "string", description: "Source kind (use if no sourceId)", enum: ["note", "file", "url", "moodle"] },
+      { name: "kind", type: "string", description: "Source kind (use if no sourceId)", enum: ["note", "file", "url"] },
       { name: "refId", type: "string", description: "Note id, file id, or URL (use if no sourceId)" },
       { name: "highlightText", type: "string", description: "Text to scroll to and highlight (first occurrence)" },
       { name: "highlightLine", type: "number", description: "1-based line number to scroll to / start of line-range highlight" },
@@ -359,6 +359,6 @@ export const teacherTools: ToolDef[] = [
 /** Build a SourceDescriptor from a kind + refId (+ optional name). */
 function descriptorFor(kind: SourceKind, refId: string, name: string): { kind: SourceKind; id?: string; url?: string; name?: string } {
   if (kind === "note" || kind === "file") return { kind, id: refId, name };
-  if (kind === "url" || kind === "moodle") return { kind, url: refId, name };
+  if (kind === "url" ) return { kind, url: refId, name };
   return { kind: "paste", name };
 }

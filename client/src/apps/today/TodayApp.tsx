@@ -1,5 +1,5 @@
 // ===== Today — daily study dashboard =====
-// Aggregates today's VUT classes, due tasks, due flashcards (all decks),
+// Aggregates due tasks, due flashcards (all decks),
 // and today's Pomodoro focus stats into a single view. Each card has a
 // one-click action that opens the relevant app. Reuses existing client
 // services — no new backend.
@@ -29,13 +29,12 @@ import { useWindows, type AppId } from "../../store/windows";
 import { useAuth } from "../../store/auth";
 import { tasksApi, PRIORITY_LABELS, PRIORITY_COLORS } from "../../services/tasks";
 import { flashcardsApi } from "../../services/flashcards";
-import { vutApi } from "../../services/vut";
 import { calendarApi } from "../../services/calendar";
 import { habitsApi } from "../../services/habits";
 import { studySourcesApi } from "../../services/study-sources";
 import { studyChatApi } from "../../services/study-chat";
 import { studyPodcastsApi } from "../../services/study-podcasts";
-import type { Task, TaskPriority, VutTimetableSlot, CalendarEvent, Habit, HabitStats } from "../../types";
+import type { Task, TaskPriority, CalendarEvent, Habit, HabitStats } from "../../types";
 
 const DAYS_FULL = ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"];
 
@@ -50,11 +49,6 @@ interface PomodoroStats {
   completedFocus: number;
   totalFocusMinutes: number;
   date: string;
-}
-
-interface VutStatus {
-  configured: boolean;
-  authenticated: boolean;
 }
 
 function todayKey(): string {
@@ -97,8 +91,6 @@ export default function TodayApp() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [dueDecks, setDueDecks] = useState<DueDeck[]>([]);
   const [totalDue, setTotalDue] = useState(0);
-  const [todayClasses, setTodayClasses] = useState<VutTimetableSlot[]>([]);
-  const [vutStatus, setVutStatus] = useState<VutStatus | null>(null);
   const [pomoStats, setPomoStats] = useState<PomodoroStats>(loadPomodoroStats);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [todayEvents, setTodayEvents] = useState<CalendarEvent[]>([]);
@@ -110,11 +102,6 @@ export default function TodayApp() {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const today = new Date().getDay();
-    const todayIndex = today === 0 ? 6 : today - 1;
-
-    // VUT status first to decide whether to fetch timetable.
-    const statusPromise = vutApi.status().catch(() => null);
 
     // Today's calendar range.
     const dayStart = new Date();
@@ -122,10 +109,9 @@ export default function TodayApp() {
     const dayEnd = new Date();
     dayEnd.setHours(23, 59, 59, 999);
 
-    const [tasksRes, dueRes, statusRes, feedRes, habitsRes, habitStatsRes, sourcesRes, chatsRes, podcastsRes] = await Promise.all([
+    const [tasksRes, dueRes, feedRes, habitsRes, habitStatsRes, sourcesRes, chatsRes, podcastsRes] = await Promise.all([
       tasksApi.list().catch(() => null),
       flashcardsApi.getDue().catch(() => null),
-      statusPromise,
       calendarApi.feed(dayStart.toISOString(), dayEnd.toISOString()).catch(() => null),
       habitsApi.list().catch(() => null),
       habitsApi.stats().catch(() => null),
@@ -154,20 +140,6 @@ export default function TodayApp() {
     if (sourcesRes?.sources) setSourceCount(sourcesRes.sources.length);
     if (chatsRes?.chats) setChatCount(chatsRes.chats.length);
     if (podcastsRes?.podcasts) setPodcastCount(podcastsRes.podcasts.length);
-    const st = statusRes as VutStatus | null;
-    setVutStatus(st);
-    if (st?.authenticated) {
-      const tt = await vutApi.timetable().catch(() => null);
-      if (tt?.slots) {
-        setTodayClasses(
-          tt.slots
-            .filter((s) => s.dayIndex === todayIndex)
-            .sort((a, b) => a.startTime.localeCompare(b.startTime))
-        );
-      }
-    } else {
-      setTodayClasses([]);
-    }
     setPomoStats(loadPomodoroStats());
     setLastRefresh(new Date());
     setLoading(false);
@@ -259,51 +231,6 @@ export default function TodayApp() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Today's classes */}
-          <SectionCard
-            icon={<GraduationCap size={16} />}
-            title="Today's Classes"
-            accent="text-sky-500"
-            onOpen={() => openApp("vut", "VUT", "GraduationCap")}
-            openLabel="Open VUT"
-            loading={loading}
-            empty={
-              vutStatus && !vutStatus.authenticated
-                ? "VUT not connected — open VUT to log in"
-                : "No classes today 🎉"
-            }
-            emptyAction={
-              vutStatus && !vutStatus.authenticated
-                ? { label: "Connect", onClick: () => openApp("vut", "VUT", "GraduationCap") }
-                : undefined
-            }
-          >
-            {todayClasses.map((slot, i) => (
-              <div key={i} className="flex items-start gap-2.5 py-1.5">
-                <div
-                  className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ background: slot.color || "#0ea5e9" }}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">{slot.courseName}</p>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-ink-muted">
-                    <span className="flex items-center gap-1">
-                      <Clock size={10} />
-                      {slot.startTime}–{slot.endTime}
-                    </span>
-                    {slot.room && (
-                      <span className="flex items-center gap-1">
-                        <MapPin size={10} />
-                        {slot.room}
-                      </span>
-                    )}
-                    {slot.type && <span className="rounded bg-surface-3 px-1.5 py-0.5">{slot.type}</span>}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </SectionCard>
-
           {/* Due tasks */}
           <SectionCard
             icon={<CheckSquare size={16} />}

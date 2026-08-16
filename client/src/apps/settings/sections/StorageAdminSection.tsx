@@ -142,7 +142,6 @@ export default function StorageAdminSection() {
       <Card className="mb-3">
         <p className="mb-3 text-xs text-ink-muted">
           Quotas count on-disk file sizes (uploads, text files, voice recordings, lecture videos and extracted slides).
-          Moodle-managed virtual files don't count — they're streamed from the integration.
         </p>
 
         {!quotas ? (

@@ -4,11 +4,8 @@
 //   - Each user has a subscription tier derived from their role.
 //   - Apps below the user's tier are fully accessible; apps above are
 //     shown in preview mode (the client renders a paywall overlay).
-//   - Per-user "vut" grant: admin-gated access to the VUT + Moodle apps
-//     (and their API routes). Moodle rides on the VUT SSO session, so a
-//     single grant covers both.
 //   - Global "disabled apps" kill switch (admin): temporarily disables an
-//     app for everyone regardless of tier/grant. Settings is never disableable.
+//     app for everyone regardless of tier. Settings is never disableable.
 //
 // All flags are stored in the Setting key/value table. Global flags use
 // userId = null; per-user flags use the user's id. The app tier classification
@@ -20,9 +17,6 @@ export type AppTier = "free" | "paid" | "pro";
 
 /** The result of an app accessibility check. */
 export type AppAccess = "full" | "preview" | "hidden";
-
-/** Apps that require an admin-granted "vut" access flag (VUT + Moodle). */
-export const VUT_GRANT_APPS = new Set<string>(["vut", "moodle"]);
 
 /** Settings can never be disabled (would lock the user out of configuration). */
 export const UNDISABLEABLE_APPS = new Set<string>(["settings"]);
@@ -64,7 +58,6 @@ const DEFAULT_APP_TIERS: Record<string, AppTier> = {
   bridge: "pro",
   scribe: "pro",
   circle: "pro",
-  // VUT + Moodle are grant-based, not tier-based
 };
 
 /** Full catalog of app ids the admin can toggle. */
@@ -81,7 +74,6 @@ export const ALL_APP_IDS: string[] = [
   "bridge",
   "scribe",
   "circle",
-  "vut", "moodle",
 ];
 
 const TIER_RANK: Record<AppTier, number> = { free: 0, paid: 1, pro: 2 };
@@ -154,25 +146,6 @@ async function persistAppTierOverrides(overrides: Record<string, AppTier>): Prom
   }
 }
 
-// ----- per-user VUT grant (admin-controlled) -----
-
-const VUT_GRANT_KEY = "vut.access";
-
-export async function getVutGrant(userId: string): Promise<boolean> {
-  const s = await prisma.setting.findFirst({ where: { userId, key: VUT_GRANT_KEY } });
-  return s?.value === "true";
-}
-
-export async function setVutGrant(userId: string, enabled: boolean): Promise<void> {
-  const value = enabled ? "true" : "false";
-  const existing = await prisma.setting.findFirst({ where: { userId, key: VUT_GRANT_KEY } });
-  if (existing) {
-    await prisma.setting.update({ where: { id: existing.id }, data: { value } });
-  } else {
-    await prisma.setting.create({ data: { userId, key: VUT_GRANT_KEY, value } });
-  }
-}
-
 // ----- global disabled-apps kill switch (admin) -----
 
 const DISABLED_APPS_KEY = "apps.disabled";
@@ -225,16 +198,13 @@ export async function getSubscriptionTier(userId: string): Promise<AppTier> {
 
 /**
  * Whether `appId` is accessible for `userId`, combining the global kill
- * switch, the per-user VUT grant, and the tier system.
+ * switch and the tier system.
  * Returns "full" (unlocked), "preview" (locked but visible), or "hidden".
  */
 export async function getAppAccessFor(userId: string, appId: string): Promise<AppAccess> {
   if (UNDISABLEABLE_APPS.has(appId)) return "full";
   const disabled = await getGlobalDisabledApps();
   if (disabled.has(appId)) return "hidden";
-  if (VUT_GRANT_APPS.has(appId)) {
-    return (await getVutGrant(userId)) ? "full" : "hidden";
-  }
   const appTier = await getAppTier(appId);
   const userTier = await getSubscriptionTier(userId);
   if (TIER_RANK[userTier] >= TIER_RANK[appTier]) return "full";

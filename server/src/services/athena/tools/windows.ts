@@ -8,7 +8,7 @@ import type { ToolDef, ClientWindowInfo } from "./plugin";
 /** Valid app ids that can be opened. */
 const VALID_APPS = [
   "notes", "tasks", "files", "music", "settings", "terminal",
-  "pomodoro", "flashcards", "grades", "vut", "editor", "viewer", "athena",
+  "pomodoro", "flashcards", "grades", "editor", "viewer", "athena",
   "browser",
 ];
 
@@ -16,7 +16,7 @@ const VALID_APPS = [
 const APP_NAMES: Record<string, string> = {
   notes: "Notes", tasks: "Tasks", files: "Files", music: "Music",
   settings: "Settings", terminal: "Terminal", pomodoro: "Pomodoro",
-  flashcards: "Flashcards", grades: "Grades", vut: "VUT Studis",
+  flashcards: "Flashcards", grades: "Grades",
   editor: "Code Editor", viewer: "File Viewer", athena: "Mavino",
   browser: "Browser",
 };
@@ -25,7 +25,7 @@ export const windowTools: ToolDef[] = [
   {
     name: "open_app",
     description:
-      "Open a new app window on the user's desktop. Valid app ids: notes, tasks, files, music, settings, terminal, pomodoro, flashcards, grades, vut, editor, viewer, athena. For side-by-side layouts, provide x/y/width/height. Example: open notes at left half (x=0,y=0,width=960,height=700) and tasks at right half (x=960,y=0,width=960,height=700). If no position is given, the window opens at a default cascaded position.",
+      "Open a new app window on the user's desktop. Valid app ids: notes, tasks, files, music, settings, terminal, pomodoro, flashcards, grades, editor, viewer, athena. For side-by-side layouts, provide x/y/width/height. Example: open notes at left half (x=0,y=0,width=960,height=700) and tasks at right half (x=960,y=0,width=960,height=700). If no position is given, the window opens at a default cascaded position.",
     clientAction: true,
     parameters: [
       {

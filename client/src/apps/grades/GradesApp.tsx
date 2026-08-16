@@ -2,11 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GraduationCap, Plus, Trash2, ChevronDown, ChevronRight, Award, TrendingUp,
-  RefreshCw, Download,
 } from "lucide-react";
 import { gradesApi, coursePercentage, percentageToLetter, letterToGpa, computeGPA, scoreColor } from "../../services/grades";
-import { vutApi } from "../../services/vut";
-import type { Course, Assignment, VutGrade } from "../../types";
+import type { Course, Assignment } from "../../types";
 
 const COURSE_COLORS = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#8b5cf6", "#ef4444"];
 
@@ -33,8 +31,6 @@ export default function GradesApp() {
   const [aMax, setAMax] = useState("100");
   const [aWeight, setAWeight] = useState("1");
   const [aCategory, setACategory] = useState("General");
-  const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   const loadSemesters = useCallback(async () => {
     try {
@@ -105,54 +101,6 @@ export default function GradesApp() {
     } catch (e) { setError((e as Error).message); }
   };
 
-  const syncFromVut = async () => {
-    setSyncing(true);
-    setSyncMsg(null);
-    try {
-      const { grades, semesters: vutSemesters } = await vutApi.grades();
-      let imported = 0;
-      let updated = 0;
-      for (const g of grades) {
-        if (!g.courseName) continue;
-        const semester = g.semester || vutSemesters[0] || "";
-        const { courses: existing } = await gradesApi.listCourses(semester || undefined);
-        let course = existing.find((c) => c.name === g.courseName);
-        if (!course) {
-          const { course: newCourse } = await gradesApi.createCourse({
-            name: g.courseName,
-            code: g.courseCode,
-            semester,
-            credits: parseInt(g.credits) || 3,
-            color: COURSE_COLORS[imported % COURSE_COLORS.length],
-          });
-          course = newCourse;
-          imported++;
-        }
-        // Create an assignment with the official VUT grade if not present.
-        const scoreNum = parseFloat(g.score) || 0;
-        const gradeName = `VUT Official Grade (${g.completionType || "Assessment"})`;
-        const hasGrade = course.assignments?.some((a) => a.name === gradeName);
-        if (!hasGrade) {
-          await gradesApi.createAssignment(course.id, {
-            name: gradeName,
-            score: scoreNum,
-            maxScore: 100,
-            weight: 1,
-            category: "Exam",
-          });
-          updated++;
-        }
-      }
-      setSyncMsg(`Synced ${imported} new course(s), ${updated} grade(s) from VUT.`);
-      loadSemesters();
-      loadCourses();
-    } catch (e) {
-      setSyncMsg(`Sync failed: ${(e as Error).message}`);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   return (
     <div className="flex h-full flex-col bg-surface">
       {/* Header */}
@@ -174,15 +122,6 @@ export default function GradesApp() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={syncFromVut}
-            disabled={syncing}
-            className="flex items-center gap-1 rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:bg-surface-2 hover:text-ink disabled:opacity-40"
-            title="Sync grades from VUT Studis"
-          >
-            {syncing ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
-            <span className="@3xl:inline hidden">Sync from VUT</span>
-          </button>
-          <button
             onClick={() => setShowCourseForm(true)}
             className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white transition hover:bg-accent/90"
           >
@@ -192,7 +131,6 @@ export default function GradesApp() {
       </div>
 
       {error && <p className="px-4 py-2 text-xs text-red-400">{error}</p>}
-      {syncMsg && <p className="px-4 py-2 text-xs text-accent">{syncMsg}</p>}
 
       {/* GPA summary */}
       {courses.length > 0 && (

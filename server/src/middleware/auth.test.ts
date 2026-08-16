@@ -6,7 +6,7 @@ import { Hono } from "hono";
  *
  * The default authMiddleware should NOT accept ?token= query parameters
  * (tokens in URLs leak via logs/referrers). Only authMiddlewareWithQuery
- * (used by file download, browser/vut proxy routes) should accept them.
+ * (used by file download, browser proxy routes) should accept them.
  */
 
 // Simulate the auth middleware logic (without JWT verification) to test

@@ -42,7 +42,6 @@ const SettingsApp = lazyImport(() => import("./settings/SettingsApp"));
 const PomodoroApp = lazyImport(() => import("./pomodoro/PomodoroApp"));
 const FlashcardsApp = lazyImport(() => import("./flashcards/FlashcardsApp"));
 const GradesApp = lazyImport(() => import("./grades/GradesApp"));
-const VUTApp = lazyImport(() => import("./vut/VUTApp"));
 const EditorApp = lazyImport(() => import("./editor/EditorApp"));
 const ViewerApp = lazyImport(() => import("./viewer/ViewerApp"));
 const AthenaApp = lazyImport(() => import("./athena/AthenaApp"));
@@ -56,7 +55,6 @@ const VoiceApp = lazyImport(() => import("./voice/VoiceApp"));
 const BrowserApp = lazyImport(() => import("./browser/BrowserApp"));
 const RemindersApp = lazyImport(() => import("./reminders/RemindersApp"));
 const AnalyticsApp = lazyImport(() => import("./analytics/AnalyticsApp"));
-const MoodleApp = lazyImport(() => import("./moodle/MoodleApp"));
 const MapsApp = lazyImport(() => import("./maps/MapsApp"));
 const PlansApp = lazyImport(() => import("./plans/PlansApp"));
 const MarketplaceApp = lazyImport(() => import("./marketplace/MarketplaceApp"));
@@ -80,9 +78,6 @@ export interface AppDefinition {
    *  are always available; "paid"/"pro" apps show a lock badge + paywall
    *  preview for lower-tier users. Mirrors server/services/features.ts. */
   minTier?: "free" | "paid" | "pro";
-  /** When set, the app requires an admin-granted access flag (e.g. "vut" for
-   *  VUT + Moodle, which ride on the VUT SSO session). */
-  requiresGrant?: "vut";
   /** On mobile, render the app full-bleed without the standard MobileAppFrame
    *  header (the app provides its own chrome). Used by Viewer, Whiteboard. */
   fullscreenOnMobile?: boolean;
@@ -131,10 +126,6 @@ export const APPS: AppDefinition[] = [
   { id: "bridge", name: "Concept Bridge", icon: "Link2", component: BridgeApp, pinnedToDesktop: true, minTier: "pro" },
   { id: "scribe", name: "Scribe", icon: "PenLine", component: ScribeApp, pinnedToDesktop: true, minTier: "pro" },
   { id: "circle", name: "Circle", icon: "Users", component: CircleApp, pinnedToDesktop: true, minTier: "pro" },
-
-  // ----- Admin-granted (VUT SSO → VUT + Moodle) -----
-  { id: "vut", name: "VUT", icon: "GraduationCap", component: VUTApp, pinnedToDesktop: true, requiresGrant: "vut" },
-  { id: "moodle", name: "Moodle", icon: "GraduationCap", component: MoodleApp, pinnedToDesktop: true, requiresGrant: "vut" },
 ];
 
 export const APP_MAP: Record<AppId, AppDefinition> = Object.fromEntries(

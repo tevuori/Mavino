@@ -1,13 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plug, Music, GraduationCap, Calendar, BookOpen, Loader2, LogOut, RefreshCw, ExternalLink, Bell, Map as MapIcon, Lock } from "lucide-react";
+import { Plug, Music, Calendar, Loader2, LogOut, RefreshCw, ExternalLink, Bell, Map as MapIcon } from "lucide-react";
 import { spotifyApi, type SpotifyCredentialStatus } from "../../../services/spotify";
-import { vutApi } from "../../../services/vut";
 import { microsoftApi, type MicrosoftCredentialStatus } from "../../../services/microsoft";
-import { moodleApi } from "../../../services/moodle";
 import { ntfyApi } from "../../../services/ntfy";
 import { mapyApi } from "../../../services/maps";
 import { useWindows } from "../../../store/windows";
-import { useFeatures } from "../../../store/features";
 import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass } from "../ui";
 
 export default function IntegrationsSection() {
@@ -19,9 +16,7 @@ export default function IntegrationsSection() {
         description="Connect external services with your own credentials. Each user configures these independently."
       />
       <SpotifyCard />
-      <VutCard />
       <MicrosoftCard />
-      <MoodleCard />
       <NtfyCard />
       <MapyCard />
     </section>
@@ -201,130 +196,6 @@ function SpotifyCard() {
         use the Authorization Code flow with <code className="text-ink">offline_access</code> scope to get a refresh token.
         Credentials are encrypted (AES-256-GCM) and stored only on the server.
       </p>
-    </Card>
-  );
-}
-
-function VutCard() {
-  const vutGranted = useFeatures((s) => s.vutGranted);
-  const [status, setStatus] = useState<{ configured: boolean; username?: string; authenticated: boolean } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [u, setU] = useState("");
-  const [p, setP] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
-  const [err, setErr] = useState(false);
-
-  const refresh = useCallback(async () => {
-    try {
-      const s = await vutApi.status();
-      setStatus(s);
-      setU(s.username ?? "");
-    } catch {
-      setStatus({ configured: false, authenticated: false });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (vutGranted) void refresh();
-  }, [refresh, vutGranted]);
-
-  const connect = async () => {
-    if (!u.trim() || !p) return;
-    setBusy(true);
-    setErr(false);
-    setMsg(null);
-    try {
-      await vutApi.login(u.trim(), p);
-      setP("");
-      await refresh();
-      setMsg("VUT connected.");
-    } catch (e) {
-      setErr(true);
-      setMsg(e instanceof Error ? e.message : "Login failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const disconnect = async () => {
-    if (!confirm("Remove stored VUT credentials?")) return;
-    setBusy(true);
-    setErr(false);
-    setMsg(null);
-    try {
-      await vutApi.deleteCredentials();
-      await refresh();
-      setMsg("VUT credentials removed.");
-    } catch (e) {
-      setErr(true);
-      setMsg(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Card className="mb-3">
-      <IntegrationRow
-        icon={<GraduationCap size={18} />}
-        name="VUT Studis"
-        description="Brno University of Technology — grades, timetable, subject updates. Also enables Moodle."
-        pill={
-          vutGranted ? (
-            <StatusPill
-              on={!!status?.configured}
-              onLabel={status?.username ? `Linked (${status.username})` : "Linked"}
-              offLabel="Not linked"
-            />
-          ) : (
-            <StatusPill on={false} onLabel="" offLabel="Not enabled" />
-          )
-        }
-      />
-      {!vutGranted ? (
-        <div className="mt-3 flex items-start gap-2 rounded-lg border border-edge bg-surface-2 p-3 text-xs text-ink-muted">
-          <Lock size={14} className="mt-0.5 shrink-0 text-amber-500" />
-          <span>
-            VUT &amp; Moodle integration is not enabled for your account. An administrator must grant
-            you access before you can connect.
-          </span>
-        </div>
-      ) : status?.configured ? (
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            onClick={disconnect}
-            disabled={busy}
-            className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-red-500 hover:text-white disabled:opacity-40"
-          >
-            <LogOut size={14} /> Disconnect
-          </button>
-          {busy && <Loader2 size={14} className="animate-spin text-ink-muted" />}
-        </div>
-      ) : (
-        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-          <input
-            value={u}
-            onChange={(e) => setU(e.target.value)}
-            placeholder="VUT username (xlogin00)"
-            className={inputClass}
-          />
-          <input
-            type="password"
-            value={p}
-            onChange={(e) => setP(e.target.value)}
-            placeholder="Password"
-            className={inputClass}
-          />
-          <button
-            onClick={connect}
-            disabled={busy || !u.trim() || !p}
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm text-accent-fg hover:opacity-90 disabled:opacity-40"
-          >
-            {busy ? <Loader2 size={14} className="animate-spin" /> : <Plug size={14} />} Connect
-          </button>
-        </div>
-      )}
-      <MsgBox msg={msg} error={err} />
     </Card>
   );
 }
@@ -562,86 +433,6 @@ function MicrosoftCard() {
         to "Personal Microsoft accounts only" and use <code className="text-ink">consumers</code> as the tenant.
         Credentials are encrypted (AES-256-GCM).
       </p>
-    </Card>
-  );
-}
-
-function MoodleCard() {
-  const vutGranted = useFeatures((s) => s.vutGranted);
-  const [status, setStatus] = useState<{ configured: boolean; authenticated: boolean } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [err, setErr] = useState(false);
-
-  const refresh = useCallback(async () => {
-    try {
-      const s = await moodleApi.status();
-      setStatus({ configured: s.configured, authenticated: s.authenticated });
-    } catch {
-      setStatus({ configured: false, authenticated: false });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (vutGranted) void refresh();
-  }, [refresh, vutGranted]);
-
-  const login = async () => {
-    setBusy(true);
-    setErr(false);
-    setMsg(null);
-    try {
-      await moodleApi.login();
-      await refresh();
-      setMsg("Moodle authenticated.");
-    } catch (e) {
-      setErr(true);
-      setMsg(e instanceof Error ? e.message : "Login failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Card>
-      <IntegrationRow
-        icon={<BookOpen size={18} />}
-        name="Moodle (VUT)"
-        description="Browse course materials. Reuses your VUT credentials — link VUT first."
-        pill={
-          vutGranted ? (
-            <StatusPill
-              on={!!status?.authenticated}
-              onLabel="Authenticated"
-              offLabel={status?.configured ? "Linked, not signed in" : "Needs VUT"}
-            />
-          ) : (
-            <StatusPill on={false} onLabel="" offLabel="Not enabled" />
-          )
-        }
-      />
-      {!vutGranted ? (
-        <div className="mt-3 flex items-start gap-2 rounded-lg border border-edge bg-surface-2 p-3 text-xs text-ink-muted">
-          <Lock size={14} className="mt-0.5 shrink-0 text-amber-500" />
-          <span>
-            Moodle access requires VUT integration, which is not enabled for your account. An
-            administrator must grant you access first.
-          </span>
-        </div>
-      ) : (
-        status?.configured && !status.authenticated && (
-          <div className="mt-3 flex items-center gap-2">
-            <button
-              onClick={login}
-              disabled={busy}
-              className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm text-accent-fg hover:opacity-90 disabled:opacity-40"
-            >
-              {busy ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />} Sign in to Moodle
-            </button>
-          </div>
-        )
-      )}
-      <MsgBox msg={msg} error={err} />
     </Card>
   );
 }

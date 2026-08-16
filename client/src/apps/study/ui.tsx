@@ -79,12 +79,11 @@ const SOURCE_ICONS: Record<string, typeof FileText> = {
   note: FileText,
   file: FileIcon,
   paste: ClipboardPaste,
-  moodle: GraduationCap,
   url: Link2,
 };
 
 /**
- * Shows a pre-selected source (e.g. from Moodle app "Summarize" button) as a
+ * Shows a pre-selected source as a
  * card with an option to dismiss it and go back to manual source selection.
  */
 export function PreselectedSource({

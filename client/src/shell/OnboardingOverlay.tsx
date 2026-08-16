@@ -323,8 +323,8 @@ function StepContent({ stepId, name, onNameChange, onSubmitName, geminiSaveRef }
         icon={<Plug size={20} />}
         title="Connect External Services"
         section="integrations"
-        description="Each user configures their own integrations independently. Connect Spotify for the Music Widget, VUT Studis for grades and timetable, Microsoft Calendar for sync, and Ntfy for push notifications."
-        tips={["Spotify powers the Music Widget & Chill mode", "VUT integration also enables Moodle access", "Ntfy lets Mavino send you push notifications and you can message Mavino from your phone"]}
+        description="Each user configures their own integrations independently. Connect Spotify for the Music Widget, Microsoft Calendar for sync, and Ntfy for push notifications."
+        tips={["Spotify powers the Music Widget & Chill mode", "Ntfy lets Mavino send you push notifications and you can message Mavino from your phone"]}
       />;
     case "shortcuts":
       return <ShortcutsStep />;

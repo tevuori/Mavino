@@ -1,5 +1,5 @@
 // ===== Study Hub: source library routes =====
-// Persistent StudySource entities (note/file/pdf/paste/moodle/url with cached
+// Persistent StudySource entities (note/file/pdf/paste/url with cached
 // extracted text) that grounded Q&A, podcasts, and cited study materials
 // reference. Mounted at /api/study/sources.
 
@@ -20,7 +20,7 @@ const sources = new Hono();
 sources.use("*", authMiddleware);
 
 const sourceSchema = z.object({
-  kind: z.enum(["note", "file", "paste", "moodle", "url"]),
+  kind: z.enum(["note", "file", "paste", "url"]),
   id: z.string().optional(),
   text: z.string().optional(),
   url: z.string().optional(),
@@ -97,7 +97,7 @@ sources.post("/:id/refresh", async (c) => {
   const descriptor: SourceDescriptor = {
     kind: s.kind as SourceKind,
     id: s.kind === "note" || s.kind === "file" ? s.refId : undefined,
-    url: s.kind === "url" || s.kind === "moodle" ? s.refId : undefined,
+    url: s.kind === "url" ? s.refId : undefined,
     name: s.name,
   };
   try {

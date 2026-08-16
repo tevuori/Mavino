@@ -100,7 +100,6 @@ export async function getUserStorageUsage(userId: string): Promise<number> {
     where: {
       userId,
       storageKey: { not: "" },
-      source: { not: "moodle" },
     },
     _sum: { size: true },
   });

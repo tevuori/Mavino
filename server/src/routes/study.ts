@@ -40,7 +40,7 @@ const study = new Hono();
 study.use("*", authMiddleware);
 
 const sourceSchema = z.object({
-  kind: z.enum(["note", "file", "paste", "moodle", "url"]),
+  kind: z.enum(["note", "file", "paste", "url"]),
   id: z.string().optional(),
   text: z.string().optional(),
   url: z.string().optional(),

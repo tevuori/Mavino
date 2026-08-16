@@ -69,7 +69,6 @@ analytics.get("/overview", ...adminGuard, async (c) => {
       prisma.spotifyCredential.count(),
       prisma.microsoftCredential.count(),
       prisma.aiCredential.count(),
-      prisma.vutCredentials.count(),
       prisma.ntfyConfig.count(),
       prisma.proactiveAlertConfig.count({ where: { enabled: true } }),
       prisma.ttsCredential.count(),
@@ -132,7 +131,7 @@ analytics.get("/overview", ...adminGuard, async (c) => {
   }
 
   const [
-    spotifyUsers, msUsers, aiUsers, vutUsers, ntfyUsers, proactiveUsers, ttsUsers,
+    spotifyUsers, msUsers, aiUsers, ntfyUsers, proactiveUsers, ttsUsers,
   ] = adoption;
   const [
     notes, tasks, tasksDone, tasksInProgress, tasksTodo, files, decks, cards,
@@ -153,7 +152,6 @@ analytics.get("/overview", ...adminGuard, async (c) => {
       spotify: spotifyUsers,
       microsoft: msUsers,
       ai: aiUsers,
-      vut: vutUsers,
       ntfy: ntfyUsers,
       proactiveAlerts: proactiveUsers,
       tts: ttsUsers,

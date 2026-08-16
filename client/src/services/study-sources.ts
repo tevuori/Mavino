@@ -1,5 +1,5 @@
 // ===== Study Hub: source library API client =====
-// Persistent StudySource entities (note/file/pdf/paste/moodle/url with cached
+// Persistent StudySource entities (note/file/pdf/paste/url with cached
 // extracted text) used by grounded Q&A, podcasts, and cited study materials.
 
 import { api } from "./api";
@@ -8,7 +8,7 @@ import type { SourceDescriptor } from "./study";
 export interface StudySource {
   id: string;
   name: string;
-  kind: "note" | "file" | "paste" | "moodle" | "url";
+  kind: "note" | "file" | "paste" | "url";
   refId: string;
   truncated: boolean;
   charCount: number;

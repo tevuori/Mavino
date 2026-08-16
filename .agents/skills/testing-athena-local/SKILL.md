@@ -25,7 +25,7 @@ link in its top-right corner before testing the desktop.
 
 Notes:
 - No API keys are required for shell/branding/UI testing. Spotify / Microsoft / OpenAI /
-  Brave / Moodle-VUT features need the env vars listed in `AGENTS.md` and will be
+  Brave features need the env vars listed in `AGENTS.md` and will be
   unavailable without them.
 - `GET /api/health` does not exist — don't use it as a readiness probe. Check that
   `http://localhost:5173/` returns 200 and that `/tmp` dev log shows

@@ -236,7 +236,7 @@ const rawStudyTools: ToolDef[] = [
         description: "Preselect a Study Hub mode",
         enum: ["home", "chat", "teach", "podcast", "graph", "flashcards", "summarize", "quiz", "explain", "study_guide", "syllabus", "recent"],
       },
-      { name: "sourceKind", type: "string", description: "Preselect source kind", enum: ["note", "file", "paste", "url", "moodle"] },
+      { name: "sourceKind", type: "string", description: "Preselect source kind", enum: ["note", "file", "paste", "url"] },
       { name: "sourceId", type: "string", description: "Preselected note id or file id" },
       { name: "chatId", type: "string", description: "Deep-link to a specific Study Chat (from start_study_chat or list_study_chats)" },
       { name: "podcastId", type: "string", description: "Deep-link to a specific podcast (from generate_podcast or list_podcasts)" },

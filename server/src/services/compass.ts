@@ -251,23 +251,12 @@ export async function addPaper(
     });
     if (!file) throw new Error("File not found");
     if (!title) title = file.name.replace(/\.[^.]+$/, "");
-    if (!url) url = file.externalUrl ?? "";
     // Extract text from the file.
     if (isPdfFile(file.name, file.mimeType)) {
       if (file.storageKey) {
         const absPath = path.join(UPLOAD_DIR, file.storageKey);
         const buf = await readFile(absPath);
         fullText = await extractPdfText(buf);
-      } else if (file.externalUrl) {
-        // Moodle-managed PDF — fetch via the fetcher (no VUT session here;
-        // for public URLs this works, for protected ones the user should
-        // download first). Best-effort.
-        try {
-          const page = await fetchUrl(file.externalUrl, MAX_PAPER_CHARS);
-          fullText = page.content;
-        } catch {
-          fullText = "";
-        }
       }
     } else {
       // Text file — read directly.

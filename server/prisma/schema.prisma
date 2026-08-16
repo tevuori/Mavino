@@ -36,7 +36,6 @@ model User {
   lyricsCache LyricsCache[]
   flashcardDecks FlashcardDeck[]
   courses     Course[]
-  vutCreds    VutCredentials?
   aiCred      AiCredential?
   workspaces  Workspace[]
   taskWorkspaces TaskWorkspace[]
@@ -67,7 +66,6 @@ model User {
   flashcardReviews FlashcardReview[]
   gamificationState GamificationState?
   studyHighlights   StudyHighlight[]
-  moodleSyncs       MoodleSync[]
   mapyCredentials   MapyCredentials?
   trips             Trip[]
   hikingTours       HikingTour[]
@@ -458,15 +456,7 @@ model VFile {
   name       String
   mimeType   String   @default("application/octet-stream")
   size       Int      @default(0)
-  storageKey String   // relative path under uploads/ (empty for external/virtual files)
-  // When set, the file's content is streamed from this external URL on demand
-  // (e.g. a Moodle resource) instead of being read from uploads/. Used together
-  // with `source` to mark the file as managed by an integration.
-  externalUrl String?
-  // Origin of the file: "manual" (user upload/text), "moodle" (synced virtual file).
-  source     String   @default("manual")
-  // Integration-specific reference id (e.g. Moodle activity id) for dedupe/sync.
-  sourceRef  String   @default("")
+  storageKey String   // relative path under uploads/
   folderId   String?
   folder     VFolder? @relation("VFolderFiles", fields: [folderId], references: [id], onDelete: SetNull)
   userId     String
@@ -479,7 +469,6 @@ model VFile {
   @@index([userId, folderId])
   @@index([userId, starred])
   @@index([userId, lastOpenedAt])
-  @@index([userId, source, sourceRef])
 }
 
 model LyricsCache {
@@ -579,18 +568,6 @@ model Assignment {
   updatedAt  DateTime @updatedAt
 
   @@index([courseId])
-}
-
-// ===== VUT Integration =====
-
-model VutCredentials {
-  id        String  @id @default(cuid())
-  userId    String  @unique
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  username  String  // VUT login (e.g. xlogin00)
-  passwordEnc String // AES-256-GCM encrypted
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 // ===== AI provider credentials (OpenCode Zen / OpenAI-compatible) =====
@@ -693,7 +670,7 @@ model CalendarEvent {
   allDay      Boolean  @default(false)
   color       String   @default("#6366f1")
   location    String   @default("")
-  source      String   @default("manual") // manual|task|vut|assignment|ics
+  source      String   @default("manual") // manual|task|assignment|ics
   sourceRef   String   @default("")       // taskId / ics uid / etc.
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -736,18 +713,18 @@ model HabitLog {
 
 // ===== Study Hub: NotebookLM-style sources / chats / podcasts =====
 
-// A persistent study source: a note, file (incl. PDF), pasted text, Moodle
-// resource, or web URL that has been resolved to plain text and cached so it
-// can be reused across grounded Q&A, podcasts, and cited study materials
-// without re-extracting on every use.
+// A persistent study source: a note, file (incl. PDF), pasted text, or web URL
+// that has been resolved to plain text and cached so it can be reused across
+// grounded Q&A, podcasts, and cited study materials without re-extracting on
+// every use.
 model StudySource {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
-  // "note" | "file" | "paste" | "moodle" | "url"
+  // "note" | "file" | "paste" | "url"
   kind      String
-  // Note/file id, "paste", or the URL (for moodle/url). Free-form, not an FK.
+  // Note/file id, "paste", or the URL (for url). Free-form, not an FK.
   refId     String   @default("")
   // Truncated extracted plain text (capped at MAX_SOURCE_CHARS). Re-extractable
   // via the /refresh endpoint when the underlying note/file changes.
@@ -1004,24 +981,6 @@ model GamificationState {
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   unlockedAchievements String   @default("[]") // JSON array of achievement ids
   updatedAt            DateTime @updatedAt
-}
-
-// ===== Moodle integration: per-course sync state =====
-// Tracks which Moodle courses have been synced into Tasks/Calendar/Files so the
-// Moodle app can show sync status and re-syncs can dedupe (upsert by courseId).
-
-model MoodleSync {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId        String
-  courseName      String   @default("")
-  lastSyncAt      DateTime @default(now())
-  assignmentCount Int      @default(0)
-  materialCount   Int      @default(0)
-
-  @@unique([userId, courseId])
-  @@index([userId])
 }
 
 // ===== Mapy.cz integration: per-user API key =====
@@ -1481,7 +1440,7 @@ model PulseForecast {
 
 // ===== Forge: AI practice problem generator (Pro tier) =====
 // Generates graded practice problems (multiple-choice, short-answer, and
-// step-by-step) from sources (Moodle PDFs, notes, Atlas concepts, or free
+// step-by-step) from sources (notes, Atlas concepts, or free
 // text). Each problem has a hidden worked solution. The student solves,
 // submits, and gets line-by-line feedback. Wrong steps trigger a
 // micro-explanation and a follow-up "variant" problem targeting the same
@@ -1503,7 +1462,7 @@ model ForgeProblemSet {
   format      String   @default("mixed")
   // "easy" | "medium" | "hard" | "adaptive"
   difficulty  String   @default("adaptive")
-  // Source description: { kind: "note"|"file"|"atlas"|"text"|"moodle", refId, name }
+  // Source description: { kind: "note"|"file"|"atlas"|"text", refId, name }
   source      String   @default("{}")
   // JSON array of concept ids (from Atlas) this set targets
   conceptIds  String   @default("[]")

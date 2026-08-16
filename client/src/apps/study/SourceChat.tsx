@@ -262,8 +262,6 @@ export default function SourceChat({ initialChatId, initialWorkspaceId, language
       openWindow({ appId: "viewer", title: "Viewer", icon: "Eye", payload: { fileId: cite.refId } });
     } else if (cite.kind === "url") {
       openWindow({ appId: "browser", title: "Browser", icon: "Globe", payload: { url: cite.refId } });
-    } else if (cite.kind === "moodle") {
-      openWindow({ appId: "browser", title: "Browser", icon: "Globe", payload: { url: cite.refId } });
     } else if (cite.kind === "paste") {
       // Paste sources: fetch the StudySource text by index → sourceIds mapping.
       const sourceId = chat?.sourceIds[cite.index - 1];

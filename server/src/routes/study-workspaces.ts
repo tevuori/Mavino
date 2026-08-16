@@ -44,7 +44,7 @@ const createSchema = z.object({
   sources: z
     .array(
       z.object({
-        kind: z.enum(["note", "file", "paste", "moodle", "url"]),
+        kind: z.enum(["note", "file", "paste", "url"]),
         id: z.string().optional(),
         text: z.string().optional(),
         url: z.string().optional(),
@@ -134,7 +134,7 @@ const addSourcesSchema = z.object({
   sources: z
     .array(
       z.object({
-        kind: z.enum(["note", "file", "paste", "moodle", "url"]),
+        kind: z.enum(["note", "file", "paste", "url"]),
         id: z.string().optional(),
         text: z.string().optional(),
         url: z.string().optional(),

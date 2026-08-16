@@ -235,7 +235,7 @@ export function researchRefinePrompt(originalQuery: string): string {
 export interface GroundedSource {
   index: number;
   name: string;
-  /** "note" | "file" | "paste" | "moodle" | "url" — used by the client to open. */
+  /** "note" | "file" | "paste" | "url" — used by the client to open. */
   kind: string;
   /** Note/file id, "paste", or the URL. */
   refId: string;

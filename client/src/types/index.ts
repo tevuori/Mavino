@@ -44,7 +44,6 @@ export interface AnalyticsOverview {
     spotify: number;
     microsoft: number;
     ai: number;
-    vut: number;
     ntfy: number;
     proactiveAlerts: number;
     tts: number;
@@ -131,12 +130,6 @@ export interface VFile {
   mimeType: string;
   size: number;
   storageKey: string;
-  /** When set, content is streamed from this external URL (virtual file). */
-  externalUrl?: string | null;
-  /** Origin: "manual" | "moodle" | ... */
-  source?: string;
-  /** Integration reference id (e.g. "courseId:activityId" for Moodle). */
-  sourceRef?: string;
   folderId: string | null;
   starred: boolean;
   createdAt: string;
@@ -223,45 +216,6 @@ export interface Assignment {
   createdAt: string;
 }
 
-// ===== VUT =====
-
-export interface VutGrade {
-  courseName: string;
-  courseCode: string;
-  credits: string;
-  semester: string;
-  grade: string;
-  ectsGrade: string;
-  completionType: string;
-  score: string;
-  attempt: string;
-}
-
-export interface VutTimetableSlot {
-  day: string;
-  dayIndex: number;
-  startTime: string;
-  endTime: string;
-  courseName: string;
-  courseCode: string;
-  room: string;
-  teacher: string;
-  type: string;
-  weekType: string;
-  date: string;
-  faculty: string;
-  color?: string;
-}
-
-export interface VutSubjectUpdate {
-  subjectName: string;
-  subjectCode: string;
-  date: string;
-  title: string;
-  content: string;
-  author: string;
-}
-
 // ===== Calendar / Planner =====
 
 export interface CalendarEvent {
@@ -273,7 +227,7 @@ export interface CalendarEvent {
   allDay: boolean;
   color: string;
   location: string;
-  source: string; // manual|task|vut|assignment|ics
+  source: string; // manual|task|assignment|ics
   sourceRef: string;
   createdAt: string;
   updatedAt: string;

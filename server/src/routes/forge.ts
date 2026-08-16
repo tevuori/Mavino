@@ -38,7 +38,7 @@ async function forgeGate(c: any, next: any) {
 forge.use("*", forgeGate);
 
 const sourceSchema = z.object({
-  kind: z.enum(["note", "file", "atlas", "text", "moodle"]),
+  kind: z.enum(["note", "file", "atlas", "text"]),
   refId: z.string().max(500).optional(),
   name: z.string().max(500),
   text: z.string().max(50000).optional(),

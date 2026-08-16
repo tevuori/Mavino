@@ -52,7 +52,6 @@ const SOURCE_ICONS: Record<string, typeof FileText> = {
   file: FileText,
   atlas: Network,
   text: Type,
-  moodle: FileText,
 };
 
 // ----- main component -----

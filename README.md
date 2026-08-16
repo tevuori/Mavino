@@ -18,7 +18,7 @@ Vite + React 18 · TypeScript · Tailwind CSS 3 · Bun + Hono · Prisma + SQLite
 
 Mavino is a self-hosted, browser-based "operating system" for students. It recreates the feel of a real desktop environment — draggable/resizable windows, a taskbar, start menu, system tray, command palette, and an animated wallpaper — and fills it with a suite of apps built around the academic workflow: notes, tasks, files, a code editor, flashcards, a grade tracker, calendar, habits, a Pomodoro timer, an AI study hub, voice notes with Whisper transcription, and an AI assistant ("Mavino").
 
-It also integrates with the services students actually use: **Spotify** (with a beat-reactive fullscreen "Chill" mode), **Microsoft Calendar** (Graph API sync), and **VUT Studis** (Brno University of Technology SSO — grades, timetable, subject updates).
+It also integrates with the services students actually use: **Spotify** (with a beat-reactive fullscreen "Chill" mode) and **Microsoft Calendar** (Graph API sync).
 
 > Default login after seeding: **`admin`** with a generated password (printed to
 > console in production, or `admin` in local dev). You'll be forced to change it
@@ -90,26 +90,24 @@ Two windows snapped side-by-side: the File Manager (virtual FS, tree sidebar, gr
 | 7 | **Pomodoro / Focus Timer** | Circular SVG ring, 25/5/15 intervals, auto long-break after 4 sessions, Web Audio chime, auto-DND during focus, daily stats |
 | 8 | **Flashcards** | SM-2 spaced repetition, deck browser with color tags, card CRUD, 3D flip-card review, 4-level quality rating, due-date scheduling |
 | 9 | **Grade Tracker** | Course management with semester filtering, weighted assignment categories, credit-weighted GPA on 4.0 scale, letter-grade conversion, animated bars |
-| 10 | **VUT Studis** | BUT integration: encrypted SSO (AES-256-GCM), Overview / Grades / Timetable / Updates / Web View tabs, HTML parsing with cheerio, "Import to Grade Tracker" |
-| 11 | **Settings** | Theme, wallpaper, animated backgrounds, accent, account, notifications, AI provider (key + provider/baseURL/model) |
-| 12 | **Study Hub** | AI-powered study center: source-grounded Q&A, interactive Teach Me tutoring, podcasts, flashcards, summaries, quizzes, study guides, syllabus→tasks, learning workspaces — see [Study Hub](#-study-hub) below |
-| 13 | **Calendar / Planner** | Month/week/day views, ICS import/export, task drag-to-schedule, Microsoft Graph sync |
-| 14 | **Habits** | Streaks, heatmap, auto-complete from Pomodoro sessions |
-| 15 | **Mavino assistant** | Streaming chat UI with tool-call chips (SSE), multi-llm-ts backend, system prompt + tool plugins, `Win+Y` quick panel |
-| 16 | **Voice Notes** | Microphone recorder (MediaRecorder + Web Audio level meter), Whisper transcription via the OpenAI-compatible API, LLM cleanup pass (punctuation, paragraphs, smart title), saves audio to the virtual FS and creates a linked Note. Also integrated into Quick Capture (`Ctrl+Shift+N` mic button). Degrades gracefully — audio + placeholder note saved even without transcription |
+| 10 | **Settings** | Theme, wallpaper, animated backgrounds, accent, account, notifications, AI provider (key + provider/baseURL/model) |
+| 11 | **Study Hub** | AI-powered study center: source-grounded Q&A, interactive Teach Me tutoring, podcasts, flashcards, summaries, quizzes, study guides, syllabus→tasks, learning workspaces — see [Study Hub](#-study-hub) below |
+| 12 | **Calendar / Planner** | Month/week/day views, ICS import/export, task drag-to-schedule, Microsoft Graph sync |
+| 13 | **Habits** | Streaks, heatmap, auto-complete from Pomodoro sessions |
+| 14 | **Mavino assistant** | Streaming chat UI with tool-call chips (SSE), multi-llm-ts backend, system prompt + tool plugins, `Win+Y` quick panel |
+| 15 | **Voice Notes** | Microphone recorder (MediaRecorder + Web Audio level meter), Whisper transcription via the OpenAI-compatible API, LLM cleanup pass (punctuation, paragraphs, smart title), saves audio to the virtual FS and creates a linked Note. Also integrated into Quick Capture (`Ctrl+Shift+N` mic button). Degrades gracefully — audio + placeholder note saved even without transcription |
 
 ### Integrations
 
 - **Spotify** — server-side token exchange/refresh, device polling, LRCLIB synced lyrics
 - **Microsoft Calendar** — Graph API (`Calendar.ReadWrite` + `offline_access`), automatic refresh-token rotation persisted in DB
-- **VUT Studis** — full Shibboleth/SAML SSO with cookie jar + session caching (25min TTL)
 - **Mavino LLM** — multi-llm-ts client supporting `openai | deepseek | anthropic | openrouter | ollama | groq | mistralai | google | xai | meta | cerebras`; per-user config (encrypted in DB) takes priority over server-wide fallback
 
 ---
 
 ## Study Hub
 
-The Study Hub is Mavino's AI-powered study center — a single app that consolidates every learning workflow around your **sources** (notes, files, pasted text, URLs, Moodle documents). All modes share the same source library and the Mavino LLM infrastructure, so you pick what to study from and choose how you want to learn.
+The Study Hub is Mavino's AI-powered study center — a single app that consolidates every learning workflow around your **sources** (notes, files, pasted text, URLs). All modes share the same source library and the Mavino LLM infrastructure, so you pick what to study from and choose how you want to learn.
 
 ### Source library
 
@@ -119,7 +117,6 @@ Everything in the Study Hub starts with **sources**. A source is any text you wa
 - **Files** — any text-readable file from the File Manager (`.txt`, `.md`, `.py`, `.js`, `.json`, etc.)
 - **Pasted text** — ad-hoc text you paste directly (no need to create a note first)
 - **URLs** — web pages fetched and extracted server-side (readability-style text extraction)
-- **Moodle documents** — documents from your Moodle courses (if VUT Studis is connected)
 
 Sources are cached in the database after first use, so re-using them in different modes is instant. A unified source picker lets you add new sources on the fly from any mode — you don't have to pre-register them.
 
@@ -317,10 +314,10 @@ Athena/
 │       ├── index.ts             # Hono app entry
 │       ├── db/{client.ts, seed.ts}
 │       ├── routes/              # auth, notes, tasks, files, spotify, lyrics,
-│       │                        # flashcards, grades, vut, ai, athena, conversations,
-│       │                        # study, moodle, calendar, habits, capture, microsoft,
+│       │                        # flashcards, grades, ai, athena, conversations,
+│       │                        # study, calendar, habits, capture, microsoft,
 │       │                        # whiteboards, ntfy, voice
-│       ├── services/            # spotify, lrclib, jwt, vut, crypto, moodle, microsoft
+│       ├── services/            # spotify, lrclib, jwt, crypto, microsoft
 │       │   ├── athena/          # multi-llm-ts client, system prompt, tool plugins
 │       │   └── study/           # source, llm-json, prompts, quiz-store, logSession
 │       └── middleware/auth.ts
@@ -335,7 +332,7 @@ Athena/
         ├── apps/
         │   ├── registry.tsx     # app manifest
         │   ├── notes/ tasks/ files/ editor/ viewer/ pomodoro/
-        │   ├── flashcards/ grades/ vut/ athena/ study/
+        │   ├── flashcards/ grades/ athena/ study/
         │   ├── calendar/ habits/ settings/ voice/ whiteboard/ ntfy/
         ├── store/               # Zustand stores (auth, windows, settings, music, notifications)
         ├── services/            # API clients

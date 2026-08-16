@@ -337,7 +337,7 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
           <h3 className="mb-3 text-sm font-semibold text-ink">Apps by tier</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {(["free", "paid", "pro"] as const).map((tier) => {
-              const tierApps = APPS.filter((a) => (a.minTier ?? "free") === tier && !a.requiresGrant);
+              const tierApps = APPS.filter((a) => (a.minTier ?? "free") === tier);
               return (
                 <div key={tier} className="rounded-xl border border-edge bg-surface-2 p-4">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">

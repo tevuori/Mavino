@@ -1,6 +1,6 @@
 // ===== Calendar / Planner =====
 // Month / Week / Day views that unify manual CalendarEvent rows, scheduled
-// tasks, VUT timetable classes, and assignment due dates into one timeline.
+// tasks, and assignment due dates into one timeline.
 // Reuses existing client services — no new backend beyond /api/calendar.
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -10,14 +10,13 @@ import {
 } from "lucide-react";
 import { calendarApi } from "../../services/calendar";
 import { tasksApi } from "../../services/tasks";
-import { vutApi } from "../../services/vut";
 import { gradesApi } from "../../services/grades";
 import { microsoftApi } from "../../services/microsoft";
 import { apiUrl } from "../../services/api";
 import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
-import type { CalendarEvent, Task, VutTimetableSlot, Course } from "../../types";
+import type { CalendarEvent, Task, Course } from "../../types";
 import { linksApi } from "../../services/links";
 import { setLinkPayload } from "../links/linkDnd";
 import LinkBadge from "../links/LinkBadge";
@@ -28,7 +27,6 @@ type ViewMode = "month" | "week" | "day" | "agenda";
 interface LayerToggles {
   events: boolean;
   tasks: boolean;
-  vut: boolean;
   assignments: boolean;
   microsoft: boolean;
 }
@@ -36,7 +34,6 @@ interface LayerToggles {
 const LAYER_COLORS: Record<keyof LayerToggles, string> = {
   events: "#6366f1",
   tasks: "#f59e0b",
-  vut: "#0ea5e9",
   assignments: "#ef4444",
   microsoft: "#0ea5e9",
 };
@@ -204,11 +201,9 @@ export default function CalendarApp({ win }: { win: WindowInstance }) {
   });
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [vutSlots, setVutSlots] = useState<VutTimetableSlot[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [vutConnected, setVutConnected] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [layers, setLayers] = useState<LayerToggles>({ events: true, tasks: true, vut: true, assignments: true, microsoft: true });
+  const [layers, setLayers] = useState<LayerToggles>({ events: true, tasks: true, assignments: true, microsoft: true });
   const [msConfigured, setMsConfigured] = useState(false);
   const [msSyncing, setMsSyncing] = useState(false);
   const [msSyncMsg, setMsSyncMsg] = useState<string | null>(null);
@@ -229,23 +224,14 @@ export default function CalendarApp({ win }: { win: WindowInstance }) {
     rangeEnd.setDate(38);
     rangeEnd.setHours(23, 59, 59, 999);
 
-    const [feedRes, tasksRes, vutStatusRes, msStatusRes] = await Promise.all([
+    const [feedRes, tasksRes, msStatusRes] = await Promise.all([
       calendarApi.feed(rangeStart.toISOString(), rangeEnd.toISOString()).catch(() => null),
       tasksApi.list().catch(() => null),
-      vutApi.status().catch(() => null),
       microsoftApi.status().catch(() => null),
     ]);
     if (feedRes?.events) setEvents(feedRes.events);
     if (tasksRes?.tasks) setTasks(tasksRes.tasks);
     setMsConfigured(Boolean((msStatusRes as { configured?: boolean } | null)?.configured));
-    const st = vutStatusRes as { authenticated: boolean } | null;
-    setVutConnected(Boolean(st?.authenticated));
-    if (st?.authenticated) {
-      const tt = await vutApi.timetable().catch(() => null);
-      if (tt?.slots) setVutSlots(tt.slots);
-    } else {
-      setVutSlots([]);
-    }
     // Load courses for assignment due dates (assignments don't have due
     // dates in the current schema, so we show course deadlines as a
     // read-only layer using the task's dueDate when linked). We still load
@@ -324,33 +310,8 @@ export default function CalendarApp({ win }: { win: WindowInstance }) {
         });
       }
     }
-    if (layers.vut && vutSlots.length) {
-      // VUT timetable slots are weekly; project onto the current week.
-      const weekStart = startOfWeek(cursor);
-      for (const slot of vutSlots) {
-        const [sh, sm] = slot.startTime.split(":").map(Number);
-        const [eh, em] = slot.endTime.split(":").map(Number);
-        const dayDate = addDays(weekStart, slot.dayIndex);
-        const start = new Date(dayDate);
-        start.setHours(sh, sm, 0, 0);
-        const end = new Date(dayDate);
-        end.setHours(eh, em, 0, 0);
-        out.push({
-          id: `vut-${slot.dayIndex}-${slot.startTime}`,
-          title: `🎓 ${slot.courseName}`,
-          start,
-          end,
-          allDay: false,
-          color: slot.color || LAYER_COLORS.vut,
-          source: "vut",
-          sourceRef: "",
-          location: slot.room,
-          description: `${slot.type} · ${slot.teacher}`,
-        });
-      }
-    }
     return out;
-  }, [events, tasks, vutSlots, layers, cursor]);
+  }, [events, tasks, layers, cursor]);
 
   // ===== Event handlers =====
   const openEditor = (ev?: Partial<CalendarEvent>, date?: Date) => {
@@ -550,13 +511,12 @@ export default function CalendarApp({ win }: { win: WindowInstance }) {
               }`}
               style={layers[k] ? { background: LAYER_COLORS[k] } : {}}
               title={
-                k === "vut" && !vutConnected ? "VUT not connected" :
                 k === "microsoft" && !msConfigured ? "Microsoft Calendar not configured" :
                 `Toggle ${k}`
               }
             >
               <span className="h-2 w-2 rounded-full" style={{ background: layers[k] ? "#fff" : LAYER_COLORS[k] }} />
-              {k === "vut" ? "VUT" : k === "microsoft" ? "MS" : k.charAt(0).toUpperCase() + k.slice(1)}
+              {k === "microsoft" ? "MS" : k.charAt(0).toUpperCase() + k.slice(1)}
             </button>
           ))}
         </div>
@@ -668,10 +628,10 @@ export default function CalendarApp({ win }: { win: WindowInstance }) {
 }
 
 // ===== Event chip with drag-to-link support =====
-// Only real stored CalendarEvent rows (not pseudo task/vut/assignment
-// display events) are linkable. Pseudo ids are prefixed with task-/vut-/assignment-.
+// Only real stored CalendarEvent rows (not pseudo task/assignment
+// display events) are linkable. Pseudo ids are prefixed with task-/assignment-.
 function isLinkableEvent(ev: DisplayEvent): boolean {
-  return !/^(task|vut|assignment)-/.test(ev.id);
+  return !/^(task|assignment)-/.test(ev.id);
 }
 
 /**

@@ -91,7 +91,7 @@ export default function TiersSection() {
 
   const nameFor = (id: string) => (APP_MAP as Record<string, { name: string }>)[id]?.name ?? id;
 
-  const tieredApps = apps.filter((a) => !a.requiresGrant);
+  const tieredApps = apps;
 
   return (
     <section id="tiers" className="mb-8">

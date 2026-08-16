@@ -17,7 +17,7 @@ const graphRoutes = new Hono();
 graphRoutes.use("*", authMiddleware, studyFunctionMiddleware("graph"));
 
 const sourceSchema = z.object({
-  kind: z.enum(["note", "file", "paste", "moodle", "url"]),
+  kind: z.enum(["note", "file", "paste", "url"]),
   id: z.string().optional(),
   text: z.string().optional(),
   url: z.string().optional(),

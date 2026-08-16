@@ -11,7 +11,6 @@ import { studyTools } from "./study";
 import { studyHubTools } from "./study-hub";
 import { studyGraphTools } from "./study-graph";
 import { flashcardsTools } from "./flashcards";
-import { moodleTools } from "./moodle";
 import { calendarTools } from "./calendar";
 import { habitsTools } from "./habits";
 import { searchTools } from "./search";
@@ -55,7 +54,6 @@ export const ALL_TOOLS: ToolDef[] = [
   ...studyHubTools,
   ...studyGraphTools,
   ...flashcardsTools,
-  ...moodleTools,
   ...calendarTools,
   ...habitsTools,
   ...searchTools,

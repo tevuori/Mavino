@@ -80,7 +80,7 @@ export const forgeTools: ToolDef[] = [
     proOnly: true,
     parameters: [
       { name: "title", type: "string", description: "Optional title for the problem set" },
-      { name: "sourceKind", type: "string", description: "Source type: 'note', 'file', 'atlas', 'text', or 'moodle'", required: true },
+      { name: "sourceKind", type: "string", description: "Source type: 'note', 'file', 'atlas', or 'text'", required: true },
       { name: "sourceRefId", type: "string", description: "Note/file id (for 'note'/'file' sources)" },
       { name: "sourceName", type: "string", description: "Display name for the source", required: true },
       { name: "sourceText", type: "string", description: "Text content (for 'text' source)" },

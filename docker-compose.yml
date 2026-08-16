@@ -63,7 +63,7 @@ services:
       # The server refuses to start in production without a secure secret (>= 32 chars).
       JWT_SECRET: ${JWT_SECRET:-}
       # ENCRYPTION_KEY is used for AES-256-GCM encryption of stored credentials
-      # (VUT passwords, API keys, OAuth tokens, TOTP secrets). Should be a
+      # (API keys, OAuth tokens, TOTP secrets). Should be a
       # separate secret from JWT_SECRET for key separation. Generate with:
       #   openssl rand -hex 32
       # If unset, falls back to JWT_SECRET (with a warning) for backward compat.

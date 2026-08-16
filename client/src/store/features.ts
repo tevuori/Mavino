@@ -1,6 +1,6 @@
 // ===== Feature flags / app availability store =====
 // Loads the current user's feature state (subscription tier, app tier
-// assignments, VUT grant, global disabled-apps kill switch) from /api/features
+// assignments, global disabled-apps kill switch) from /api/features
 // and exposes derived helpers used by all app launch surfaces and the window
 // manager's open() guard.
 //
@@ -21,7 +21,6 @@ export type AppAccess = "full" | "preview" | "hidden";
 
 interface FeaturesState {
   subscriptionTier: SubscriptionTier;
-  vutGranted: boolean;
   /** Admin-configured app tier assignments (appId → minTier). */
   appTiers: Record<string, "free" | "paid" | "pro">;
   /** Globally disabled app ids (admin kill switch). */
@@ -29,13 +28,12 @@ interface FeaturesState {
   loaded: boolean;
 
   load: () => Promise<void>;
-  /** Refresh grants/disabled state (e.g. after an admin change). */
+  /** Refresh disabled state (e.g. after an admin change). */
   refresh: () => Promise<void>;
 }
 
 export const useFeatures = create<FeaturesState>((set, get) => ({
   subscriptionTier: "free",
-  vutGranted: false,
   appTiers: {},
   disabledApps: new Set(),
   loaded: false,
@@ -44,13 +42,11 @@ export const useFeatures = create<FeaturesState>((set, get) => ({
     try {
       const data = await api.get<{
         subscriptionTier: SubscriptionTier;
-        vutGranted: boolean;
         disabledApps: string[];
         appTiers: Record<string, "free" | "paid" | "pro">;
       }>("/api/features");
       set({
         subscriptionTier: data.subscriptionTier,
-        vutGranted: data.vutGranted,
         appTiers: data.appTiers ?? {},
         disabledApps: new Set(data.disabledApps),
         loaded: true,
@@ -73,13 +69,13 @@ const TIER_RANK: Record<SubscriptionTier, number> = { free: 0, paid: 1, pro: 2 }
 
 /**
  * Whether an app is accessible to the current user, combining the global kill
- * switch, the per-user VUT grant, and the tier system.
+ * switch and the tier system.
  * Returns "full" (unlocked), "preview" (locked but visible), or "hidden".
  * Pure function over the store's current state — safe to call from the
  * windows store without subscribing to React updates.
  */
 export function isAppAccessible(appId: AppId): AppAccess {
-  const { disabledApps, subscriptionTier, vutGranted, appTiers } = useFeatures.getState();
+  const { disabledApps, subscriptionTier, appTiers } = useFeatures.getState();
   if (UNDISABLEABLE.has(appId)) return "full";
   if (disabledApps.has(appId)) return "hidden";
   // Plugin apps: always "full" if installed (the marketplace is already
@@ -90,7 +86,6 @@ export function isAppAccessible(appId: AppId): AppAccess {
   }
   const def = APP_MAP[appId];
   if (!def) return "hidden";
-  if (def.requiresGrant === "vut") return vutGranted ? "full" : "hidden";
   // Use server-provided tier override if available, otherwise the registry default
   const minTier = appTiers[appId] ?? def.minTier ?? "free";
   if (TIER_RANK[subscriptionTier] >= TIER_RANK[minTier]) return "full";
@@ -138,7 +133,6 @@ export function accessibleApps(): Array<AppDefinition & { access: AppAccess }> {
  */
 export function useAccessibleApps(): Array<AppDefinition & { access: AppAccess }> {
   const subscriptionTier = useFeatures((s) => s.subscriptionTier);
-  const vutGranted = useFeatures((s) => s.vutGranted);
   const disabledApps = useFeatures((s) => s.disabledApps);
   const appTiers = useFeatures((s) => s.appTiers);
   const pluginList = usePlugins((s) => s.plugins);
@@ -148,7 +142,6 @@ export function useAccessibleApps(): Array<AppDefinition & { access: AppAccess }
         let access: AppAccess = "full";
         if (UNDISABLEABLE.has(a.id)) access = "full";
         else if (disabledApps.has(a.id)) access = "hidden";
-        else if (a.requiresGrant === "vut") access = vutGranted ? "full" : "hidden";
         else {
           const minTier = appTiers[a.id] ?? a.minTier ?? "free";
           access = TIER_RANK[subscriptionTier] >= TIER_RANK[minTier] ? "full" : "preview";
@@ -161,14 +154,13 @@ export function useAccessibleApps(): Array<AppDefinition & { access: AppAccess }
       }));
       return [...builtin, ...pluginApps];
     },
-    [subscriptionTier, vutGranted, disabledApps, appTiers, pluginList]
+    [subscriptionTier, disabledApps, appTiers, pluginList]
   );
 }
 
 /** Reactive hook: returns isAppAccessible for a single app id. */
 export function useAppAccessible(appId: AppId): AppAccess {
   const subscriptionTier = useFeatures((s) => s.subscriptionTier);
-  const vutGranted = useFeatures((s) => s.vutGranted);
   const disabledApps = useFeatures((s) => s.disabledApps);
   const appTiers = useFeatures((s) => s.appTiers);
   const pluginList = usePlugins((s) => s.plugins);
@@ -179,7 +171,6 @@ export function useAppAccessible(appId: AppId): AppAccess {
   }
   const def = APP_MAP[appId];
   if (!def) return "hidden";
-  if (def.requiresGrant === "vut") return vutGranted ? "full" : "hidden";
   const minTier = appTiers[appId] ?? def.minTier ?? "free";
   return TIER_RANK[subscriptionTier] >= TIER_RANK[minTier] ? "full" : "preview";
 }

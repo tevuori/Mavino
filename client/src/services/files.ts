@@ -131,10 +131,7 @@ export function isMarkdownFile(file: Pick<VFile, "mimeType" | "name">): boolean 
 }
 
 /** Decide which app window opens a file on double-click. */
-export function openTargetForFile(file: Pick<VFile, "name" | "mimeType" | "source" | "externalUrl">): "editor" | "viewer" {
-  // Moodle-managed virtual files are external content — never editable.
-  // Route them to the Viewer (which streams via the /download proxy).
-  if (file.source === "moodle" && file.externalUrl) return "viewer";
+export function openTargetForFile(file: Pick<VFile, "name" | "mimeType">): "editor" | "viewer" {
   if (isTextFile(file)) return "editor";
   if (isImageFile(file) || isPdfFile(file) || isAudioFile(file) || isVideoFile(file)) return "viewer";
   return "viewer";

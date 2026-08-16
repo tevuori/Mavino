@@ -108,9 +108,9 @@ const rawStudyHubTools: ToolDef[] = [
       "Add a source to the user's Study Source library by resolving a note, file, URL, or pasted text. The source's text is extracted and cached for use in grounded chat, podcasts, teacher mode, and cited study materials. Returns the source id.",
     destructive: true,
     parameters: [
-      { name: "kind", type: "string", description: "Source kind", enum: ["note", "file", "paste", "url", "moodle"], required: true },
+      { name: "kind", type: "string", description: "Source kind", enum: ["note", "file", "paste", "url"], required: true },
       { name: "id", type: "string", description: "Note id or file id (required for kind note/file)" },
-      { name: "url", type: "string", description: "URL (required for kind url/moodle)" },
+      { name: "url", type: "string", description: "URL (required for kind url)" },
       { name: "text", type: "string", description: "Pasted text (required for kind paste)" },
       { name: "name", type: "string", description: "Optional display name" },
     ],
@@ -660,9 +660,9 @@ const rawStudyHubTools: ToolDef[] = [
     destructive: true,
     clientAction: true,
     parameters: [
-      { name: "kind", type: "string", description: "Source kind", enum: ["note", "file", "paste", "url", "moodle"], required: true },
+      { name: "kind", type: "string", description: "Source kind", enum: ["note", "file", "paste", "url"], required: true },
       { name: "id", type: "string", description: "Note id or file id (required for kind note/file)" },
-      { name: "url", type: "string", description: "URL (required for kind url/moodle)" },
+      { name: "url", type: "string", description: "URL (required for kind url)" },
       { name: "text", type: "string", description: "Pasted text (required for kind paste)" },
       { name: "name", type: "string", description: "Optional source name" },
       { name: "style", type: "string", description: "Note style", enum: ["cornell", "outline", "summary", "bullets"] },

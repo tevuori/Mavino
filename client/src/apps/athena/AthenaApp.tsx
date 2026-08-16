@@ -71,7 +71,6 @@ const APP_ICONS: Record<string, string> = {
   pomodoro: "Timer",
   flashcards: "Brain",
   grades: "GraduationCap",
-  vut: "GraduationCap",
   editor: "Code",
   viewer: "Image",
   athena: "Sparkles",

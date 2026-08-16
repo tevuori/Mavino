@@ -7,7 +7,7 @@ import { api } from "./api";
 // ----- types -----
 
 export interface ForgeSource {
-  kind: "note" | "file" | "atlas" | "text" | "moodle";
+  kind: "note" | "file" | "atlas" | "text";
   refId?: string;
   name: string;
   text?: string;

@@ -1,6 +1,6 @@
 // ===== Forge: AI practice problem generator service (Pro tier) =====
 // Generates graded practice problems (multiple-choice, short-answer, and
-// step-by-step) from sources (Moodle PDFs, notes, Atlas concepts, or free
+// step-by-step) from sources (notes, Atlas concepts, or free
 // text). Each problem has a hidden worked solution. The student solves,
 // submits, and gets line-by-step feedback. Wrong answers trigger a
 // micro-explanation and a follow-up "variant" problem targeting the same
@@ -20,7 +20,7 @@ import { getAtlas, type AtlasData, type AtlasConcept } from "./atlas";
 // ----- types (serialized to/from JSON) -----
 
 export interface ForgeSource {
-  kind: "note" | "file" | "atlas" | "text" | "moodle";
+  kind: "note" | "file" | "atlas" | "text";
   refId?: string;
   name: string;
   text?: string; // for "text" source
@@ -111,7 +111,7 @@ async function resolveSourceText(userId: string, source: ForgeSource): Promise<s
   if (source.kind === "file" && source.refId) {
     const file = await prisma.vFile.findFirst({
       where: { id: source.refId, userId },
-      select: { name: true, storageKey: true, mimeType: true, externalUrl: true },
+      select: { name: true, storageKey: true, mimeType: true },
     });
     if (!file) return "";
     // Reuse Compass's text extraction approach

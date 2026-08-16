@@ -2,7 +2,7 @@
 
 import { api } from "./api";
 
-export type SourceKind = "note" | "file" | "paste" | "moodle" | "url";
+export type SourceKind = "note" | "file" | "paste" | "url";
 
 export type StudyLanguage = "en" | "cs";
 

@@ -18,14 +18,14 @@ production product yet.
 ## What's Working Well
 
 - **Build & types clean** — `bun run typecheck` and `bun run build` pass with zero errors.
-- **23 apps all implemented** — Notes, Tasks, Files, Editor, Viewer, Pomodoro, Flashcards,
-  Grades, VUT, Settings, Mavino, Study Hub, Today, Calendar, Habits, Whiteboard, Ntfy,
-  Voice, Browser, Reminders, Analytics, Moodle, Maps. Each has loading/error/empty states.
+- **21 apps all implemented** — Notes, Tasks, Files, Editor, Viewer, Pomodoro, Flashcards,
+  Grades, Settings, Mavino, Study Hub, Today, Calendar, Habits, Whiteboard, Ntfy,
+  Voice, Browser, Reminders, Analytics, Maps. Each has loading/error/empty states.
 - **Solid auth foundation** — JWT with 15-min access / 90-day refresh tokens, refresh
   rotation, device fingerprint binding, rate limiting on login/register, bootstrap-only
   registration.
 - **Zod validation everywhere** — no raw SQL, no unsafe `orderBy`, proper input schemas.
-- **Encrypted secrets in DB** — AES-256-GCM for VUT/Spotify/Microsoft/Mapy/AI credentials.
+- **Encrypted secrets in DB** — AES-256-GCM for Spotify/Microsoft/Mapy/AI credentials.
 - **Sandboxed code execution** — Docker with gVisor, network disabled, read-only FS,
   dropped caps, memory limits.
 - **Deployment tooling exists** — `deploy/deploy.sh` generates strong secrets, nginx
@@ -132,7 +132,7 @@ production product yet.
 3. **Add file upload size + extension limits** to `/files/upload`.
 4. **Remove token/password logging** — stripped partial access tokens from MS logs,
    removed plaintext password from seed log, restricted `?token=` query auth to only
-   the 3 route files that need it (files, browser, vut), added unhandled rejection handler.
+   the 2 route files that need it (files, browser), added unhandled rejection handler.
 5. **Add Docker healthchecks** — server + client healthcheck directives, client waits
    for server to be healthy before starting.
 6. **Add SQLite backup script + cron** — `deploy/backup.sh` uses `VACUUM INTO` for

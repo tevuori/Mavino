@@ -3,7 +3,7 @@ import { isAppAvailableFor } from "../services/features";
 
 /** Must run AFTER an auth middleware. Returns 402 (Payment Required) if the
  *  user's subscription tier is too low for the given app, or 403 if the app
- *  is hidden (admin kill-switch or missing VUT grant).
+ *  is hidden (admin kill-switch).
  *
  *  This is the server-side enforcement of the app tier system defined in
  *  services/features.ts. It mirrors the client-side isAppAccessible() check

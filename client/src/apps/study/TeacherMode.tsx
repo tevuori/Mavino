@@ -45,7 +45,6 @@ const KIND_ICON: Record<string, typeof FileText> = {
   note: FileText,
   file: FileIcon,
   paste: ClipboardPaste,
-  moodle: GraduationCap,
   url: Link2,
 };
 
@@ -483,12 +482,12 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     const entry = sourceHistory.find((h) => h.index === index);
     if (!entry) return;
     const appId = entry.kind === "note" ? "notes"
-      : entry.kind === "url" || entry.kind === "moodle" ? "browser"
+      : entry.kind === "url" ? "browser"
       : entry.kind === "file" ? "editor"
       : "viewer";
     const openPayload = entry.kind === "note" ? { noteId: entry.refId }
       : entry.kind === "file" ? { fileId: entry.refId }
-      : entry.kind === "url" || entry.kind === "moodle" ? { url: entry.refId }
+      : entry.kind === "url" ? { url: entry.refId }
       : {};
     const meta = sourceMetaRef.current[entry.windowId];
     const src = buildPaneSource({

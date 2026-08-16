@@ -19,7 +19,6 @@ const KIND_ICON: Record<string, typeof FileText> = {
   note: FileText,
   file: FileIcon,
   paste: ClipboardPaste,
-  moodle: GraduationCap,
   url: Link2,
 };
 
@@ -33,8 +32,6 @@ export function studySourceToDescriptor(s: StudySource): SourceDescriptor {
       return { kind: "paste", text: s.textCache, name: s.name };
     case "url":
       return { kind: "url", url: s.refId, name: s.name };
-    case "moodle":
-      return { kind: "moodle", url: s.refId, name: s.name };
     default:
       return { kind: "paste", text: s.textCache, name: s.name };
   }

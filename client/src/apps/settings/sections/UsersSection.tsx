@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Users as UsersIcon, Plus, Trash2, KeyRound, X, Loader2, ShieldCheck, User as UserIcon, UserPlus, GraduationCap } from "lucide-react";
+import { Users as UsersIcon, Plus, Trash2, KeyRound, X, Loader2, ShieldCheck, User as UserIcon, UserPlus } from "lucide-react";
 import { usersApi } from "../../../services/users";
-import { featuresAdminApi } from "../../../services/features";
 import { useAuth } from "../../../store/auth";
 import type { AdminUser, UserRole } from "../../../types";
 import { SectionHeader, Card, Field, inputClass } from "../ui";
@@ -399,8 +398,6 @@ function EditUserModal({
   const [displayName, setDisplayName] = useState(user.displayName);
   const [avatarColor, setAvatarColor] = useState(user.avatarColor);
   const [role, setRole] = useState<UserRole>(user.role);
-  const [vutGrant, setVutGrant] = useState(false);
-  const [vutBusy, setVutBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -421,37 +418,6 @@ function EditUserModal({
         { value: "PRO", label: "Pro (highest AI limits)" },
         { value: "MANAGER", label: "Manager (user management)" },
       ];
-
-  // Load the user's VUT access grant when the modal opens.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const g = await featuresAdminApi.getGrants(user.id);
-        if (!cancelled) setVutGrant(g.vut);
-      } catch {
-        /* leave default false */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user.id]);
-
-  const toggleVut = async () => {
-    setVutBusy(true);
-    const prev = vutGrant;
-    setVutGrant(!prev);
-    try {
-      const g = await featuresAdminApi.setGrants(user.id, !prev);
-      setVutGrant(g.vut);
-    } catch (e) {
-      setVutGrant(prev);
-      setErr(e instanceof Error ? e.message : "Failed to update VUT access");
-    } finally {
-      setVutBusy(false);
-    }
-  };
 
   const submit = async () => {
     setBusy(true);
@@ -503,39 +469,6 @@ function EditUserModal({
             ))}
           </select>
         </Field>
-        {/* VUT integration access grant */}
-        <div className="flex items-center justify-between rounded-lg border border-edge bg-surface-2 p-3">
-          <div className="flex items-start gap-2.5">
-            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500">
-              <GraduationCap size={15} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-ink">VUT &amp; Moodle integration</p>
-              <p className="mt-0.5 text-xs text-ink-muted">
-                Grants this user access to the VUT Studis + Moodle apps and API. Without this, the VUT and Moodle apps stay hidden.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={toggleVut}
-            disabled={vutBusy}
-            className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-              vutGrant ? "bg-accent" : "bg-surface-3"
-            } disabled:opacity-50`}
-            role="switch"
-            aria-checked={vutGrant}
-          >
-            {vutBusy ? (
-              <Loader2 size={13} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white" />
-            ) : (
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-                  vutGrant ? "left-[22px]" : "left-0.5"
-                }`}
-              />
-            )}
-          </button>
-        </div>
         {err && <p className="text-xs text-red-500">{err}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={onClose} className="rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-surface-3">

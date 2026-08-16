@@ -34,7 +34,7 @@ const LEVELS: StudentLevel[] = ["beginner", "intermediate", "advanced"];
 const STYLES: TeachingStyle[] = ["explain", "socratic"];
 
 const KIND_ICON: Record<string, typeof BookOpen> = {
-  note: BookOpen, file: BookOpen, paste: BookOpen, moodle: GraduationCap, url: BookOpen,
+  note: BookOpen, file: BookOpen, paste: BookOpen, url: BookOpen,
 };
 
 /** The source currently shown in the bottom sheet. */

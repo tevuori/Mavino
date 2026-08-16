@@ -37,7 +37,7 @@ export async function authMiddleware(c: Context, next: Next) {
 
 /** Like authMiddleware, but also accepts a ?token= query parameter as a
  *  fallback. Use ONLY for routes loaded via <img>/<iframe> src attributes
- *  that cannot set Authorization headers (file download, browser/vut proxy).
+ *  that cannot set Authorization headers (file download, browser proxy).
  *  Tokens in URLs may be logged by proxies — restrict to these specific GET
  *  routes only. */
 export async function authMiddlewareWithQuery(c: Context, next: Next) {
