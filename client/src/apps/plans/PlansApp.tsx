@@ -47,7 +47,7 @@ const PLANS: Array<{
     description: "For serious students",
     features: [
       "Everything in Free",
-      "Pomodoro, Flashcards, Grades",
+      "Pomodoro, Flashcards",
       "Calendar, Habits, Editor",
       "Browser, Voice Notes, Reminders",
       "Analytics, Maps",

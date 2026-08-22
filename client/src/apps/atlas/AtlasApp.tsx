@@ -156,18 +156,20 @@ function LinkedItemRow({
   icon: typeof StickyNote;
   name: string;
   badge?: string;
-  onClick: () => void;
+  /** Omit for items that have no dedicated app to jump to (e.g. courses, now that Grades is discontinued). */
+  onClick?: () => void;
 }) {
+  const Tag = onClick ? "button" : "div";
   return (
-    <button
+    <Tag
       onClick={onClick}
-      className="group flex items-center gap-2 rounded-md border border-edge bg-surface px-2.5 py-1.5 text-left text-xs text-ink transition hover:border-accent/50 hover:bg-accent/5"
+      className={`group flex items-center gap-2 rounded-md border border-edge bg-surface px-2.5 py-1.5 text-left text-xs ${onClick ? "text-ink transition hover:border-accent/50 hover:bg-accent/5" : "text-ink-muted"}`}
     >
-      <Icon size={13} className="shrink-0 text-ink-muted transition group-hover:text-accent" />
+      <Icon size={13} className={`shrink-0 text-ink-muted ${onClick ? "transition group-hover:text-accent" : ""}`} />
       <span className="flex-1 truncate">{name}</span>
       {badge && <span className="shrink-0 text-[10px] text-ink-muted">{badge}</span>}
-      <ExternalLink size={11} className="shrink-0 text-ink-muted opacity-0 transition group-hover:opacity-100" />
-    </button>
+      {onClick && <ExternalLink size={11} className="shrink-0 text-ink-muted opacity-0 transition group-hover:opacity-100" />}
+    </Tag>
   );
 }
 
@@ -356,7 +358,6 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
   const openNote = (id: string) => open({ appId: "notes", title: "Notes", icon: "StickyNote", payload: { noteId: id } });
   const openFlashcards = (id: string) => open({ appId: "flashcards", title: "Flashcards", icon: "Brain", payload: { deckId: id } });
   const openTasks = () => open({ appId: "tasks", title: "Tasks", icon: "CheckSquare" });
-  const openCourse = (id: string) => open({ appId: "grades", title: "Grades", icon: "GraduationCap", payload: { courseId: id } });
 
   const weakCount = data?.stats.weakCount ?? 0;
 
@@ -786,7 +787,7 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                       {items.courses.length > 0 && (
                         <div className="flex flex-col gap-1">
                           {items.courses.map((c) => (
-                            <LinkedItemRow key={c.id} icon={GraduationCap} name={c.code ? `${c.code} · ${c.name}` : c.name} onClick={() => openCourse(c.id)} />
+                            <LinkedItemRow key={c.id} icon={GraduationCap} name={c.code ? `${c.code} · ${c.name}` : c.name} />
                           ))}
                         </div>
                       )}

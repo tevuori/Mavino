@@ -21,7 +21,7 @@ SOURCE = ROOT / "assets" / "logo.png"
 PUBLIC = ROOT / "client" / "public"
 RES = ROOT / "android" / "app" / "src" / "main" / "res"
 
-BRAND_BG = (25, 20, 78, 255)  # #19144E — the navy of the logo tile
+BRAND_BG = (12, 11, 32, 255)  # #0C0B20 — the deep navy behind the new Mavino "M" mark
 
 LAUNCHER_DENSITIES = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
 FOREGROUND_DENSITIES = {"mdpi": 108, "hdpi": 162, "xhdpi": 216, "xxhdpi": 324, "xxxhdpi": 432}

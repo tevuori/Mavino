@@ -268,13 +268,12 @@ function ConceptCard({
                 <div className="space-y-1">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Courses</p>
                   {concept.items.courses.map((c) => (
-                    <button
+                    <div
                       key={c.id}
-                      onClick={() => onOpenTool("grades")}
-                      className="flex w-full items-center gap-2 rounded-lg bg-surface-2 px-2.5 py-2 text-left text-xs text-ink active:bg-surface-3"
+                      className="flex w-full items-center gap-2 rounded-lg bg-surface-2 px-2.5 py-2 text-xs text-ink-muted"
                     >
-                      <GraduationCap size={13} className="shrink-0 text-ink-muted" /> {c.code ? `${c.code} · ${c.name}` : c.name}
-                    </button>
+                      <GraduationCap size={13} className="shrink-0" /> {c.code ? `${c.code} · ${c.name}` : c.name}
+                    </div>
                   ))}
                 </div>
               )}

@@ -53,7 +53,10 @@ export default function MobileShell() {
   const closeTool = () => {
     setTool(null);
     setToolPayload(null);
-    setRoute("home");
+    // Deliberately don't touch `route` here — it already reflects whichever
+    // screen the tool was opened from (Home, or the "More" launcher), so
+    // closing the tool naturally reveals that screen again instead of
+    // always bouncing back to Home.
   };
 
   return (

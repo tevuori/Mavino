@@ -1,5 +1,5 @@
 import { forwardRef, useEffect } from "react";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Monitor, Plus, X } from "lucide-react";
 import type { ReactNode, InputHTMLAttributes, TextareaHTMLAttributes, SelectHTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -324,6 +324,23 @@ export function MobileButton({
     <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${styles} ${className}`}>
       {children}
     </button>
+  );
+}
+
+/**
+ * A soft, dismissible-feeling (but non-blocking) note that a feature is
+ * fuller / more comfortable on a bigger screen. Used on mobile screens for
+ * apps that have a heavy canvas/graph/multi-pane desktop layout (e.g. Compass'
+ * citation graph, Maps' full tour planner) — the mobile view still works and
+ * exposes the core functionality, this just sets expectations rather than
+ * blocking access.
+ */
+export function MobileDesktopNote({ text }: { text: string }) {
+  return (
+    <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-accent/20 bg-accent/[0.07] px-4 py-3 text-xs leading-5 text-ink-muted">
+      <Monitor size={15} className="mt-0.5 shrink-0 text-accent" />
+      <span>{text}</span>
+    </div>
   );
 }
 

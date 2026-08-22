@@ -347,7 +347,7 @@ function WelcomeStep() {
       <p className="mb-1 text-lg text-ink-muted">Student OS — your desktop for learning</p>
       <p className="mx-auto mt-3 max-w-md text-sm text-ink-muted">
         A desktop-environment-style productivity dashboard with notes, tasks, an AI assistant,
-        calendar, flashcards, grades tracker, and more — all in your browser.
+        calendar, flashcards, and more — all in your browser.
       </p>
       <p className="mt-4 text-sm text-ink-muted">
         Let's take a quick tour and set up your workspace.
@@ -436,7 +436,6 @@ function MoreAppsStep() {
   const apps = [
     { icon: <Folder size={18} />, name: "Files", desc: "Virtual file system with drag-drop, ZIP, search" },
     { icon: <Brain size={18} />, name: "Flashcards", desc: "SM-2 spaced repetition with 3D flip cards" },
-    { icon: <GraduationCap size={18} />, name: "Grades", desc: "GPA calculator with weighted assignments" },
     { icon: <GraduationCap size={18} />, name: "Study Hub", desc: "AI-powered flashcards, quizzes, summaries" },
     { icon: <Timer size={18} />, name: "Pomodoro", desc: "Focus timer with DND and session stats" },
     { icon: <Flame size={18} />, name: "Habits", desc: "Habit tracker with streaks and heatmap" },

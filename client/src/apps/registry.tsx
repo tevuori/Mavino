@@ -41,7 +41,6 @@ const FilesApp = lazyImport(() => import("./files/FilesApp"));
 const SettingsApp = lazyImport(() => import("./settings/SettingsApp"));
 const PomodoroApp = lazyImport(() => import("./pomodoro/PomodoroApp"));
 const FlashcardsApp = lazyImport(() => import("./flashcards/FlashcardsApp"));
-const GradesApp = lazyImport(() => import("./grades/GradesApp"));
 const EditorApp = lazyImport(() => import("./editor/EditorApp"));
 const ViewerApp = lazyImport(() => import("./viewer/ViewerApp"));
 const AthenaApp = lazyImport(() => import("./athena/AthenaApp"));
@@ -103,7 +102,6 @@ export const APPS: AppDefinition[] = [
   { id: "viewer", name: "Viewer", icon: "Eye", component: ViewerApp, pinnedToDesktop: false, fullscreenOnMobile: true, hideOnMobile: true, minTier: "paid" },
   { id: "pomodoro", name: "Pomodoro", icon: "Timer", component: PomodoroApp, pinnedToDesktop: true, minTier: "paid" },
   { id: "flashcards", name: "Flashcards", icon: "Brain", component: FlashcardsApp, pinnedToDesktop: true, minTier: "paid" },
-  { id: "grades", name: "Grades", icon: "GraduationCap", component: GradesApp, pinnedToDesktop: true, minTier: "paid" },
   { id: "calendar", name: "Calendar", icon: "Calendar", component: CalendarApp, pinnedToDesktop: true, minTier: "paid" },
   { id: "habits", name: "Habits", icon: "Flame", component: HabitsApp, pinnedToDesktop: true, minTier: "paid" },
   { id: "ntfy", name: "Ntfy", icon: "Bell", component: NtfyApp, pinnedToDesktop: false, minTier: "paid" },

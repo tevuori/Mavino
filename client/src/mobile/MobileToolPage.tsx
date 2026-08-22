@@ -9,7 +9,6 @@ import MobileTeach from "./MobileTeach";
 import MobileFocus from "./MobileFocus";
 import MobileFiles from "./MobileFiles";
 import MobileVoice from "./MobileVoice";
-import MobileGrades from "./MobileGrades";
 import MobileWhiteboard from "./MobileWhiteboard";
 import MobileBrowser from "./MobileBrowser";
 import MobileNtfy from "./MobileNtfy";
@@ -18,6 +17,16 @@ import MobileEditor from "./MobileEditor";
 import MobileAtlas from "./MobileAtlas";
 import MobileCrunch from "./MobileCrunch";
 import MobileEcho from "./MobileEcho";
+import MobileAnalytics from "./MobileAnalytics";
+import MobileMaps from "./MobileMaps";
+import MobilePlans from "./MobilePlans";
+import MobileMarketplace from "./MobileMarketplace";
+import MobilePulse from "./MobilePulse";
+import MobileCompass from "./MobileCompass";
+import MobileForge from "./MobileForge";
+import MobileBridge from "./MobileBridge";
+import MobileScribe from "./MobileScribe";
+import MobileCircle from "./MobileCircle";
 import { MobileContainer, MobileEmpty, MobileHeader } from "./MobileUi";
 
 /** Optional payload carried when opening a tool (e.g. a note source for Study). */
@@ -45,7 +54,6 @@ const SCREENS: Partial<Record<MobileTool, (props: { onClose: () => void; onOpenT
   focus: (props) => <MobileFocus {...props} />,
   files: (props) => <MobileFiles {...props} />,
   voice: (props) => <MobileVoice {...props} />,
-  grades: (props) => <MobileGrades {...props} />,
   whiteboard: (props) => <MobileWhiteboard {...props} />,
   browser: (props) => <MobileBrowser {...props} />,
   ntfy: (props) => <MobileNtfy {...props} />,
@@ -54,6 +62,16 @@ const SCREENS: Partial<Record<MobileTool, (props: { onClose: () => void; onOpenT
   atlas: (props) => <MobileAtlas {...props} />,
   crunch: (props) => <MobileCrunch {...props} />,
   echo: (props) => <MobileEcho {...props} />,
+  analytics: (props) => <MobileAnalytics {...props} />,
+  maps: (props) => <MobileMaps {...props} />,
+  plans: (props) => <MobilePlans {...props} />,
+  marketplace: (props) => <MobileMarketplace {...props} />,
+  pulse: (props) => <MobilePulse {...props} />,
+  compass: (props) => <MobileCompass {...props} />,
+  forge: (props) => <MobileForge {...props} />,
+  bridge: (props) => <MobileBridge {...props} />,
+  scribe: (props) => <MobileScribe {...props} />,
+  circle: (props) => <MobileCircle {...props} />,
 };
 
 export default function MobileToolPage({

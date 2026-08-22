@@ -1,11 +1,21 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, BookOpen, Brain, FileText, Flame, Folder, Globe, GraduationCap, Mic, Music2, Network, NotebookPen, PenTool, Settings, Timer, BellRing, Search, Lock, CalendarClock, Radio } from "lucide-react";
+import {
+  ArrowLeft, BookOpen, Brain, FileText, Flame, Folder, Globe, GraduationCap,
+  Mic, Music2, Network, NotebookPen, PenTool, Settings, Timer, BellRing,
+  Search, Lock, CalendarClock, Radio, BarChart3, CreditCard, Store, Link2,
+  Activity, Compass as CompassIcon, Users, PenLine, Map as MapIcon,
+} from "lucide-react";
 import { useFeatures, type SubscriptionTier } from "../store/features";
 import { APP_MAP } from "../apps/registry";
 import type { AppId } from "../store/windows";
 import type { MobileToolPayload } from "./MobileToolPage";
 
-export type MobileTool = "notes" | "study" | "teach" | "flashcards" | "focus" | "files" | "voice" | "grades" | "habits" | "whiteboard" | "browser" | "reminders" | "ntfy" | "settings" | "editor" | "atlas" | "crunch" | "echo";
+export type MobileTool =
+  | "notes" | "study" | "teach" | "flashcards" | "focus" | "files" | "voice"
+  | "habits" | "whiteboard" | "browser" | "reminders" | "ntfy"
+  | "settings" | "editor" | "atlas" | "crunch" | "echo"
+  | "analytics" | "maps" | "plans" | "marketplace"
+  | "pulse" | "compass" | "forge" | "bridge" | "scribe" | "circle";
 
 /** Maps a mobile tool id to the desktop AppId used for availability checks. */
 const TOOL_TO_APP_ID: Record<MobileTool, AppId> = {
@@ -16,7 +26,6 @@ const TOOL_TO_APP_ID: Record<MobileTool, AppId> = {
   focus: "pomodoro",
   files: "files",
   voice: "voice",
-  grades: "grades",
   habits: "habits",
   whiteboard: "whiteboard",
   browser: "browser",
@@ -27,17 +36,54 @@ const TOOL_TO_APP_ID: Record<MobileTool, AppId> = {
   atlas: "atlas",
   crunch: "crunch",
   echo: "echo",
+  analytics: "analytics",
+  maps: "maps",
+  plans: "plans",
+  marketplace: "marketplace",
+  pulse: "pulse",
+  compass: "compass",
+  forge: "forge",
+  bridge: "bridge",
+  scribe: "scribe",
+  circle: "circle",
 };
 
-const ALL_APPS: { id: MobileTool; name: string; description: string; icon: typeof NotebookPen }[] = [
-  { id: "notes", name: "Notes", description: "Capture and organize ideas", icon: NotebookPen }, { id: "study", name: "Study Hub", description: "AI study workflows", icon: BookOpen }, { id: "teach", name: "Teach Me", description: "Interactive AI tutor", icon: GraduationCap }, { id: "flashcards", name: "Flashcards", description: "Review what matters", icon: Brain }, { id: "focus", name: "Focus", description: "Pomodoro sessions", icon: Timer },
-  { id: "files", name: "Files", description: "Your study materials", icon: Folder }, { id: "voice", name: "Voice Notes", description: "Record, transcribe, remember", icon: Mic }, { id: "grades", name: "Grades", description: "Courses and progress", icon: GraduationCap },
-  { id: "habits", name: "Habits", description: "Small wins, daily", icon: Flame }, { id: "whiteboard", name: "Whiteboard", description: "Sketch your thinking", icon: PenTool }, { id: "browser", name: "Browser", description: "Research with Mavino", icon: Globe }, { id: "reminders", name: "Reminders", description: "Never lose a deadline", icon: BellRing },
-  { id: "ntfy", name: "Ntfy", description: "Messages and automations", icon: Music2 }, { id: "settings", name: "Settings", description: "Account and preferences", icon: Settings }, { id: "editor", name: "Editor", description: "Text and code files", icon: FileText },
-  { id: "atlas", name: "Atlas", description: "Your global knowledge map", icon: Network },
-  { id: "crunch", name: "Crunch", description: "Adaptive exam prep planner", icon: CalendarClock },
-  { id: "echo", name: "Echo", description: "Live lecture companion", icon: Radio },
+type AppCategory = "Study" | "Productivity" | "Pro tools" | "Account";
+
+const ALL_APPS: { id: MobileTool; name: string; description: string; icon: typeof NotebookPen; category: AppCategory }[] = [
+  { id: "study", name: "Study Hub", description: "AI study workflows", icon: BookOpen, category: "Study" },
+  { id: "teach", name: "Teach Me", description: "Interactive AI tutor", icon: GraduationCap, category: "Study" },
+  { id: "flashcards", name: "Flashcards", description: "Review what matters", icon: Brain, category: "Study" },
+  { id: "analytics", name: "Analytics", description: "Your progress at a glance", icon: BarChart3, category: "Study" },
+
+  { id: "notes", name: "Notes", description: "Capture and organize ideas", icon: NotebookPen, category: "Productivity" },
+  { id: "focus", name: "Focus", description: "Pomodoro sessions", icon: Timer, category: "Productivity" },
+  { id: "files", name: "Files", description: "Your study materials", icon: Folder, category: "Productivity" },
+  { id: "voice", name: "Voice Notes", description: "Record, transcribe, remember", icon: Mic, category: "Productivity" },
+  { id: "habits", name: "Habits", description: "Small wins, daily", icon: Flame, category: "Productivity" },
+  { id: "whiteboard", name: "Whiteboard", description: "Sketch your thinking", icon: PenTool, category: "Productivity" },
+  { id: "browser", name: "Browser", description: "Research with Mavino", icon: Globe, category: "Productivity" },
+  { id: "reminders", name: "Reminders", description: "Never lose a deadline", icon: BellRing, category: "Productivity" },
+  { id: "maps", name: "Maps", description: "Hiking routes and trips", icon: MapIcon, category: "Productivity" },
+  { id: "ntfy", name: "Ntfy", description: "Messages and automations", icon: Music2, category: "Productivity" },
+  { id: "editor", name: "Editor", description: "Text and code files", icon: FileText, category: "Productivity" },
+
+  { id: "atlas", name: "Atlas", description: "Your global knowledge map", icon: Network, category: "Pro tools" },
+  { id: "crunch", name: "Crunch", description: "Adaptive exam prep planner", icon: CalendarClock, category: "Pro tools" },
+  { id: "echo", name: "Echo", description: "Live lecture companion", icon: Radio, category: "Pro tools" },
+  { id: "pulse", name: "Pulse", description: "Predicts your mastery over time", icon: Activity, category: "Pro tools" },
+  { id: "compass", name: "Compass", description: "Research & literature review", icon: CompassIcon, category: "Pro tools" },
+  { id: "forge", name: "Forge", description: "AI practice problems", icon: Flame, category: "Pro tools" },
+  { id: "bridge", name: "Concept Bridge", description: "Connections across courses", icon: Link2, category: "Pro tools" },
+  { id: "scribe", name: "Scribe", description: "Thesis & essay writing coach", icon: PenLine, category: "Pro tools" },
+  { id: "circle", name: "Circle", description: "Shared study spaces", icon: Users, category: "Pro tools" },
+
+  { id: "marketplace", name: "Marketplace", description: "Browse and install plugins", icon: Store, category: "Account" },
+  { id: "plans", name: "Plans", description: "Billing and subscription", icon: CreditCard, category: "Account" },
+  { id: "settings", name: "Settings", description: "Account and preferences", icon: Settings, category: "Account" },
 ];
+
+const CATEGORY_ORDER: AppCategory[] = ["Study", "Productivity", "Pro tools", "Account"];
 
 const TIER_RANK: Record<SubscriptionTier, number> = { free: 0, paid: 1, pro: 2 };
 
@@ -67,6 +113,13 @@ export default function MobileLauncher({ onClose, onOpen }: { onClose: () => voi
     return apps.filter((a) => a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q));
   }, [apps, query]);
 
+  const grouped = useMemo(() => {
+    const byCategory = new Map<AppCategory, typeof filtered>();
+    for (const cat of CATEGORY_ORDER) byCategory.set(cat, []);
+    for (const app of filtered) byCategory.get(app.category)?.push(app);
+    return CATEGORY_ORDER.map((cat) => ({ cat, items: byCategory.get(cat) ?? [] })).filter((g) => g.items.length > 0);
+  }, [filtered]);
+
   return (
     <div className="mx-auto min-w-0 max-w-md px-5 pb-7 pt-[max(1.5rem,env(safe-area-inset-top))]">
       <header className="mb-6 flex items-center gap-3">
@@ -87,28 +140,36 @@ export default function MobileLauncher({ onClose, onOpen }: { onClose: () => voi
           className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted"
         />
       </label>
-      <div className="grid grid-cols-2 gap-3">
-        {filtered.map(({ id, name, description, icon: Icon, access }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => onOpen(id)}
-            className="relative min-h-32 rounded-3xl border border-edge bg-surface-2 p-4 text-left active:scale-[.98] active:bg-surface-3"
-          >
-            <span className="mb-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/15 text-accent">
-              <Icon size={20} />
-            </span>
-            <p className="flex items-center gap-1.5 font-semibold text-ink">
-              {name}
-              {access === "preview" && <Lock size={12} className="text-amber-400" />}
-            </p>
-            <p className="mt-1 text-xs leading-5 text-ink-muted">{description}</p>
-          </button>
-        ))}
-        {filtered.length === 0 && (
-          <p className="col-span-2 rounded-2xl border border-dashed border-edge px-4 py-5 text-sm text-ink-muted">No apps match "{query}".</p>
-        )}
-      </div>
+      {grouped.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-edge px-4 py-5 text-sm text-ink-muted">No apps match "{query}".</p>
+      ) : (
+        <div className="space-y-6">
+          {grouped.map(({ cat, items }) => (
+            <section key={cat}>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">{cat}</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {items.map(({ id, name, description, icon: Icon, access }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onOpen(id)}
+                    className="relative min-h-32 rounded-3xl border border-edge bg-surface-2 p-4 text-left active:scale-[.98] active:bg-surface-3"
+                  >
+                    <span className="mb-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/15 text-accent">
+                      <Icon size={20} />
+                    </span>
+                    <p className="flex items-center gap-1.5 font-semibold text-ink">
+                      {name}
+                      {access === "preview" && <Lock size={12} className="text-amber-400" />}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-ink-muted">{description}</p>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
