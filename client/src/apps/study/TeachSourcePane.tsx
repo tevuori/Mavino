@@ -152,17 +152,21 @@ function CodemirrorPane({ paneId, source, pending, onPendingApplied, onLoadingCh
   const issueShowCommand = useShowControl((s) => s.issueCommand);
   const [content, setContent] = useState("");
   const [fileName, setFileName] = useState(source.name);
-  const viewReady = useRef(false);
-  const pendingRef = useRef<PaneHighlight | null>(pending);
-  pendingRef.current = pending;
-  const appliedPendingRef = useRef(false);
+  // A real state (not a ref) so the pending-highlight effect below re-runs
+  // once the CodeMirror view actually mounts, even if content resolved first.
+  const [viewReady, setViewReady] = useState(false);
+  // Tracks the last pending highlight we've already applied (by value, not
+  // identity) so a highlight is applied exactly once per distinct request —
+  // but WILL re-apply if a new highlight arrives for the same open source
+  // (fixes highlighting silently no-op'ing on the 2nd+ passage).
+  const appliedPendingKeyRef = useRef<string | null>(null);
 
   // Fetch content.
   useEffect(() => {
     let cancelled = false;
     onLoadingChange(true);
-    viewReady.current = false;
-    appliedPendingRef.current = false;
+    setViewReady(false);
+    appliedPendingKeyRef.current = null;
     (async () => {
       try {
         if (source.appId === "notes") {
@@ -192,26 +196,31 @@ function CodemirrorPane({ paneId, source, pending, onPendingApplied, onLoadingCh
 
   const onCreateEditor = useCallback((view: EditorView) => {
     onCreateEditorShow(view);
-    viewReady.current = true;
+    setViewReady(true);
   }, [onCreateEditorShow]);
 
   // Apply the pending highlight AFTER the content has loaded (not in
   // onCreateEditor, which fires while content is still "" — the empty doc
   // would clamp all offsets to 0 and the highlight would fail with "no-match").
+  // Re-runs whenever a NEW pending highlight arrives (e.g. Athena highlights a
+  // second passage in the same already-open source), not just on first load.
   useEffect(() => {
-    if (!content || !viewReady.current || appliedPendingRef.current) return;
-    const p = pendingRef.current;
-    if (!p) return;
-    appliedPendingRef.current = true;
+    if (!content || !viewReady || !pending) return;
+    const key = JSON.stringify(pending);
+    if (appliedPendingKeyRef.current === key) return;
+    appliedPendingKeyRef.current = key;
     issueShowCommand(paneId, "highlight", {
-      text: p.text,
-      posStart: p.posStart,
-      posEnd: p.posEnd,
-      lineStart: p.line,
-      lineEnd: p.lineEnd,
+      text: pending.text,
+      posStart: pending.posStart,
+      posEnd: pending.posEnd,
+      lineStart: pending.line,
+      // A single-line highlight (highlightLine only, no highlightLineEnd)
+      // must still resolve via the line-RANGE branch (lineStart===lineEnd) —
+      // resolveRange() has no other way to target a single line by number.
+      lineEnd: pending.lineEnd ?? pending.line,
     });
     onPendingApplied();
-  }, [content, paneId, issueShowCommand, onPendingApplied]);
+  }, [content, viewReady, pending, paneId, issueShowCommand, onPendingApplied]);
 
   return (
     <CodeMirror
@@ -234,12 +243,18 @@ function ViewerPane({ paneId, source, pending, onPendingApplied, onLoadingChange
   const [fileMeta, setFileMeta] = useState<{ name: string; mimeType: string } | null>(null);
   const [pdfSearch, setPdfSearch] = useState<string | undefined>(undefined);
   const lastSeq = useRef(0);
+  const appliedPendingKeyRef = useRef<string | null>(null);
 
-  // Fetch file metadata (to decide PDF vs image) + apply the pending highlight.
+  // Fetch file metadata (to decide PDF vs image). Deliberately does NOT depend
+  // on `pending` — re-highlighting an already-open file must never re-fetch
+  // metadata / flip the loading state (that was causing the file to visibly
+  // "reopen" every time Athena highlighted a new passage in it).
   useEffect(() => {
     let cancelled = false;
     onLoadingChange(true);
+    setFileMeta(null);
     setPdfSearch(undefined);
+    appliedPendingKeyRef.current = null;
     (async () => {
       try {
         const { files } = await filesApi.all();
@@ -248,18 +263,26 @@ function ViewerPane({ paneId, source, pending, onPendingApplied, onLoadingChange
         if (!found) { onError("File not found"); onLoadingChange(false); return; }
         setFileMeta({ name: found.name, mimeType: found.mimeType });
         onLoadingChange(false);
-        // Apply pending highlight for PDFs via #search=.
-        if (pending?.text) {
-          const q = pending.text.length > 60 ? pending.text.slice(0, 60).trim() : pending.text;
-          if (q) setPdfSearch(q);
-        }
-        onPendingApplied();
       } catch (e) {
         if (!cancelled) onError(e instanceof Error ? e.message : "Failed to load file");
       }
     })();
     return () => { cancelled = true; };
-  }, [source.refId, onLoadingChange, onError, onPendingApplied, pending]);
+  }, [source.refId, onLoadingChange, onError]);
+
+  // Apply the pending highlight (PDF #search=) once metadata has loaded.
+  // Re-runs whenever a NEW pending highlight arrives, not just on first load.
+  useEffect(() => {
+    if (!fileMeta || !pending) return;
+    const key = JSON.stringify(pending);
+    if (appliedPendingKeyRef.current === key) return;
+    appliedPendingKeyRef.current = key;
+    if (pending.text) {
+      const q = pending.text.length > 60 ? pending.text.slice(0, 60).trim() : pending.text;
+      if (q) setPdfSearch(q);
+    }
+    onPendingApplied();
+  }, [fileMeta, pending, onPendingApplied]);
 
   // Consume subsequent show-control commands (highlight/scroll → PDF #search=).
   const cmd = commands[paneId];

@@ -10,7 +10,7 @@
 //   - per-message TTS controls with speech-synced source highlighting
 //   - lesson exports (note / flashcards / quiz / review tasks)
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen, ChevronDown, GraduationCap, Loader2, Mic, Pause, Play,
   Plus, Send, Sparkles, Square, Trash2, Volume2, VolumeX, X,
@@ -495,47 +495,55 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
           <MobileEmpty text="Ask a question, or tap the mic to speak. Mavino will teach from your sources." />
         )}
         {messages.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
-            {m.role === "user" ? (
-              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-accent px-3.5 py-2 text-sm text-ink">
-                {m.content}
-              </div>
-            ) : (
-              <div className="rounded-2xl rounded-bl-sm border border-edge bg-surface-2 px-3.5 py-2.5">
-                <HighlightableMarkdown
-                  content={m.content}
-                  scope="teacher"
-                  scopeId={`${sessionId}:${i}`}
-                  citations={citationMeta}
-                  onOpenCitation={openCitation}
-                  enabled={false}
-                />
-                <div className="mt-1.5 flex items-center gap-2">
-                  {latestSpeaking && i === messages.length - 1 ? (
-                    <>
+          <Fragment key={i}>
+            <div className={m.role === "user" ? "flex justify-end" : ""}>
+              {m.role === "user" ? (
+                <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-accent px-3.5 py-2 text-sm text-ink">
+                  {m.content}
+                </div>
+              ) : (
+                <div className="rounded-2xl rounded-bl-sm border border-edge bg-surface-2 px-3.5 py-2.5">
+                  <HighlightableMarkdown
+                    content={m.content}
+                    scope="teacher"
+                    scopeId={`${sessionId}:${i}`}
+                    citations={citationMeta}
+                    onOpenCitation={openCitation}
+                    enabled={false}
+                  />
+                  <div className="mt-1.5 flex items-center gap-2">
+                    {latestSpeaking && i === messages.length - 1 ? (
+                      <>
+                        <button
+                          onClick={() => (tts.paused ? tts.resume() : tts.pause())}
+                          className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs text-ink"
+                        >
+                          {tts.paused ? <Play size={12} /> : <Pause size={12} />}
+                          {tts.paused ? "Resume" : "Pause"}
+                        </button>
+                        <button onClick={() => tts.stop()} className="rounded-lg bg-surface-3 p-1 text-ink">
+                          <Square size={12} />
+                        </button>
+                      </>
+                    ) : (
                       <button
-                        onClick={() => (tts.paused ? tts.resume() : tts.pause())}
+                        onClick={() => speakMessage(m.content, `msg-${i}`)}
                         className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs text-ink"
                       >
-                        {tts.paused ? <Play size={12} /> : <Pause size={12} />}
-                        {tts.paused ? "Resume" : "Pause"}
+                        <Volume2 size={12} /> Play
                       </button>
-                      <button onClick={() => tts.stop()} className="rounded-lg bg-surface-3 p-1 text-ink">
-                        <Square size={12} />
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => speakMessage(m.content, `msg-${i}`)}
-                      className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs text-ink"
-                    >
-                      <Volume2 size={12} /> Play
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+            {/* Comprehension checks stay pinned right after the assistant
+                message that asked them, instead of piling up at the bottom
+                as the conversation grows. */}
+            {comprehensionChecks.filter((c) => c.afterMessageIndex === i).map((c) => (
+              <ComprehensionCard key={c.id} check={c} onAnswer={(a) => void answerComprehension(c.id, a)} fullWidth />
+            ))}
+          </Fragment>
         ))}
 
         {streaming && (
@@ -556,7 +564,8 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
           </div>
         )}
 
-        {comprehensionChecks.map((c) => (
+        {/* Checks asked during the turn that's still streaming render here. */}
+        {comprehensionChecks.filter((c) => c.afterMessageIndex >= messages.length).map((c) => (
           <ComprehensionCard key={c.id} check={c} onAnswer={(a) => void answerComprehension(c.id, a)} fullWidth />
         ))}
 

@@ -13,7 +13,7 @@
 //  - Source-history is tracked in local state and sent back to the server on
 //    each turn so Athena can resolve "go back to the first file".
 
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from "react";
 import {
   Sparkles, Send, Square, Plus, Trash2,
   ChevronDown, GraduationCap, MessageSquare, Check,
@@ -202,6 +202,26 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     setPanePending(highlight);
   }, []);
 
+  /** Issue a highlight (or clear) against the pane's LIVE command channel.
+   *  Use this whenever the target source is already the one displayed in the
+   *  pane — it applies immediately without touching `paneSource`/`panePending`,
+   *  so the pane never remounts/reloads (avoids the "reopening" flicker) and
+   *  the highlight is guaranteed to be picked up (the `pending` prop is only
+   *  consumed once per source load). */
+  const applyPaneHighlight = useCallback((highlight: PaneHighlight | null) => {
+    if (!highlight || (!highlight.text && highlight.posStart === undefined && highlight.line === undefined)) {
+      issueShowCommand(paneId, "clear_highlight");
+      return;
+    }
+    issueShowCommand(paneId, "highlight", {
+      text: highlight.text,
+      posStart: highlight.posStart,
+      posEnd: highlight.posEnd,
+      lineStart: highlight.line,
+      lineEnd: highlight.lineEnd ?? highlight.line,
+    });
+  }, [issueShowCommand, paneId]);
+
   const dispatchSourceAction = useCallback((action: AthenaClientAction) => {
     const p = action.payload as Record<string, any>;
     const act = String(p.action ?? "");
@@ -223,8 +243,16 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           lineEnd: typeof hl.lineEnd === "number" ? hl.lineEnd : undefined,
         } : null;
         sourceMetaRef.current[windowId] = { appId, openPayload };
-        const src = buildPaneSource({ windowId, appId, refId: sourceRef, name, kind, openPayload });
-        switchPane(src, highlight);
+        // If this source is already the one shown in the pane, DON'T remount
+        // it (that's what caused the "reopening" flicker while Athena keeps
+        // citing the same source turn after turn) — just re-issue the
+        // highlight through the live command channel.
+        if (paneSourceRef.current?.windowId === windowId) {
+          applyPaneHighlight(highlight);
+        } else {
+          const src = buildPaneSource({ windowId, appId, refId: sourceRef, name, kind, openPayload });
+          switchPane(src, highlight);
+        }
         setSourceHistory?.((prev) => {
           const idx = prev.findIndex((h) => h.windowId === windowId);
           const entry: TeacherSourceHistoryEntry = {
@@ -330,7 +358,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         break;
       }
     }
-  }, [openWindow, buildPaneSource, switchPane, issueShowCommand, paneId]);
+  }, [openWindow, buildPaneSource, switchPane, applyPaneHighlight, issueShowCommand, paneId]);
 
   const teach = useTeacherSession({
     language,
@@ -847,54 +875,62 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             const msgId = `msg-${i}`;
             const isSpeaking = tts.speakingId === msgId && tts.playing;
             return (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`group max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                  m.role === "user" ? "bg-accent/15 text-ink" : "bg-surface-2 text-ink"
-                }`}>
-                  {m.role === "assistant" ? (
-                    <>
-                      <HighlightableMarkdown
-                        content={m.content}
-                        scope="teacher"
-                        scopeId={sessionId ? `${sessionId}#msg-${i}` : msgId}
-                        sourceName={session?.title ? `Teach Me: ${session.title}` : "Teach Me"}
-                        citations={citationMeta}
-                        onOpenCitation={openCitation}
-                      />
-                      {tts.supported && (
-                        <div className={`mt-1 flex items-center gap-1.5 transition-opacity ${isSpeaking ? "" : "opacity-0 group-hover:opacity-100"}`}>
-                          {isSpeaking ? (
-                            <>
+              <Fragment key={i}>
+                <div className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`group max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                    m.role === "user" ? "bg-accent/15 text-ink" : "bg-surface-2 text-ink"
+                  }`}>
+                    {m.role === "assistant" ? (
+                      <>
+                        <HighlightableMarkdown
+                          content={m.content}
+                          scope="teacher"
+                          scopeId={sessionId ? `${sessionId}#msg-${i}` : msgId}
+                          sourceName={session?.title ? `Teach Me: ${session.title}` : "Teach Me"}
+                          citations={citationMeta}
+                          onOpenCitation={openCitation}
+                        />
+                        {tts.supported && (
+                          <div className={`mt-1 flex items-center gap-1.5 transition-opacity ${isSpeaking ? "" : "opacity-0 group-hover:opacity-100"}`}>
+                            {isSpeaking ? (
+                              <>
+                                <button
+                                  onClick={() => (tts.paused ? tts.resume() : tts.pause())}
+                                  className="flex items-center gap-1 text-[10px] text-accent hover:opacity-80"
+                                >
+                                  {tts.paused ? <Play size={11} /> : <Pause size={11} />} {tts.paused ? "Resume" : "Pause"}
+                                </button>
+                                <button onClick={tts.stop} className="flex items-center gap-1 text-[10px] text-ink-muted hover:text-ink">
+                                  <Square size={10} /> Stop
+                                </button>
+                                <span className="h-1 w-20 overflow-hidden rounded-full bg-surface-3">
+                                  <span className="block h-full bg-accent transition-all" style={{ width: `${Math.round(tts.progress * 100)}%` }} />
+                                </span>
+                              </>
+                            ) : (
                               <button
-                                onClick={() => (tts.paused ? tts.resume() : tts.pause())}
-                                className="flex items-center gap-1 text-[10px] text-accent hover:opacity-80"
+                                onClick={() => speakMessage(m.content, msgId)}
+                                className="flex items-center gap-1 text-[10px] text-ink-muted hover:text-accent"
+                                title="Read aloud"
                               >
-                                {tts.paused ? <Play size={11} /> : <Pause size={11} />} {tts.paused ? "Resume" : "Pause"}
+                                <Volume2 size={11} /> Read aloud
                               </button>
-                              <button onClick={tts.stop} className="flex items-center gap-1 text-[10px] text-ink-muted hover:text-ink">
-                                <Square size={10} /> Stop
-                              </button>
-                              <span className="h-1 w-20 overflow-hidden rounded-full bg-surface-3">
-                                <span className="block h-full bg-accent transition-all" style={{ width: `${Math.round(tts.progress * 100)}%` }} />
-                              </span>
-                            </>
-                          ) : (
-                            <button
-                              onClick={() => speakMessage(m.content, msgId)}
-                              className="flex items-center gap-1 text-[10px] text-ink-muted hover:text-accent"
-                              title="Read aloud"
-                            >
-                              <Volume2 size={11} /> Read aloud
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="whitespace-pre-wrap">{m.content}</p>
-                  )}
+                            )}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{m.content}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
+                {/* Comprehension checks stay pinned right after the assistant
+                    message that asked them, instead of piling up at the
+                    bottom as the conversation grows. */}
+                {comprehensionChecks.filter((c) => c.afterMessageIndex === i).map((c) => (
+                  <ComprehensionCard key={c.id} check={c} onAnswer={(ans) => void answerComprehension(c.id, ans)} />
+                ))}
+              </Fragment>
             );
           })}
           {streamText && (
@@ -916,8 +952,9 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
 
           <ToolChipRow chips={toolChips} />
 
-          {/* Comprehension checks (graded ones stay visible with their feedback) */}
-          {comprehensionChecks.map((c) => (
+          {/* Checks asked during the turn that's still streaming (or that
+              somehow outran the message list) render here, at the end. */}
+          {comprehensionChecks.filter((c) => c.afterMessageIndex >= messages.length).map((c) => (
             <ComprehensionCard key={c.id} check={c} onAnswer={(ans) => void answerComprehension(c.id, ans)} />
           ))}
         </div>

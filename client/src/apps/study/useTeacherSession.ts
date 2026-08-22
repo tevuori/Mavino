@@ -39,6 +39,14 @@ export interface ComprehensionCheck {
   answer?: string;
   grading?: boolean;
   assessment?: TeacherAssessment;
+  /**
+   * Index (into `messages`) of the assistant message that asked this check —
+   * i.e. the number of messages that existed when the check was created. The
+   * UI renders the check right after that message instead of letting all
+   * checks pile up at the bottom, so each check stays anchored to the turn
+   * that asked it as the conversation grows.
+   */
+  afterMessageIndex: number;
 }
 
 /** A transient "Athena is doing X" chip. */
@@ -70,7 +78,7 @@ function toolLabel(name: string): string {
 
 const comprehensionChecksKey = (id: string) => `athena:teach:checks:${id}`;
 
-function logToChecks(log: TeacherComprehensionEntry[]): ComprehensionCheck[] {
+function logToChecks(log: TeacherComprehensionEntry[], totalMessages: number): ComprehensionCheck[] {
   return log.map((e, i) => ({
     id: `comp-log-${i}`,
     question: e.question ?? "",
@@ -79,6 +87,9 @@ function logToChecks(log: TeacherComprehensionEntry[]): ComprehensionCheck[] {
     answered: true,
     answer: e.answer,
     grading: false,
+    // No per-message association was persisted for these (server log only),
+    // so fall back to the end of the transcript in chronological order.
+    afterMessageIndex: totalMessages,
     assessment: { passed: e.passed, score: e.passed ? 1 : 0, feedback: e.feedback ?? "", misconception: e.misconception },
   }));
 }
@@ -132,6 +143,8 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
   teachStateRef.current = teachState;
   const sourceHistoryRef = useRef(sourceHistory);
   sourceHistoryRef.current = sourceHistory;
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const dispatchRef = useRef(dispatchSourceAction);
   dispatchRef.current = dispatchSourceAction;
   const finishedRef = useRef(onLessonFinished);
@@ -176,7 +189,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     if (checks) {
       setComprehensionChecks(checks);
     } else if (loaded.state?.comprehensionLog?.length) {
-      setComprehensionChecks(logToChecks(loaded.state.comprehensionLog));
+      setComprehensionChecks(logToChecks(loaded.state.comprehensionLog, (loaded.messages ?? []).length));
     } else {
       setComprehensionChecks([]);
     }
@@ -343,12 +356,18 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     const act = String(p.action ?? "");
     switch (act) {
       case "check_comprehension": {
+        // Anchor the check to the assistant message currently being streamed
+        // (it will land at this index once the turn completes) so it stays
+        // pinned right after that reply instead of piling up at the bottom
+        // as later turns/checks are added.
+        const afterMessageIndex = messagesRef.current.length;
         setComprehensionChecks((prev) => [...prev, {
           id: `comp-${Date.now()}-${prev.length}`,
           question: String(p.question ?? ""),
           expectedConcept: typeof p.expectedConcept === "string" ? p.expectedConcept : undefined,
           options: Array.isArray(p.options) ? (p.options as unknown[]).map(String) : undefined,
           answered: false,
+          afterMessageIndex,
         }]);
         break;
       }
