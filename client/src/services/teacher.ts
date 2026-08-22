@@ -23,6 +23,10 @@ export interface TeacherSourceHistoryEntry {
    *  first-occurrence guessing) — used to re-anchor during speech playback. */
   lastPosStart?: number;
   lastPosEnd?: number;
+  /** App used to render this source in the source pane (so it can be restored on re-enter). */
+  appId?: "notes" | "editor" | "viewer" | "browser";
+  /** Payload the pane needs to reopen this source (noteId / fileId / url). */
+  openPayload?: Record<string, unknown>;
 }
 
 export type TeachingStyle = "explain" | "socratic";

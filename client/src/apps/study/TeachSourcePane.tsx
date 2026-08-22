@@ -58,7 +58,7 @@ export default function TeachSourcePane({ paneId, source, pending, onPendingAppl
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="flex h-full min-w-0 flex-col border-l border-edge bg-surface-2">
+    <div className="flex h-full w-full min-w-0 flex-col border-l border-edge bg-surface-2">
       <div className="flex items-center gap-2 border-b border-edge px-3 py-2">
         <BookOpen size={14} className="shrink-0 text-accent" />
         <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink">
@@ -74,15 +74,15 @@ export default function TeachSourcePane({ paneId, source, pending, onPendingAppl
           </button>
         )}
       </div>
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative min-h-0 w-full flex-1 overflow-hidden">
         {!source ? (
           <EmptyState />
         ) : loading ? (
-          <div className="flex h-full items-center justify-center gap-2 text-xs text-ink-muted">
+          <div className="flex h-full w-full items-center justify-center gap-2 text-xs text-ink-muted">
             <Loader2 size={14} className="animate-spin" /> Loading source…
           </div>
         ) : error ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center text-xs text-ink-muted">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-xs text-ink-muted">
             <AlertTriangle size={18} className="text-amber-400" />
             <p>{error}</p>
           </div>
@@ -220,7 +220,7 @@ function CodemirrorPane({ paneId, source, pending, onPendingApplied, onLoadingCh
       extensions={[langExt, EditorView.lineWrapping, ...showExtensions]}
       theme={isDark ? oneDark : "light"}
       height="100%"
-      className="h-full text-sm"
+      className="h-full w-full min-w-0 text-sm"
       onCreateEditor={onCreateEditor}
     />
   );

@@ -22,7 +22,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Settings2, X, AlertTriangle,
   ArrowUp, ArrowDown, Pencil, RotateCcw,
 } from "lucide-react";
-import type { StudentLevel, TeachingStyle } from "../../services/teacher";
+import type { StudentLevel, TeachingStyle, TeacherSourceHistoryEntry } from "../../services/teacher";
 import { type StudySource } from "../../services/study-sources";
 import WorkspaceSourceSelector from "./WorkspaceSourceSelector";
 import HighlightableMarkdown from "./HighlightableMarkdown";
@@ -71,6 +71,19 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function inferSourceApp(kind: string, refId: string): { appId: PaneSource["appId"]; openPayload: Record<string, unknown> } {
+  switch (kind) {
+    case "note":
+      return { appId: "notes", openPayload: { noteId: refId } };
+    case "file":
+      return { appId: "editor", openPayload: { fileId: refId } };
+    case "url":
+      return { appId: "browser", openPayload: { url: refId } };
+    default:
+      return { appId: "viewer", openPayload: {} };
+  }
+}
+
 interface Props {
   initialSessionId?: string | null;
   language?: "en" | "cs";
@@ -115,6 +128,8 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const [panePending, setPanePending] = useState<PaneHighlight | null>(null);
   const paneSourceRef = useRef<PaneSource | null>(null);
   paneSourceRef.current = paneSource;
+  const collapsedSidebarFor = useRef<string | null>(null);
+  const restoredPaneFor = useRef<string | null>(null);
 
   // Voice: TTS (Athena speaks) + STT (student speaks)
   const [autoSpeak, setAutoSpeak] = useState(false);
@@ -212,13 +227,15 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         switchPane(src, highlight);
         setSourceHistory?.((prev) => {
           const idx = prev.findIndex((h) => h.windowId === windowId);
-          const entry = {
+          const entry: TeacherSourceHistoryEntry = {
             windowId,
             index: idx >= 0 ? prev[idx].index : prev.length + 1,
             name, kind, refId: sourceRef,
             lastHighlight: highlight?.text,
             lastPosStart: highlight?.posStart,
             lastPosEnd: highlight?.posEnd,
+            appId: appId as TeacherSourceHistoryEntry["appId"],
+            openPayload,
           };
           if (idx >= 0) return prev.map((h) => (h.windowId === windowId ? { ...h, ...entry } : h));
           return [...prev, entry];
@@ -245,8 +262,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           // Target a background source: switch the pane to it and apply after load.
           const entry = sessionRef.current?.sourceHistory.find((h) => h.windowId === winId);
           const meta = sourceMetaRef.current[winId];
-          if (entry && meta) {
-            const src = buildPaneSource({ windowId: winId, appId: meta.appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload: meta.openPayload });
+          if (entry) {
+            const inferred = inferSourceApp(entry.kind, entry.refId);
+            const appId = (meta?.appId ?? entry.appId ?? inferred.appId) as PaneSource["appId"];
+            const openPayload = meta?.openPayload ?? entry.openPayload ?? inferred.openPayload;
+            const src = buildPaneSource({ windowId: winId, appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload });
             const pending: PaneHighlight | null = kind === "highlight" ? { text: payload.text, posStart: payload.posStart, posEnd: payload.posEnd, line: payload.lineStart, lineEnd: payload.lineEnd } : null;
             switchPane(src, pending);
           }
@@ -262,8 +282,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         const winId = String(p.windowId ?? "");
         const entry = sessionRef.current?.sourceHistory.find((h) => h.windowId === winId);
         const meta = sourceMetaRef.current[winId];
-        if (entry && meta) {
-          const src = buildPaneSource({ windowId: winId, appId: meta.appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload: meta.openPayload });
+        if (entry) {
+          const inferred = inferSourceApp(entry.kind, entry.refId);
+          const appId = (meta?.appId ?? entry.appId ?? inferred.appId) as PaneSource["appId"];
+          const openPayload = meta?.openPayload ?? entry.openPayload ?? inferred.openPayload;
+          const src = buildPaneSource({ windowId: winId, appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload });
           switchPane(src, entry.lastHighlight ? {
             text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd,
           } : null);
@@ -278,8 +301,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           if (paneSourceRef.current?.windowId === winId) {
             const last = next[next.length - 1];
             const meta = last ? sourceMetaRef.current[last.windowId] : undefined;
-            if (last && meta) {
-              const src = buildPaneSource({ windowId: last.windowId, appId: meta.appId, refId: last.refId, name: last.name, kind: last.kind, openPayload: meta.openPayload });
+            if (last) {
+              const inferred = inferSourceApp(last.kind, last.refId);
+              const appId = (meta?.appId ?? last.appId ?? inferred.appId) as PaneSource["appId"];
+              const openPayload = meta?.openPayload ?? last.openPayload ?? inferred.openPayload;
+              const src = buildPaneSource({ windowId: last.windowId, appId, refId: last.refId, name: last.name, kind: last.kind, openPayload });
               switchPane(src, null);
             } else {
               setPaneSource(null);
@@ -351,15 +377,16 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         // Switch the pane to the cited source if it's not already active.
         if (paneSourceRef.current?.windowId !== cited.windowId) {
           const meta = sourceMetaRef.current[cited.windowId];
-          if (meta) {
-            const src = buildPaneSource({
-              windowId: cited.windowId, appId: meta.appId, refId: cited.refId,
-              name: cited.name, kind: cited.kind, openPayload: meta.openPayload,
-            });
-            switchPane(src, cited.lastHighlight ? {
-              text: cited.lastHighlight, posStart: cited.lastPosStart, posEnd: cited.lastPosEnd,
-            } : null);
-          }
+          const inferred = inferSourceApp(cited.kind, cited.refId);
+          const appId = (meta?.appId ?? cited.appId ?? inferred.appId) as PaneSource["appId"];
+          const openPayload = meta?.openPayload ?? cited.openPayload ?? inferred.openPayload;
+          const src = buildPaneSource({
+            windowId: cited.windowId, appId, refId: cited.refId,
+            name: cited.name, kind: cited.kind, openPayload,
+          });
+          switchPane(src, cited.lastHighlight ? {
+            text: cited.lastHighlight, posStart: cited.lastPosStart, posEnd: cited.lastPosEnd,
+          } : null);
         } else if (typeof cited.lastPosStart === "number" && typeof cited.lastPosEnd === "number") {
           issueShowCommand(paneId, "highlight", { posStart: cited.lastPosStart, posEnd: cited.lastPosEnd });
         } else if (cited.lastHighlight) {
@@ -476,27 +503,51 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     if (session) setSelectedSourceIds(new Set(session.sourceIds));
   }, [session]);
 
+  // Collapse the Sessions sidebar as soon as a session becomes active.
+  useEffect(() => {
+    if (sessionId && collapsedSidebarFor.current !== sessionId) {
+      collapsedSidebarFor.current = sessionId;
+      setSidebarOpen(false);
+    }
+  }, [sessionId]);
+
+  // When loading a session, restore the most recently shown source into the pane
+  // so the document and highlight are still visible after the student re-enters.
+  useEffect(() => {
+    if (restoredPaneFor.current === sessionId) return;
+    restoredPaneFor.current = sessionId;
+    if (!sessionId || paneSource || sourceHistory.length === 0) return;
+    const last = sourceHistory[sourceHistory.length - 1];
+    const inferred = inferSourceApp(last.kind, last.refId);
+    const meta = sourceMetaRef.current[last.windowId];
+    const src = buildPaneSource({
+      windowId: last.windowId,
+      appId: (meta?.appId ?? last.appId ?? inferred.appId) as PaneSource["appId"],
+      refId: last.refId,
+      name: last.name,
+      kind: last.kind,
+      openPayload: meta?.openPayload ?? last.openPayload ?? inferred.openPayload,
+    });
+    switchPane(src, last.lastHighlight ? {
+      text: last.lastHighlight, posStart: last.lastPosStart, posEnd: last.lastPosEnd,
+    } : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, sourceHistory, paneSource, buildPaneSource, switchPane]);
+
   // ----- citations -----
 
   const openCitation = useCallback((index: number) => {
     const entry = sourceHistory.find((h) => h.index === index);
     if (!entry) return;
-    const appId = entry.kind === "note" ? "notes"
-      : entry.kind === "url" ? "browser"
-      : entry.kind === "file" ? "editor"
-      : "viewer";
-    const openPayload = entry.kind === "note" ? { noteId: entry.refId }
-      : entry.kind === "file" ? { fileId: entry.refId }
-      : entry.kind === "url" ? { url: entry.refId }
-      : {};
+    const inferred = inferSourceApp(entry.kind, entry.refId);
     const meta = sourceMetaRef.current[entry.windowId];
     const src = buildPaneSource({
       windowId: entry.windowId,
-      appId: meta?.appId ?? appId,
+      appId: (meta?.appId ?? entry.appId ?? inferred.appId) as PaneSource["appId"],
       refId: entry.refId,
       name: entry.name,
       kind: entry.kind,
-      openPayload: meta?.openPayload ?? openPayload,
+      openPayload: meta?.openPayload ?? entry.openPayload ?? inferred.openPayload,
     });
     switchPane(src, entry.lastHighlight ? {
       text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd,

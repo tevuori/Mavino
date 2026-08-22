@@ -18,6 +18,7 @@ import {
   type StudentLevel,
   type TeacherAssessment,
   type TeacherChatHandle,
+  type TeacherComprehensionEntry,
   type TeacherMessage,
   type TeacherSession,
   type TeacherSessionState,
@@ -67,6 +68,21 @@ function toolLabel(name: string): string {
   return TOOL_LABELS[name] ?? `Running ${name.replace(/_/g, " ")}…`;
 }
 
+const comprehensionChecksKey = (id: string) => `athena:teach:checks:${id}`;
+
+function logToChecks(log: TeacherComprehensionEntry[]): ComprehensionCheck[] {
+  return log.map((e, i) => ({
+    id: `comp-log-${i}`,
+    question: e.question ?? "",
+    expectedConcept: e.concept,
+    options: undefined,
+    answered: true,
+    answer: e.answer,
+    grading: false,
+    assessment: { passed: e.passed, score: e.passed ? 1 : 0, feedback: e.feedback ?? "", misconception: e.misconception },
+  }));
+}
+
 export interface UseTeacherSessionOpts {
   language?: "en" | "cs";
   initialSessionId?: string | null;
@@ -111,6 +127,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
 
   const handleRef = useRef<TeacherChatHandle | null>(null);
   const streamTextRef = useRef("");
+  const autoStartFor = useRef<string | null>(null);
   const teachStateRef = useRef(teachState);
   teachStateRef.current = teachState;
   const sourceHistoryRef = useRef(sourceHistory);
@@ -149,6 +166,20 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
       followPlan: true,
       ...(loaded.state ?? {}),
     });
+    // Restore comprehension-check cards from localStorage first (keeps pending checks),
+    // then fall back to the server's answered comprehension log.
+    let checks: ComprehensionCheck[] | null = null;
+    try {
+      const raw = localStorage.getItem(comprehensionChecksKey(loaded.id));
+      if (raw) checks = JSON.parse(raw) as ComprehensionCheck[];
+    } catch { /* ignore */ }
+    if (checks) {
+      setComprehensionChecks(checks);
+    } else if (loaded.state?.comprehensionLog?.length) {
+      setComprehensionChecks(logToChecks(loaded.state.comprehensionLog));
+    } else {
+      setComprehensionChecks([]);
+    }
   }, []);
 
   const loadSession = useCallback(async (id: string) => {
@@ -199,8 +230,6 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
         teachingStyle: input.teachingStyle,
       });
       applySession(created);
-      setMessages([]);
-      setComprehensionChecks([]);
       void refreshLists();
       if (input.withPlan) {
         setPlanning(true);
@@ -217,6 +246,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
           setPlanning(false);
         }
       }
+      autoStartFor.current = created.id;
       return created;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create session");
@@ -345,6 +375,14 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     }
   }, []);
 
+  // Persist pending/answered comprehension cards so they survive a re-enter.
+  useEffect(() => {
+    if (!sessionId) return;
+    try {
+      localStorage.setItem(comprehensionChecksKey(sessionId), JSON.stringify(comprehensionChecks));
+    } catch { /* ignore */ }
+  }, [sessionId, comprehensionChecks]);
+
   // ----- streaming a turn -----
 
   /** Called with the full assistant text when a turn completes (for auto-speak). */
@@ -429,6 +467,16 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     });
     send(lastTurn);
   }, [lastTurn, send]);
+
+  // After creating a new session (and optionally generating a plan) start the
+  // first teaching turn automatically so the student doesn't have to type it.
+  useEffect(() => {
+    if (autoStartFor.current && sessionId === autoStartFor.current && !planning && !streaming && messages.length === 0) {
+      autoStartFor.current = null;
+      const prompt = language === "cs" ? "Začni výuku." : "Start the lesson.";
+      send(prompt);
+    }
+  }, [sessionId, planning, streaming, messages.length, send, language]);
 
   // ----- comprehension assessment -----
 
