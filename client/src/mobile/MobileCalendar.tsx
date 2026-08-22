@@ -131,7 +131,7 @@ export default function MobileCalendar() {
       <header className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-accent">Keep the day clear</p>
-          <h1 className="mt-1 text-3xl font-bold text-ink">Calendar</h1>
+          <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight text-ink">Calendar</h1>
         </div>
         <MobileFab onClick={() => openEditor()} icon={<Plus size={22} />} label="New event" />
       </header>
@@ -139,8 +139,8 @@ export default function MobileCalendar() {
       {/* View toggle */}
       <div className="mb-4 flex justify-center">
         <div className="inline-flex rounded-full border border-edge bg-surface-2 p-1">
-          <button type="button" onClick={() => setView("agenda")} className={`rounded-full px-5 py-1.5 text-sm font-medium transition ${view === "agenda" ? "bg-accent text-accent-fg" : "text-ink-muted"}`}>Agenda</button>
-          <button type="button" onClick={() => setView("day")} className={`rounded-full px-5 py-1.5 text-sm font-medium transition ${view === "day" ? "bg-accent text-accent-fg" : "text-ink-muted"}`}>Day</button>
+          <button type="button" onClick={() => setView("agenda")} className={`rounded-full px-5 py-1.5 text-sm font-medium transition ${view === "agenda" ? "brand-gradient text-white" : "text-ink-muted"}`}>Agenda</button>
+          <button type="button" onClick={() => setView("day")} className={`rounded-full px-5 py-1.5 text-sm font-medium transition ${view === "day" ? "brand-gradient text-white" : "text-ink-muted"}`}>Day</button>
         </div>
       </div>
 

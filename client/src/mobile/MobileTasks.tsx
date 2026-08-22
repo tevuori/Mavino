@@ -131,7 +131,7 @@ export default function MobileTasks() {
       <header className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-accent">Get it done</p>
-          <h1 className="mt-1 text-3xl font-bold text-ink">Tasks</h1>
+          <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight text-ink">Tasks</h1>
         </div>
         <MobileFab onClick={() => setAdding(true)} icon={<Plus size={22} />} label="New task" />
       </header>
@@ -145,11 +145,11 @@ export default function MobileTasks() {
       </button>
       {wsPickerOpen && (
         <div className="mb-4 space-y-1 rounded-2xl border border-edge bg-surface p-1.5">
-          <button type="button" onClick={() => selectWs(null)} className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm ${!activeWsId ? "bg-accent/15 text-accent" : "text-ink active:bg-surface-2"}`}>
+          <button type="button" onClick={() => selectWs(null)} className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm ${!activeWsId ? "bg-surface-2 ring-1 ring-accent/60 text-ink" : "text-ink active:bg-surface-2"}`}>
             <Circle size={14} className="text-ink-muted" /> All workspaces
           </button>
           {workspaces.map((ws) => (
-            <button key={ws.id} type="button" onClick={() => selectWs(ws.id)} className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm ${activeWsId === ws.id ? "bg-accent/15 text-accent" : "text-ink active:bg-surface-2"}`}>
+            <button key={ws.id} type="button" onClick={() => selectWs(ws.id)} className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm ${activeWsId === ws.id ? "bg-surface-2 ring-1 ring-accent/60 text-ink" : "text-ink active:bg-surface-2"}`}>
               <span className="h-3 w-3 rounded-full" style={{ background: ws.color }} /> {ws.name}
               <span className="ml-auto text-xs text-ink-muted">{ws.taskCount}</span>
             </button>

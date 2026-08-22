@@ -8,6 +8,7 @@ import type { CalendarEvent, Task } from "../types";
 import type { MobileRoute } from "../shell/mobile/MobileShell";
 import type { MobileTool } from "./MobileLauncher";
 import type { MobileToolPayload } from "./MobileToolPage";
+import { MobileCard, MobileIconChip } from "./MobileUi";
 
 export default function MobileHome({
   onNavigate,
@@ -93,22 +94,22 @@ export default function MobileHome({
       <header className="mb-7 flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-accent">{greeting}</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-ink">{firstName ? `Hello, ${firstName}` : "Hello"}</h1>
+          <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight text-ink">{firstName ? `Hello, ${firstName}` : "Hello"}</h1>
           <p className="mt-2 text-sm text-ink-muted">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-sm font-bold text-accent-fg shadow-lg shadow-accent/30">{(firstName.slice(0, 1) || "A").toUpperCase()}</div>
+        <div className="brand-gradient flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-lg shadow-accent/30">{(firstName.slice(0, 1) || "A").toUpperCase()}</div>
       </header>
 
-      <section className="mb-6 rounded-3xl border border-accent/20 bg-gradient-to-br from-accent/25 to-accent/5 p-5 shadow-xl shadow-black/10">
+      <section className="brand-border-glow mb-6 rounded-3xl border border-transparent bg-surface-2 p-5 shadow-[0_8px_28px_-12px_rgb(var(--brand-violet)/0.45)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-accent">Your next step</p>
-            <h2 className="mt-1 text-xl font-semibold text-ink">{nextEvent?.title || "Create a focused plan"}</h2>
+            <h2 className="font-display mt-1 text-xl font-semibold text-ink">{nextEvent?.title || "Create a focused plan"}</h2>
             <p className="mt-1 text-sm text-ink-muted">{nextEvent ? new Date(nextEvent.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Turn your priorities into progress."}</p>
           </div>
           <Timer className="text-accent" size={27} />
         </div>
-        <button type="button" onClick={() => onNavigate("calendar")} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-fg px-4 py-3 text-sm font-semibold text-accent active:scale-[.98]">
+        <button type="button" onClick={() => onNavigate("calendar")} className="brand-gradient mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-md shadow-accent/30 active:scale-[.98]">
           View today <ChevronRight size={17} />
         </button>
       </section>
@@ -116,10 +117,10 @@ export default function MobileHome({
       <section className="mb-7">
         <p className="mb-3 text-sm font-semibold text-ink-muted">Quick actions</p>
         <div className="grid grid-cols-4 gap-2">
-          <QuickAction icon={<ListPlus size={21} />} label="Task" onClick={() => onNavigate("tasks")} />
-          <QuickAction icon={<FilePlus2 size={21} />} label="Note" onClick={() => onOpenTool("notes")} />
-          <QuickAction icon={<Play size={21} />} label="Focus" onClick={() => onOpenTool("focus")} />
-          <QuickAction icon={<Mic size={21} />} label="Voice" onClick={() => onOpenTool("voice")} />
+          <QuickAction icon={<ListPlus size={20} />} label="Task" onClick={() => onNavigate("tasks")} />
+          <QuickAction icon={<FilePlus2 size={20} />} label="Note" onClick={() => onOpenTool("notes")} />
+          <QuickAction icon={<Play size={20} />} label="Focus" onClick={() => onOpenTool("focus")} />
+          <QuickAction icon={<Mic size={20} />} label="Voice" onClick={() => onOpenTool("voice")} />
         </div>
       </section>
 
@@ -149,8 +150,8 @@ export default function MobileHome({
 
 function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-edge bg-surface-2 text-ink active:scale-[.97] active:bg-surface-3">
-      <span className="text-accent">{icon}</span>
+    <button type="button" onClick={onClick} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-edge bg-surface-2 text-ink transition active:scale-[.97] active:bg-surface-3">
+      <MobileIconChip icon={icon} size="sm" />
       <span className="text-xs font-medium">{label}</span>
     </button>
   );
@@ -158,18 +159,20 @@ function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: s
 function SectionHead({ title, action, onClick }: { title: string; action: string; onClick: () => void }) {
   return (
     <div className="flex items-center justify-between pt-2">
-      <h2 className="text-lg font-bold text-ink">{title}</h2>
+      <h2 className="font-display text-lg font-semibold tracking-tight text-ink">{title}</h2>
       <button type="button" onClick={onClick} className="text-sm font-medium text-accent">{action}</button>
     </div>
   );
 }
 function Pulse({ label, value, icon, onClick }: { label: string; value: number; icon: React.ReactNode; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="w-full rounded-2xl border border-edge bg-surface-2 p-4 text-left active:bg-surface-3">
-      <div className="mb-5 text-accent">{icon}</div>
-      <p className="text-2xl font-bold text-ink">{value}</p>
+    <MobileCard onClick={onClick} className="p-4 text-left">
+      <div className="mb-5">
+        <MobileIconChip icon={icon} size="sm" />
+      </div>
+      <p className="font-display text-2xl font-semibold tracking-tight text-ink">{value}</p>
       <p className="mt-1 text-xs text-ink-muted">{label}</p>
-    </button>
+    </MobileCard>
   );
 }
 function LoadingCard() { return <div className="h-14 animate-pulse rounded-2xl bg-surface-3" />; }

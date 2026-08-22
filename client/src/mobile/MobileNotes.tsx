@@ -417,7 +417,7 @@ export default function MobileNotes({
           </>
         ) : (
           <div className="rounded-2xl border border-edge bg-surface-2 p-5">
-            <h1 className="mb-3 text-2xl font-bold text-ink">{title || "Untitled"}</h1>
+            <h1 className="font-display mb-3 text-2xl font-semibold tracking-tight text-ink">{title || "Untitled"}</h1>
             {tags && (
               <div className="mb-4 flex flex-wrap gap-1.5">
                 {tags.split(",").map((t) => t.trim()).filter(Boolean).map((t, i) => (

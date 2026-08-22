@@ -15,6 +15,7 @@ import {
   FileCode,
   FileType,
 } from "lucide-react";
+import { MobileCard, MobileIconChip } from "./MobileUi";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -368,11 +369,9 @@ export default function MobileAthena() {
     <div className="mx-auto flex h-full min-w-0 max-w-md flex-col px-5 pt-[max(1.5rem,env(safe-area-inset-top))]">
       {/* Header */}
       <header className="mb-3 flex items-center gap-2">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent/15 text-accent">
-          <Sparkles size={20} />
-        </div>
+        <MobileIconChip icon={<Sparkles size={20} />} size="md" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold text-ink">Mavino</h1>
+          <h1 className="font-display text-xl font-semibold tracking-tight text-ink">Mavino</h1>
           <p className="truncate text-xs text-ink-muted">
             {streaming ? "working…" : activeConvTitle && activeConvTitle !== "New Chat" ? activeConvTitle : "Your study copilot"}
           </p>
@@ -400,8 +399,8 @@ export default function MobileAthena() {
       {/* Messages (scrollable) */}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto pb-3">
         {turns.length === 0 ? (
-          <div className="mt-6 rounded-3xl border border-accent/20 bg-accent/10 p-5">
-            <p className="font-semibold text-ink">What are you working on?</p>
+          <MobileCard variant="feature" className="mt-6 p-5">
+            <p className="font-display font-semibold text-ink">What are you working on?</p>
             <p className="mt-2 text-sm leading-6 text-ink-muted">
               Ask me to make a plan, clarify a concept, turn a syllabus into tasks, or help you get unstuck.
             </p>
@@ -411,13 +410,13 @@ export default function MobileAthena() {
                   key={prompt}
                   type="button"
                   onClick={() => setDraft(prompt)}
-                  className="rounded-full border border-edge px-3 py-2 text-xs text-accent"
+                  className="rounded-full border border-accent/30 bg-surface-2 px-3 py-2 text-xs text-accent transition active:bg-surface-3"
                 >
                   {prompt}
                 </button>
               ))}
             </div>
-          </div>
+          </MobileCard>
         ) : (
           <div className="flex flex-col gap-3">
             {turns.map((turn, i) => (
@@ -429,7 +428,7 @@ export default function MobileAthena() {
 
       {/* Pinned attachment chip */}
       {attachment && (
-        <div className="mb-2 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2">
+        <div className="mb-2 flex items-center gap-2 rounded-xl border border-accent/30 bg-surface-2 px-3 py-2">
           {attachment.fileType === "pdf" ? (
             <FileType size={15} className="shrink-0 text-rose-400" />
           ) : (
@@ -457,13 +456,13 @@ export default function MobileAthena() {
       {/* Composer */}
       <form
         onSubmit={(e) => { e.preventDefault(); send(draft); }}
-        className="mb-3 flex items-end gap-2 rounded-2xl border border-edge bg-surface-2 p-2"
+        className="mb-3 flex items-end gap-2 rounded-2xl border border-edge bg-surface-2 p-2 transition focus-within:border-accent/70 focus-within:ring-2 focus-within:ring-accent/15"
       >
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={attaching || streaming}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:bg-surface-3 disabled:opacity-40"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-muted transition active:bg-surface-3 disabled:opacity-40"
           title="Attach file (PDF, TXT, code) — pinned to conversation"
         >
           {attaching ? <Loader2 size={17} className="animate-spin" /> : <Paperclip size={18} />}
@@ -505,7 +504,7 @@ export default function MobileAthena() {
           <button
             type="submit"
             disabled={!draft.trim() && !attachment}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-ink disabled:opacity-40"
+            className="brand-gradient flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-md shadow-accent/30 disabled:opacity-40"
             title="Send"
           >
             <ArrowUp size={19} />
@@ -526,7 +525,7 @@ export default function MobileAthena() {
             </button>
             <div>
               <p className="text-sm font-medium text-accent">Previous chats</p>
-              <h1 className="text-2xl font-bold text-ink">History</h1>
+              <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">History</h1>
             </div>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
@@ -539,9 +538,9 @@ export default function MobileAthena() {
                     key={conv.id}
                     type="button"
                     onClick={() => void loadConversation(conv.id)}
-                    className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left active:scale-[.99] ${
+                    className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[.99] ${
                       conv.id === activeConvId
-                        ? "border-indigo-400/40 bg-accent/10"
+                        ? "border-accent/40 bg-accent/10"
                         : "border-edge bg-surface-2"
                     }`}
                   >
@@ -595,7 +594,7 @@ function TurnBubble({ turn }: { turn: ChatTurn }) {
         )}
         <div
           className={`rounded-3xl px-4 py-3 text-sm leading-6 ${
-            isUser ? "bg-accent text-ink" : "border border-edge bg-surface-2 text-ink"
+            isUser ? "brand-gradient text-white" : "border border-edge bg-surface-2 text-ink"
           }`}
         >
           {turn.content ? (

@@ -14,7 +14,7 @@ import { usePlugins } from "../store/plugins";
 import type { MobileTool } from "./MobileLauncher";
 import {
   MobileContainer, MobileHeader, MobileEmpty, MobileLoading, MobileCard,
-  MobileChip, MobileInput, MobileButton, MobileToggle, MobileDesktopNote,
+  MobileChip, MobileIconChip, MobileInput, MobileButton, MobileToggle, MobileDesktopNote,
 } from "./MobileUi";
 
 type Tab = "browse" | "installed";
@@ -242,9 +242,7 @@ function PluginCard({
   return (
     <MobileCard>
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/15 text-accent">
-          <Icon size={22} />
-        </div>
+        <MobileIconChip icon={<Icon size={22} />} size="md" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h4 className="truncate text-sm font-semibold text-ink">{plugin.name}</h4>

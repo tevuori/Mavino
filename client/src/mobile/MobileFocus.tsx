@@ -206,7 +206,7 @@ export default function MobileFocus({ onClose }: { onClose?: () => void }) {
           type="button"
           onClick={() => setDnd((v) => !v)}
           className={`flex items-center gap-1.5 rounded-2xl px-3 py-2 text-xs font-medium ${
-            dnd ? "bg-accent/15 text-accent" : "bg-surface-2 text-ink-muted"
+            dnd ? "brand-gradient text-white" : "bg-surface-2 text-ink-muted"
           }`}
         >
           {dnd || doNotDisturb ? <VolumeX size={14} /> : <Volume2 size={14} />}

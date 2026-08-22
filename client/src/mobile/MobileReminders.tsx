@@ -169,7 +169,7 @@ function ReminderCard({
             </span>
             <span
               className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                isAthena ? "bg-accent/15 text-accent" : "bg-amber-500/15 text-amber-300"
+                isAthena ? "brand-gradient text-white" : "bg-amber-500/15 text-amber-300"
               }`}
             >
               {isAthena ? "smart" : "basic"}

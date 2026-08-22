@@ -39,6 +39,8 @@ export default {
       fontFamily: {
         sans: ["Inter", "system-ui", "Segoe UI", "Roboto", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+        // Mobile-only display face for headlines — see .mobile-shell brand tokens in index.css.
+        display: ["\"Space Grotesk\"", "Inter", "system-ui", "sans-serif"],
       },
       boxShadow: {
         window: "0 10px 40px -8px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.25)",

@@ -175,7 +175,7 @@ export default function MobileFiles({
       <header className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-accent">Your materials</p>
-          <h1 className="mt-1 text-3xl font-bold text-ink">Files</h1>
+          <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight text-ink">Files</h1>
         </div>
         <div className="flex items-center gap-2">
           <MobileFab onClick={() => fileRef.current?.click()} icon={<Upload size={20} />} label="Upload" />

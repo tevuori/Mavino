@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  ArrowLeft, BookOpen, Brain, FileText, Flame, Folder, Globe, GraduationCap,
+  BookOpen, Brain, FileText, Flame, Folder, Globe, GraduationCap,
   Mic, Music2, Network, NotebookPen, PenTool, Settings, Timer, BellRing,
   Search, Lock, CalendarClock, Radio, BarChart3, CreditCard, Store, Link2,
   Activity, Compass as CompassIcon, Users, PenLine, Map as MapIcon,
@@ -9,6 +9,7 @@ import { useFeatures, type SubscriptionTier } from "../store/features";
 import { APP_MAP } from "../apps/registry";
 import type { AppId } from "../store/windows";
 import type { MobileToolPayload } from "./MobileToolPage";
+import { MobileHeader, MobileIconChip } from "./MobileUi";
 
 export type MobileTool =
   | "notes" | "study" | "teach" | "flashcards" | "focus" | "files" | "voice"
@@ -122,16 +123,8 @@ export default function MobileLauncher({ onClose, onOpen }: { onClose: () => voi
 
   return (
     <div className="mx-auto min-w-0 max-w-md px-5 pb-7 pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <header className="mb-6 flex items-center gap-3">
-        <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-ink active:bg-surface-3" aria-label="Back">
-          <ArrowLeft size={21} />
-        </button>
-        <div>
-          <p className="text-sm font-medium text-accent">Everything else</p>
-          <h1 className="text-3xl font-bold text-ink">Your tools</h1>
-        </div>
-      </header>
-      <label className="mb-5 flex items-center gap-3 rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-ink-muted">
+      <MobileHeader title="Your tools" subtitle="Everything else" onBack={onClose} compact />
+      <label className="mb-5 flex items-center gap-3 rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-ink-muted transition focus-within:border-accent/70 focus-within:ring-2 focus-within:ring-accent/15">
         <Search size={18} />
         <input
           value={query}
@@ -146,18 +139,18 @@ export default function MobileLauncher({ onClose, onOpen }: { onClose: () => voi
         <div className="space-y-6">
           {grouped.map(({ cat, items }) => (
             <section key={cat}>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">{cat}</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-accent">{cat}</h2>
               <div className="grid grid-cols-2 gap-3">
                 {items.map(({ id, name, description, icon: Icon, access }) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => onOpen(id)}
-                    className="relative min-h-32 rounded-3xl border border-edge bg-surface-2 p-4 text-left active:scale-[.98] active:bg-surface-3"
+                    className="relative min-h-32 rounded-3xl border border-edge bg-surface-2 p-4 text-left transition active:scale-[.98] active:bg-surface-3"
                   >
-                    <span className="mb-5 flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/15 text-accent">
-                      <Icon size={20} />
-                    </span>
+                    <div className="mb-5">
+                      <MobileIconChip icon={<Icon size={20} />} size="md" />
+                    </div>
                     <p className="flex items-center gap-1.5 font-semibold text-ink">
                       {name}
                       {access === "preview" && <Lock size={12} className="text-amber-400" />}

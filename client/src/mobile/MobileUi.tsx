@@ -50,7 +50,7 @@ export function MobileHeader({
         )}
         <div className="min-w-0">
           {subtitle && <p className="text-sm font-medium text-accent">{subtitle}</p>}
-          <h1 className={`truncate font-bold tracking-tight text-ink ${compact ? "text-xl" : "text-3xl"}`}>{title}</h1>
+          <h1 className={`truncate font-display font-semibold tracking-tight text-ink ${compact ? "text-xl" : "text-3xl"}`}>{title}</h1>
         </div>
       </div>
       {right && <div className="shrink-0">{right}</div>}
@@ -64,10 +64,34 @@ export function MobileFab({ onClick, icon, label }: { onClick: () => void; icon:
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent text-accent-fg shadow-lg shadow-accent/20 active:scale-[.97]"
+      className="brand-gradient flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-lg shadow-accent/35 active:scale-[.97]"
     >
       {icon ?? <Plus size={22} />}
     </button>
+  );
+}
+
+/**
+ * A small "duotone" icon badge — a solid brand-colored icon over a soft
+ * brand-gradient tint, replacing the old flat `bg-accent/15 text-accent`
+ * circle pattern that was copy-pasted across every screen. Purely additive;
+ * existing inline patterns keep working and can be migrated over time.
+ */
+export function MobileIconChip({
+  icon,
+  size = "md",
+  shape = "squircle",
+}: {
+  icon: ReactNode;
+  size?: "sm" | "md" | "lg";
+  shape?: "squircle" | "circle";
+}) {
+  const dims = size === "sm" ? "h-8 w-8" : size === "lg" ? "h-14 w-14" : "h-10 w-10";
+  return (
+    <span className={`relative flex ${dims} shrink-0 items-center justify-center overflow-hidden ${shape === "circle" ? "rounded-full" : "rounded-2xl"} text-accent`}>
+      <span className="brand-gradient absolute inset-0 opacity-[0.16]" />
+      <span className="relative">{icon}</span>
+    </span>
   );
 }
 
@@ -76,20 +100,25 @@ export function MobileCard({
   className = "",
   onClick,
   active = false,
+  variant = "default",
 }: {
   children: ReactNode;
   className?: string;
   onClick?: () => void;
   active?: boolean;
+  /** "feature" adds a soft gradient-tinted border + glow for hero/standalone moments. */
+  variant?: "default" | "feature";
 }) {
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`w-full rounded-2xl border border-edge bg-surface-2 p-4 text-left transition ${
-        onClick ? "active:scale-[.99] active:bg-surface-3" : ""
-      } ${active ? "ring-1 ring-accent/60" : ""} ${className}`}
+      className={`w-full rounded-2xl p-4 text-left transition ${
+        variant === "feature"
+          ? "brand-border-glow border border-transparent shadow-[0_8px_28px_-12px_rgb(var(--brand-violet)/0.45)]"
+          : "border border-edge bg-surface-2"
+      } ${onClick ? "active:scale-[.99] active:bg-surface-3" : ""} ${active ? "ring-1 ring-accent/60" : ""} ${className}`}
     >
       {children}
     </Tag>
@@ -135,7 +164,7 @@ export function MobileChip({
       type="button"
       onClick={onClick}
       className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
-        active ? "bg-accent text-accent-fg" : "bg-surface-2 text-ink-muted"
+        active ? "brand-gradient text-white shadow-sm shadow-accent/30" : "bg-surface-2 text-ink-muted"
       } ${className}`}
     >
       {children}
@@ -143,8 +172,13 @@ export function MobileChip({
   );
 }
 
-export function MobileEmpty({ text }: { text: string }) {
-  return <p className="rounded-2xl border border-dashed border-edge px-4 py-5 text-sm leading-6 text-ink-muted">{text}</p>;
+export function MobileEmpty({ text, icon }: { text: string; icon?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-edge px-4 py-6 text-center">
+      {icon && <MobileIconChip icon={icon} size="lg" />}
+      <p className="text-sm leading-6 text-ink-muted">{text}</p>
+    </div>
+  );
 }
 
 export function MobileLoading({ count = 3 }: { count?: number }) {
@@ -161,7 +195,7 @@ export function MobileInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted focus:border-accent/60 ${props.className ?? ""}`}
+      className={`w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15 ${props.className ?? ""}`}
     />
   );
 }
@@ -171,7 +205,7 @@ export const MobileTextarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttrib
     <textarea
       ref={ref}
       {...props}
-      className={`w-full resize-none rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted focus:border-accent/60 ${props.className ?? ""}`}
+      className={`w-full resize-none rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15 ${props.className ?? ""}`}
     />
   );
 });
@@ -180,7 +214,7 @@ export function MobileSelect(props: SelectHTMLAttributes<HTMLSelectElement> & { 
   return (
     <select
       {...props}
-      className={`w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none focus:border-accent/60 ${props.className ?? ""}`}
+      className={`w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15 ${props.className ?? ""}`}
     >
       {props.children}
     </select>
@@ -206,7 +240,7 @@ export function MobileSegmentedControl<T extends string>({
           type="button"
           onClick={() => onChange(option)}
           className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
-            value === option ? "bg-accent text-accent-fg" : "bg-surface-2 text-ink-muted"
+            value === option ? "brand-gradient text-white shadow-sm shadow-accent/30" : "bg-surface-2 text-ink-muted"
           }`}
         >
           {getLabel(option)}
@@ -234,7 +268,7 @@ export function MobileToggle<T extends string>({
           type="button"
           onClick={() => onChange(opt.value)}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            value === opt.value ? "bg-accent text-accent-fg" : "text-ink-muted"
+            value === opt.value ? "brand-gradient text-white shadow-sm shadow-accent/30" : "text-ink-muted"
           }`}
         >
           {opt.label}
@@ -274,9 +308,10 @@ export function MobileModal({
       onClick={onClose}
     >
       <div
-        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-edge bg-surface p-5 shadow-2xl sm:rounded-3xl"
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-edge bg-surface p-5 pt-3 shadow-2xl sm:rounded-3xl sm:pt-5"
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="mx-auto mb-3 h-1.5 w-10 shrink-0 rounded-full bg-surface-3 sm:hidden" aria-hidden />
         {title && (
           <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-ink">{title}</h2>
@@ -316,7 +351,7 @@ export function MobileButton({
   const base = "inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 active:scale-[.98]";
   const styles =
     variant === "primary"
-      ? "bg-accent text-accent-fg"
+      ? "brand-gradient text-white shadow-md shadow-accent/30"
       : variant === "danger"
       ? "bg-rose-500/15 text-rose-400 active:bg-rose-500/25"
       : "bg-surface-2 text-ink-muted active:bg-surface-3";
@@ -337,9 +372,9 @@ export function MobileButton({
  */
 export function MobileDesktopNote({ text }: { text: string }) {
   return (
-    <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-accent/20 bg-accent/[0.07] px-4 py-3 text-xs leading-5 text-ink-muted">
-      <Monitor size={15} className="mt-0.5 shrink-0 text-accent" />
-      <span>{text}</span>
+    <div className="mb-4 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent/[0.07] px-4 py-3 text-xs leading-5 text-ink-muted">
+      <MobileIconChip icon={<Monitor size={14} />} size="sm" />
+      <span className="pt-1.5">{text}</span>
     </div>
   );
 }
