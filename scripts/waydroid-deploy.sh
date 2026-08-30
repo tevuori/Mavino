@@ -19,7 +19,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 APK="$ROOT_DIR/android/app/build/outputs/apk/debug/app-debug.apk"
-PACKAGE="ai.mavino.app"
+PACKAGE="stud.mavino.net"
 
 # JDK 21 (Fedora 44 only ships Java 25, which Gradle 8.x can't run on)
 JDK21="$HOME/.local/share/jvm/jdk-21.0.12+8"

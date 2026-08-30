@@ -1,4 +1,4 @@
-package ai.mavino.app;
+package stud.mavino.net;
 
 import android.content.Intent;
 import android.net.Uri;

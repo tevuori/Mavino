@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "ai.mavino.app"
+    namespace = "stud.mavino.net"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "ai.mavino.app"
+        applicationId "stud.mavino.net"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Version is injected by the release workflow via -PversionName / -PversionCode
@@ -25,7 +25,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    // Two distribution flavors share the same applicationId (ai.mavino.app):
+    // Two distribution flavors share the same applicationId (stud.mavino.net):
     //   - standard: the self-updating build distributed via GitHub Releases.
     //     Keeps REQUEST_INSTALL_PACKAGES so ApkUpdaterPlugin can launch the
     //     system package installer for in-app APK self-updates.
