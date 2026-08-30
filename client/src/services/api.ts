@@ -12,6 +12,7 @@
  */
 
 import { Capacitor } from "@capacitor/core";
+import { resolveServerUrl } from "./server-url";
 
 const TOKEN_KEY = "athena.token";
 const REFRESH_KEY = "athena.refresh";
@@ -43,21 +44,23 @@ export function setRefreshToken(token: string | null) {
  *   Falls back to "" if not yet configured (the login screen will prompt).
  */
 export function getBaseUrl(): string {
-  if (!Capacitor.isNativePlatform()) return "";
-  const url = localStorage.getItem(SERVER_URL_KEY);
-  if (!url) return "";
-  return url.replace(/\/+$/, "");
+  return resolveServerUrl(
+    Capacitor.isNativePlatform(),
+    __PLAY_BUILD__,
+    localStorage.getItem(SERVER_URL_KEY)
+  );
 }
 
 /** Sets the backend server URL (used by the Capacitor native app). */
 export function setBaseUrl(url: string | null) {
+  if (__PLAY_BUILD__) return;
   if (url) localStorage.setItem(SERVER_URL_KEY, url);
   else localStorage.removeItem(SERVER_URL_KEY);
 }
 
 /** Returns true if the server URL has been configured (native only). */
 export function isServerUrlConfigured(): boolean {
-  return !!localStorage.getItem(SERVER_URL_KEY);
+  return __PLAY_BUILD__ || !!localStorage.getItem(SERVER_URL_KEY);
 }
 
 /** Prepends the base URL to a path if running natively. */

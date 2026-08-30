@@ -91,7 +91,7 @@ export default function LoginScreen() {
 
     // On native, persist the server URL before attempting login so the api
     // client picks it up. Validate it looks like a URL.
-    if (isNative) {
+    if (isNative && !__PLAY_BUILD__) {
       const trimmed = serverUrl.trim().replace(/\/+$/, "");
       if (!trimmed) {
         setError("Please enter the server address (e.g. http://192.168.1.100:3001).");
@@ -314,7 +314,7 @@ export default function LoginScreen() {
           </form>
         ) : mode === "login" ? (
           <form onSubmit={submit} className="space-y-3">
-            {isNative && (
+            {isNative && !__PLAY_BUILD__ && (
               <div className="space-y-1">
                 <label className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-ink-muted">
                   <Server size={11} /> Server address

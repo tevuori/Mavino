@@ -105,7 +105,7 @@ export default function AboutSection() {
         </div>
       </Card>
 
-      {isNative && (
+      {isNative && !__PLAY_BUILD__ && (
         <Card className="mb-3">
           <h4 className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-ink">
             <Server size={14} /> Server address
