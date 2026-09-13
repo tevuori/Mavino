@@ -32,6 +32,7 @@ export default function TasksApp(_: { win: WindowInstance }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [addingTo, setAddingTo] = useState<TaskStatus | null>(null);
   const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
   const [wsDropdownOpen, setWsDropdownOpen] = useState(false);
   const [showWsForm, setShowWsForm] = useState(false);
   const [editingWs, setEditingWs] = useState<TaskWorkspace | null>(null);
@@ -126,11 +127,13 @@ export default function TasksApp(_: { win: WindowInstance }) {
     try {
       const { task } = await tasksApi.create({
         title: newTitle,
+        description: newDescription,
         status,
         workspaceId: activeWsId ?? undefined,
       });
       setTasks((prev) => [...prev, task]);
       setNewTitle("");
+      setNewDescription("");
       setAddingTo(null);
       loadWorkspaces();
     } catch (e) {
@@ -326,6 +329,8 @@ export default function TasksApp(_: { win: WindowInstance }) {
               setAddingTo={setAddingTo}
               newTitle={newTitle}
               setNewTitle={setNewTitle}
+              newDescription={newDescription}
+              setNewDescription={setNewDescription}
               onCreate={() => createTask(status)}
               onUpdate={updateTask}
               onDelete={deleteTask}
@@ -405,7 +410,7 @@ export default function TasksApp(_: { win: WindowInstance }) {
 }
 
 function Column({
-  status, tasks, addingTo, setAddingTo, newTitle, setNewTitle, onCreate, onUpdate, onDelete, onMove, workspaces,
+  status, tasks, addingTo, setAddingTo, newTitle, setNewTitle, newDescription, setNewDescription, onCreate, onUpdate, onDelete, onMove, workspaces,
 }: {
   status: TaskStatus;
   tasks: Task[];
@@ -413,6 +418,8 @@ function Column({
   setAddingTo: (s: TaskStatus | null) => void;
   newTitle: string;
   setNewTitle: (s: string) => void;
+  newDescription: string;
+  setNewDescription: (s: string) => void;
   onCreate: () => void;
   onUpdate: (id: string, data: Partial<Task>) => void;
   onDelete: (id: string) => void;
@@ -461,14 +468,30 @@ function Column({
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") onCreate();
+                if (e.key === "Enter" && !e.shiftKey) onCreate();
                 if (e.key === "Escape") {
                   setAddingTo(null);
                   setNewTitle("");
+                  setNewDescription("");
                 }
               }}
               placeholder="Task title..."
               className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted"
+            />
+            <textarea
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.ctrlKey) onCreate();
+                if (e.key === "Escape") {
+                  setAddingTo(null);
+                  setNewTitle("");
+                  setNewDescription("");
+                }
+              }}
+              placeholder="Description (optional)"
+              rows={2}
+              className="mt-1.5 w-full resize-none bg-transparent text-xs text-ink outline-none placeholder:text-ink-muted"
             />
             <div className="mt-2 flex gap-1.5">
               <button
@@ -481,6 +504,7 @@ function Column({
                 onClick={() => {
                   setAddingTo(null);
                   setNewTitle("");
+                  setNewDescription("");
                 }}
                 className="rounded px-2.5 py-1 text-xs text-ink-muted hover:bg-surface-3"
               >
@@ -536,7 +560,18 @@ function TaskCard({
   const [descExpanded, setDescExpanded] = useState(false);
   const [descClamped, setDescClamped] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
+  const [editDescription, setEditDescription] = useState(task.description ?? "");
   const descRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditTitle(task.title);
+      setEditDescription(task.description ?? "");
+    }
+  }, [task, isEditing]);
+
   const { onDragOver, onDragEnter, onDragLeave, onDrop, isOver } = useLinkDrop(
     "task",
     task.id,
@@ -556,6 +591,21 @@ function TaskCard({
     setDescClamped(el.scrollHeight > el.clientHeight + 1);
   }, [task.description, descExpanded]);
 
+  const saveEdit = () => {
+    const title = editTitle.trim();
+    if (!title) return;
+    if (title !== task.title || editDescription !== (task.description ?? "")) {
+      onUpdate?.(task.id, { title, description: editDescription });
+    }
+    setIsEditing(false);
+  };
+
+  const cancelEdit = () => {
+    setEditTitle(task.title);
+    setEditDescription(task.description ?? "");
+    setIsEditing(false);
+  };
+
   return (
     <div
       onDragOver={onDragOver}
@@ -567,9 +617,54 @@ function TaskCard({
       } ${dragging ? "shadow-window rotate-1" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="flex-1 text-sm text-ink">{task.title}</p>
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
-          <LinkDragHandle type="task" id={task.id} title={task.title} />
+        {isEditing ? (
+          <div className="flex-1">
+            <input
+              autoFocus
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) saveEdit();
+                if (e.key === "Escape") cancelEdit();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              placeholder="Task title..."
+              className="w-full rounded border border-edge bg-surface-2 px-1.5 py-0.5 text-sm text-ink outline-none focus:border-accent"
+            />
+            <textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.ctrlKey) saveEdit();
+                if (e.key === "Escape") cancelEdit();
+              }}
+              placeholder="Description (optional)"
+              rows={2}
+              className="mt-1.5 w-full resize-none rounded border border-edge bg-surface-2 px-1.5 py-0.5 text-xs text-ink outline-none focus:border-accent"
+            />
+            <div className="mt-1.5 flex gap-1.5">
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={saveEdit}
+                className="rounded bg-accent px-2 py-0.5 text-[10px] text-accent-fg"
+              >
+                Save
+              </button>
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={cancelEdit}
+                className="rounded px-2 py-0.5 text-[10px] text-ink-muted hover:bg-surface-3"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="flex-1 text-sm text-ink">{task.title}</p>
+            <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
+              <LinkDragHandle type="task" id={task.id} title={task.title} />
           {onUpdate && (
             <>
               <select
@@ -629,6 +724,14 @@ function TaskCard({
               )}
               <button
                 onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => setIsEditing(true)}
+                className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:text-ink hover:bg-surface-3"
+                title="Edit"
+              >
+                <Pencil size={14} />
+              </button>
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => onDelete?.(task.id)}
                 className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:text-red-400 active:bg-surface-3"
               >
@@ -637,8 +740,10 @@ function TaskCard({
             </>
           )}
         </div>
+      </>
+        )}
       </div>
-      {task.description && (
+      {!isEditing && task.description && (
         <div className="mt-1">
           <p
             ref={descRef}
