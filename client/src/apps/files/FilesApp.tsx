@@ -816,6 +816,10 @@ export default function FilesApp(_: { win: WindowInstance }) {
     if (result.note) {
       openWindow({ appId: "notes", title: result.note.title, icon: "FileText", payload: { noteId: result.note.id } });
     }
+    // Open the Study Hub chat for the newly created workspace.
+    if (result.workspace) {
+      openWindow({ appId: "study", title: "Study Hub", icon: "GraduationCap", payload: { mode: "chat", workspaceId: result.workspace.id } });
+    }
   }, [load, loadTree, loadStorage, openWindow]);
 
   return (

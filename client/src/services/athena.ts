@@ -330,6 +330,9 @@ export interface IntelligentUploadPlan {
     level: "beginner" | "intermediate" | "advanced";
     title: string;
   } | null;
+  workspace: {
+    name: string;
+  } | null;
   reasoning: string;
 }
 
@@ -353,6 +356,9 @@ export interface IntelligentProcessActions {
     level: "beginner" | "intermediate" | "advanced";
     title?: string;
   } | null;
+  workspace?: {
+    name: string;
+  } | null;
 }
 
 export interface IntelligentProcessResult {
@@ -361,6 +367,7 @@ export interface IntelligentProcessResult {
   note: { id: string; title: string } | null;
   flashcardDeck: { id: string; name: string; cardCount: number } | null;
   teacherSession: { id: string; title: string } | null;
+  workspace: { id: string; name: string; sourceIds: string[] } | null;
   studySourceIds: string[];
 }
 

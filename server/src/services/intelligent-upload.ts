@@ -100,6 +100,9 @@ export interface PlanSuggestion {
     level: "beginner" | "intermediate" | "advanced";
     title: string;
   } | null;
+  workspace: {
+    name: string;
+  } | null;
   reasoning: string;
 }
 
@@ -130,6 +133,9 @@ export interface ProcessActions {
     level: "beginner" | "intermediate" | "advanced";
     title?: string;
   } | null;
+  workspace?: {
+    name: string;
+  } | null;
 }
 
 export interface ProcessedFile {
@@ -146,6 +152,7 @@ export interface ProcessResult {
   note: { id: string; title: string } | null;
   flashcardDeck: { id: string; name: string; cardCount: number } | null;
   teacherSession: { id: string; title: string } | null;
+  workspace: { id: string; name: string; sourceIds: string[] } | null;
   studySourceIds: string[];
 }
 
@@ -262,7 +269,8 @@ export async function suggestUploadPlan(
       notes: null,
       flashcards: null,
       teach: null,
-      reasoning: "AI not configured. Files will be saved to a single folder.",
+      workspace: { name: "New study materials" },
+      reasoning: "AI not configured. Files will be saved to a single folder and a Study Hub workspace.",
     };
   }
   const { model } = await acquireLlmModel(userId);
@@ -290,11 +298,12 @@ Suggest the following JSON plan. Use ": null" for actions you do not recommend.
   "notes": { "style": "outline" | "cornell" | "summary" | "bullets", "detail": "brief" | "standard" | "detailed", "customStructure": "optional instructions or empty string", "title": "note title or empty" } or null,
   "flashcards": { "count": 10, "mode": "mixed" | "concept" | "factual" | "cloze", "deckName": "..." } or null,
   "teach": { "level": "beginner" | "intermediate" | "advanced", "title": "..." } or null,
+  "workspace": { "name": "workspace title in Study Hub" } or null,
   "reasoning": "short Czech explanation of the plan"
 }`;
 
   const hint =
-    'Schema: { "createFolder": boolean, "folderName": string|null, "createStructure": boolean, "structure": [{"folderName":"string","fileIndexes":[number]}]|null, "notes": {"style":"outline"|"cornell"|"summary"|"bullets","detail":"brief"|"standard"|"detailed","customStructure":"string","title":"string"}|null, "flashcards": {"count":number,"mode":"mixed"|"concept"|"factual"|"cloze","deckName":"string"}|null, "teach": {"level":"beginner"|"intermediate"|"advanced","title":"string"}|null, "reasoning":"string" }';
+    'Schema: { "createFolder": boolean, "folderName": string|null, "createStructure": boolean, "structure": [{"folderName":"string","fileIndexes":[number]}]|null, "notes": {"style":"outline"|"cornell"|"summary"|"bullets","detail":"brief"|"standard"|"detailed","customStructure":"string","title":"string"}|null, "flashcards": {"count":number,"mode":"mixed"|"concept"|"factual"|"cloze","deckName":"string"}|null, "teach": {"level":"beginner"|"intermediate"|"advanced","title":"string"}|null, "workspace": {"name":"string"}|null, "reasoning":"string" }';
 
   const result = await generateJson<PlanSuggestion>(model, userPrompt, hint);
   return {
@@ -305,6 +314,7 @@ Suggest the following JSON plan. Use ": null" for actions you do not recommend.
     notes: result.notes ?? null,
     flashcards: result.flashcards ?? null,
     teach: result.teach ?? null,
+    workspace: result.workspace && result.workspace.name ? result.workspace : null,
     reasoning: result.reasoning || "AI-suggested plan",
   };
 }
@@ -406,18 +416,16 @@ export async function processUploads(
     }
   }
 
-  // Resolve text sources for any AI actions.
+  // Resolve text sources for Study Hub workspace and any AI actions.
   const sources: { fileId: string; sourceId: string; name: string; text: string }[] = [];
-  if (actions.notes || actions.flashcards || actions.teach) {
-    for (const file of savedFiles) {
-      if (isTextOrPdf(file.name, extOf(file.name), file.mimeType)) {
-        try {
-          const resolved = await resolveSource(userId, { kind: "file", id: file.id });
-          const cached = await resolveAndCache(userId, { kind: "file", id: file.id });
-          sources.push({ fileId: file.id, sourceId: cached.id, name: resolved.name, text: resolved.text });
-        } catch (e) {
-          console.error("[intelligent-upload] resolve source failed for", file.id, e);
-        }
+  for (const file of savedFiles) {
+    if (isTextOrPdf(file.name, extOf(file.name), file.mimeType)) {
+      try {
+        const resolved = await resolveSource(userId, { kind: "file", id: file.id });
+        const cached = await resolveAndCache(userId, { kind: "file", id: file.id });
+        sources.push({ fileId: file.id, sourceId: cached.id, name: resolved.name, text: resolved.text });
+      } catch (e) {
+        console.error("[intelligent-upload] resolve source failed for", file.id, e);
       }
     }
   }
@@ -493,6 +501,21 @@ export async function processUploads(
     teacherSessionResult = { id: session.id, title: session.title };
   }
 
+  let workspaceResult: { id: string; name: string; sourceIds: string[] } | null = null;
+  if (actions.workspace && actions.workspace.name && sources.length > 0) {
+    const workspaceName = actions.workspace.name.trim().slice(0, 200) || "Study materials";
+    const ws = await prisma.learningWorkspace.create({
+      data: {
+        userId,
+        name: workspaceName,
+        description: `Workspace created from ${savedFiles.length} uploaded file(s).`,
+        color: "#6366f1",
+        sourceIds: JSON.stringify(sources.map((s) => s.sourceId)),
+      },
+    });
+    workspaceResult = { id: ws.id, name: ws.name, sourceIds: JSON.parse(ws.sourceIds) as string[] };
+  }
+
   // Clean up any remaining temp files for staged files we failed to move.
   for (const s of staged) {
     try {
@@ -506,6 +529,7 @@ export async function processUploads(
     note: noteResult,
     flashcardDeck: flashcardDeckResult,
     teacherSession: teacherSessionResult,
+    workspace: workspaceResult,
     studySourceIds: sources.map((s) => s.sourceId),
   };
 }

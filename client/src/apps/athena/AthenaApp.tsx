@@ -1042,6 +1042,7 @@ export default function AthenaApp({
     if (result.note) actionLines.push(`- Generated notes: "${result.note.title}" (id: ${result.note.id})`);
     if (result.flashcardDeck) actionLines.push(`- Generated flashcards: "${result.flashcardDeck.name}" with ${result.flashcardDeck.cardCount} card(s) (id: ${result.flashcardDeck.id})`);
     if (result.teacherSession) actionLines.push(`- Started Teach Me session: "${result.teacherSession.title}" (id: ${result.teacherSession.id})`);
+    if (result.workspace) actionLines.push(`- Created Study Hub workspace: "${result.workspace.name}" (id: ${result.workspace.id}) with ${result.workspace.sourceIds.length} source(s)`);
     const context = `I just uploaded ${result.savedFiles.length} file(s): ${fileNames}.\n\nHere is what was done:\n${actionLines.join("\n")}\n\nPlease confirm the plan and tell me what we can do with these materials next.`;
     return context;
   };

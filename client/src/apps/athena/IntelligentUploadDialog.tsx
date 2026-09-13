@@ -4,7 +4,7 @@
 // flashcards, or start a Teach Me session.
 
 import { useState, useEffect, useMemo } from "react";
-import { X, Folder, FileText, Sparkles, Loader2, Brain, GraduationCap, AlertCircle } from "lucide-react";
+import { X, Folder, FileText, Sparkles, Loader2, Brain, GraduationCap, BookOpen, AlertCircle } from "lucide-react";
 import { formatBytes } from "../../services/files";
 import {
   suggestUploadPlan,
@@ -56,6 +56,7 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
     notes: null,
     flashcards: null,
     teach: null,
+    workspace: { name: "Study materials" },
   });
   const [planReasoning, setPlanReasoning] = useState<string | null>(null);
   const [suggesting, setSuggesting] = useState(false);
@@ -91,6 +92,7 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
         notes: plan.notes,
         flashcards: plan.flashcards,
         teach: plan.teach,
+        workspace: plan.workspace ?? { name: "Study materials" },
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Suggestion failed");
@@ -170,7 +172,23 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
     }));
   };
 
-  const canProcess = staged.length > 0 && (actions.createFolder || actions.createStructure || actions.notes || actions.flashcards || actions.teach);
+  const toggleWorkspace = (enabled: boolean) => {
+    setActions((prev) => ({
+      ...prev,
+      workspace: enabled
+        ? { name: prev.workspace?.name ?? "Study materials" }
+        : null,
+    }));
+  };
+
+  const updateWorkspace = (patch: Partial<NonNullable<IntelligentProcessActions["workspace"]>>) => {
+    setActions((prev) => ({
+      ...prev,
+      workspace: prev.workspace ? { ...prev.workspace, ...patch } : { name: "", ...patch },
+    }));
+  };
+
+  const canProcess = staged.length > 0 && (actions.createFolder || actions.createStructure || actions.notes || actions.flashcards || actions.teach || actions.workspace);
 
   return (
     <div
@@ -356,6 +374,25 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
                   onChange={(e) => updateTeach({ title: e.target.value })}
                   placeholder="Session title (optional)"
                   className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                />
+              </div>
+            )}
+          </ActionRow>
+
+          {/* Workspace */}
+          <ActionRow
+            icon={BookOpen}
+            label="Create Study Hub workspace"
+            checked={!!actions.workspace}
+            onToggle={toggleWorkspace}
+          >
+            {actions.workspace && (
+              <div className="mt-1">
+                <input
+                  value={actions.workspace.name}
+                  onChange={(e) => updateWorkspace({ name: e.target.value })}
+                  placeholder="Workspace name"
+                  className="w-full rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
                 />
               </div>
             )}

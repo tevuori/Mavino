@@ -757,6 +757,12 @@ const processUploadsSchema = z.object({
       })
       .nullable()
       .optional(),
+    workspace: z
+      .object({
+        name: z.string().min(1),
+      })
+      .nullable()
+      .optional(),
   }),
 });
 
