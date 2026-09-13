@@ -28,7 +28,7 @@ type SortDir = "asc" | "desc";
 type SmartCollection = "home" | "recent" | "starred" | "all";
 
 interface ClipboardItem {
-  type: "file";
+  type: "file" | "folder";
   id: string;
   cut: boolean;
 }
@@ -261,9 +261,35 @@ export default function FilesApp(_: { win: WindowInstance }) {
     setLastSelected(id);
   }, [lastSelected, sortedFiles]);
 
+  const selectFolder = useCallback((id: string, e: React.MouseEvent) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (e.ctrlKey || e.metaKey) {
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+      } else if (e.shiftKey && lastSelected) {
+        const ids = sortedFolders.map((f) => f.id);
+        const start = ids.indexOf(lastSelected);
+        const end = ids.indexOf(id);
+        if (start !== -1 && end !== -1) {
+          const [from, to] = [Math.min(start, end), Math.max(start, end)];
+          for (let i = from; i <= to; i++) next.add(ids[i]);
+        } else {
+          next.clear();
+          next.add(id);
+        }
+      } else {
+        next.clear();
+        next.add(id);
+      }
+      return next;
+    });
+    setLastSelected(id);
+  }, [lastSelected, sortedFolders]);
+
   const selectAll = useCallback(() => {
-    setSelected(new Set(sortedFiles.map((f) => f.id)));
-  }, [sortedFiles]);
+    setSelected(new Set([...sortedFolders.map((f) => f.id), ...sortedFiles.map((f) => f.id)]));
+  }, [sortedFiles, sortedFolders]);
 
   const clearSelection = useCallback(() => {
     setSelected(new Set());
@@ -306,13 +332,13 @@ export default function FilesApp(_: { win: WindowInstance }) {
     band.endY = endY;
     setRubberBand({ ...band });
 
-    // Compute which file items intersect with the rubber band rectangle
+    // Compute which file and folder items intersect with the rubber band rectangle
     const rbLeft = Math.min(band.startX, band.endX);
     const rbTop = Math.min(band.startY, band.endY);
     const rbRight = Math.max(band.startX, band.endX);
     const rbBottom = Math.max(band.startY, band.endY);
 
-    const items = area.querySelectorAll("[data-file-item]");
+    const items = area.querySelectorAll("[data-file-item], [data-folder-item]");
     const intersecting = new Set(rubberBaseSelection.current);
     items.forEach((item) => {
       const el = item as HTMLElement;
@@ -322,7 +348,8 @@ export default function FilesApp(_: { win: WindowInstance }) {
       const elRight = elLeft + elRect.width;
       const elBottom = elTop + elRect.height;
       if (rbLeft < elRight && rbRight > elLeft && rbTop < elBottom && rbBottom > elTop) {
-        intersecting.add(el.dataset.fileId ?? "");
+        const id = el.dataset.fileId ?? el.dataset.folderId ?? "";
+        if (id) intersecting.add(id);
       }
     });
     setSelected(intersecting);
@@ -490,19 +517,24 @@ export default function FilesApp(_: { win: WindowInstance }) {
   const deleteSelected = useCallback(async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    if (!confirm(`Delete ${ids.length} file(s)?`)) return;
+    if (!confirm(`Delete ${ids.length} selected item(s)?`)) return;
+    const fileIds = ids.filter((id) => files.some((f) => f.id === id));
+    const folderIds = ids.filter((id) => folders.some((f) => f.id === id));
     try {
-      await Promise.all(ids.map((id) => filesApi.delete(id)));
-      setFiles((prev) => prev.filter((f) => !selected.has(f.id)));
+      await Promise.all([
+        ...fileIds.map((id) => filesApi.delete(id)),
+        ...folderIds.map((id) => filesApi.deleteFolder(id)),
+      ]);
       setSelected(new Set());
       if (preview && selected.has(preview.id)) setPreview(null);
+      void load();
       void loadStorage();
       void loadTree();
     } catch (e) {
       console.error(e);
-      alert("Some files failed to delete");
+      alert("Some items failed to delete");
     }
-  }, [selected, preview, loadStorage, loadTree]);
+  }, [selected, preview, files, folders, load, loadStorage, loadTree]);
 
   const renameFile = useCallback(async (id: string, newName: string) => {
     if (!newName.trim()) return;
@@ -574,20 +606,34 @@ export default function FilesApp(_: { win: WindowInstance }) {
 
   // ---- Clipboard ----
   const copySelected = useCallback(() => {
-    setClipboard(Array.from(selected).map((id) => ({ type: "file" as const, id, cut: false })));
-  }, [selected]);
+    // Copy is only supported for files (folders cannot be duplicated).
+    const fileIds = Array.from(selected).filter((id) => files.some((f) => f.id === id));
+    setClipboard(fileIds.map((id) => ({ type: "file" as const, id, cut: false })));
+  }, [selected, files]);
 
   const cutSelected = useCallback(() => {
-    setClipboard(Array.from(selected).map((id) => ({ type: "file" as const, id, cut: true })));
-  }, [selected]);
+    const items: ClipboardItem[] = Array.from(selected).map((id) => {
+      const kind = files.some((f) => f.id === id) ? "file" : "folder";
+      return { type: kind, id, cut: true };
+    });
+    setClipboard(items);
+  }, [selected, files]);
 
   const pasteFiles = useCallback(async () => {
     if (clipboard.length === 0) return;
     try {
       for (const item of clipboard) {
-        await filesApi.move(item.id, currentFolder);
-        if (item.cut) {
-          setFiles((prev) => prev.filter((f) => f.id !== item.id));
+        if (item.type === "folder") {
+          await filesApi.moveFolder(item.id, currentFolder);
+          if (item.cut) {
+            setFolders((prev) => prev.filter((f) => f.id !== item.id));
+            setAllFolders((prev) => prev.filter((f) => f.id !== item.id));
+          }
+        } else {
+          await filesApi.move(item.id, currentFolder);
+          if (item.cut) {
+            setFiles((prev) => prev.filter((f) => f.id !== item.id));
+          }
         }
       }
       if (clipboard.some((c) => c.cut)) {
@@ -595,11 +641,12 @@ export default function FilesApp(_: { win: WindowInstance }) {
       }
       void load();
       void loadTree();
+      void loadStorage();
     } catch (e) {
       console.error(e);
       alert("Paste failed");
     }
-  }, [clipboard, currentFolder, load, loadTree]);
+  }, [clipboard, currentFolder, load, loadStorage, loadTree]);
 
   // ---- Open file ----
   const openFile = useCallback((file: VFile) => {
@@ -638,6 +685,10 @@ export default function FilesApp(_: { win: WindowInstance }) {
   const showFolderContextMenu = useCallback((e: React.MouseEvent, folder: VFolder) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!selected.has(folder.id)) {
+      setSelected(new Set([folder.id]));
+      setLastSelected(folder.id);
+    }
     const items: MenuItem[] = [
       { label: "Open", icon: <Folder size={14} />, onClick: () => navigateToFolder(folder) },
       { label: "Rename", icon: <Pencil size={14} />, onClick: () => setRenaming({ type: "folder", id: folder.id, value: folder.name }) },
@@ -646,7 +697,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       { label: "Delete", icon: <Trash2 size={14} />, danger: true, onClick: () => deleteFolder(folder) },
     ];
     setContextMenu({ x: e.clientX, y: e.clientY, items });
-  }, [navigateToFolder, downloadFolderZip, deleteFolder]);
+  }, [selected, navigateToFolder, downloadFolderZip, deleteFolder]);
 
   const showEmptyContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -754,6 +805,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
 
   // ---- Render ----
   const selectedFiles = sortedFiles.filter((f) => selected.has(f.id));
+  const selectedFolders = sortedFolders.filter((f) => selected.has(f.id));
 
   const handleIntelligentResult = useCallback((result: IntelligentProcessResult) => {
     setIntelligentStaged(null);
@@ -955,15 +1007,19 @@ export default function FilesApp(_: { win: WindowInstance }) {
           {selected.size > 0 && (
             <div className="ml-auto flex items-center gap-1">
               <span className="text-ink">{selected.size} selected</span>
-              {selected.size > 1 ? (
-                <button onClick={() => downloadZip(Array.from(selected))} className="flex items-center gap-1 rounded px-2 py-1 text-ink-muted hover:bg-surface-2 hover:text-ink" title="Download as ZIP">
-                  <Archive size={13} /> ZIP
-                </button>
-              ) : (
-                <button onClick={() => selectedFiles[0] && download(selectedFiles[0])} className="flex items-center gap-1 rounded px-2 py-1 text-ink-muted hover:bg-surface-2 hover:text-ink" title="Download">
+              {selectedFiles.length > 0 && selectedFolders.length === 0 && selectedFiles.length === 1 ? (
+                <button onClick={() => download(selectedFiles[0])} className="flex items-center gap-1 rounded px-2 py-1 text-ink-muted hover:bg-surface-2 hover:text-ink" title="Download">
                   <Download size={13} /> Download
                 </button>
-              )}
+              ) : selectedFiles.length > 1 ? (
+                <button onClick={() => downloadZip(selectedFiles.map((f) => f.id))} className="flex items-center gap-1 rounded px-2 py-1 text-ink-muted hover:bg-surface-2 hover:text-ink" title="Download as ZIP">
+                  <Archive size={13} /> ZIP
+                </button>
+              ) : selectedFolders.length === 1 ? (
+                <button onClick={() => downloadFolderZip(selectedFolders[0])} className="flex items-center gap-1 rounded px-2 py-1 text-ink-muted hover:bg-surface-2 hover:text-ink" title="Download as ZIP">
+                  <Archive size={13} /> ZIP
+                </button>
+              ) : null}
               <button onClick={copySelected} className="flex items-center gap-1 rounded px-2 py-1 text-ink-muted hover:bg-surface-2 hover:text-ink" title="Copy">
                 <Copy size={13} />
               </button>
@@ -1039,7 +1095,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
                   data-folder-item
                   data-folder-id={folder.id}
                   onDoubleClick={() => navigateToFolder(folder)}
-                  onClick={(e) => { e.stopPropagation(); setSelected(new Set()); }}
+                  onClick={(e) => { e.stopPropagation(); selectFolder(folder.id, e); }}
                   onContextMenu={(e) => showFolderContextMenu(e, folder)}
                   draggable
                   onDragStart={(e) => e.dataTransfer.setData("text/folder-id", folder.id)}
@@ -1052,7 +1108,9 @@ export default function FilesApp(_: { win: WindowInstance }) {
                     if (fileId) moveFile(fileId, folder.id);
                     if (folderId && folderId !== folder.id) moveFolder(folderId, folder.id);
                   }}
-                  className="group relative flex cursor-pointer flex-col items-center gap-1.5 rounded-lg p-3 hover:bg-surface-2"
+                  className={`group relative flex cursor-pointer flex-col items-center gap-1.5 rounded-lg p-3 hover:bg-surface-2 ${
+                    selected.has(folder.id) ? "bg-accent/10 ring-1 ring-accent/40" : ""
+                  }`}
                 >
                   <Folder size={36} className="text-amber-400" />
                   {renaming?.type === "folder" && renaming.id === folder.id ? (
@@ -1146,7 +1204,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
                     data-folder-item
                     data-folder-id={folder.id}
                     onDoubleClick={() => navigateToFolder(folder)}
-                    onClick={(e) => { e.stopPropagation(); setSelected(new Set()); }}
+                    onClick={(e) => { e.stopPropagation(); selectFolder(folder.id, e); }}
                     onContextMenu={(e) => showFolderContextMenu(e, folder)}
                     draggable
                     onDragStart={(e) => e.dataTransfer.setData("text/folder-id", folder.id)}
@@ -1159,7 +1217,9 @@ export default function FilesApp(_: { win: WindowInstance }) {
                       if (fileId) moveFile(fileId, folder.id);
                       if (folderId && folderId !== folder.id) moveFolder(folderId, folder.id);
                     }}
-                    className="cursor-pointer border-b border-edge/50 hover:bg-surface-2"
+                    className={`cursor-pointer border-b border-edge/50 hover:bg-surface-2 ${
+                      selected.has(folder.id) ? "bg-accent/10" : ""
+                    }`}
                   >
                     <td className="px-2 py-1.5">
                       <div className="flex items-center gap-2">
