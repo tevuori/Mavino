@@ -134,7 +134,7 @@ export interface ProcessActions {
     title?: string;
   } | null;
   workspace?: {
-    name: string;
+    name?: string;
   } | null;
 }
 
@@ -502,8 +502,11 @@ export async function processUploads(
   }
 
   let workspaceResult: { id: string; name: string; sourceIds: string[] } | null = null;
-  if (actions.workspace && actions.workspace.name && sources.length > 0) {
-    const workspaceName = actions.workspace.name.trim().slice(0, 200) || "Study materials";
+  if (actions.workspace !== null && sources.length > 0) {
+    const defaultName = actions.createFolder && actions.folderName
+      ? actions.folderName
+      : `Study materials (${new Date().toLocaleDateString()})`;
+    const workspaceName = actions.workspace?.name?.trim().slice(0, 200) || defaultName;
     const ws = await prisma.learningWorkspace.create({
       data: {
         userId,

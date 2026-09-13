@@ -759,7 +759,7 @@ const processUploadsSchema = z.object({
       .optional(),
     workspace: z
       .object({
-        name: z.string().min(1),
+        name: z.string().optional(),
       })
       .nullable()
       .optional(),

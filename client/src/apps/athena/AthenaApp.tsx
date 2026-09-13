@@ -1051,6 +1051,14 @@ export default function AthenaApp({
     setIntelligentStaged(null);
     setAttachment(null);
     send(buildIntelligentSummary(result), true);
+    if (result.workspace) {
+      openWindow({
+        appId: "study",
+        title: "Study Hub",
+        icon: "GraduationCap",
+        payload: { mode: "chat", workspaceId: result.workspace.id },
+      });
+    }
   };
 
   // Shared streaming setup — appends a fresh pending assistant turn to
