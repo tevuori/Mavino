@@ -19,6 +19,8 @@ import {
 import { generateJson } from "../services/study/llm-json";
 import prisma from "../db/client";
 import { getStorageStatus } from "../services/storage-quota";
+import { stageFiles, suggestUploadPlan, processUploads } from "../services/intelligent-upload";
+import type { NoteStyle, NoteDetail } from "../services/study/prompts";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 const TEMP_DIR = path.join(UPLOAD_DIR, "temp");
@@ -666,6 +668,109 @@ Respond with JSON: { "folderId": "<folder id or null for root>", "reason": "<sho
       reason: `AI suggestion failed: ${e instanceof Error ? e.message : "unknown"}. Saving to root.`,
       confidence: 0.0,
     });
+  }
+});
+
+// ===== Intelligent bulk upload & processing =====
+
+/** POST /api/athena/stage-uploads — upload multiple files, extract text,
+ *  and return staging info for the intelligent upload dialog. */
+athena.post("/stage-uploads", async (c) => {
+  const { userId } = c.get("auth");
+  const formData = await c.req.formData();
+  const files = formData.getAll("files").filter((v): v is File => v instanceof File);
+  if (files.length === 0) return c.json({ error: "No files provided" }, 400);
+  try {
+    const staged = await stageFiles(userId, files);
+    return c.json({ staged }, 201);
+  } catch (e) {
+    if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 413 | 415 | 429 | 500);
+    return c.json({ error: e instanceof Error ? e.message : "Staging failed" }, 500);
+  }
+});
+
+const suggestUploadPlanSchema = z.object({
+  files: z.array(
+    z.object({
+      name: z.string().min(1),
+      text: z.string().default(""),
+      mimeType: z.string().default(""),
+    })
+  ),
+});
+
+/** POST /api/athena/suggest-upload-plan — ask the LLM to propose a plan
+ *  (folder, structure, notes, flashcards, Teach Me) for the staged files. */
+athena.post("/suggest-upload-plan", zValidator("json", suggestUploadPlanSchema), async (c) => {
+  const { userId } = c.get("auth");
+  const { files } = c.req.valid("json");
+  try {
+    const plan = await suggestUploadPlan(userId, files);
+    return c.json({ plan });
+  } catch (e) {
+    if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500);
+    return c.json({ error: e instanceof Error ? e.message : "Suggestion failed" }, 500);
+  }
+});
+
+const processUploadsSchema = z.object({
+  files: z.array(
+    z.object({
+      tempId: z.string().min(1),
+      name: z.string().min(1),
+    })
+  ),
+  actions: z.object({
+    createFolder: z.boolean().default(false),
+    folderName: z.string().nullable().optional(),
+    createStructure: z.boolean().default(false),
+    structure: z
+      .array(
+        z.object({
+          folderName: z.string().min(1),
+          fileIndexes: z.array(z.number().int().min(0)),
+        })
+      )
+      .nullable()
+      .optional(),
+    notes: z
+      .object({
+        style: z.enum(["cornell", "outline", "summary", "bullets"]),
+        detail: z.enum(["brief", "standard", "detailed"]),
+        customStructure: z.string().optional(),
+        title: z.string().optional(),
+      })
+      .nullable()
+      .optional(),
+    flashcards: z
+      .object({
+        count: z.number().int().min(1).max(40),
+        mode: z.enum(["mixed", "concept", "factual", "cloze"]),
+        deckName: z.string().optional(),
+      })
+      .nullable()
+      .optional(),
+    teach: z
+      .object({
+        level: z.enum(["beginner", "intermediate", "advanced"]),
+        title: z.string().optional(),
+      })
+      .nullable()
+      .optional(),
+  }),
+});
+
+/** POST /api/athena/process-uploads — execute the chosen plan and return
+ *  the created folder, notes, flashcard deck, and/or Teach Me session. */
+athena.post("/process-uploads", zValidator("json", processUploadsSchema), async (c) => {
+  const { userId } = c.get("auth");
+  const { files, actions } = c.req.valid("json");
+  try {
+    const result = await processUploads(userId, files, actions);
+    return c.json({ result }, 201);
+  } catch (e) {
+    if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 413 | 429 | 500);
+    return c.json({ error: e instanceof Error ? e.message : "Processing failed" }, 500);
   }
 });
 

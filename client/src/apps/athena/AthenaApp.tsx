@@ -7,11 +7,14 @@ import {
   attachFile,
   saveAttachedFile,
   suggestFolder,
+  stageUploads,
   type AthenaMessage,
   type AthenaToolEvent,
   type AthenaClientAction,
   type AthenaWindowState,
   type AthenaAttachment,
+  type IntelligentUploadFile,
+  type IntelligentProcessResult,
 } from "../../services/athena";
 import { filesApi } from "../../services/files";
 import { conversationsApi, type ConversationSummary, type ConversationMessage } from "../../services/conversations";
@@ -24,6 +27,7 @@ import { useBrowser } from "../../store/browser";
 import { useMaps } from "../../store/maps";
 import { useAuth } from "../../store/auth";
 import { useDataRefresh } from "../../store/dataRefresh";
+import IntelligentUploadDialog from "./IntelligentUploadDialog";
 
 interface ChatTurn extends AthenaMessage {
   tools?: AthenaToolEvent[];
@@ -110,6 +114,10 @@ export default function AthenaApp({
   const [suggestion, setSuggestion] = useState<{ folderId: string | null; folderPath: string; reason: string; confidence: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  // Intelligent multi-file upload dialog state
+  const [intelligentStaged, setIntelligentStaged] = useState<IntelligentUploadFile[] | null>(null);
+  const [intelligentLoading, setIntelligentLoading] = useState(false);
 
   // Conversation history state
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
@@ -1002,6 +1010,48 @@ export default function AthenaApp({
     setAttachError(null);
   };
 
+  const handleFileInput = (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    if (list.length === 1) {
+      void handleFileSelect(list[0]);
+    } else {
+      void handleIntelligentUpload(list);
+    }
+  };
+
+  const handleIntelligentUpload = async (list: FileList) => {
+    setIntelligentLoading(true);
+    setAttachError(null);
+    try {
+      const { staged } = await stageUploads(Array.from(list));
+      setIntelligentStaged(staged);
+    } catch (e) {
+      setAttachError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setIntelligentLoading(false);
+    }
+  };
+
+  const buildIntelligentSummary = (result: IntelligentProcessResult): string => {
+    const fileNames = result.savedFiles.map((f) => f.name).join(", ");
+    const actionLines: string[] = [];
+    if (result.createdFolders.length > 0) {
+      const names = result.createdFolders.map((f) => f.name).join(", ");
+      actionLines.push(`- Created folder(s): ${names}`);
+    }
+    if (result.note) actionLines.push(`- Generated notes: "${result.note.title}" (id: ${result.note.id})`);
+    if (result.flashcardDeck) actionLines.push(`- Generated flashcards: "${result.flashcardDeck.name}" with ${result.flashcardDeck.cardCount} card(s) (id: ${result.flashcardDeck.id})`);
+    if (result.teacherSession) actionLines.push(`- Started Teach Me session: "${result.teacherSession.title}" (id: ${result.teacherSession.id})`);
+    const context = `I just uploaded ${result.savedFiles.length} file(s): ${fileNames}.\n\nHere is what was done:\n${actionLines.join("\n")}\n\nPlease confirm the plan and tell me what we can do with these materials next.`;
+    return context;
+  };
+
+  const handleIntelligentResult = (result: IntelligentProcessResult) => {
+    setIntelligentStaged(null);
+    setAttachment(null);
+    send(buildIntelligentSummary(result), true);
+  };
+
   // Shared streaming setup — appends a fresh pending assistant turn to
   // `turnsBefore` and streams the response. Used by both send() and
   // regenerate() so copy/retry share the exact same SSE handling.
@@ -1128,12 +1178,12 @@ export default function AthenaApp({
   );
 
   const send = useCallback(
-    (text: string) => {
+    (text: string, skipAttachment = false) => {
       let content = text.trim();
       if (!content || streaming) return;
 
       // If there's an attachment, inject its content into the message.
-      if (attachment) {
+      if (!skipAttachment && attachment) {
         const fileLabel = attachment.fileType === "pdf" ? "PDF document" : `${attachment.fileType} file`;
         const truncationNote = attachment.truncated ? "\n_(content truncated — first 50,000 characters shown)_" : "";
         content = `I've attached a ${fileLabel}: **${attachment.fileName}** (${(attachment.fileSize / 1024).toFixed(1)} KB)\n\nFile content:\n\`\`\`\n${attachment.text}${truncationNote}\n\`\`\`\n\n${content}`;
@@ -1460,20 +1510,20 @@ export default function AthenaApp({
           {/* Attach button */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={attaching || streaming}
+            disabled={attaching || intelligentLoading || streaming}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-edge text-ink-muted hover:bg-surface-3 hover:text-ink disabled:opacity-40"
-            title="Attach file (PDF, TXT, C, C++, Java, TS)"
+            title="Attach or upload multiple study files"
           >
-            {attaching ? <Loader2 size={15} className="animate-spin" /> : <Paperclip size={15} />}
+            {attaching || intelligentLoading ? <Loader2 size={15} className="animate-spin" /> : <Paperclip size={15} />}
           </button>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.txt,.c,.h,.cpp,.cc,.cxx,.hpp,.java,.ts,.tsx,.js,.jsx,.py,.md"
+            multiple
+            accept=".pdf,.txt,.c,.h,.cpp,.cc,.cxx,.hpp,.java,.ts,.tsx,.js,.jsx,.py,.md,.json,.html,.htm,.css,.xml,.svg,.csv,.yaml,.yml,.log"
             className="hidden"
             onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleFileSelect(f);
+              handleFileInput(e.target.files);
               e.target.value = "";
             }}
           />
@@ -1527,6 +1577,15 @@ export default function AthenaApp({
           saving={saving}
           onSave={handleSaveToStorage}
           onSkip={() => { setShowSaveDialog(false); setSaveMsg(null); }}
+        />
+      )}
+
+      {/* Intelligent multi-file upload dialog */}
+      {intelligentStaged && (
+        <IntelligentUploadDialog
+          staged={intelligentStaged}
+          onClose={() => setIntelligentStaged(null)}
+          onResult={handleIntelligentResult}
         />
       )}
     </div>

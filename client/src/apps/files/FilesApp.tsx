@@ -19,6 +19,8 @@ import { useDataRefreshVersion } from "../../store/dataRefresh";
 import ContextMenu, { type MenuItem } from "../../shell/ContextMenu";
 import CollapsibleSidebar from "../../wm/CollapsibleSidebar";
 import { setLinkPayload } from "../links/linkDnd";
+import { stageUploads, type IntelligentUploadFile, type IntelligentProcessResult } from "../../services/athena";
+import IntelligentUploadDialog from "../athena/IntelligentUploadDialog";
 
 type ViewMode = "grid" | "list";
 type SortKey = "name" | "size" | "modified" | "type";
@@ -59,6 +61,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [renaming, setRenaming] = useState<{ type: "file" | "folder"; id: string; value: string } | null>(null);
+  const [intelligentStaged, setIntelligentStaged] = useState<IntelligentUploadFile[] | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
@@ -375,10 +378,25 @@ export default function FilesApp(_: { win: WindowInstance }) {
   }, [currentFolder, openWindow, loadStorage]);
 
   const onUpload = useCallback(async (fileList: FileList | File[], folderId?: string | null) => {
+    const files = Array.from(fileList);
+    if (files.length > 1) {
+      setUploading(true);
+      try {
+        const { staged } = await stageUploads(files);
+        setIntelligentStaged(staged);
+      } catch (err) {
+        console.error(err);
+        alert("Upload failed");
+      } finally {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+      return;
+    }
     const target = folderId ?? currentFolder;
     setUploading(true);
     try {
-      for (const file of Array.from(fileList)) {
+      for (const file of files) {
         const { file: record } = await filesApi.upload(file, target);
         if (folderId === undefined || folderId === currentFolder) {
           setFiles((prev) => [...prev, record]);
@@ -736,6 +754,17 @@ export default function FilesApp(_: { win: WindowInstance }) {
 
   // ---- Render ----
   const selectedFiles = sortedFiles.filter((f) => selected.has(f.id));
+
+  const handleIntelligentResult = useCallback((result: IntelligentProcessResult) => {
+    setIntelligentStaged(null);
+    void load();
+    void loadTree();
+    void loadStorage();
+    // Open any generated note for review.
+    if (result.note) {
+      openWindow({ appId: "notes", title: result.note.title, icon: "FileText", payload: { noteId: result.note.id } });
+    }
+  }, [load, loadTree, loadStorage, openWindow]);
 
   return (
     <div className="relative flex h-full"
@@ -1254,6 +1283,15 @@ export default function FilesApp(_: { win: WindowInstance }) {
           y={contextMenu.y}
           items={contextMenu.items}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* Intelligent multi-file upload dialog */}
+      {intelligentStaged && (
+        <IntelligentUploadDialog
+          staged={intelligentStaged}
+          onClose={() => setIntelligentStaged(null)}
+          onResult={handleIntelligentResult}
         />
       )}
     </div>

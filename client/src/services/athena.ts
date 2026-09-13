@@ -297,3 +297,91 @@ export async function getAthenaInstructions(): Promise<string> {
 export async function setAthenaInstructions(instructions: string): Promise<void> {
   await api.put("/api/athena/instructions", { instructions });
 }
+
+// ===== Intelligent bulk upload & processing =====
+
+export interface IntelligentUploadFile {
+  tempId: string;
+  name: string;
+  ext: string;
+  mimeType: string;
+  size: number;
+  text: string;
+  truncated: boolean;
+}
+
+export interface IntelligentUploadPlan {
+  createFolder: boolean;
+  folderName: string | null;
+  createStructure: boolean;
+  structure: { folderName: string; fileIndexes: number[] }[] | null;
+  notes: {
+    style: "cornell" | "outline" | "summary" | "bullets";
+    detail: "brief" | "standard" | "detailed";
+    customStructure: string;
+    title: string;
+  } | null;
+  flashcards: {
+    count: number;
+    mode: "mixed" | "concept" | "factual" | "cloze";
+    deckName: string;
+  } | null;
+  teach: {
+    level: "beginner" | "intermediate" | "advanced";
+    title: string;
+  } | null;
+  reasoning: string;
+}
+
+export interface IntelligentProcessActions {
+  createFolder: boolean;
+  folderName?: string | null;
+  createStructure: boolean;
+  structure?: { folderName: string; fileIndexes: number[] }[] | null;
+  notes?: {
+    style: "summary" | "cornell" | "outline" | "bullets";
+    detail: "brief" | "standard" | "detailed";
+    customStructure?: string;
+    title?: string;
+  } | null;
+  flashcards?: {
+    count: number;
+    mode: "mixed" | "concept" | "factual" | "cloze";
+    deckName?: string;
+  } | null;
+  teach?: {
+    level: "beginner" | "intermediate" | "advanced";
+    title?: string;
+  } | null;
+}
+
+export interface IntelligentProcessResult {
+  savedFiles: { id: string; name: string; mimeType: string; size: number; folderId: string | null }[];
+  createdFolders: { id: string; name: string; parentId: string | null }[];
+  note: { id: string; title: string } | null;
+  flashcardDeck: { id: string; name: string; cardCount: number } | null;
+  teacherSession: { id: string; title: string } | null;
+  studySourceIds: string[];
+}
+
+/** Stage multiple files for the intelligent upload dialog. */
+export async function stageUploads(files: File[]): Promise<{ staged: IntelligentUploadFile[] }> {
+  const fd = new FormData();
+  for (const file of files) fd.append("files", file);
+  return api.post<{ staged: IntelligentUploadFile[] }>("/api/athena/stage-uploads", fd);
+}
+
+/** Ask Mavino to suggest a plan for the staged files. */
+export async function suggestUploadPlan(
+  files: Pick<IntelligentUploadFile, "name" | "text" | "mimeType">[]
+): Promise<{ plan: IntelligentUploadPlan }> {
+  return api.post<{ plan: IntelligentUploadPlan }>("/api/athena/suggest-upload-plan", { files });
+}
+
+/** Execute the chosen processing plan. */
+export async function processUploads(
+  files: { tempId: string; name: string }[],
+  actions: IntelligentProcessActions
+): Promise<{ result: IntelligentProcessResult }> {
+  return api.post<{ result: IntelligentProcessResult }>("/api/athena/process-uploads", { files, actions });
+}
