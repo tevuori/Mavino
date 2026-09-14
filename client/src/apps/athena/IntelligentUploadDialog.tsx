@@ -4,7 +4,7 @@
 // flashcards, or start a Teach Me session.
 
 import { useState, useEffect, useMemo } from "react";
-import { X, Folder, FileText, Sparkles, Loader2, Brain, GraduationCap, BookOpen, AlertCircle } from "lucide-react";
+import { X, Folder, FileText, Sparkles, Loader2, Brain, GraduationCap, BookOpen, AlertCircle, Languages } from "lucide-react";
 import { formatBytes } from "../../services/files";
 import {
   suggestUploadPlan,
@@ -13,6 +13,7 @@ import {
   type IntelligentUploadPlan,
   type IntelligentProcessActions,
   type IntelligentProcessResult,
+  type StudyLanguage,
 } from "../../services/athena";
 
 interface Props {
@@ -47,7 +48,12 @@ const TEACH_LEVELS: { value: NonNullable<IntelligentProcessActions["teach"]>["le
   { value: "advanced", label: "Advanced" },
 ];
 
+const LANGUAGE_KEY = "study-language";
+
 export default function IntelligentUploadDialog({ staged, onClose, onResult }: Props) {
+  const [language, setLanguage] = useState<StudyLanguage>(() => {
+    return (localStorage.getItem(LANGUAGE_KEY) as StudyLanguage) || "en";
+  });
   const [actions, setActions] = useState<IntelligentProcessActions>({
     createFolder: false,
     folderName: null,
@@ -81,7 +87,8 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
     setError(null);
     try {
       const { plan } = await suggestUploadPlan(
-        staged.map((f) => ({ name: f.name, text: f.text, mimeType: f.mimeType }))
+        staged.map((f) => ({ name: f.name, text: f.text, mimeType: f.mimeType })),
+        language
       );
       setPlanReasoning(plan.reasoning || null);
       setActions({
@@ -107,7 +114,8 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
     try {
       const { result } = await processUploads(
         staged.map((f) => ({ tempId: f.tempId, name: f.name })),
-        actions
+        actions,
+        language
       );
       onResult(result);
       onClose();
@@ -120,6 +128,14 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
 
   const setAction = <K extends keyof IntelligentProcessActions>(key: K, value: IntelligentProcessActions[K]) => {
     setActions((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const toggleLanguage = () => {
+    setLanguage((prev) => {
+      const next = prev === "en" ? "cs" : "en";
+      localStorage.setItem(LANGUAGE_KEY, next);
+      return next;
+    });
   };
 
   const toggleNote = (enabled: boolean) => {
@@ -204,13 +220,24 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
             <Sparkles size={16} className="text-accent" />
             <h2 className="text-sm font-semibold text-ink">Mavino: process uploaded files</h2>
           </div>
-          <button
-            onClick={onClose}
-            disabled={processing || suggesting}
-            className="rounded p-1 text-ink-muted hover:bg-surface-3 hover:text-ink disabled:opacity-40"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleLanguage}
+              disabled={processing || suggesting}
+              className="flex items-center gap-1 rounded-md border border-edge px-1.5 py-0.5 text-[10px] font-medium text-ink-muted transition hover:bg-surface-3 hover:text-ink disabled:opacity-40"
+              title="Switch output language"
+            >
+              <Languages size={11} />
+              {language === "en" ? "EN" : "CS"}
+            </button>
+            <button
+              onClick={onClose}
+              disabled={processing || suggesting}
+              className="rounded p-1 text-ink-muted hover:bg-surface-3 hover:text-ink disabled:opacity-40"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}

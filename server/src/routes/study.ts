@@ -689,7 +689,7 @@ study.post("/notes-from-source", studyFunctionMiddleware("notes_from_source"), z
       notetakingPrompt(resolved.text, body.style as NoteStyle, resolved.name, {
         detail: body.detail as NoteDetail,
         customStructure: body.customStructure,
-      }),
+      }, body.language as StudyLanguage),
       "You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information not present in the source."
     );
   } catch (e) {

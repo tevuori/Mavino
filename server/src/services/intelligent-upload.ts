@@ -17,6 +17,7 @@ import {
   flashcardsSchemaHint,
   type NoteStyle,
   type NoteDetail,
+  type StudyLanguage,
 } from "./study/prompts";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
@@ -256,7 +257,8 @@ async function folderTreeText(userId: string): Promise<string> {
 /** Ask the LLM to suggest a plan for the uploaded materials. */
 export async function suggestUploadPlan(
   userId: string,
-  files: { name: string; text: string; mimeType: string }[]
+  files: { name: string; text: string; mimeType: string }[],
+  language: StudyLanguage = "en"
 ): Promise<PlanSuggestion> {
   const cfg = await getUserConfig(userId);
   if (!cfg.apiKey) {
@@ -289,7 +291,7 @@ ${fileList}
 Existing folder tree (id | path):
 ${folderTree}
 
-Suggest the following JSON plan. Use ": null" for actions you do not recommend.
+Suggest the following JSON plan. Use ": null" for actions you do not recommend. Write the "reasoning" field in ${language === "cs" ? "Czech" : "English"}.
 {
   "createFolder": boolean,
   "folderName": "suggested folder name or null",
@@ -299,7 +301,7 @@ Suggest the following JSON plan. Use ": null" for actions you do not recommend.
   "flashcards": { "count": 10, "mode": "mixed" | "concept" | "factual" | "cloze", "deckName": "..." } or null,
   "teach": { "level": "beginner" | "intermediate" | "advanced", "title": "..." } or null,
   "workspace": { "name": "workspace title in Study Hub" } or null,
-  "reasoning": "short Czech explanation of the plan"
+  "reasoning": "short explanation of the plan"
 }`;
 
   const hint =
@@ -323,7 +325,8 @@ Suggest the following JSON plan. Use ": null" for actions you do not recommend.
 export async function processUploads(
   userId: string,
   files: ProcessRequestFile[],
-  actions: ProcessActions
+  actions: ProcessActions,
+  language: StudyLanguage = "en"
 ): Promise<ProcessResult> {
   const cfg = await getUserConfig(userId);
   const anyAi = Boolean(actions.notes || actions.flashcards || actions.teach);
@@ -442,7 +445,7 @@ export async function processUploads(
       const combined = combinedSourceText(sources);
       const notes = await generateText(
         model,
-        notetakingPrompt(combined, style, "Study materials", { detail, customStructure }),
+        notetakingPrompt(combined, style, "Study materials", { detail, customStructure }, language),
         "You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information."
       );
       const noteTitle = (title || `Notes: ${actions.createFolder ? actions.folderName : sources[0].name}`).trim().slice(0, 200);
@@ -458,7 +461,7 @@ export async function processUploads(
       const combined = combinedSourceText(sources);
       const result = await generateJson<{ cards: { front: string; back: string }[] }>(
         model,
-        flashcardsPrompt(combined, cardCount, mode),
+        flashcardsPrompt(combined, cardCount, mode, language),
         flashcardsSchemaHint()
       );
       const cards = (result.cards || []).filter((c) => c.front?.trim() && c.back?.trim());

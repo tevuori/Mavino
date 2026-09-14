@@ -37,6 +37,8 @@ export interface AthenaClientAction {
   payload: Record<string, unknown>;
 }
 
+export type StudyLanguage = "en" | "cs";
+
 export interface AthenaStreamCallbacks {
   onContent?: (text: string, done: boolean) => void;
   onReasoning?: (text: string) => void;
@@ -380,15 +382,17 @@ export async function stageUploads(files: File[]): Promise<{ staged: Intelligent
 
 /** Ask Mavino to suggest a plan for the staged files. */
 export async function suggestUploadPlan(
-  files: Pick<IntelligentUploadFile, "name" | "text" | "mimeType">[]
+  files: Pick<IntelligentUploadFile, "name" | "text" | "mimeType">[],
+  language: StudyLanguage = "en"
 ): Promise<{ plan: IntelligentUploadPlan }> {
-  return api.post<{ plan: IntelligentUploadPlan }>("/api/athena/suggest-upload-plan", { files });
+  return api.post<{ plan: IntelligentUploadPlan }>("/api/athena/suggest-upload-plan", { files, language });
 }
 
 /** Execute the chosen processing plan. */
 export async function processUploads(
   files: { tempId: string; name: string }[],
-  actions: IntelligentProcessActions
+  actions: IntelligentProcessActions,
+  language: StudyLanguage = "en"
 ): Promise<{ result: IntelligentProcessResult }> {
-  return api.post<{ result: IntelligentProcessResult }>("/api/athena/process-uploads", { files, actions });
+  return api.post<{ result: IntelligentProcessResult }>("/api/athena/process-uploads", { files, actions, language });
 }

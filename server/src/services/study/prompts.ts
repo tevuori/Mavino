@@ -175,7 +175,8 @@ export function notetakingPrompt(
   sourceText: string,
   style: NoteStyle,
   sourceLabel: string,
-  options?: NotetakingOptions
+  options?: NotetakingOptions,
+  lang?: StudyLanguage
 ): string {
   const styleInstr =
     style === "cornell"
@@ -202,7 +203,7 @@ Source: ${sourceLabel}
 Material:
 """
 ${sourceText}
-"""`;
+"""${langInstr(lang)}`;
 }
 
 // ===== Research (multi-step web research with citations) =====

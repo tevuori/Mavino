@@ -697,15 +697,16 @@ const suggestUploadPlanSchema = z.object({
       mimeType: z.string().default(""),
     })
   ),
+  language: z.enum(["en", "cs"]).optional().default("en"),
 });
 
 /** POST /api/athena/suggest-upload-plan — ask the LLM to propose a plan
  *  (folder, structure, notes, flashcards, Teach Me) for the staged files. */
 athena.post("/suggest-upload-plan", zValidator("json", suggestUploadPlanSchema), async (c) => {
   const { userId } = c.get("auth");
-  const { files } = c.req.valid("json");
+  const { files, language } = c.req.valid("json");
   try {
-    const plan = await suggestUploadPlan(userId, files);
+    const plan = await suggestUploadPlan(userId, files, language);
     return c.json({ plan });
   } catch (e) {
     if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500);
@@ -764,15 +765,16 @@ const processUploadsSchema = z.object({
       .nullable()
       .optional(),
   }),
+  language: z.enum(["en", "cs"]).optional().default("en"),
 });
 
 /** POST /api/athena/process-uploads — execute the chosen plan and return
  *  the created folder, notes, flashcard deck, and/or Teach Me session. */
 athena.post("/process-uploads", zValidator("json", processUploadsSchema), async (c) => {
   const { userId } = c.get("auth");
-  const { files, actions } = c.req.valid("json");
+  const { files, actions, language } = c.req.valid("json");
   try {
-    const result = await processUploads(userId, files, actions);
+    const result = await processUploads(userId, files, actions, language);
     return c.json({ result }, 201);
   } catch (e) {
     if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 413 | 429 | 500);
