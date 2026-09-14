@@ -25,6 +25,8 @@ import {
 } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import type { Components } from "react-markdown";
 import { Highlighter, Trash2, X, MessageSquarePlus } from "lucide-react";
 import { useHighlights } from "../../store/highlights";
@@ -402,7 +404,7 @@ export default function HighlightableMarkdown({
         ref={containerRef}
         className={`selectable markdown-body prose-sm max-w-none text-sm text-ink ${className ?? ""}`}
       >
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} components={components}>
           {transformed}
         </ReactMarkdown>
       </div>

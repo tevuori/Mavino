@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle, GraduationCap, FileText, File as FileIcon, Link2, ClipboardPaste, X, Network } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import type { SourceDescriptor } from "../../services/study";
 import { studyGraphApi } from "../../services/study-graph";
 
 export function MarkdownView({ content }: { content: string }) {
   return (
     <div className="selectable markdown-body prose-sm max-w-none rounded-lg border border-edge bg-surface-2 p-3 text-sm text-ink">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{content}</ReactMarkdown>
     </div>
   );
 }
