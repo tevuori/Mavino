@@ -3,7 +3,7 @@
 // parses the (possibly fenced / prose-wrapped) response into a JS value.
 // One re-prompt retry on parse failure.
 
-import { Message } from "multi-llm-ts";
+import { Message, Attachment } from "multi-llm-ts";
 import type { LlmModel } from "multi-llm-ts";
 
 /** Extract the first balanced JSON value from a possibly noisy string. */
@@ -99,6 +99,34 @@ export async function generateText(
   systemPrompt: string
 ): Promise<string> {
   const messages = [new Message("system", systemPrompt), new Message("user", userPrompt)];
+  let out = "";
+  for await (const chunk of model.generate(messages, { tools: false })) {
+    if (chunk.type === "content" && chunk.text) out += chunk.text;
+  }
+  return out.trim();
+}
+
+/** Single image attachment for a vision-enabled prompt. */
+export interface VisionImage {
+  /** Short label shown to the model, e.g. "Figure 1 (page 3)". */
+  label: string;
+  mimeType: string;
+  /** Raw base64 bytes (not a data URL). */
+  base64: string;
+}
+
+/** Run the model with mixed text + image attachments. Requires a vision-capable model. */
+export async function generateVisionText(
+  model: LlmModel,
+  systemPrompt: string,
+  userPrompt: string,
+  images: VisionImage[]
+): Promise<string> {
+  const userMessage = new Message("user", userPrompt);
+  for (const img of images) {
+    userMessage.attach(new Attachment(img.base64, img.mimeType));
+  }
+  const messages = [new Message("system", systemPrompt), userMessage];
   let out = "";
   for await (const chunk of model.generate(messages, { tools: false })) {
     if (chunk.type === "content" && chunk.text) out += chunk.text;

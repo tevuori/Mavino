@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { notesApi } from "../../services/notes";
 import { filesApi } from "../../services/files";
+import { getToken } from "../../services/api";
 import { linksApi } from "../../services/links";
 import { useSettings } from "../../store/settings";
 import { useWindows } from "../../store/windows";
@@ -1076,6 +1077,25 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
   );
 }
 
+/** Append the current auth token to internal file download URLs if it isn't already present.
+ *  This keeps markdown image references in notes renderable without baking
+ *  tokens into the persisted note content. */
+function imageUrlWithToken(src: string): string {
+  const token = getToken();
+  if (!token) return src;
+  if (!src.startsWith("/api/files/") && !src.startsWith(`${window.location.origin}/api/files/`)) {
+    return src;
+  }
+  try {
+    const url = new URL(src, window.location.origin);
+    if (url.searchParams.has("token")) return src;
+    url.searchParams.set("token", token);
+    return url.pathname + url.search;
+  } catch {
+    return src;
+  }
+}
+
 // ===== Subcomponents =====
 
 function ToolToggle({
@@ -1169,14 +1189,17 @@ function NoteEditor({
               remarkPlugins={[remarkGfm, remarkMath]}
               rehypePlugins={[rehypeKatex]}
               components={{
-                img: ({ src, alt }) => (
-                  <img
-                    src={typeof src === "string" ? src : undefined}
-                    alt={alt ?? ""}
-                    className="my-3 max-w-full rounded-lg border border-edge"
-                    loading="lazy"
-                  />
-                ),
+                img: ({ src, alt }) => {
+                  const resolvedSrc = typeof src === "string" ? imageUrlWithToken(src) : undefined;
+                  return (
+                    <img
+                      src={resolvedSrc}
+                      alt={alt ?? ""}
+                      className="my-3 max-w-full rounded-lg border border-edge"
+                      loading="lazy"
+                    />
+                  );
+                },
                 a: ({ href, children }) => (
                   <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent underline hover:opacity-80">
                     {children}

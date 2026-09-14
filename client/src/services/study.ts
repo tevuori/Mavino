@@ -56,6 +56,7 @@ export interface NotesFromSourceResult {
   content: string;
   sessionId: string;
   truncated: boolean;
+  extractedImageCount?: number;
 }
 
 export interface SyllabusTask {
@@ -152,6 +153,7 @@ export const studyApi = {
     tags?: string;
     folderId?: string | null;
     language?: StudyLanguage;
+    includeImages?: boolean;
   }) => api.post<NotesFromSourceResult>("/api/study/notes-from-source", data),
 
   syllabusTasks: (data: { source?: SourceDescriptor; sources?: SourceDescriptor[]; create?: boolean; language?: StudyLanguage }) =>

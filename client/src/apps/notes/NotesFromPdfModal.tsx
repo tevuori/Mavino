@@ -53,6 +53,7 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
   const [style, setStyle] = useState<NoteStyle>("outline");
   const [customStructure, setCustomStructure] = useState("");
   const [title, setTitle] = useState("");
+  const [includeImages, setIncludeImages] = useState(true);
 
   // Submission state
   const [generating, setGenerating] = useState(false);
@@ -114,6 +115,7 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
         customStructure: customStructure.trim() || undefined,
         title: title.trim() || undefined,
         folderId: folderId ?? undefined,
+        includeImages: tab === "pdf" ? includeImages : false,
       });
       onCreated(result);
     } catch (e) {
@@ -192,8 +194,19 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
                   ))
                 )}
               </div>
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-[11px] text-ink">
+                <input
+                  type="checkbox"
+                  checked={includeImages}
+                  onChange={(e) => setIncludeImages(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-edge bg-surface-2 text-accent accent-accent focus:ring-0 focus:ring-offset-0"
+                />
+                Include images &amp; diagrams (uses vision models like Gemini / GPT-4o / Claude 3)
+              </label>
               <p className="mt-1.5 text-[10px] text-ink-muted">
                 Text is extracted server-side. Scanned/image-only PDFs can't be processed.
+                If your AI model supports vision, embedded images are sent to the model and
+                embedded, described, or recreated as ASCII in the notes.
               </p>
             </div>
           ) : (

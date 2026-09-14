@@ -171,6 +171,17 @@ export interface NotetakingOptions {
   customStructure?: string;
 }
 
+export interface PdfImageRef {
+  /** 1-based index shown to the model. */
+  index: number;
+  pageNumber: number;
+  name: string;
+  width: number;
+  height: number;
+  /** Auth-aware download URL the model can use for markdown image links. */
+  url: string;
+}
+
 export function notetakingPrompt(
   sourceText: string,
   style: NoteStyle,
@@ -204,6 +215,45 @@ Material:
 """
 ${sourceText}
 """${langInstr(lang)}`;
+}
+
+/** Same as notetakingPrompt, but includes extracted PDF image references and
+ *  instructions for the model on how to embed/ASCII/describe them. Returns
+ *  separate system/user prompts so a vision-enabled LLM call can attach the
+ *  actual image bytes alongside the user prompt. */
+export function visionNotetakingPrompt(
+  sourceText: string,
+  style: NoteStyle,
+  sourceLabel: string,
+  images: PdfImageRef[],
+  options?: NotetakingOptions,
+  lang?: StudyLanguage
+): { systemPrompt: string; userPrompt: string } {
+  const base = notetakingPrompt(sourceText, style, sourceLabel, options, lang);
+  let imageBlock = "";
+  if (images.length > 0) {
+    const imageList = images
+      .map(
+        (img) =>
+          `[Image ${img.index}] Page ${img.pageNumber}, ${img.width}x${img.height}px: ${img.name}\nEmbed URL: ${img.url}`
+      )
+      .join("\n\n");
+    imageBlock = `
+
+The PDF also contains the ${images.length} image(s) shown below/attached. Each image is labeled [Image N] with its page number, dimensions, and a URL you can use if you decide to embed it in the notes:
+
+${imageList}
+
+For each attached image, choose the best representation in the notes:
+- If it is a meaningful figure, chart, diagram, photo, or illustration that belongs in the notes, embed it using the provided URL in markdown image syntax: \`![descriptive alt text](URL)\`.
+- If it is a simple diagram or structure that is clearer as text, reproduce it as ASCII art inside a fenced code block and add a brief explanation.
+- If it is decorative, a logo, a watermark, or does not add educational value, omit it or describe it in one sentence.
+Do not invent figures or descriptions not present in the source.`;
+  }
+
+  const systemPrompt = `You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information not present in the source.`;
+  const userPrompt = `${base}${imageBlock}`;
+  return { systemPrompt, userPrompt };
 }
 
 // ===== Research (multi-step web research with citations) =====

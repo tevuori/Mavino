@@ -6,10 +6,11 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import type { ToolDef } from "./plugin";
 import prisma from "../../../db/client";
-import { getUserConfig, buildModel, acquireLlmModel } from "../llm";
+import { getUserConfig, acquireLlmModel, modelSupportsVision } from "../llm";
 import { fetchUrl } from "../../../services/fetcher";
-import { generateText } from "../../study/llm-json";
-import { notetakingPrompt, type NoteStyle, type NoteDetail } from "../../study/prompts";
+import { generateText, generateVisionText } from "../../study/llm-json";
+import { notetakingPrompt, visionNotetakingPrompt, type NoteStyle, type NoteDetail } from "../../study/prompts";
+import { extractPdfImages, saveExtractedImages } from "../../../services/pdf-images";
 import { logSessionSafe } from "../../study/logSession";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
@@ -143,7 +144,7 @@ export const notetakeTools: ToolDef[] = [
   {
     name: "create_notes_from_pdf",
     description:
-      "Extract text from an uploaded PDF file, generate structured notes, save them as a new Note, and open it in the Notes app. Use search_files / list_files first to get the file id. The file must be a PDF in the user's virtual file system.",
+      "Extract text from an uploaded PDF file, generate structured notes, save them as a new Note, and open it in the Notes app. Use search_files / list_files first to get the file id. The file must be a PDF in the user's virtual file system. When the configured model supports vision and includeImages is true, embedded images are extracted and passed to the model so they can be embedded, ASCII-ified, or described in the notes.",
     destructive: true,
     clientAction: true,
     parameters: [
@@ -164,6 +165,7 @@ export const notetakeTools: ToolDef[] = [
       { name: "title", type: "string", description: "Optional title for the new note" },
       { name: "tags", type: "string", description: "Comma-separated tags (defaults to 'notes,ai,pdf')" },
       { name: "folderId", type: "string", description: "Optional folder id from list_note_folders to store the note in" },
+      { name: "includeImages", type: "boolean", description: "Whether to extract and send embedded images to a vision-capable model (defaults to true if the model supports vision)" },
     ],
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
@@ -204,13 +206,59 @@ export const notetakeTools: ToolDef[] = [
       const style = parseStyle(args.style);
       const detail = parseDetail(args.detail);
       const customStructure = parseCustomStructure(args.customStructure);
+
+      const visionCapable = modelSupportsVision(cfg.provider, cfg.modelId);
+      const includeImages = args.includeImages !== false && visionCapable;
+      let savedImages: Awaited<ReturnType<typeof saveExtractedImages>> = [];
+      if (includeImages) {
+        try {
+          const abs = path.join(UPLOAD_DIR, file.storageKey);
+          const buf = await readFile(abs);
+          const extracted = await extractPdfImages(buf);
+          if (extracted.length > 0) {
+            savedImages = await saveExtractedImages(userId, extracted, file.folderId, file.name);
+          }
+        } catch (e) {
+          console.error("PDF image extraction failed; continuing with text-only notes", e);
+          savedImages = [];
+        }
+      }
+
       let notes: string;
       try {
-        notes = await generateText(
-          model,
-          notetakingPrompt(text, style, file.name, { detail, customStructure }),
-          "You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information."
-        );
+        if (savedImages.length > 0) {
+          const imageRefs = savedImages.map((img, idx) => ({
+            index: idx + 1,
+            pageNumber: img.pageNumber,
+            name: img.file.name,
+            width: img.width,
+            height: img.height,
+            url: img.downloadUrl,
+          }));
+          const { systemPrompt, userPrompt } = visionNotetakingPrompt(
+            text,
+            style,
+            file.name,
+            imageRefs,
+            { detail, customStructure }
+          );
+          notes = await generateVisionText(
+            model,
+            systemPrompt,
+            userPrompt,
+            savedImages.map((img) => ({
+              label: img.file.name,
+              mimeType: img.mimeType,
+              base64: Buffer.from(img.data).toString("base64"),
+            }))
+          );
+        } else {
+          notes = await generateText(
+            model,
+            notetakingPrompt(text, style, file.name, { detail, customStructure }),
+            "You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information."
+          );
+        }
       } catch (e) {
         return { error: e instanceof Error ? e.message : "Note generation failed" };
       }
@@ -240,6 +288,9 @@ export const notetakeTools: ToolDef[] = [
         fileName: file.name,
         truncated,
         customStructure: customStructure || undefined,
+        includeImages,
+        visionCapable,
+        extractedImageCount: savedImages.length,
       });
 
       return {

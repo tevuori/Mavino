@@ -82,6 +82,27 @@ function providerDefaultModel(provider: string): string {
   return PROVIDER_DEFAULT_MODEL[provider] ?? "gpt-4o-mini";
 }
 
+/** Known vision-capable model name patterns (provider-agnostic fallback). */
+const VISION_PATTERNS: RegExp[] = [
+  /gpt-4o/,
+  /gpt-4-turbo/,
+  /gpt-4-vision/,
+  /gemini/,
+  /claude-3/,
+  /pixtral/,
+  /llama-?3\.2-vision/,
+  /llama-?4/i,
+  /grok-vision/,
+  /qwen2-vl/i,
+  /phi-4-multimodal/i,
+];
+
+/** Return true if the provider+model combination is known to support image input. */
+export function modelSupportsVision(provider: string, modelId: string): boolean {
+  const id = `${provider}:${modelId}`.toLowerCase();
+  return VISION_PATTERNS.some((p) => p.test(id));
+}
+
 /** Map known deprecated/shutdown models to current replacements so existing
  *  stored credentials don't break after a provider retires a model. */
 const DEPRECATED_MODELS: Record<string, Record<string, string>> = {
@@ -231,10 +252,17 @@ export function buildModel(cfg: LlmUserConfig): LlmModel {
   // Pass an explicit ChatModel with tools enabled so tool calling works
   // regardless of how the provider names the model (the OpenAI engine infers
   // capabilities from the model id, which is unreliable for custom endpoints).
+  // Enable vision when the model name matches a known vision-capable family so
+  // image attachments can be sent to providers like Gemini, GPT-4o, and Claude 3.
   const chatModel: ChatModel = {
     id: cfg.modelId,
     name: cfg.modelId,
-    capabilities: { tools: true, vision: false, reasoning: false, caching: false },
+    capabilities: {
+      tools: true,
+      vision: modelSupportsVision(cfg.provider, cfg.modelId),
+      reasoning: false,
+      caching: false,
+    },
   };
   return igniteModel(cfg.provider, chatModel, config);
 }

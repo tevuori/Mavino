@@ -48,6 +48,8 @@ export interface ResolvedSource {
   kind: SourceKind;
   /** 1-based index when resolved as part of a multi-source list. */
   index?: number;
+  /** For kind "file", the folder id of the source file (useful for saving derived files alongside it). */
+  folderId?: string | null;
 }
 
 function isTextFile(name: string, mime: string): boolean {
@@ -136,7 +138,7 @@ export async function resolveSource(
       throw new Error(`File '${file.name}' is not a supported text or PDF file`);
     }
     const t = truncate(content);
-    return { name: file.name, text: t.text, ref: file.id, truncated: t.truncated, kind: "file" };
+    return { name: file.name, text: t.text, ref: file.id, truncated: t.truncated, kind: "file", folderId: file.folderId };
   }
 
   if (src.kind === "url") {

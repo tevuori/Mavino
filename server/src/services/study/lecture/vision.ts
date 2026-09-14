@@ -7,6 +7,7 @@
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import type { LlmUserConfig } from "../../athena/llm";
+import { modelSupportsVision } from "../../athena/llm";
 
 export interface SlideRegion {
   x: number;
@@ -159,29 +160,11 @@ If the slide is mostly text, the VISUALS section can say "None". Be thorough wit
 }
 
 /**
- * Check if the configured model supports vision by attempting a minimal
- * vision call. Caches the result per provider+model combo.
+ * Check if the configured model supports vision. Delegates to the shared
+ * provider+model name heuristic in athena/llm.ts.
  */
-const visionCapabilityCache = new Map<string, boolean>();
-
 export async function supportsVision(cfg: LlmUserConfig): Promise<boolean> {
-  const key = `${cfg.provider}:${cfg.modelId}`;
-  const cached = visionCapabilityCache.get(key);
-  if (cached !== undefined) return cached;
-
-  // Known vision-capable model patterns.
-  const visionModels = ["gpt-4o", "gpt-4-turbo", "gpt-4-vision", "claude-3", "gemini"];
-  const hasVisionName = visionModels.some((m) => cfg.modelId.toLowerCase().includes(m));
-
-  // For known vision models, assume capable without probing.
-  if (hasVisionName) {
-    visionCapabilityCache.set(key, true);
-    return true;
-  }
-
-  // For unknown models, assume no vision to avoid wasting API calls.
-  visionCapabilityCache.set(key, false);
-  return false;
+  return modelSupportsVision(cfg.provider, cfg.modelId);
 }
 
 /** Run tesseract OCR on an image file. Returns extracted text. */
