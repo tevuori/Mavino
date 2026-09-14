@@ -73,6 +73,10 @@ services:
       # generates a strong random password and prints it once. The seeded user
       # is forced to change it on first login.
       SEED_PASSWORD: ${SEED_PASSWORD:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      AWS_REGION: ${AWS_REGION:-eu-central-1}
       # Comma-separated list of allowed CORS origins. For a single-origin public
       # deploy behind the host nginx, set this to the public URL.
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-}

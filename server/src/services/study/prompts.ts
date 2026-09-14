@@ -337,7 +337,8 @@ export function podcastScriptPrompt(
   sources: { index: number; name: string; text: string }[],
   host1Label: string,
   host2Label: string,
-  lang?: StudyLanguage
+  lang?: StudyLanguage,
+  options?: { length?: "short" | "medium" | "long"; tone?: string; focus?: string }
 ): string {
   const budgeted = budgetSources(
     sources.map((s) => ({ ...s, kind: "source", refId: String(s.index) })),
@@ -346,15 +347,18 @@ export function podcastScriptPrompt(
   const blocks = budgeted
     .map((s) => `--- SOURCE [${s.index}]: ${s.name} ---\n${s.text}\n`)
     .join("\n");
-  return `You are writing an engaging, conversational podcast script that gives an audio overview of the study material below. Two hosts discuss the material in a natural, lively way — like a popular educational podcast.
+  const lengthGuide = options?.length === "short" ? "3-4 minutes (about 35-50 short lines)" : options?.length === "long" ? "10-12 minutes (about 110-150 short lines)" : "5-8 minutes (about 60-100 short lines)";
+  const tone = options?.tone?.trim() || "engaging";
+  const focus = options?.focus?.trim() ? `\n- Give special attention to this student request: ${options.focus.trim()}` : "";
+  return `You are writing an engaging, conversational podcast script that gives an audio overview of the study material below. Two hosts discuss the material in a natural, lively way — like a popular educational podcast. Use a ${tone} tone.
 
 FORMAT RULES (follow exactly so a text-to-speech engine can read it):
 - Each spoken line MUST start with the host label followed by a colon, e.g. "${host1Label}: ..." or "${host2Label}: ...".
 - Alternate between the two hosts. Keep each turn to 1-3 sentences.
 - Do NOT include stage directions, sound effects, parentheses, or markdown headings inside the dialogue. Only \`Host: spoken text\` lines.
 - Cover the key concepts, important details, and a couple of concrete examples from the sources. Make it feel like a real conversation: ask each other questions, react, summarize.
-- Aim for roughly 5-8 minutes of spoken audio (about 60-100 short lines total).
-- Stay faithful to the sources — do not invent facts. If something is unclear in the sources, the hosts can acknowledge it.
+- Aim for roughly ${lengthGuide}.
+- Stay faithful to the sources — do not invent facts.${focus} If something is unclear in the sources, the hosts can acknowledge it.
 - Start with a brief friendly intro (host 1 welcomes listeners and introduces the topic) and end with a short recap + sign-off.
 
 SOURCES:

@@ -16,6 +16,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@aws-sdk/client-polly": "3.887.0",
     "@hono/zod-validator": "^0.4.3",
     "@postlight/parser": "^2.2.3",
     "@prisma/client": "^6.19.3",

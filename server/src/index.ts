@@ -53,6 +53,7 @@ import features from "./routes/features";
 import subscriptions from "./routes/subscriptions";
 import plugins from "./routes/plugins";
 import clientErrors from "./routes/client-errors";
+import adminPolly from "./routes/admin-polly";
 import adminErrors from "./routes/admin-errors";
 import adminLlm from "./routes/admin-llm";
 import adminStorage from "./routes/admin-storage";
@@ -226,6 +227,7 @@ app.route("/api/notifications", notifications);
 app.route("/api/client-errors", clientErrors);
 app.route("/api/admin/errors", adminErrors);
 app.route("/api/admin/llm", adminLlm);
+app.route("/api/admin/polly", adminPolly);
 app.route("/api/admin/storage", adminStorage);
 
 // Start ntfy background workers (cron scheduler + per-user inbox subscribers).

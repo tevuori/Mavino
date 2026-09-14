@@ -788,24 +788,31 @@ model StudyChat {
 }
 
 // An audio overview / "podcast" generated from one or more StudySources.
-// The LLM writes a 2-host dialogue script (saved as a Note); audio is played
-// back in-browser via the Web Speech API (see client usePodcastTts). The
-// script note is the persistent, downloadable artifact.
 model Podcast {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
-  // The saved dialogue script note.
   scriptNoteId String?
   scriptNote Note?  @relation(fields: [scriptNoteId], references: [id], onDelete: SetNull)
-  // JSON array of StudySource ids this podcast was generated from.
   sourceIds String   @default("[]")
   host1Label String  @default("Host A")
   host2Label String  @default("Host B")
-  // Rough duration estimate in seconds (derived from script length).
+  language   String  @default("en")
+  format     String  @default("conversation")
+  length     String  @default("medium")
+  tone       String  @default("engaging")
+  voice1     String  @default("")
+  voice2     String  @default("")
+  engine     String  @default("neural")
+  status     String  @default("script_ready")
+  stage      String  @default("")
+  error      String  @default("")
+  audioKey   String?
+  audioSize  Int?
   durationEstimate Int @default(0)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([userId, createdAt])
