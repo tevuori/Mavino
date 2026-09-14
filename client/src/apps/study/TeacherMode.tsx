@@ -114,6 +114,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const [studentLevel, setStudentLevel] = useState<StudentLevel>("intermediate");
   const [teachingStyle, setTeachingStyle] = useState<TeachingStyle>("explain");
   const [withPlan, setWithPlan] = useState(true);
+  const [imageAware, setImageAware] = useState(true);
   const [listOpen, setListOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -234,13 +235,15 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         const name = String(p.title ?? "Source");
         const kind = String(p.sourceKind ?? "");
         const windowId = sourceRef || name;
+        const scrollToPage = typeof p.scrollToPage === "number" ? p.scrollToPage : undefined;
         const hl = (p.highlight as Record<string, unknown> | undefined);
-        const highlight: PaneHighlight | null = hl ? {
-          text: typeof hl.text === "string" ? hl.text : undefined,
-          posStart: typeof hl.posStart === "number" ? hl.posStart : undefined,
-          posEnd: typeof hl.posEnd === "number" ? hl.posEnd : undefined,
-          line: typeof hl.line === "number" ? hl.line : undefined,
-          lineEnd: typeof hl.lineEnd === "number" ? hl.lineEnd : undefined,
+        const highlight: PaneHighlight | null = (hl || scrollToPage) ? {
+          text: typeof hl?.text === "string" ? hl.text : undefined,
+          posStart: typeof hl?.posStart === "number" ? hl.posStart : undefined,
+          posEnd: typeof hl?.posEnd === "number" ? hl.posEnd : undefined,
+          line: typeof hl?.line === "number" ? hl.line : undefined,
+          lineEnd: typeof hl?.lineEnd === "number" ? hl.lineEnd : undefined,
+          scrollToPage,
         } : null;
         sourceMetaRef.current[windowId] = { appId, openPayload };
         // If this source is already the one shown in the pane, DON'T remount
@@ -248,7 +251,13 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         // citing the same source turn after turn) — just re-issue the
         // highlight through the live command channel.
         if (paneSourceRef.current?.windowId === windowId) {
-          applyPaneHighlight(highlight);
+          // scrollToPage needs the pending-highlight path (updates the iframe
+          // URL fragment), so go through switchPane for the same source.
+          if (highlight?.scrollToPage) {
+            setPanePending(highlight);
+          } else {
+            applyPaneHighlight(highlight);
+          }
         } else {
           const src = buildPaneSource({ windowId, appId, refId: sourceRef, name, kind, openPayload });
           switchPane(src, highlight);
@@ -590,6 +599,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
       sourceIds: [...selectedSourceIds],
       studentLevel,
       teachingStyle,
+      imageAware,
       withPlan,
     });
   };
@@ -763,6 +773,10 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                 <input type="checkbox" checked={withPlan} onChange={(e) => setWithPlan(e.target.checked)} />
                 Plan the lesson
               </label>
+              <label className="flex items-center gap-1 text-[11px] text-ink-muted" title="Extract and describe images from PDF sources (requires a vision-capable model)">
+                <input type="checkbox" checked={imageAware} onChange={(e) => setImageAware(e.target.checked)} />
+                Image recognition
+              </label>
               <ActionButton onClick={startSession} variant="primary">
                 <Sparkles size={13} /> Start Teaching
               </ActionButton>
@@ -830,9 +844,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                 studentLevel={(teachState.studentLevel as StudentLevel) ?? "intermediate"}
                 teachingStyle={(teachState.teachingStyle as TeachingStyle) ?? "explain"}
                 inferredLevel={teachState.inferredLevel}
+                imageAware={teachState.imageAware !== false}
                 onReorder={(ids) => void setSessionSources(ids)}
                 onLevel={(lvl) => void updateTeachState({ studentLevel: lvl })}
                 onStyle={(st) => void updateTeachState({ teachingStyle: st })}
+                onImageAware={(v) => void updateTeachState({ imageAware: v })}
                 onSourceAdded={(s) => setLibrary((prev) => [s, ...prev.filter((x) => x.id !== s.id)])}
                 onClose={() => setSettingsOpen(false)}
               />
@@ -1094,9 +1110,11 @@ function SessionSettings({
   studentLevel,
   teachingStyle,
   inferredLevel,
+  imageAware,
   onReorder,
   onLevel,
   onStyle,
+  onImageAware,
   onSourceAdded,
   onClose,
 }: {
@@ -1104,9 +1122,11 @@ function SessionSettings({
   studentLevel: StudentLevel;
   teachingStyle: TeachingStyle;
   inferredLevel?: string;
+  imageAware: boolean;
   onReorder: (ids: string[]) => void;
   onLevel: (lvl: StudentLevel) => void;
   onStyle: (st: TeachingStyle) => void;
+  onImageAware: (v: boolean) => void;
   onSourceAdded: (s: StudySource) => void;
   onClose: () => void;
 }) {
@@ -1221,6 +1241,11 @@ function SessionSettings({
           </button>
         ))}
       </div>
+
+      <label className="flex items-center gap-1.5 text-[11px] text-ink-muted" title="Extract and describe images from PDF sources (requires a vision-capable model)">
+        <input type="checkbox" checked={imageAware} onChange={(e) => onImageAware(e.target.checked)} />
+        Image recognition
+      </label>
     </div>
   );
 }

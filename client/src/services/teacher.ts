@@ -79,6 +79,8 @@ export interface TeacherSessionState {
   sourceIssues?: TeacherSourceIssue[];
   paceFeedback?: string;
   lessonCompletedAt?: string;
+  /** Whether image-aware tutoring is enabled for this session. */
+  imageAware?: boolean;
 }
 
 export interface TeacherAssessment {
@@ -127,6 +129,7 @@ export const teacherApi = {
     sourceIds?: string[];
     studentLevel?: StudentLevel;
     teachingStyle?: TeachingStyle;
+    imageAware?: boolean;
     sources?: { kind: string; id?: string; text?: string; url?: string; name?: string }[];
   }): Promise<{ session: TeacherSession }> {
     return api.post("/api/teacher", input);

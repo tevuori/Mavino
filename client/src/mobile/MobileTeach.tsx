@@ -12,7 +12,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BookOpen, ChevronDown, GraduationCap, Loader2, Mic, Pause, Play,
+  BookOpen, ChevronDown, GraduationCap, Image, Loader2, Mic, Pause, Play,
   Plus, Send, Sparkles, Square, Trash2, Volume2, VolumeX, X,
 } from "lucide-react";
 import type { StudentLevel, TeachingStyle } from "../services/teacher";
@@ -65,6 +65,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
   const [studentLevel, setStudentLevel] = useState<StudentLevel>("intermediate");
   const [teachingStyle, setTeachingStyle] = useState<TeachingStyle>("explain");
   const [withPlan, setWithPlan] = useState(true);
+  const [imageAware, setImageAware] = useState(true);
   const [view, setView] = useState<"list" | "new">("list");
 
   const [input, setInput] = useState("");
@@ -300,7 +301,7 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
   };
 
   const startSession = () => {
-    void startNewSession({ sourceIds: [...selectedSourceIds], studentLevel, teachingStyle, withPlan });
+    void startNewSession({ sourceIds: [...selectedSourceIds], studentLevel, teachingStyle, imageAware, withPlan });
   };
 
   const submit = () => {
@@ -380,13 +381,26 @@ export default function MobileTeach({ initialSessionId = null, language = "en", 
           <button
             type="button"
             onClick={() => setWithPlan((v) => !v)}
-            className={`mb-4 flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm ${
+            className={`mb-2 flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm ${
               withPlan ? "border-indigo-400/60 bg-accent/15 text-ink" : "border-edge bg-surface-2 text-ink-muted"
             }`}
           >
             <span className="flex items-center gap-2"><Sparkles size={16} /> Generate a lesson plan</span>
             <span className={`h-5 w-9 rounded-full p-0.5 transition ${withPlan ? "bg-accent" : "bg-surface-3"}`}>
               <span className={`block h-4 w-4 rounded-full bg-surface-2 transition ${withPlan ? "translate-x-4" : ""}`} />
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setImageAware((v) => !v)}
+            className={`mb-4 flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm ${
+              imageAware ? "border-indigo-400/60 bg-accent/15 text-ink" : "border-edge bg-surface-2 text-ink-muted"
+            }`}
+          >
+            <span className="flex items-center gap-2"><Image size={16} /> Image recognition</span>
+            <span className={`h-5 w-9 rounded-full p-0.5 transition ${imageAware ? "bg-accent" : "bg-surface-3"}`}>
+              <span className={`block h-4 w-4 rounded-full bg-surface-2 transition ${imageAware ? "translate-x-4" : ""}`} />
             </span>
           </button>
 

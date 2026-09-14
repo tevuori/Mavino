@@ -226,6 +226,8 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     sourceIds: string[];
     studentLevel: StudentLevel;
     teachingStyle?: TeachingStyle;
+    /** Enable image-aware tutoring (extract + describe PDF images). */
+    imageAware?: boolean;
     /** Generate a lesson plan right away (one extra model call). */
     withPlan?: boolean;
     planFocus?: string;
@@ -241,6 +243,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
         sourceIds: input.sourceIds,
         studentLevel: input.studentLevel,
         teachingStyle: input.teachingStyle,
+        imageAware: input.imageAware,
       });
       applySession(created);
       void refreshLists();

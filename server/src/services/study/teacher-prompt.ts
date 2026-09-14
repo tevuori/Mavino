@@ -16,6 +16,7 @@
 // sessions keep working.
 
 import { budgetSources, type GroundedSource, langInstr, type StudyLanguage } from "./prompts";
+import type { SourceImageMeta } from "./teacher-images";
 
 /** An entry in the ordered source-history shown during a session. */
 export interface SourceHistoryEntry {
@@ -103,6 +104,12 @@ export interface TeacherSessionState {
   paceFeedback?: string;
   /** Set once the tutor has wrapped the lesson up. */
   lessonCompletedAt?: string;
+  /** Whether the user enabled image-aware tutoring for this session (default true). */
+  imageAware?: boolean;
+  /** Extracted images from PDF sources (populated async after session creation). */
+  sourceImages?: SourceImageMeta[];
+  /** Turn number when images were last attached to the LLM thread (avoids re-attaching every turn). */
+  imagesAttachedOnTurn?: number;
 }
 
 const LEVELS = ["beginner", "intermediate", "advanced"] as const;
@@ -272,9 +279,15 @@ export function teacherSystemPrompt(
   sources: GroundedSource[],
   history: SourceHistoryEntry[],
   state: TeacherSessionState,
-  lang?: StudyLanguage
+  lang?: StudyLanguage,
+  visionCapable = false
 ): string {
-  const budgeted = budgetSources(sources, 40000);
+  const imageAware = state.imageAware !== false;
+  const sourceImages = imageAware ? (state.sourceImages ?? []) : [];
+  const hasImages = sourceImages.length > 0;
+  // Reduce text budget when images are present to leave room in the context window.
+  const textBudget = hasImages ? 30000 : 40000;
+  const budgeted = budgetSources(sources, textBudget);
   const blocks = budgeted
     .map((s) => `--- SOURCE [${s.index}] (${s.kind}: ${s.name}) id=${s.refId} kind=${s.kind} ---\n${s.text}\n`)
     .join("\n");
@@ -351,6 +364,32 @@ ${issues.map((i) => `  - ${i.name ?? i.refId ?? "source"}: ${i.reason}`).join("\
         ? "PACE: the student said this is TOO EASY. Move faster, skip basics and go deeper."
         : "";
 
+  const imageListLines = sourceImages
+    .map(
+      (img) =>
+        `  - SOURCE [${img.sourceIndex}] page ${img.pageNumber}, Image ${img.imageIndex + 1}: "${img.name}" (${img.width}x${img.height}px)`
+    )
+    .join("\n");
+
+  const imageBlock = hasImages
+    ? visionCapable
+      ? `IMAGES IN SOURCES:
+You can SEE the following images extracted from the PDF sources (they are attached to this conversation).
+${imageListLines}
+
+When teaching content related to an image:
+- Describe what the image shows naturally: "As you can see in the diagram on page 3, it illustrates…"
+- Call point_at_image to scroll the student's PDF viewer to the page with the image so they can see it too
+- Point out specific parts: "Notice the arrow pointing from X to Y in the figure…"
+- If the image is a chart or graph, explain the axes, trends, and key data points
+- Do NOT skip images — they are often the most important part of lecture materials
+- Integrate images into your teaching flow: explain the concept, point at the image, then elaborate on what it shows`
+      : `IMAGES IN SOURCES (your model cannot see images directly):
+The PDF sources contain embedded images you cannot see. Based on the surrounding text and captions:
+${imageListLines}
+When the text references a figure or image, call point_at_image to show it to the student in the PDF viewer, and describe what you can infer about the image from the surrounding text. Tell the student to look at the image in the viewer while you explain the context around it.`
+    : "";
+
   return `You are Mavino, an interactive tutor inside the Mavino Student OS. You are conducting a LIVE, real-time teaching session with the student. Your goal is to make the material as easy to understand as possible, adapting to the student's level.
 
 SAFETY: If the student expresses thoughts of self-harm, suicide, or being in crisis, stop the lesson and respond with empathy. Do NOT attempt to diagnose or provide therapy. Share crisis resources: Czech crisis line 116 123 (free, 24/7), emergency 112, https://www.linka-bezpeci.cz. If in immediate danger, urge them to call 112. Take every such statement seriously — the student's wellbeing comes before the lesson.
@@ -384,7 +423,7 @@ CRITICAL: After calling any tool (show_source, highlight_source, etc.), you MUST
 LESSON FLOW:
 - Work ONE objective per turn: introduce the concept, ground it in the source, then verify with a single comprehension check. Do NOT rush through multiple objectives in one turn — the student needs time to absorb and answer.
 - Call mark_concept_covered as soon as you have finished explaining a concept AND its comprehension check has been answered, so the agenda stays in sync.
-- When every objective is covered (or the student asks to wrap up), call finish_lesson with a recap and the concepts that still need work.
+- When every objective is covered (or the student asks to wrap up), call finish_lesson with a recap and the concepts that still need work.${hasImages ? "\n- When a source contains images (see IMAGES IN SOURCES below), work them into your explanation naturally. Figures and diagrams often contain the most important information — don't skip them." : ""}
 
 COMPREHENSION CHECKS:
 - After explaining a key concept, call check_comprehension with ONE short question and the expectedConcept it tests. The answer is graded automatically and comes back to you with the verdict.
@@ -401,7 +440,7 @@ CITATION RULES:
 ${planBlock}
 
 ${masteryBlock}
-${misconceptionBlock ? `\n${misconceptionBlock}\n` : ""}${issueBlock ? `\n${issueBlock}\n` : ""}${paceBlock ? `\n${paceBlock}\n` : ""}
+${misconceptionBlock ? `\n${misconceptionBlock}\n` : ""}${issueBlock ? `\n${issueBlock}\n` : ""}${paceBlock ? `\n${paceBlock}\n` : ""}${imageBlock ? `\n${imageBlock}\n` : ""}
 SOURCE HISTORY (sources shown so far this session, in order):
 ${historyLines}
 

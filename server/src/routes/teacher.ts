@@ -9,11 +9,12 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { streamSSE } from "hono/streaming";
-import { Message } from "multi-llm-ts";
+import { Message, Attachment } from "multi-llm-ts";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
 import { studyFunctionMiddleware } from "../middleware/study-functions";
-import { acquireLlmModel, isLlmConfiguredFor, LlmError } from "../services/athena/llm";
+import { acquireLlmModel, getUserConfig, isLlmConfiguredFor, LlmError, modelSupportsVision } from "../services/athena/llm";
+import { extractSessionImages, loadImageAttachments } from "../services/study/teacher-images";
 import {
   AthenaToolsPlugin,
   toolsForUser,
@@ -158,6 +159,7 @@ const createSchema = z.object({
   sourceIds: z.array(z.string()).max(10).default([]),
   studentLevel: z.enum(["beginner", "intermediate", "advanced"]).optional(),
   teachingStyle: z.enum(["explain", "socratic"]).optional(),
+  imageAware: z.boolean().optional(),
   sources: z
     .array(
       z.object({
@@ -211,6 +213,7 @@ teacher.post("/", zValidator("json", createSchema), async (c) => {
     mastery: {},
     teachingStyle: body.teachingStyle ?? "explain",
     followPlan: true,
+    imageAware: body.imageAware !== false,
   };
 
   const created = await prisma.teacherSession.create({
@@ -228,6 +231,29 @@ teacher.post("/", zValidator("json", createSchema), async (c) => {
     studentLevel: state.studentLevel,
     teachingStyle: state.teachingStyle,
   });
+
+  // Fire-and-forget: extract images from PDF sources in the background.
+  // The metadata is persisted in the session state once ready; if extraction
+  // hasn't finished by the first turn, that turn proceeds text-only.
+  // Skipped entirely when the user disabled image-aware tutoring.
+  const sessionSources = await loadSessionSources(userId, sourceIds);
+  if (state.imageAware !== false && sessionSources.length > 0) {
+    extractSessionImages(userId, sessionSources)
+      .then(async (images) => {
+        if (images.length > 0) {
+          const current = parseState(
+            (await prisma.teacherSession.findFirst({ where: { id: created.id }, select: { state: true } }))?.state ?? "{}"
+          );
+          current.sourceImages = images;
+          await prisma.teacherSession.update({
+            where: { id: created.id },
+            data: { state: JSON.stringify(current) },
+          });
+          console.log(`[teacher] extracted ${images.length} image(s) for session ${created.id}`);
+        }
+      })
+      .catch((e) => console.error("[teacher] background image extraction failed:", e));
+  }
 
   return c.json({ session: serialize(created) }, 201);
 });
@@ -608,8 +634,10 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
   const history: SourceHistoryEntry[] = Array.isArray(body.sourceHistory) ? body.sourceHistory : [];
   const state: TeacherSessionState = mergeState(parseState(row.state), body.state as TeacherSessionState);
 
+  const cfg = await getUserConfig(userId);
   const { model } = await acquireLlmModel(userId);
-  const systemPrompt = teacherSystemPrompt(sources, history, state, body.language as StudyLanguage);
+  const visionCapable = modelSupportsVision(cfg.provider, cfg.modelId);
+  const systemPrompt = teacherSystemPrompt(sources, history, state, body.language as StudyLanguage, visionCapable);
 
   const history2 = parseMessages(row.messages);
   const thread: Message[] = [new Message("system", systemPrompt)];
@@ -622,6 +650,28 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
   // Persist the user message immediately.
   const userMsg: StoredMessage = { role: "user", content: body.message, timestamp: new Date().toISOString() };
   const updatedMessages = [...history2, userMsg];
+
+  // Attach PDF images to the LLM thread for vision-capable models.
+  // Attached on the first turn, when not yet attached, or when a
+  // point_at_image tool set the reattachImages flag on a previous turn.
+  const sourceImages = state.sourceImages ?? [];
+  const isFirstTurn = history2.length === 0;
+  const reattachRequested = Boolean((state as any).reattachImages);
+  const imageAware = state.imageAware !== false;
+  const shouldAttachImages = imageAware && visionCapable && sourceImages.length > 0 &&
+    (isFirstTurn || state.imagesAttachedOnTurn === undefined || reattachRequested);
+  if (shouldAttachImages) {
+    try {
+      const imageAttachments = await loadImageAttachments(sourceImages);
+      for (const img of imageAttachments) {
+        thread[0].attach(new Attachment(img.base64, img.mimeType));
+      }
+      state.imagesAttachedOnTurn = updatedMessages.length;
+      delete (state as any).reattachImages;
+    } catch (e) {
+      console.error("[teacher] failed to attach images:", e);
+    }
+  }
   await prisma.teacherSession.update({
     where: { id: row.id },
     data: {
@@ -712,6 +762,10 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
                 event: "client_action",
                 data: JSON.stringify({ tool: chunk.name, payload: result }),
               });
+              // point_at_image signals that images should be re-attached next turn.
+              if (result._reattachImages) {
+                (state as any).reattachImages = true;
+              }
             }
           }
         } else if (chunk.type === "usage") {

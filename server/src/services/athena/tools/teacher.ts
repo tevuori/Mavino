@@ -354,6 +354,66 @@ export const teacherTools: ToolDef[] = [
         : undefined,
     }),
   },
+  {
+    name: "point_at_image",
+    description:
+      "Scroll the student's PDF viewer to the page containing a specific image, so they can " +
+      "see it while you describe it. Use this when discussing a figure, chart, diagram, or photo " +
+      "from a PDF source. The image will be displayed in the source pane. Also signals that image " +
+      "context should be re-attached for the next turn if needed.",
+    clientAction: true,
+    parameters: [
+      { name: "sourceId", type: "string", description: "StudySource id from the session source list" },
+      { name: "kind", type: "string", description: "Source kind (use if no sourceId)", enum: ["file"] },
+      { name: "refId", type: "string", description: "File id (use if no sourceId)" },
+      { name: "pageNumber", type: "number", description: "Page number containing the image (1-based)", required: true },
+      { name: "imageLabel", type: "string", description: "Short label for the image shown to the student (e.g. 'architecture diagram')" },
+    ],
+    handler: async (args, { userId }) => {
+      // Resolve the source (same pattern as show_source).
+      let kind: SourceKind = "file";
+      let refId: string = "";
+      let name: string | undefined;
+
+      const sourceId = args.sourceId ? String(args.sourceId) : undefined;
+      if (sourceId) {
+        const ss = await prisma.studySource.findFirst({ where: { id: sourceId, userId } });
+        if (ss) {
+          kind = ss.kind as SourceKind;
+          refId = ss.refId;
+          name = ss.name;
+        } else {
+          refId = String(args.refId ?? "");
+          if (!refId) return { error: "Source not found. Provide kind+refId." };
+        }
+      } else {
+        refId = String(args.refId ?? "");
+        if (!refId) return { error: "refId is required." };
+      }
+
+      if (!name) {
+        const file = await prisma.vFile.findFirst({ where: { id: refId, userId }, select: { name: true } });
+        name = file?.name ?? "PDF";
+      }
+
+      const pageNumber = typeof args.pageNumber === "number" ? Number(args.pageNumber) : 1;
+      const windowId = refId;
+
+      return {
+        action: "show_source",
+        appId: "viewer",
+        windowId,
+        title: String(args.imageLabel ?? name ?? "PDF"),
+        sourceKind: kind,
+        sourceRef: refId,
+        openPayload: { fileId: refId },
+        scrollToPage: pageNumber,
+        imageLabel: args.imageLabel ? String(args.imageLabel) : undefined,
+        highlight: {},
+        _reattachImages: true,
+      };
+    },
+  },
 ];
 
 /** Build a SourceDescriptor from a kind + refId (+ optional name). */

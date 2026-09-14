@@ -42,6 +42,8 @@ export interface PaneHighlight {
   posEnd?: number;
   line?: number;
   lineEnd?: number;
+  /** For PDFs: scroll to this 1-based page number instead of a text search. */
+  scrollToPage?: number;
 }
 
 interface Props {
@@ -242,6 +244,8 @@ function ViewerPane({ paneId, source, pending, onPendingApplied, onLoadingChange
   const reportResult = useShowControl((s) => s.reportResult);
   const [fileMeta, setFileMeta] = useState<{ name: string; mimeType: string } | null>(null);
   const [pdfSearch, setPdfSearch] = useState<string | undefined>(undefined);
+  /** PDF fragment for page navigation (e.g. "page=3"). Takes priority over search. */
+  const [pdfPage, setPdfPage] = useState<number | undefined>(undefined);
   const lastSeq = useRef(0);
   const appliedPendingKeyRef = useRef<string | null>(null);
 
@@ -254,6 +258,7 @@ function ViewerPane({ paneId, source, pending, onPendingApplied, onLoadingChange
     onLoadingChange(true);
     setFileMeta(null);
     setPdfSearch(undefined);
+    setPdfPage(undefined);
     appliedPendingKeyRef.current = null;
     (async () => {
       try {
@@ -270,16 +275,19 @@ function ViewerPane({ paneId, source, pending, onPendingApplied, onLoadingChange
     return () => { cancelled = true; };
   }, [source.refId, onLoadingChange, onError]);
 
-  // Apply the pending highlight (PDF #search=) once metadata has loaded.
+  // Apply the pending highlight (PDF #search= or #page=) once metadata has loaded.
   // Re-runs whenever a NEW pending highlight arrives, not just on first load.
   useEffect(() => {
     if (!fileMeta || !pending) return;
     const key = JSON.stringify(pending);
     if (appliedPendingKeyRef.current === key) return;
     appliedPendingKeyRef.current = key;
-    if (pending.text) {
+    if (pending.scrollToPage && pending.scrollToPage >= 1) {
+      setPdfPage(pending.scrollToPage);
+      setPdfSearch(undefined);
+    } else if (pending.text) {
       const q = pending.text.length > 60 ? pending.text.slice(0, 60).trim() : pending.text;
-      if (q) setPdfSearch(q);
+      if (q) { setPdfSearch(q); setPdfPage(undefined); }
     }
     onPendingApplied();
   }, [fileMeta, pending, onPendingApplied]);
@@ -295,12 +303,14 @@ function ViewerPane({ paneId, source, pending, onPendingApplied, onLoadingChange
       if (raw) {
         const q = raw.length > 60 ? raw.slice(0, 60).trim() : raw;
         setPdfSearch(q || undefined);
+        setPdfPage(undefined);
         reportResult(paneId, cmd.seq, cmd.kind, Boolean(q));
       } else {
         reportResult(paneId, cmd.seq, cmd.kind, true);
       }
     } else if (cmd.kind === "clear_highlight") {
       setPdfSearch(undefined);
+      setPdfPage(undefined);
       reportResult(paneId, cmd.seq, cmd.kind, true);
     } else {
       reportResult(paneId, cmd.seq, cmd.kind, false, "unsupported-type");
@@ -311,10 +321,12 @@ function ViewerPane({ paneId, source, pending, onPendingApplied, onLoadingChange
   const downloadUrl = filesApi.downloadUrl(source.refId);
 
   if (isPdfFile(fileMeta)) {
+    // Build the PDF URL fragment: page navigation takes priority over search.
+    const fragment = pdfPage ? `page=${pdfPage}` : pdfSearch ? `search=${encodeURIComponent(pdfSearch)}` : "";
     return (
       <iframe
-        key={pdfSearch ?? "default"}
-        src={pdfSearch ? `${downloadUrl}#search=${encodeURIComponent(pdfSearch)}` : downloadUrl}
+        key={fragment || "default"}
+        src={fragment ? `${downloadUrl}#${fragment}` : downloadUrl}
         className="h-full w-full border-0"
         title={fileMeta.name}
       />
