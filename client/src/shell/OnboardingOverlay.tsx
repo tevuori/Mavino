@@ -549,7 +549,7 @@ function GeminiKeySaveStep({ saveRef }: { saveRef: React.MutableRefObject<Gemini
     setErr(false);
     setMsg(null);
     try {
-      await aiApi.setKey(trimmed, "google", undefined, "gemini-3.6-flash");
+      await aiApi.setKey(trimmed, "google", undefined, "gemini-3.8-flash");
       setKey("");
       setMsg("Gemini API key saved — Mavino is ready to use!");
       return true;

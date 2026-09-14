@@ -68,7 +68,7 @@ const SERVER_PROVIDER = process.env.OPENAI_PROVIDER ?? "openai";
  *  `gpt-4o-mini` when the user has configured a different provider. */
 const PROVIDER_DEFAULT_MODEL: Record<string, string> = {
   openai: "gpt-4o-mini",
-  google: "gemini-3.6-flash",
+  google: "gemini-3.8-flash",
   anthropic: "claude-3-5-sonnet-20241022",
   deepseek: "deepseek-chat",
   groq: "llama-3.1-70b-versatile",
@@ -86,16 +86,16 @@ function providerDefaultModel(provider: string): string {
  *  stored credentials don't break after a provider retires a model. */
 const DEPRECATED_MODELS: Record<string, Record<string, string>> = {
   google: {
-    "gemini-2.0-flash": "gemini-3.6-flash",
-    "gemini-2.0-flash-001": "gemini-3.6-flash",
+    "gemini-2.0-flash": "gemini-3.8-flash",
+    "gemini-2.0-flash-001": "gemini-3.8-flash",
     "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
     "gemini-2.0-flash-lite-001": "gemini-3.5-flash-lite",
-    "gemini-2.5-flash": "gemini-3.6-flash",
-    "gemini-2.5-flash-001": "gemini-3.6-flash",
+    "gemini-2.5-flash": "gemini-3.8-flash",
+    "gemini-2.5-flash-001": "gemini-3.8-flash",
     "gemini-2.5-flash-lite": "gemini-3.5-flash-lite",
     "gemini-2.5-flash-lite-001": "gemini-3.5-flash-lite",
-    "gemini-2.5-flash-preview-05-20": "gemini-3.6-flash",
-    "gemini-2.5-flash-preview-09-25": "gemini-3.6-flash",
+    "gemini-2.5-flash-preview-05-20": "gemini-3.8-flash",
+    "gemini-2.5-flash-preview-09-25": "gemini-3.8-flash",
     "gemini-2.5-flash-lite-preview-09-2025": "gemini-3.5-flash-lite",
   },
 };
