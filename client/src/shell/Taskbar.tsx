@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import * as Lucide from "lucide-react";
 import { Lock, Pin, PinOff } from "lucide-react";
 import AppLogo from "./AppLogo";
+import { renderAppIcon } from "./AppIcon";
 import { useWindows } from "../store/windows";
 import { useAccessibleApps } from "../store/features";
 import { useTaskbarPins } from "../store/taskbarPins";
@@ -88,7 +88,6 @@ export default function Taskbar({ onOpenOverview }: Props) {
         <div className="flex items-center gap-1 overflow-x-auto">
           {taskbarAppIds.map((appId) => {
             const app = appById.get(appId)!;
-            const Icon = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number }>>)[app.icon] ?? Lucide.AppWindow;
             const appWindows = windows.filter((w) => w.appId === app.id);
             const isRunning = appWindows.length > 0;
             const isActive = appWindows.some((w) => w.id === focusedId && !w.minimized);
@@ -102,8 +101,9 @@ export default function Taskbar({ onOpenOverview }: Props) {
                   } else {
                     // Prefer the topmost window of this app on the current workspace.
                     const onCurrent = appWindows.filter((w) => w.workspaceId === activeWorkspaceId);
-                    const top = [...(onCurrent.length > 0 ? onCurrent : appWindows)]
-                      .sort((a, b) => b.zIndex - a.zIndex)[0];
+                    const top = [...(onCurrent.length > 0 ? onCurrent : appWindows)].sort(
+                      (a, b) => b.zIndex - a.zIndex
+                    )[0];
                     // If the chosen window is on another workspace, switch to it.
                     if (top.workspaceId !== activeWorkspaceId) {
                       switchWorkspace(top.workspaceId);
@@ -119,12 +119,12 @@ export default function Taskbar({ onOpenOverview }: Props) {
                   isActive
                     ? "bg-accent/20 text-accent"
                     : isRunning
-                    ? "text-ink hover:bg-surface-3"
-                    : "text-ink-muted hover:bg-surface-3 hover:text-ink"
+                      ? "text-ink hover:bg-surface-3"
+                      : "text-ink-muted hover:bg-surface-3 hover:text-ink"
                 }`}
                 title={app.name}
               >
-                <Icon size={18} />
+                {renderAppIcon(app, { size: 18 })}
                 {app.access === "preview" && (
                   <span className="absolute right-0 top-0 text-amber-500">
                     <Lock size={8} />

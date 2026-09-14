@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as Lucide from "lucide-react";
 import { Lock } from "lucide-react";
+import { renderAppIcon } from "./AppIcon";
 import { useAccessibleApps } from "../store/features";
 import { useWindows } from "../store/windows";
 import { useSettings, type WallpaperId, type AnimatedBgId } from "../store/settings";
@@ -52,52 +53,52 @@ export default function Desktop() {
         })),
       ]
     : animBgSubmenu
-    ? [
-        { label: "← Back", keepOpen: true, onClick: () => setAnimBgSubmenu(false) },
-        { separator: true },
-        ...QUICK_ANIM_BGS.map((b) => ({
-          label: b.name,
-          onClick: () => setAnimatedBg(b.id),
-        })),
-        { separator: true },
-        {
-          label: "More in Settings...",
-          icon: <Lucide.Settings size={15} />,
-          onClick: () => open({ appId: "settings", title: "Settings", icon: "Settings" }),
-        },
-      ]
-    : [
-        {
-          label: "New Folder",
-          icon: <FolderPlus size={15} />,
-          onClick: () => {
-            open({ appId: "files", title: "Files", icon: "Folder" });
+      ? [
+          { label: "← Back", keepOpen: true, onClick: () => setAnimBgSubmenu(false) },
+          { separator: true },
+          ...QUICK_ANIM_BGS.map((b) => ({
+            label: b.name,
+            onClick: () => setAnimatedBg(b.id),
+          })),
+          { separator: true },
+          {
+            label: "More in Settings...",
+            icon: <Lucide.Settings size={15} />,
+            onClick: () => open({ appId: "settings", title: "Settings", icon: "Settings" }),
           },
-        },
-        {
-          label: "Change Wallpaper",
-          icon: <Image size={15} />,
-          keepOpen: true,
-          onClick: () => setWallpaperSubmenu(true),
-        },
-        {
-          label: "Animated Background",
-          icon: <Film size={15} />,
-          keepOpen: true,
-          onClick: () => setAnimBgSubmenu(true),
-        },
-        {
-          label: "Open Settings",
-          icon: <Lucide.Settings size={15} />,
-          onClick: () => open({ appId: "settings", title: "Settings", icon: "Settings" }),
-        },
-        { separator: true },
-        {
-          label: "Refresh",
-          icon: <RefreshCw size={15} />,
-          onClick: () => window.location.reload(),
-        },
-      ];
+        ]
+      : [
+          {
+            label: "New Folder",
+            icon: <FolderPlus size={15} />,
+            onClick: () => {
+              open({ appId: "files", title: "Files", icon: "Folder" });
+            },
+          },
+          {
+            label: "Change Wallpaper",
+            icon: <Image size={15} />,
+            keepOpen: true,
+            onClick: () => setWallpaperSubmenu(true),
+          },
+          {
+            label: "Animated Background",
+            icon: <Film size={15} />,
+            keepOpen: true,
+            onClick: () => setAnimBgSubmenu(true),
+          },
+          {
+            label: "Open Settings",
+            icon: <Lucide.Settings size={15} />,
+            onClick: () => open({ appId: "settings", title: "Settings", icon: "Settings" }),
+          },
+          { separator: true },
+          {
+            label: "Refresh",
+            icon: <RefreshCw size={15} />,
+            onClick: () => window.location.reload(),
+          },
+        ];
 
   return (
     <div
@@ -106,10 +107,13 @@ export default function Desktop() {
       onClick={() => menu && setMenu(null)}
     >
       {/* Desktop icons — fixed-height cells so 2-line names don't break the grid */}
-      <div className="absolute left-3 top-3 grid grid-flow-col grid-rows-[repeat(auto-fill,88px)] gap-1" style={{ height: "calc(100% - 24px)" }}>
-        {apps.filter((a) => a.pinnedToDesktop).map((app) => {
-          const Icon = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number }>>)[app.icon] ?? Lucide.AppWindow;
-          return (
+      <div
+        className="absolute left-3 top-3 grid grid-flow-col grid-rows-[repeat(auto-fill,88px)] gap-1"
+        style={{ height: "calc(100% - 24px)" }}
+      >
+        {apps
+          .filter((a) => a.pinnedToDesktop)
+          .map((app) => (
             <button
               key={app.id}
               onDoubleClick={() => open({ appId: app.id, title: app.name, icon: app.icon })}
@@ -117,7 +121,7 @@ export default function Desktop() {
               className="group flex h-[88px] w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition hover:bg-white/10 focus:bg-accent/20"
             >
               <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white shadow-lg backdrop-blur-sm transition group-hover:scale-105">
-                <Icon size={22} />
+                {renderAppIcon(app, { size: 22 })}
                 {app.access === "preview" && (
                   <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-white/20">
                     <Lock size={9} />
@@ -128,18 +132,10 @@ export default function Desktop() {
                 {app.name}
               </span>
             </button>
-          );
-        })}
+          ))}
       </div>
 
-      {menu && (
-        <ContextMenu
-          x={menu.x}
-          y={menu.y}
-          items={items}
-          onClose={() => setMenu(null)}
-        />
-      )}
+      {menu && <ContextMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} />}
     </div>
   );
 }

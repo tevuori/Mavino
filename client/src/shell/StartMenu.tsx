@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import * as Lucide from "lucide-react";
 import { Search, Power, LogOut, Lock } from "lucide-react";
+import { renderAppIcon } from "./AppIcon";
 import { useAccessibleApps } from "../store/features";
 import { useWindows } from "../store/windows";
 import { useAuth } from "../store/auth";
@@ -34,11 +34,9 @@ export default function StartMenu({ open, onClose }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const filtered = apps.filter((a) =>
-    a.name.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = apps.filter((a) => a.name.toLowerCase().includes(query.toLowerCase()));
 
-  const launch = (id: typeof apps[number]) => {
+  const launch = (id: (typeof apps)[number]) => {
     openWindow({ appId: id.id, title: id.name, icon: id.icon });
     onClose();
   };
@@ -69,26 +67,23 @@ export default function StartMenu({ open, onClose }: Props) {
 
             {/* App grid */}
             <div className="mb-4 grid grid-cols-4 gap-2">
-              {filtered.map((app) => {
-                const Icon = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number }>>)[app.icon] ?? Lucide.AppWindow;
-                return (
-                  <button
-                    key={app.id}
-                    onClick={() => launch(app)}
-                    className="flex flex-col items-center gap-1.5 rounded-lg p-3 transition hover:bg-surface-3"
-                  >
-                    <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
-                      <Icon size={22} />
-                      {app.access === "preview" && (
-                        <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-edge">
-                          <Lock size={9} />
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs text-ink">{app.name}</span>
-                  </button>
-                );
-              })}
+              {filtered.map((app) => (
+                <button
+                  key={app.id}
+                  onClick={() => launch(app)}
+                  className="flex flex-col items-center gap-1.5 rounded-lg p-3 transition hover:bg-surface-3"
+                >
+                  <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
+                    {renderAppIcon(app, { size: 22 })}
+                    {app.access === "preview" && (
+                      <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-edge">
+                        <Lock size={9} />
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-ink">{app.name}</span>
+                </button>
+              ))}
               {filtered.length === 0 && (
                 <p className="col-span-4 py-6 text-center text-sm text-ink-muted">No apps found</p>
               )}

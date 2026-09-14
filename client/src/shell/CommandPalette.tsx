@@ -1,18 +1,38 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Search, CornerDownLeft, AppWindow, StickyNote, CheckSquare,
-  Calculator, Play, Brain, GraduationCap, Timer, Folder, Settings as SettingsIcon,
-  FileText, Image as ImageIcon, FileCode, Eye, Code2, Music as MusicIcon, Video as VideoIcon,
-  Calendar, Flame, Zap,
+  Search,
+  CornerDownLeft,
+  StickyNote,
+  CheckSquare,
+  Calculator,
+  Brain,
+  GraduationCap,
+  Timer,
+  FileText,
+  Image as ImageIcon,
+  FileCode,
+  Music as MusicIcon,
+  Video as VideoIcon,
+  Calendar,
+  Flame,
+  Zap,
 } from "lucide-react";
 import { useWindows, type AppId } from "../store/windows";
 import { useAccessibleApps } from "../store/features";
 import { api } from "../services/api";
-import { openTargetForFile, isImageFile, isPdfFile, isAudioFile, isVideoFile, isTextFile } from "../services/files";
+import {
+  openTargetForFile,
+  isImageFile,
+  isPdfFile,
+  isAudioFile,
+  isVideoFile,
+  isTextFile,
+} from "../services/files";
 import { useShortcut, formatShortcut } from "../store/shortcuts";
 import { useQuickCapture } from "../store/quickCapture";
 import { useSettings } from "../store/settings";
+import { renderAppIcon } from "./AppIcon";
 import type { Note, Task, VFile } from "../types";
 
 interface SearchResult {
@@ -28,15 +48,15 @@ interface SearchResult {
 function tryCalculate(input: string): string | null {
   const trimmed = input.trim();
   // Only allow numbers, operators, parens, decimal points, spaces, and common math functions
-  if (!/^[\d+\-*/().%\s,e]*(sin|cos|tan|sqrt|abs|pow|log|ln|pi|e)?[\d+\-*/().%\s,e]*$/.test(trimmed)) {
+  if (
+    !/^[\d+\-*/().%\s,e]*(sin|cos|tan|sqrt|abs|pow|log|ln|pi|e)?[\d+\-*/().%\s,e]*$/.test(trimmed)
+  ) {
     // More permissive check for basic arithmetic
     if (!/^[\d+\-*/().\s]+$/.test(trimmed)) return null;
   }
   try {
     // Replace common math tokens
-    let expr = trimmed
-      .replace(/\^/g, "**")
-      .replace(/%/g, "/100");
+    let expr = trimmed.replace(/\^/g, "**").replace(/%/g, "/100");
     // eslint-disable-next-line no-new-func
     const result = Function(`"use strict"; return (${expr})`)();
     if (typeof result === "number" && isFinite(result)) {
@@ -47,17 +67,6 @@ function tryCalculate(input: string): string | null {
   }
   return null;
 }
-
-const APP_ICONS: Record<string, React.ReactNode> = {
-  notes: <StickyNote size={18} />,
-  tasks: <CheckSquare size={18} />,
-  files: <Folder size={18} />,
-  settings: <SettingsIcon size={18} />,
-  pomodoro: <Timer size={18} />,
-  flashcards: <Brain size={18} />,
-  editor: <Code2 size={18} />,
-  viewer: <Eye size={18} />,
-};
 
 function fileIcon(file: VFile): React.ReactNode {
   if (isImageFile(file)) return <ImageIcon size={18} className="text-green-400" />;
@@ -143,7 +152,7 @@ export default function CommandPalette() {
           type: "app",
           title: app.name,
           subtitle: "Application",
-          icon: APP_ICONS[app.id] ?? <AppWindow size={18} />,
+          icon: renderAppIcon(app, { size: 18 }),
           action: () => {
             openWindow({ appId: app.id as AppId, title: app.name, icon: app.icon });
             setOpen(false);
@@ -153,7 +162,13 @@ export default function CommandPalette() {
     }
 
     // Quick actions
-    const quickActions: { title: string; subtitle: string; icon: React.ReactNode; action: () => void; keywords: string[] }[] = [
+    const quickActions: {
+      title: string;
+      subtitle: string;
+      icon: React.ReactNode;
+      action: () => void;
+      keywords: string[];
+    }[] = [
       {
         title: "New Note",
         subtitle: "Create a note",
@@ -433,20 +448,22 @@ export default function CommandPalette() {
                       i === selectedIndex ? "bg-accent/15" : "hover:bg-surface-2"
                     }`}
                   >
-                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                      i === selectedIndex ? "bg-accent/20" : "bg-surface-2"
-                    }`}>
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                        i === selectedIndex ? "bg-accent/20" : "bg-surface-2"
+                      }`}
+                    >
                       {r.icon}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className={`truncate text-sm ${r.type === "calc" ? "font-mono text-accent" : "text-ink"}`}>
+                      <p
+                        className={`truncate text-sm ${r.type === "calc" ? "font-mono text-accent" : "text-ink"}`}
+                      >
                         {r.title}
                       </p>
                       <p className="truncate text-xs text-ink-muted">{r.subtitle}</p>
                     </div>
-                    {i === selectedIndex && (
-                      <CornerDownLeft size={14} className="text-ink-muted" />
-                    )}
+                    {i === selectedIndex && <CornerDownLeft size={14} className="text-ink-muted" />}
                   </button>
                 ))
               )}

@@ -6,8 +6,8 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import * as Lucide from "lucide-react";
 import { Plus, Trash2, ChevronUp, ChevronDown, X } from "lucide-react";
+import { renderAppIcon } from "../shell/AppIcon";
 import { useWindows, type WindowInstance } from "../store/windows";
 
 interface Props {
@@ -67,7 +67,10 @@ export default function WorkspaceOverview({ open, onClose }: Props) {
           onClick={onClose}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex items-center justify-between px-6 py-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-lg font-semibold text-white">Workspaces</h2>
             <button
               onClick={onClose}
@@ -108,8 +111,8 @@ export default function WorkspaceOverview({ open, onClose }: Props) {
                     isActive
                       ? "border-accent/50 bg-accent/5"
                       : isDragOver
-                      ? "border-accent bg-accent/10"
-                      : "border-white/10 bg-white/5"
+                        ? "border-accent bg-accent/10"
+                        : "border-white/10 bg-white/5"
                   }`}
                 >
                   {/* Strip header */}
@@ -118,9 +121,11 @@ export default function WorkspaceOverview({ open, onClose }: Props) {
                       onClick={() => handleSwitchAndClose(ws.id)}
                       className="flex items-center gap-2 text-left"
                     >
-                      <span className={`flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold ${
-                        isActive ? "bg-accent text-accent-fg" : "bg-white/10 text-white/80"
-                      }`}>
+                      <span
+                        className={`flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold ${
+                          isActive ? "bg-accent text-accent-fg" : "bg-white/10 text-white/80"
+                        }`}
+                      >
                         {i + 1}
                       </span>
                       {isRenaming ? (
@@ -131,7 +136,10 @@ export default function WorkspaceOverview({ open, onClose }: Props) {
                           onBlur={() => commitRename(ws.id)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") commitRename(ws.id);
-                            if (e.key === "Escape") { setRenaming(null); setRenameValue(""); }
+                            if (e.key === "Escape") {
+                              setRenaming(null);
+                              setRenameValue("");
+                            }
                           }}
                           className="w-40 rounded border border-accent bg-surface px-2 py-0.5 text-sm text-ink outline-none"
                           placeholder="Workspace name"
@@ -187,24 +195,26 @@ export default function WorkspaceOverview({ open, onClose }: Props) {
                         {isDragOver ? "Drop here" : "Empty workspace"}
                       </div>
                     ) : (
-                      wsWindows.map((win) => {
-                        const Icon = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number }>>)[win.icon] ?? Lucide.AppWindow;
-                        return (
-                          <div
-                            key={win.id}
-                            draggable
-                            onDragStart={() => setDragWinId(win.id)}
-                            onDragEnd={() => { setDragWinId(null); setDragOverWs(null); }}
-                            onClick={() => handleCardClick(win)}
-                            className="flex w-36 cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 p-3 text-center transition hover:border-accent/50 hover:bg-accent/10"
-                          >
-                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white">
-                              <Icon size={18} />
-                            </div>
-                            <span className="line-clamp-2 text-[11px] text-white/80">{win.title}</span>
+                      wsWindows.map((win) => (
+                        <div
+                          key={win.id}
+                          draggable
+                          onDragStart={() => setDragWinId(win.id)}
+                          onDragEnd={() => {
+                            setDragWinId(null);
+                            setDragOverWs(null);
+                          }}
+                          onClick={() => handleCardClick(win)}
+                          className="flex w-36 cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 p-3 text-center transition hover:border-accent/50 hover:bg-accent/10"
+                        >
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white">
+                            {renderAppIcon(win.appId, { size: 18 })}
                           </div>
-                        );
-                      })
+                          <span className="line-clamp-2 text-[11px] text-white/80">
+                            {win.title}
+                          </span>
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
