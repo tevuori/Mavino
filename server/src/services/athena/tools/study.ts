@@ -111,6 +111,7 @@ const rawStudyTools: ToolDef[] = [
       { name: "noteId", type: "string", description: "Note id to summarize", required: true },
       { name: "mode", type: "string", description: "Summary style", enum: ["tldr", "outline", "keypoints"] },
       { name: "title", type: "string", description: "Optional title for the new summary note" },
+      { name: "folderId", type: "string", description: "Optional folder id from list_note_folders to store the summary in" },
     ],
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
@@ -137,8 +138,19 @@ const rawStudyTools: ToolDef[] = [
       }
 
       const title = (String(args.title ?? "").trim() || `Summary: ${resolved.name}`).slice(0, 200);
+
+      let folderId: string | null = null;
+      if (args.folderId !== undefined && args.folderId !== null) {
+        const fid = String(args.folderId).trim();
+        if (fid !== "" && fid !== "null") {
+          const folder = await prisma.noteFolder.findFirst({ where: { id: fid, userId } });
+          if (!folder) return { error: "Folder not found" };
+          folderId = fid;
+        }
+      }
+
       const note = await prisma.note.create({
-        data: { userId, title, content: summary, tags: "summary,ai" },
+        data: { userId, title, content: summary, tags: "summary,ai", folderId },
       });
       await logSessionSafe(userId, "summary", title, resolved.ref, { mode, noteId: note.id });
 
@@ -267,6 +279,7 @@ const rawStudyTools: ToolDef[] = [
       { name: "noteId", type: "string", description: "Note id to explain", required: true },
       { name: "depth", type: "string", description: "Explanation depth", enum: ["eli5", "standard", "expert"] },
       { name: "title", type: "string", description: "Optional title for the new explanation note" },
+      { name: "folderId", type: "string", description: "Optional folder id from list_note_folders to store the explanation in" },
     ],
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
@@ -293,8 +306,19 @@ const rawStudyTools: ToolDef[] = [
       }
 
       const title = (String(args.title ?? "").trim() || `Explanation: ${resolved.name}`).slice(0, 200);
+
+      let folderId: string | null = null;
+      if (args.folderId !== undefined && args.folderId !== null) {
+        const fid = String(args.folderId).trim();
+        if (fid !== "" && fid !== "null") {
+          const folder = await prisma.noteFolder.findFirst({ where: { id: fid, userId } });
+          if (!folder) return { error: "Folder not found" };
+          folderId = fid;
+        }
+      }
+
       const note = await prisma.note.create({
-        data: { userId, title, content: explanation, tags: "explain,ai" },
+        data: { userId, title, content: explanation, tags: "explain,ai", folderId },
       });
       await logSessionSafe(userId, "explain", title, resolved.ref, { depth, noteId: note.id });
 
@@ -317,6 +341,7 @@ const rawStudyTools: ToolDef[] = [
     parameters: [
       { name: "noteIds", type: "string", description: "Comma-separated note ids to consolidate", required: true },
       { name: "title", type: "string", description: "Optional title for the study guide note" },
+      { name: "folderId", type: "string", description: "Optional folder id from list_note_folders to store the study guide in" },
     ],
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
@@ -345,8 +370,19 @@ const rawStudyTools: ToolDef[] = [
       }
 
       const title = (String(args.title ?? "").trim() || "Study Guide").slice(0, 200);
+
+      let folderId: string | null = null;
+      if (args.folderId !== undefined && args.folderId !== null) {
+        const fid = String(args.folderId).trim();
+        if (fid !== "" && fid !== "null") {
+          const folder = await prisma.noteFolder.findFirst({ where: { id: fid, userId } });
+          if (!folder) return { error: "Folder not found" };
+          folderId = fid;
+        }
+      }
+
       const note = await prisma.note.create({
-        data: { userId, title, content: guide, tags: "study-guide,ai" },
+        data: { userId, title, content: guide, tags: "study-guide,ai", folderId },
       });
       await logSessionSafe(userId, "study_guide", title, notes.map((n) => n.id).join(","), {
         noteId: note.id,

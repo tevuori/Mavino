@@ -68,6 +68,7 @@ export const notetakeTools: ToolDef[] = [
       { name: "customStructure", type: "string", description: "Optional freeform instructions describing how the notes should be structured (e.g. 'start with a glossary, then one section per chapter, end with 5 review questions')" },
       { name: "title", type: "string", description: "Optional title for the new note" },
       { name: "tags", type: "string", description: "Comma-separated tags (defaults to 'notes,ai,web')" },
+      { name: "folderId", type: "string", description: "Optional folder id from list_note_folders to store the note in" },
     ],
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
@@ -103,8 +104,19 @@ export const notetakeTools: ToolDef[] = [
 
       const title = (String(args.title ?? "").trim() || `Notes: ${page.title || "Web Page"}`).slice(0, 200);
       const tags = String(args.tags ?? "notes,ai,web");
+
+      let folderId: string | null = null;
+      if (args.folderId !== undefined && args.folderId !== null) {
+        const fid = String(args.folderId).trim();
+        if (fid !== "" && fid !== "null") {
+          const folder = await prisma.noteFolder.findFirst({ where: { id: fid, userId } });
+          if (!folder) return { error: "Folder not found" };
+          folderId = fid;
+        }
+      }
+
       const note = await prisma.note.create({
-        data: { userId, title, content: notes, tags },
+        data: { userId, title, content: notes, tags, folderId },
       });
 
       // Include source URL as a footer in the note for traceability.
@@ -151,6 +163,7 @@ export const notetakeTools: ToolDef[] = [
       { name: "customStructure", type: "string", description: "Optional freeform instructions describing how the notes should be structured (e.g. 'start with a glossary, then one section per chapter, end with 5 review questions')" },
       { name: "title", type: "string", description: "Optional title for the new note" },
       { name: "tags", type: "string", description: "Comma-separated tags (defaults to 'notes,ai,pdf')" },
+      { name: "folderId", type: "string", description: "Optional folder id from list_note_folders to store the note in" },
     ],
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
@@ -204,8 +217,19 @@ export const notetakeTools: ToolDef[] = [
 
       const title = (String(args.title ?? "").trim() || `Notes: ${file.name}`).slice(0, 200);
       const tags = String(args.tags ?? "notes,ai,pdf");
+
+      let folderId: string | null = null;
+      if (args.folderId !== undefined && args.folderId !== null) {
+        const fid = String(args.folderId).trim();
+        if (fid !== "" && fid !== "null") {
+          const folder = await prisma.noteFolder.findFirst({ where: { id: fid, userId } });
+          if (!folder) return { error: "Folder not found" };
+          folderId = fid;
+        }
+      }
+
       const note = await prisma.note.create({
-        data: { userId, title, content: notes, tags },
+        data: { userId, title, content: notes, tags, folderId },
       });
 
       await logSessionSafe(userId, "notes", title, file.id, {

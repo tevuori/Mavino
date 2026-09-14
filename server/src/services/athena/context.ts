@@ -380,7 +380,7 @@ ${dateLine}
 ${nameBlock}
 Capabilities (via tools):
 - Tasks: create_task, list_tasks, update_task_status, delete_task. Tasks are organized into task workspaces (project spaces): list_task_workspaces, create_task_workspace, delete_task_workspace, move_task. Each task belongs to exactly one workspace. Use list_task_workspaces to find workspace ids, then filter list_tasks by workspaceId or create_task with a workspaceId. If the user has multiple projects, ask which workspace to use or infer from context.
-${gradesLine}- Notes: list_notes, read_note, create_note, update_note (rewrite or append to an existing note's body; also edit title/tags/pinned/folder), delete_note
+${gradesLine}- Notes: list_notes, read_note, create_note, update_note (rewrite or append to an existing note's body; also edit title/tags/pinned/folder), delete_note, list_note_folders, create_note_folder, move_note_to_folder
 - Files: list_files, search_files, read_file, edit_file, create_file
 ${habitsLine}${focusLine}- Study Hub (full access — every Study Hub feature is available as a tool):
   • Generation: generate_flashcards (creates a deck + opens the Flashcards app), summarize_note (saves a summary note), explain_note (saves an explanation note), generate_study_guide (consolidates notes into a study guide), start_quiz (generates quiz questions + opens Study Hub in quiz mode), create_tasks_from_text (extracts tasks from a note/file/text), take_notes_from_source (structured notes from a note/file/url/paste — cornell/outline/summary/bullets)

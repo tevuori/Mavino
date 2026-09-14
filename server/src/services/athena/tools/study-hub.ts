@@ -670,6 +670,7 @@ const rawStudyHubTools: ToolDef[] = [
       { name: "customStructure", type: "string", description: "Optional custom structure description (e.g. 'focus on dates and names')" },
       { name: "title", type: "string", description: "Optional note title" },
       { name: "tags", type: "string", description: "Optional comma-separated tags" },
+      { name: "folderId", type: "string", description: "Optional folder id from list_note_folders to store the note in" },
     ],
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
@@ -710,8 +711,19 @@ const rawStudyHubTools: ToolDef[] = [
       const defaultTags = resolved.kind === "file" ? "notes,ai,pdf" : resolved.kind === "paste" ? "notes,ai,paste" : "notes,ai";
       const title = (String(args.title ?? "").trim() || `Notes: ${resolved.name}`).slice(0, 200);
       const tags = String(args.tags ?? "").trim() || defaultTags;
+
+      let folderId: string | null = null;
+      if (args.folderId !== undefined && args.folderId !== null) {
+        const fid = String(args.folderId).trim();
+        if (fid !== "" && fid !== "null") {
+          const folder = await prisma.noteFolder.findFirst({ where: { id: fid, userId } });
+          if (!folder) return { error: "Folder not found" };
+          folderId = fid;
+        }
+      }
+
       const note = await prisma.note.create({
-        data: { userId, title, content: notes, tags },
+        data: { userId, title, content: notes, tags, folderId },
       });
       await logSessionSafe(userId, "notes", title, resolved.ref, {
         noteId: note.id,

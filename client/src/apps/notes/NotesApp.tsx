@@ -22,7 +22,7 @@ import { useWindows } from "../../store/windows";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
 import type { Note, NoteFolder } from "../../types";
 import type { WindowInstance } from "../../store/windows";
-import { setLinkPayload, readLinkPayload, allowLinkDrop } from "../links/linkDnd";
+import { setLinkPayload, readLinkPayload, hasLinkPayload, allowLinkDrop } from "../links/linkDnd";
 import LinkBadge from "../links/LinkBadge";
 import { useCodemirrorShowControl } from "../shared/useCodemirrorShowControl";
 import { useCodemirrorHighlights } from "../shared/useCodemirrorHighlights";
@@ -67,6 +67,8 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
   // Folder context menu + inline rename
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; folderId: string } | null>(null);
   const [noteMenu, setNoteMenu] = useState<{ x: number; y: number; noteId: string } | null>(null);
+  const [moveNoteMenu, setMoveNoteMenu] = useState<{ x: number; y: number; noteId: string } | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | "all" | null>(null);
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
@@ -358,6 +360,42 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
     updateNote(note.id, { pinned: !note.pinned });
   };
 
+  const moveNoteToFolder = async (noteId: string, folderId: string | null) => {
+    try {
+      await notesApi.update(noteId, { folderId });
+      if (selectedFolder !== null && selectedFolder !== folderId) {
+        // The note no longer belongs to the folder currently being viewed.
+        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        if (selectedId === noteId) setSelectedId(null);
+      } else {
+        setNotes((prev) => prev.map((n) => (n.id === noteId ? { ...n, folderId } : n)));
+      }
+    } catch (e) {
+      console.error("Failed to move note", e);
+    }
+  };
+
+  const onFolderDragOver = (e: React.DragEvent, folderId: string | "all") => {
+    if (hasLinkPayload(e)) {
+      e.preventDefault();
+      setDragOverFolderId(folderId);
+    }
+  };
+
+  const onFolderDragLeave = (e: React.DragEvent) => {
+    if (e.currentTarget === e.target) setDragOverFolderId(null);
+  };
+
+  const onFolderDrop = async (e: React.DragEvent, folderId: string | null) => {
+    const payload = readLinkPayload(e);
+    if (payload?.type === "note") {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverFolderId(null);
+      await moveNoteToFolder(payload.id, folderId);
+    }
+  };
+
   // Open Study Hub with this note as the source, in the given mode.
   const studyFromNote = (noteId: string, mode: "flashcards" | "summarize" | "quiz" | "explain" | "study_guide") => {
     openWindow({
@@ -518,18 +556,24 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           <button
             onClick={() => setSelectedFolder(null)}
+            onDragOver={(e) => onFolderDragOver(e, "all")}
+            onDragLeave={onFolderDragLeave}
+            onDrop={(e) => onFolderDrop(e, null)}
             className={`mb-0.5 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs ${
               selectedFolder === null ? "bg-accent/15 text-accent" : "text-ink hover:bg-surface-3"
-            }`}
+            } ${dragOverFolderId === "all" ? "ring-1 ring-accent bg-accent/10" : ""}`}
           >
             <Folder size={14} /> All notes
           </button>
           {folders.filter((f) => !f.shared).map((f) => (
             <div
               key={f.id}
+              onDragOver={(e) => onFolderDragOver(e, f.id)}
+              onDragLeave={onFolderDragLeave}
+              onDrop={(e) => onFolderDrop(e, f.id)}
               className={`group mb-0.5 flex w-full items-center gap-1 rounded-md px-1.5 py-1.5 text-left text-xs ${
                 selectedFolder === f.id ? "bg-accent/15 text-accent" : "text-ink hover:bg-surface-3"
-              }`}
+              } ${dragOverFolderId === f.id ? "ring-1 ring-accent bg-accent/10" : ""}`}
             >
               <Folder size={14} className="shrink-0" />
               {renamingFolderId === f.id ? (
@@ -637,6 +681,23 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
             className="fixed z-50 min-w-[160px] rounded-lg border border-edge bg-surface py-1 shadow-window"
             style={{ left: noteMenu.x, top: noteMenu.y }}
           >
+            {!isReadOnlyShared && (
+              <>
+                <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-wide text-ink-muted">
+                  Move
+                </div>
+                <button
+                  onClick={() => {
+                    setMoveNoteMenu({ x: noteMenu.x, y: noteMenu.y, noteId: noteMenu.noteId });
+                    setNoteMenu(null);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-3"
+                >
+                  <Folder size={12} /> Move to folder…
+                </button>
+                <div className="my-1 border-t border-edge" />
+              </>
+            )}
             <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-wide text-ink-muted">
               Study
             </div>
@@ -679,6 +740,36 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
                 <Trash2 size={12} /> Delete
               </button>
             )}
+          </div>
+        </>
+      )}
+
+      {/* Move note to folder picker */}
+      {moveNoteMenu && (
+        <>
+          <div className="fixed inset-0 z-50" onClick={() => setMoveNoteMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMoveNoteMenu(null); }} />
+          <div
+            className="fixed z-50 min-w-[180px] max-h-72 overflow-y-auto rounded-lg border border-edge bg-surface py-1 shadow-window"
+            style={{ left: moveNoteMenu.x, top: moveNoteMenu.y }}
+          >
+            <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-wide text-ink-muted">
+              Move to
+            </div>
+            <button
+              onClick={() => { void moveNoteToFolder(moveNoteMenu.noteId, null); setMoveNoteMenu(null); }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-3"
+            >
+              <Folder size={12} /> All notes
+            </button>
+            {folders.filter((f) => !f.shared).map((f) => (
+              <button
+                key={f.id}
+                onClick={() => { void moveNoteToFolder(moveNoteMenu.noteId, f.id); setMoveNoteMenu(null); }}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-3"
+              >
+                <Folder size={12} /> <span className="truncate">{f.name}</span>
+              </button>
+            ))}
           </div>
         </>
       )}
