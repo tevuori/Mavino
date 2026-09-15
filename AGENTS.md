@@ -223,7 +223,6 @@ See `.env.example`. Key ones:
 - `JWT_SECRET` — JWT signing secret
 - `SEED_USERNAME` / `SEED_PASSWORD` — default user created by seed
 - `VITE_API_URL` — backend URL for client (used by Vite proxy)
-- `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` / `SPOTIFY_REFRESH_TOKEN` — Spotify integration
 - `MS_CLIENT_ID` / `MS_CLIENT_SECRET` / `MS_TENANT_ID` / `MS_REFRESH_TOKEN` — Microsoft Calendar sync (Graph API, requires `Calendar.ReadWrite` + `offline_access` scopes)
 - `NTFY_SERVER_URL` / `NTFY_TOKEN` / `NTFY_DEFAULT_PRIORITY` — Ntfy server-wide fallback (per-user config in DB takes priority)
 - `OPENAI_PROVIDER` / `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL` — Athena LLM server-wide fallback (per-user config in DB takes priority). All optional — if neither per-user nor server-wide keys are set, Athena AI is unavailable (no free fallback).

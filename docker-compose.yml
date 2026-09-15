@@ -80,9 +80,6 @@ services:
       # Comma-separated list of allowed CORS origins. For a single-origin public
       # deploy behind the host nginx, set this to the public URL.
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-}
-      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
-      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
-      SPOTIFY_REFRESH_TOKEN: ${SPOTIFY_REFRESH_TOKEN}
       SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI:-https://mavino.net/auth/spotify/callback}
       # Mavino code execution sandbox (run_code tool). Uses gVisor (runsc)
       # runtime for kernel-level isolation — safe for public multi-user hosts.

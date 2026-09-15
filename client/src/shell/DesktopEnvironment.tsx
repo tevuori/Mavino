@@ -1,5 +1,6 @@
 import Wallpaper from "./Wallpaper";
 import MusicWidget from "./MusicWidget";
+import TipsWidget from "./TipsWidget";
 import Desktop from "./Desktop";
 import Taskbar from "./Taskbar";
 import WindowLayer from "../wm/WindowLayer";
@@ -91,7 +92,10 @@ export default function DesktopEnvironment() {
       )}
       <div className="relative flex-1 overflow-hidden">
         <Wallpaper />
-        <MusicWidget />
+        <div className="fixed right-4 top-4 z-[5] flex flex-col items-end gap-3">
+          <TipsWidget />
+          <MusicWidget />
+        </div>
         <Desktop />
         <WindowLayer />
         <AthenaQuickPanel />

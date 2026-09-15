@@ -11,7 +11,6 @@ interface HealthInfo {
   ok: boolean;
   service: string;
   version: string;
-  spotifyEnvFallback: boolean;
 }
 
 export default function AboutSection() {
@@ -173,10 +172,6 @@ export default function AboutSection() {
             <div className="flex items-center justify-between">
               <span className="text-ink-muted">Health</span>
               <StatusPill on={health.ok} onLabel="Healthy" offLabel="Degraded" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-ink-muted">Spotify (server fallback)</span>
-              <StatusPill on={health.spotifyEnvFallback} onLabel="Available" offLabel="Not set" />
             </div>
           </div>
         ) : (

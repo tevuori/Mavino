@@ -2,8 +2,7 @@
  * Spotify service — per-user token management + Web API proxy.
  *
  * Each user stores their own Spotify credentials (client id, secret, refresh
- * token) encrypted in the DB. Server-wide SPOTIFY_* env vars serve as an
- * optional fallback (e.g. for the admin who set them up).
+ * token) encrypted in the DB.
  *
  * Token endpoint: https://accounts.spotify.com/api/token
  * Web API base:   https://api.spotify.com/v1
@@ -14,11 +13,6 @@ import { encryptSecret, decryptSecret } from "./crypto";
 
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
 const API_BASE = "https://api.spotify.com/v1";
-
-// Server-wide fallback (env vars)
-const ENV_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID ?? "";
-const ENV_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET ?? "";
-const ENV_REFRESH_TOKEN = process.env.SPOTIFY_REFRESH_TOKEN ?? "";
 
 export interface SpotifyTokens {
   access_token: string;
@@ -36,8 +30,6 @@ export interface SpotifyUserConfig {
   clientId: string;
   clientSecret: string;
   refreshToken: string;
-  /** True if using per-user DB credentials (vs env fallback). */
-  perUser: boolean;
 }
 
 function decryptSafe(enc: string): string {
@@ -48,30 +40,20 @@ function decryptSafe(enc: string): string {
   }
 }
 
-/** Load a user's Spotify config: per-user DB → env fallback. */
+/** Load a user's Spotify config from their encrypted credentials. */
 export async function getUserSpotifyConfig(userId: string): Promise<SpotifyUserConfig | null> {
   const cred = await prisma.spotifyCredential.findUnique({ where: { userId } });
-  if (cred) {
-    const clientId = decryptSafe(cred.clientIdEnc);
-    const clientSecret = decryptSafe(cred.clientSecretEnc);
-    const refreshToken = decryptSafe(cred.refreshTokenEnc);
-    if (clientId && clientSecret && refreshToken) {
-      return { clientId, clientSecret, refreshToken, perUser: true };
-    }
-  }
-  // Fallback to server env vars
-  if (ENV_CLIENT_ID && ENV_CLIENT_SECRET && ENV_REFRESH_TOKEN) {
-    return {
-      clientId: ENV_CLIENT_ID,
-      clientSecret: ENV_CLIENT_SECRET,
-      refreshToken: ENV_REFRESH_TOKEN,
-      perUser: false,
-    };
-  }
-  return null;
+  if (!cred) return null;
+
+  const clientId = decryptSafe(cred.clientIdEnc);
+  const clientSecret = decryptSafe(cred.clientSecretEnc);
+  const refreshToken = decryptSafe(cred.refreshTokenEnc);
+  if (!clientId || !clientSecret || !refreshToken) return null;
+
+  return { clientId, clientSecret, refreshToken };
 }
 
-/** Check if Spotify is configured for a given user (per-user or env fallback). */
+/** Check if Spotify is configured for a given user. */
 export async function isSpotifyConfiguredFor(userId: string): Promise<boolean> {
   const config = await getUserSpotifyConfig(userId);
   return config !== null;
@@ -103,7 +85,7 @@ async function refreshAccessToken(userId: string, config: SpotifyUserConfig): Pr
     expiresAt: Date.now() + data.expires_in * 1000,
   });
   // If Spotify returned a new refresh token, persist it.
-  if (data.refresh_token && data.refresh_token !== config.refreshToken && config.perUser) {
+  if (data.refresh_token && data.refresh_token !== config.refreshToken) {
     await prisma.spotifyCredential.update({
       where: { userId },
       data: { refreshTokenEnc: encryptSecret(data.refresh_token) },

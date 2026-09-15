@@ -54,7 +54,6 @@ export interface SpotifyPlayerState {
 export interface SpotifyCredentialStatus {
   hasCredentials: boolean;
   configured: boolean;
-  usingEnvFallback: boolean;
 }
 
 export const spotifyApi = {

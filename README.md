@@ -292,7 +292,6 @@ See [`.env.example`](.env.example) for the full list. Key ones:
 | `JWT_SECRET` | JWT signing secret |
 | `SEED_USERNAME` / `SEED_PASSWORD` | Default user created by seed |
 | `VITE_API_URL` | Backend URL for client (Vite proxy) |
-| `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` / `SPOTIFY_REFRESH_TOKEN` | Spotify integration |
 | `MS_CLIENT_ID` / `MS_CLIENT_SECRET` / `MS_TENANT_ID` / `MS_REFRESH_TOKEN` | Microsoft Calendar sync (Graph API) |
 | `OPENAI_PROVIDER` / `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL` | Mavino LLM server-wide fallback (per-user DB config takes priority). All optional — if neither is set, Mavino AI is unavailable (no free fallback) |
 | `OPENAI_TRANSCRIPTION_MODEL` | Whisper model for Voice Notes transcription (default `whisper-1`). Reuses `OPENAI_API_KEY` / `OPENAI_BASE_URL` (or per-user AiCredential) |

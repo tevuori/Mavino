@@ -160,10 +160,6 @@ app.get("/health", (c) =>
     ok: true,
     service: "mavino-server",
     version: "0.1.0",
-    // Spotify is now per-user; report whether the server-wide env fallback exists.
-    spotifyEnvFallback: Boolean(
-      process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET && process.env.SPOTIFY_REFRESH_TOKEN
-    ),
   })
 );
 

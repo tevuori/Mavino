@@ -78,7 +78,7 @@ function SpotifyCard() {
       const s = await spotifyApi.getCredentials();
       setStatus(s);
     } catch {
-      setStatus({ hasCredentials: false, configured: false, usingEnvFallback: false });
+      setStatus({ hasCredentials: false, configured: false });
     }
   }, []);
 
@@ -128,13 +128,7 @@ function SpotifyCard() {
         icon={<Music size={18} />}
         name="Spotify"
         description="Powers the Music Widget & Chill mode. Connect your own Spotify account."
-        pill={
-          <StatusPill
-            on={configured}
-            onLabel={hasCreds ? "Connected" : status?.usingEnvFallback ? "Server fallback" : "Connected"}
-            offLabel="Not configured"
-          />
-        }
+        pill={<StatusPill on={configured} onLabel="Connected" offLabel="Not configured" />}
       />
       {hasCreds ? (
         <div className="mt-3 flex items-center gap-2">
@@ -146,9 +140,7 @@ function SpotifyCard() {
             <LogOut size={14} /> Disconnect
           </button>
           {busy && <Loader2 size={14} className="animate-spin text-ink-muted" />}
-          {status?.usingEnvFallback === false && hasCreds && (
-            <span className="text-xs text-ink-muted">Using your credentials</span>
-          )}
+          <span className="text-xs text-ink-muted">Using your credentials</span>
         </div>
       ) : (
         <div className="mt-3 space-y-2">
@@ -184,9 +176,6 @@ function SpotifyCard() {
             <SaveButton busy={busy} onClick={connect} disabled={!clientId.trim() || !clientSecret.trim() || !refreshToken.trim()}>
               Connect
             </SaveButton>
-            {status?.usingEnvFallback && (
-              <span className="text-xs text-ink-muted">Server fallback active — add your own to override</span>
-            )}
           </div>
         </div>
       )}

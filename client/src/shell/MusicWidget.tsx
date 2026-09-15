@@ -92,7 +92,7 @@ export default function MusicWidget() {
   if (connection === "not-configured") return null;
   if (connection === "idle" || connection === "connecting") {
     return (
-      <div className="fixed right-4 top-4 z-[5] flex w-72 items-center gap-2 rounded-xl border border-edge bg-surface/80 p-3 shadow-window backdrop-blur-xl">
+      <div className="flex w-72 items-center gap-2 rounded-xl border border-edge bg-surface/80 p-3 shadow-window backdrop-blur-xl">
         <Loader2 size={16} className="animate-spin text-accent" />
         <span className="text-xs text-ink-muted">Connecting to Spotify...</span>
       </div>
@@ -100,7 +100,7 @@ export default function MusicWidget() {
   }
   if (connection === "error") {
     return (
-      <div className="fixed right-4 top-4 z-[5] flex w-72 items-center gap-2 rounded-xl border border-edge bg-surface/80 p-3 shadow-window backdrop-blur-xl">
+      <div className="flex w-72 items-center gap-2 rounded-xl border border-edge bg-surface/80 p-3 shadow-window backdrop-blur-xl">
         <AlertCircle size={16} className="shrink-0 text-red-400" />
         <span className="flex-1 truncate text-xs text-ink-muted">{error}</span>
         <button onClick={() => init()} className="rounded p-1 text-ink-muted hover:bg-surface-3 hover:text-ink">
@@ -113,7 +113,7 @@ export default function MusicWidget() {
   // No active playback
   if (!track) {
     return (
-      <div className="fixed right-4 top-4 z-[5] flex w-72 items-center gap-2 rounded-xl border border-edge bg-surface/80 p-3 shadow-window backdrop-blur-xl">
+      <div className="flex w-72 items-center gap-2 rounded-xl border border-edge bg-surface/80 p-3 shadow-window backdrop-blur-xl">
         <MusicIcon size={16} className="shrink-0 text-ink-muted" />
         <span className="text-xs text-ink-muted">No active Spotify session</span>
       </div>
@@ -124,7 +124,7 @@ export default function MusicWidget() {
     <>
     <motion.div
       layout
-      className="fixed right-4 top-4 z-[5] w-72 overflow-hidden rounded-xl border border-edge bg-surface/80 shadow-window backdrop-blur-xl"
+      className="w-72 overflow-hidden rounded-xl border border-edge bg-surface/80 shadow-window backdrop-blur-xl"
     >
       {/* Collapsed: now-playing bar */}
       <div className="flex items-center gap-3 p-2.5">

@@ -21,13 +21,9 @@ const credSchema = z.object({
 spotify.get("/credentials", async (c) => {
   const { userId } = c.get("auth");
   const cred = await prisma.spotifyCredential.findUnique({ where: { userId } });
-  const hasEnv = Boolean(
-    process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET && process.env.SPOTIFY_REFRESH_TOKEN
-  );
   return c.json({
     hasCredentials: Boolean(cred),
     configured: await isSpotifyConfiguredFor(userId),
-    usingEnvFallback: !cred && hasEnv,
   });
 });
 
