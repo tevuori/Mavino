@@ -62,7 +62,7 @@ async function checkTaskReminders(): Promise<void> {
       const category: NotificationCategory = isOverdue ? "task_overdue" : "task_due";
 
       // Throttle: one notification per task per day.
-      if (await alreadyNotifiedToday(userId, category, t.id)) continue;
+      if (await alreadyNotifiedToday(userId, category, JSON.stringify({ taskId: t.id }))) continue;
 
       // Check per-category setting.
       if (!(await isCategoryEnabled(userId, category))) continue;
@@ -111,7 +111,7 @@ async function checkCalendarReminders(): Promise<void> {
 
   for (const e of events) {
     // Throttle: one notification per event per day.
-    if (await alreadyNotifiedToday(e.userId, "calendar_upcoming", e.id)) continue;
+    if (await alreadyNotifiedToday(e.userId, "calendar_upcoming", JSON.stringify({ eventId: e.id }))) continue;
     if (!(await isCategoryEnabled(e.userId, "calendar_upcoming"))) continue;
 
     const minsUntil = Math.round((e.start.getTime() - now.getTime()) / 60_000);
