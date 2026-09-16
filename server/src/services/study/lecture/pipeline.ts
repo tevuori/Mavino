@@ -274,8 +274,8 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
       const ts = formatTimestamp(slide.startSec);
       const endTs = formatTimestamp(slide.timestampSec);
       noteBody += `## Slide ${i + 1} [${ts} – ${endTs}]\n\n`;
-      // Embed slide image via file API.
-      noteBody += `![Slide ${i + 1}](/api/files/${fileId}/raw)\n\n`;
+      // Embed slide image via file download endpoint.
+      noteBody += `![Slide ${i + 1}](/api/files/${fileId}/download)\n\n`;
       noteBody += (perSlideNotes[i] ?? "") + "\n\n---\n\n";
     }
 
