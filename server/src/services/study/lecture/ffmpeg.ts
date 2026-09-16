@@ -145,12 +145,13 @@ export async function sampleFramesForHash(
   const framesDir = path.join(outDir, "hash_frames");
   await mkdir(framesDir, { recursive: true });
   // Output 9×8 grayscale PGM images (pgm has a tiny header we can parse).
+  // 20 min ceiling gives headroom for long / slow-to-decode videos.
   const { code, stderr } = await run("ffmpeg", [
     "-y", "-i", videoPath,
     "-vf", `fps=${sampleFps},scale=9:8,format=gray`,
     "-f", "image2",
     path.join(framesDir, "frame_%06d.pgm"),
-  ], { timeout: 600_000 });
+  ], { timeout: 1_200_000 });
 
   if (code !== 0) throw new Error(`ffmpeg frame sampling failed: ${stderr.slice(-500)}`);
   return framesDir;
@@ -195,12 +196,13 @@ export async function sampleCroppedFramesForHash(
 ): Promise<string> {
   const framesDir = path.join(outDir, "hash_frames_cropped");
   await mkdir(framesDir, { recursive: true });
+  // 20 min ceiling gives headroom for long / slow-to-decode videos.
   const { code, stderr } = await run("ffmpeg", [
     "-y", "-i", videoPath,
     "-vf", `fps=${sampleFps},crop=${crop.w}:${crop.h}:${crop.x}:${crop.y},scale=9:8,format=gray`,
     "-f", "image2",
     path.join(framesDir, "frame_%06d.pgm"),
-  ], { timeout: 600_000 });
+  ], { timeout: 1_200_000 });
 
   if (code !== 0) throw new Error(`ffmpeg cropped frame sampling failed: ${stderr.slice(-500)}`);
   return framesDir;

@@ -98,7 +98,9 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
     await updateJob(jobId, { stage: "frame_sampling", progress: 42 });
 
     // ---- Stage 4: Frame sampling + slide dedup ----
-    const sampleFps = 1;
+    // Long videos don't need 1 fps for slide detection; adapt the rate so
+    // the ffmpeg pass completes well within the timeout ceiling.
+    const sampleFps = probe.durationSec > 3600 ? 0.2 : probe.durationSec > 600 ? 0.5 : 1;
     let slideRegion: SlideRegion | null = null;
     let framesDir: string;
 
