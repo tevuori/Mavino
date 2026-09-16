@@ -86,9 +86,9 @@ notes.get("/", async (c) => {
       const where: Record<string, unknown> = { folderId };
       if (q) {
         where.OR = [
-          { title: { contains: q } },
-          { content: { contains: q } },
-          { tags: { contains: q } },
+          { title: { contains: q, mode: "insensitive" } },
+          { content: { contains: q, mode: "insensitive" } },
+          { tags: { contains: q, mode: "insensitive" } },
         ];
       }
       const list = await prisma.note.findMany({
@@ -103,9 +103,9 @@ notes.get("/", async (c) => {
   if (folderId) where.folderId = folderId === "null" ? null : folderId;
   if (q) {
     where.OR = [
-      { title: { contains: q } },
-      { content: { contains: q } },
-      { tags: { contains: q } },
+      { title: { contains: q, mode: "insensitive" } },
+      { content: { contains: q, mode: "insensitive" } },
+      { tags: { contains: q, mode: "insensitive" } },
     ];
   }
   const list = await prisma.note.findMany({

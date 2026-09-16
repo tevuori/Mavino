@@ -205,7 +205,7 @@ files.get("/all", async (c) => {
   const recent = c.req.query("recent") === "true";
   const where: Record<string, unknown> = { userId };
   if (starred) where.starred = true;
-  if (q) where.name = { contains: q };
+  if (q) where.name = { contains: q, mode: "insensitive" };
   const orderBy = recent
     ? { lastOpenedAt: "desc" as const }
     : { name: "asc" as const };

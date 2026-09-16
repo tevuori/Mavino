@@ -523,7 +523,8 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search notes..."
+              placeholder="Search titles and content..."
+              aria-label="Search note titles, content, and tags"
               className="flex-1 bg-transparent text-xs text-ink outline-none placeholder:text-ink-muted"
             />
           </div>

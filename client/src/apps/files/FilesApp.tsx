@@ -53,6 +53,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lastSelected, setLastSelected] = useState<string | null>(null);
   const [preview, setPreview] = useState<VFile | null>(null);
@@ -103,7 +104,11 @@ export default function FilesApp(_: { win: WindowInstance }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      if (activeView === "folder") {
+      if (debouncedSearchQuery) {
+        const { files: matches } = await filesApi.all({ q: debouncedSearchQuery });
+        setFolders([]);
+        setFiles(matches);
+      } else if (activeView === "folder") {
         const [folderRes, fileRes] = await Promise.all([
           filesApi.listFolders(currentFolder),
           filesApi.list(currentFolder),
@@ -135,7 +140,12 @@ export default function FilesApp(_: { win: WindowInstance }) {
     } finally {
       setLoading(false);
     }
-  }, [activeView, currentFolder]);
+  }, [activeView, currentFolder, debouncedSearchQuery]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedSearchQuery(searchQuery.trim()), 250);
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
 
   useEffect(() => {
     load();
@@ -948,7 +958,8 @@ export default function FilesApp(_: { win: WindowInstance }) {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
+                placeholder="Search all files..."
+                aria-label="Search all files by name"
                 className="w-36 rounded-lg border border-edge bg-surface-2 py-1.5 pl-7 pr-2 text-xs text-ink placeholder:text-ink-muted transition-all focus:w-48 focus:outline-none focus:ring-1 focus:ring-accent"
               />
             </div>
