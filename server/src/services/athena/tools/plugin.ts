@@ -47,6 +47,12 @@ export interface ToolDef {
   /** If true, the tool is only available to PRO / MANAGER / ADMIN users
    *  (Pro-tier exclusive). Paid and Free users won't see it. */
   proOnly?: boolean;
+  /** Scopes that control in which LLM context the tool is exposed.
+   *  - "core" = always available to the main Athena assistant.
+   *  - "teacher" = only available inside Teach Me streaming turns.
+   *  - "app:<appId>" = available when a window for that app is open.
+   *  A tool may belong to multiple scopes. */
+  scopes?: string[];
   handler: (args: any, ctx: ToolContext) => Promise<any>;
 }
 

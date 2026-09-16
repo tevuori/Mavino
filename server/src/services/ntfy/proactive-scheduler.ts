@@ -15,7 +15,7 @@ import { publish, type NtfyUsableConfig } from "./client";
 import { isAthenaReady } from "./athena-turn";
 import { acquireLlmModel, getUserConfig } from "../athena/llm";
 import { buildSystemPrompt } from "../athena/context";
-import { AthenaToolsPlugin, ALL_TOOLS } from "../athena/tools";
+import { AthenaToolsPlugin, toolsForAssistant } from "../athena/tools";
 import { getUserTimezone, computeNextOccurrence } from "../timezone";
 
 const TICK_MS = 60_000;
@@ -55,6 +55,12 @@ async function runProactiveTurn(userId: string, userText: string): Promise<strin
 
   const systemPrompt = await buildSystemPrompt(userId, []);
 
+  const userRow = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  const role = userRow?.role ?? "FREE";
+
   // Accumulated tool results from prior attempts — injected into retry turns
   // so Athena doesn't re-call tools it already ran.
   let gatheredContext = "";
@@ -71,7 +77,8 @@ async function runProactiveTurn(userId: string, userText: string): Promise<strin
     ];
 
     const { model } = await acquireLlmModel(userId);
-    const plugin = new AthenaToolsPlugin(ALL_TOOLS, { userId, windows: [] });
+    const allowedTools = await toolsForAssistant(userId, role, []);
+    const plugin = new AthenaToolsPlugin(allowedTools, { userId, windows: [] });
     model.addPlugin(plugin);
 
     // Patch fetch with aggressive retry: catches network throws + 5xx + 400.

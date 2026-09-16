@@ -11,6 +11,7 @@ import { buildSystemPrompt } from "../services/athena/context";
 import {
   AthenaToolsPlugin,
   toolsForUser,
+  toolsForAssistant,
   CLIENT_ACTION_TOOLS,
   DESTRUCTIVE_TOOLS,
   toolManifest,
@@ -162,7 +163,7 @@ athena.post("/chat", zValidator("json", chatSchema, (result, c) => {
     select: { role: true },
   });
   const role = userRow?.role ?? "FREE";
-  const allowedTools = await toolsForUser(userId, role);
+  const allowedTools = await toolsForAssistant(userId, role, clientWindows);
 
   // Build the message list, ensuring alternating user/assistant roles.
   // Some providers (DeepSeek/OpenAI) reject consecutive same-role messages

@@ -17,7 +17,7 @@ import { acquireLlmModel, getUserConfig, isLlmConfiguredFor, LlmError, modelSupp
 import { extractSessionImages, loadImageAttachments } from "../services/study/teacher-images";
 import {
   AthenaToolsPlugin,
-  toolsForUser,
+  toolsForTeacher,
   CLIENT_ACTION_TOOLS,
   DESTRUCTIVE_TOOLS,
   type ClientWindowInfo,
@@ -694,7 +694,7 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
     select: { role: true },
   });
   const role = userRow?.role ?? "FREE";
-  const allowedTools = await toolsForUser(userId, role);
+  const allowedTools = await toolsForTeacher(userId, role);
 
   return streamSSE(c, async (stream) => {
     const plugin = new AthenaToolsPlugin(allowedTools, { userId, windows: clientWindows });

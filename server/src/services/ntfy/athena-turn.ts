@@ -7,7 +7,7 @@ import { Message } from "multi-llm-ts";
 import prisma from "../../db/client";
 import { acquireLlmModel, getUserConfig } from "../athena/llm";
 import { buildSystemPrompt } from "../athena/context";
-import { AthenaToolsPlugin, ALL_TOOLS } from "../athena/tools";
+import { AthenaToolsPlugin, toolsForAssistant } from "../athena/tools";
 
 /**
  * Run one Athena turn for a user. Returns the assistant's final text reply,
@@ -28,8 +28,15 @@ export async function runAthenaTurn(
     new Message("user", userText),
   ];
 
+  const userRow = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  const role = userRow?.role ?? "FREE";
+
   const { model } = await acquireLlmModel(userId);
-  const plugin = new AthenaToolsPlugin(ALL_TOOLS, { userId, windows: [] });
+  const allowedTools = await toolsForAssistant(userId, role, []);
+  const plugin = new AthenaToolsPlugin(allowedTools, { userId, windows: [] });
   model.addPlugin(plugin);
 
   // Patch the internal OpenAI client's fetch to retry on transient
