@@ -256,7 +256,7 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
       </CollapsibleSidebar>
 
       {/* Main */}
-      <div className="flex-1 overflow-y-auto p-5">
+      <div className="min-h-0 flex-1 overflow-y-auto p-5">
         {lockedMode ? (
           (() => {
             const fn = functions.find((f) => f.id === lockedMode);

@@ -618,7 +618,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   }
 
   return (
-    <div className="flex h-full gap-3">
+    <div className="flex h-full min-h-0 gap-3 overflow-hidden">
       {/* Session list — collapsible sidebar @4xl+ */}
       {sidebarOpen ? (
         <div className="hidden w-56 shrink-0 flex-col @4xl:flex">
@@ -681,7 +681,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
       )}
 
       {/* Chat panel */}
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
         {/* Mobile session list dropdown */}
         <div className="flex items-center gap-2 @4xl:hidden">
           <div className="relative flex-1">
@@ -879,7 +879,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         )}
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
+        <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
           {messages.length === 0 && !streamText && session && (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-ink-muted">
               <GraduationCap size={40} className="opacity-30" />

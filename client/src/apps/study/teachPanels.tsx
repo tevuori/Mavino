@@ -72,7 +72,7 @@ export function LessonAgenda({
         </span>
       </button>
       {open && (
-        <div className="flex flex-col gap-2 border-t border-edge px-2.5 py-2">
+        <div className="flex max-h-[min(16rem,40vh)] flex-col gap-2 overflow-y-auto border-t border-edge px-2.5 py-2">
           {plan.objectives.length > 0 && (
             <ul className="flex flex-col gap-0.5">
               {plan.objectives.map((o, i) => (
