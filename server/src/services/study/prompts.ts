@@ -240,15 +240,11 @@ export function visionNotetakingPrompt(
       .join("\n\n");
     imageBlock = `
 
-The PDF also contains the ${images.length} image(s) shown below/attached. Each image is labeled [Image N] with its page number, dimensions, and a URL you can use if you decide to embed it in the notes:
+The PDF also contains the ${images.length} image(s) shown below/attached. Each image is labeled [Image N] with its page number, dimensions, and the URL that must be used in the notes:
 
 ${imageList}
 
-For each attached image, choose the best representation in the notes:
-- If it is a meaningful figure, chart, diagram, photo, or illustration that belongs in the notes, embed it using the provided URL in markdown image syntax: \`![descriptive alt text](URL)\`.
-- If it is a simple diagram or structure that is clearer as text, reproduce it as ASCII art inside a fenced code block and add a brief explanation.
-- If it is decorative, a logo, a watermark, or does not add educational value, omit it or describe it in one sentence.
-Do not invent figures or descriptions not present in the source.`;
+The attached images have already passed the document-image filters. Embed every attached image exactly once, close to the section it supports, using its provided URL in markdown image syntax: \`![descriptive alt text](URL)\`. Add a concise caption or explanation when that improves understanding. Do not replace an attached image with ASCII art and do not invent figures or descriptions not present in the source.`;
   }
 
   const systemPrompt = `You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information not present in the source.`;

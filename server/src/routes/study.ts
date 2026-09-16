@@ -5,15 +5,13 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import path from "node:path";
-import { readFile } from "node:fs/promises";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
 import { studyFunctionMiddleware } from "../middleware/study-functions";
 import { getUserConfig, buildModel, isLlmConfiguredFor, acquireLlmModel, modelSupportsVision, LlmError } from "../services/athena/llm";
 import { resolveSource, resolveAndCache, type SourceDescriptor, type ResolvedSource } from "../services/study/source";
-import { generateJson, generateText, generateVisionText } from "../services/study/llm-json";
-import { extractPdfImages, saveExtractedImages } from "../services/pdf-images";
+import { generateJson, generateText } from "../services/study/llm-json";
+import { generateImageAwareNotes } from "../services/study/image-aware-notes";
 import {
   syllabusTasksPrompt,
   syllabusTasksSchemaHint,
@@ -28,7 +26,6 @@ import {
   quizFromGraphPrompt,
   quizGenerateSchemaHint,
   notetakingPrompt,
-  visionNotetakingPrompt,
   type NoteStyle,
   type NoteDetail,
   type QuizQuestionSpec,
@@ -687,73 +684,28 @@ study.post("/notes-from-source", studyFunctionMiddleware("notes_from_source"), z
     return c.json({ error: e instanceof Error ? e.message : "Source error" }, 400);
   }
 
-  // Determine whether we can send images to the model. The user can opt out via
-  // the modal; we also skip the work if the configured model isn't vision-capable.
   const cfg = await getUserConfig(userId);
   const visionCapable = modelSupportsVision(cfg.provider, cfg.modelId);
-  const wantImages = body.includeImages && visionCapable && resolved.kind === "file";
-
-  let savedImages: Awaited<ReturnType<typeof saveExtractedImages>> = [];
-  if (wantImages) {
-    try {
-      const file = await prisma.vFile.findFirst({ where: { id: resolved.ref, userId } });
-      if (file) {
-        const abs = path.join(path.resolve(process.cwd(), "uploads"), file.storageKey);
-        const buf = await readFile(abs);
-        const extracted = await extractPdfImages(buf);
-        if (extracted.length > 0) {
-          savedImages = await saveExtractedImages(userId, extracted, file.folderId, file.name);
-        }
-      }
-    } catch (e) {
-      console.error("PDF image extraction failed; falling back to text-only notes", e);
-      // Continue with text-only generation so the user's request doesn't fail.
-      savedImages = [];
-    }
-  }
-
   let notes: string;
+  let extractedImageCount = 0;
+  let imagesIncluded = false;
   try {
-    if (savedImages.length > 0) {
-      const imageRefs = savedImages.map((img, idx) => ({
-        index: idx + 1,
-        pageNumber: img.pageNumber,
-        name: img.file.name,
-        width: img.width,
-        height: img.height,
-        url: img.downloadUrl,
-      }));
-      const { systemPrompt, userPrompt } = visionNotetakingPrompt(
-        resolved.text,
-        body.style as NoteStyle,
-        resolved.name,
-        imageRefs,
-        {
-          detail: body.detail as NoteDetail,
-          customStructure: body.customStructure,
-        },
-        body.language as StudyLanguage
-      );
-      notes = await generateVisionText(
-        loaded.model,
-        systemPrompt,
-        userPrompt,
-        savedImages.map((img) => ({
-          label: img.file.name,
-          mimeType: img.mimeType,
-          base64: Buffer.from(img.data).toString("base64"),
-        }))
-      );
-    } else {
-      notes = await generateText(
-        loaded.model,
-        notetakingPrompt(resolved.text, body.style as NoteStyle, resolved.name, {
-          detail: body.detail as NoteDetail,
-          customStructure: body.customStructure,
-        }, body.language as StudyLanguage),
-        "You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information not present in the source."
-      );
-    }
+    const generated = await generateImageAwareNotes({
+      model: loaded.model,
+      userId,
+      sourceText: resolved.text,
+      sourceLabel: resolved.name,
+      style: body.style as NoteStyle,
+      detail: body.detail as NoteDetail,
+      customStructure: body.customStructure,
+      language: body.language as StudyLanguage,
+      includeImages: body.includeImages,
+      visionCapable,
+      sourceFiles: resolved.kind === "file" ? [{ fileId: resolved.ref, sourceName: resolved.name }] : [],
+    });
+    notes = generated.notes;
+    extractedImageCount = generated.extractedImageCount;
+    imagesIncluded = generated.imagesIncluded;
   } catch (e) {
     return c.json({ error: e instanceof Error ? e.message : "Note generation failed" }, 502);
   }
@@ -785,7 +737,8 @@ study.post("/notes-from-source", studyFunctionMiddleware("notes_from_source"), z
     customStructure: body.customStructure?.trim() || undefined,
     includeImages: body.includeImages,
     visionCapable,
-    extractedImageCount: savedImages.length,
+    extractedImageCount,
+    imagesIncluded,
   });
 
   return c.json({
@@ -794,7 +747,8 @@ study.post("/notes-from-source", studyFunctionMiddleware("notes_from_source"), z
     content: notes,
     sessionId,
     truncated: resolved.truncated,
-    extractedImageCount: savedImages.length,
+    extractedImageCount,
+    imagesIncluded,
   }, 201);
 });
 

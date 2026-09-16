@@ -741,6 +741,7 @@ const processUploadsSchema = z.object({
         detail: z.enum(["brief", "standard", "detailed"]),
         customStructure: z.string().optional(),
         title: z.string().optional(),
+        includeImages: z.boolean().optional().default(true),
       })
       .nullable()
       .optional(),

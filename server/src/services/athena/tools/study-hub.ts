@@ -7,7 +7,7 @@
 
 import type { ToolDef } from "./plugin";
 import prisma from "../../../db/client";
-import { acquireLlmModel, getUserConfig, isLlmConfiguredFor } from "../llm";
+import { acquireLlmModel, getUserConfig, isLlmConfiguredFor, modelSupportsVision } from "../llm";
 import { resolveSource, resolveAndCache, type SourceDescriptor, type SourceKind } from "../../study/source";
 import { generateJson, generateText } from "../../study/llm-json";
 import {
@@ -15,13 +15,13 @@ import {
   groundedQaSystemPrompt,
   quizGradePrompt,
   quizGradeSchemaHint,
-  notetakingPrompt,
   type StudyLanguage,
   type GroundedSource,
   type NoteStyle,
   type NoteDetail,
 } from "../../study/prompts";
 import { getQuiz, deleteQuiz } from "../../study/quiz-store";
+import { generateImageAwareNotes } from "../../study/image-aware-notes";
 import { logSessionSafe } from "../../study/logSession";
 import { Message } from "multi-llm-ts";
 import { withStudyGate } from "./study-gate";
@@ -671,6 +671,7 @@ const rawStudyHubTools: ToolDef[] = [
       { name: "title", type: "string", description: "Optional note title" },
       { name: "tags", type: "string", description: "Optional comma-separated tags" },
       { name: "folderId", type: "string", description: "Optional folder id from list_note_folders to store the note in" },
+      { name: "includeImages", type: "boolean", description: "Include useful PDF figures when using a vision-capable model (defaults to true)" },
     ],
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
@@ -693,16 +694,27 @@ const rawStudyHubTools: ToolDef[] = [
 
       const style = (String(args.style ?? "outline")) as NoteStyle;
       const detail = (String(args.detail ?? "standard")) as NoteDetail;
+      const includeImages = args.includeImages !== false;
+      const visionCapable = modelSupportsVision(cfg.provider, cfg.modelId);
       let notes: string;
+      let extractedImageCount = 0;
+      let imagesIncluded = false;
       try {
-        notes = await generateText(
+        const generated = await generateImageAwareNotes({
           model,
-          notetakingPrompt(resolved.text, style, resolved.name, {
-            detail,
-            customStructure: args.customStructure ? String(args.customStructure) : undefined,
-          }),
-          "You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information not present in the source."
-        );
+          userId,
+          sourceText: resolved.text,
+          sourceLabel: resolved.name,
+          style,
+          detail,
+          customStructure: args.customStructure ? String(args.customStructure) : undefined,
+          includeImages,
+          visionCapable,
+          sourceFiles: resolved.kind === "file" ? [{ fileId: resolved.ref, sourceName: resolved.name }] : [],
+        });
+        notes = generated.notes;
+        extractedImageCount = generated.extractedImageCount;
+        imagesIncluded = generated.imagesIncluded;
       } catch (e) {
         return { error: e instanceof Error ? e.message : "Note generation failed" };
       }
@@ -730,6 +742,10 @@ const rawStudyHubTools: ToolDef[] = [
         style,
         detail,
         sourceKind: resolved.kind,
+        includeImages,
+        visionCapable,
+        extractedImageCount,
+        imagesIncluded,
       });
       return {
         action: "open_app",

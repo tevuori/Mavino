@@ -322,6 +322,7 @@ export interface IntelligentUploadPlan {
     detail: "brief" | "standard" | "detailed";
     customStructure: string;
     title: string;
+    includeImages: boolean;
   } | null;
   flashcards: {
     count: number;
@@ -348,6 +349,7 @@ export interface IntelligentProcessActions {
     detail: "brief" | "standard" | "detailed";
     customStructure?: string;
     title?: string;
+    includeImages?: boolean;
   } | null;
   flashcards?: {
     count: number;

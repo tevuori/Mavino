@@ -8,9 +8,9 @@ import type { ToolDef } from "./plugin";
 import prisma from "../../../db/client";
 import { getUserConfig, acquireLlmModel, modelSupportsVision } from "../llm";
 import { fetchUrl } from "../../../services/fetcher";
-import { generateText, generateVisionText } from "../../study/llm-json";
-import { notetakingPrompt, visionNotetakingPrompt, type NoteStyle, type NoteDetail } from "../../study/prompts";
-import { extractPdfImages, saveExtractedImages } from "../../../services/pdf-images";
+import { generateText } from "../../study/llm-json";
+import { notetakingPrompt, type NoteStyle, type NoteDetail } from "../../study/prompts";
+import { generateImageAwareNotes } from "../../study/image-aware-notes";
 import { logSessionSafe } from "../../study/logSession";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
@@ -208,57 +208,26 @@ export const notetakeTools: ToolDef[] = [
       const customStructure = parseCustomStructure(args.customStructure);
 
       const visionCapable = modelSupportsVision(cfg.provider, cfg.modelId);
-      const includeImages = args.includeImages !== false && visionCapable;
-      let savedImages: Awaited<ReturnType<typeof saveExtractedImages>> = [];
-      if (includeImages) {
-        try {
-          const abs = path.join(UPLOAD_DIR, file.storageKey);
-          const buf = await readFile(abs);
-          const extracted = await extractPdfImages(buf);
-          if (extracted.length > 0) {
-            savedImages = await saveExtractedImages(userId, extracted, file.folderId, file.name);
-          }
-        } catch (e) {
-          console.error("PDF image extraction failed; continuing with text-only notes", e);
-          savedImages = [];
-        }
-      }
-
+      const includeImages = args.includeImages !== false;
       let notes: string;
+      let extractedImageCount = 0;
+      let imagesIncluded = false;
       try {
-        if (savedImages.length > 0) {
-          const imageRefs = savedImages.map((img, idx) => ({
-            index: idx + 1,
-            pageNumber: img.pageNumber,
-            name: img.file.name,
-            width: img.width,
-            height: img.height,
-            url: img.downloadUrl,
-          }));
-          const { systemPrompt, userPrompt } = visionNotetakingPrompt(
-            text,
-            style,
-            file.name,
-            imageRefs,
-            { detail, customStructure }
-          );
-          notes = await generateVisionText(
-            model,
-            systemPrompt,
-            userPrompt,
-            savedImages.map((img) => ({
-              label: img.file.name,
-              mimeType: img.mimeType,
-              base64: Buffer.from(img.data).toString("base64"),
-            }))
-          );
-        } else {
-          notes = await generateText(
-            model,
-            notetakingPrompt(text, style, file.name, { detail, customStructure }),
-            "You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information."
-          );
-        }
+        const generated = await generateImageAwareNotes({
+          model,
+          userId,
+          sourceText: text,
+          sourceLabel: file.name,
+          style,
+          detail,
+          customStructure,
+          includeImages,
+          visionCapable,
+          sourceFiles: [{ fileId: file.id, sourceName: file.name }],
+        });
+        notes = generated.notes;
+        extractedImageCount = generated.extractedImageCount;
+        imagesIncluded = generated.imagesIncluded;
       } catch (e) {
         return { error: e instanceof Error ? e.message : "Note generation failed" };
       }
@@ -290,7 +259,8 @@ export const notetakeTools: ToolDef[] = [
         customStructure: customStructure || undefined,
         includeImages,
         visionCapable,
-        extractedImageCount: savedImages.length,
+        extractedImageCount,
+        imagesIncluded,
       });
 
       return {

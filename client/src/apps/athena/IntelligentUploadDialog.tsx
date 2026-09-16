@@ -49,6 +49,7 @@ const TEACH_LEVELS: { value: NonNullable<IntelligentProcessActions["teach"]>["le
 ];
 
 const LANGUAGE_KEY = "study-language";
+const IMAGE_NOTES_KEY = "image-aware-notes";
 
 export default function IntelligentUploadDialog({ staged, onClose, onResult }: Props) {
   const [language, setLanguage] = useState<StudyLanguage>(() => {
@@ -96,7 +97,7 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
         folderName: plan.folderName,
         createStructure: plan.createStructure,
         structure: plan.structure,
-        notes: plan.notes,
+        notes: plan.notes ? { ...plan.notes, includeImages: localStorage.getItem(IMAGE_NOTES_KEY) !== "false" } : null,
         flashcards: plan.flashcards,
         teach: plan.teach,
         workspace: plan.workspace ?? { name: "Study materials" },
@@ -142,7 +143,7 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
     setActions((prev) => ({
       ...prev,
       notes: enabled
-        ? { style: "outline", detail: "standard", customStructure: "", title: "" }
+        ? { style: "outline", detail: "standard", customStructure: "", title: "", includeImages: localStorage.getItem(IMAGE_NOTES_KEY) !== "false" }
         : null,
     }));
   };
@@ -150,7 +151,7 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
   const updateNote = (patch: Partial<NonNullable<IntelligentProcessActions["notes"]>>) => {
     setActions((prev) => ({
       ...prev,
-      notes: prev.notes ? { ...prev.notes, ...patch } : { style: "outline", detail: "standard", customStructure: "", title: "", ...patch },
+      notes: prev.notes ? { ...prev.notes, ...patch } : { style: "outline", detail: "standard", customStructure: "", title: "", includeImages: localStorage.getItem(IMAGE_NOTES_KEY) !== "false", ...patch },
     }));
   };
 
@@ -338,6 +339,24 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
                   rows={2}
                   className="col-span-2 resize-y rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
                 />
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={actions.notes.includeImages !== false}
+                  onClick={() => {
+                    const next = actions.notes?.includeImages === false;
+                    localStorage.setItem(IMAGE_NOTES_KEY, String(next));
+                    updateNote({ includeImages: next });
+                  }}
+                  className={`col-span-2 flex items-center justify-between rounded border px-2 py-1.5 text-left text-[11px] transition ${
+                    actions.notes.includeImages !== false ? "border-accent/50 bg-accent/10 text-ink" : "border-edge bg-surface-2 text-ink-muted"
+                  }`}
+                >
+                  <span>Include useful PDF images &amp; diagrams</span>
+                  <span className={`relative h-4 w-7 rounded-full transition ${actions.notes.includeImages !== false ? "bg-accent" : "bg-surface-3"}`}>
+                    <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition ${actions.notes.includeImages !== false ? "left-3.5" : "left-0.5"}`} />
+                  </span>
+                </button>
               </div>
             )}
           </ActionRow>

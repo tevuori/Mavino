@@ -16,6 +16,8 @@ import type { VFile } from "../../types";
 
 type SourceTab = "pdf" | "paste";
 
+const IMAGE_NOTES_KEY = "image-aware-notes";
+
 const DETAIL_OPTIONS: { value: NoteDetail; label: string; hint: string }[] = [
   { value: "brief", label: "Brief", hint: "Key points & definitions only" },
   { value: "standard", label: "Standard", hint: "Balanced detail" },
@@ -53,7 +55,7 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
   const [style, setStyle] = useState<NoteStyle>("outline");
   const [customStructure, setCustomStructure] = useState("");
   const [title, setTitle] = useState("");
-  const [includeImages, setIncludeImages] = useState(true);
+  const [includeImages, setIncludeImages] = useState(() => localStorage.getItem(IMAGE_NOTES_KEY) !== "false");
 
   // Submission state
   const [generating, setGenerating] = useState(false);
@@ -194,19 +196,27 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
                   ))
                 )}
               </div>
-              <label className="mt-2 flex cursor-pointer items-center gap-2 text-[11px] text-ink">
-                <input
-                  type="checkbox"
-                  checked={includeImages}
-                  onChange={(e) => setIncludeImages(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-edge bg-surface-2 text-accent accent-accent focus:ring-0 focus:ring-offset-0"
-                />
-                Include images &amp; diagrams (uses vision models like Gemini / GPT-4o / Claude 3)
-              </label>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={includeImages}
+                onClick={() => setIncludeImages((current) => {
+                  const next = !current;
+                  localStorage.setItem(IMAGE_NOTES_KEY, String(next));
+                  return next;
+                })}
+                className={`mt-2 flex w-full items-center justify-between rounded-md border px-2.5 py-2 text-left text-[11px] transition ${
+                  includeImages ? "border-accent/50 bg-accent/10 text-ink" : "border-edge bg-surface-2 text-ink-muted"
+                }`}
+              >
+                <span>Include useful images &amp; diagrams</span>
+                <span className={`relative h-4 w-7 rounded-full transition ${includeImages ? "bg-accent" : "bg-surface-3"}`}>
+                  <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition ${includeImages ? "left-3.5" : "left-0.5"}`} />
+                </span>
+              </button>
               <p className="mt-1.5 text-[10px] text-ink-muted">
                 Text is extracted server-side. Scanned/image-only PDFs can't be processed.
-                If your AI model supports vision, embedded images are sent to the model and
-                embedded, described, or recreated as ASCII in the notes.
+                With a vision-capable model, useful extracted figures are analyzed and embedded in the notes.
               </p>
             </div>
           ) : (

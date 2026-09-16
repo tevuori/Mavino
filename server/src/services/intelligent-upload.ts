@@ -8,11 +8,11 @@ import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import prisma from "../db/client";
 import { detectAndValidateMime } from "./upload-security";
 import { getStorageStatus } from "./storage-quota";
-import { getUserConfig, acquireLlmModel, LlmError } from "./athena/llm";
+import { getUserConfig, acquireLlmModel, modelSupportsVision, LlmError } from "./athena/llm";
 import { resolveSource, resolveAndCache } from "./study/source";
-import { generateText, generateJson } from "./study/llm-json";
+import { generateJson } from "./study/llm-json";
+import { generateImageAwareNotes } from "./study/image-aware-notes";
 import {
-  notetakingPrompt,
   flashcardsPrompt,
   flashcardsSchemaHint,
   type NoteStyle,
@@ -91,6 +91,7 @@ export interface PlanSuggestion {
     detail: NoteDetail;
     customStructure: string;
     title: string;
+    includeImages: boolean;
   } | null;
   flashcards: {
     count: number;
@@ -124,6 +125,7 @@ export interface ProcessActions {
     detail: NoteDetail;
     customStructure?: string;
     title?: string;
+    includeImages?: boolean;
   } | null;
   flashcards?: {
     count: number;
@@ -297,7 +299,7 @@ Suggest the following JSON plan. Use ": null" for actions you do not recommend. 
   "folderName": "suggested folder name or null",
   "createStructure": boolean,
   "structure": [{ "folderName": "...", "fileIndexes": [0, 2] }] or null,
-  "notes": { "style": "outline" | "cornell" | "summary" | "bullets", "detail": "brief" | "standard" | "detailed", "customStructure": "optional instructions or empty string", "title": "note title or empty" } or null,
+  "notes": { "style": "outline" | "cornell" | "summary" | "bullets", "detail": "brief" | "standard" | "detailed", "customStructure": "optional instructions or empty string", "title": "note title or empty", "includeImages": true } or null,
   "flashcards": { "count": 10, "mode": "mixed" | "concept" | "factual" | "cloze", "deckName": "..." } or null,
   "teach": { "level": "beginner" | "intermediate" | "advanced", "title": "..." } or null,
   "workspace": { "name": "workspace title in Study Hub" } or null,
@@ -305,7 +307,7 @@ Suggest the following JSON plan. Use ": null" for actions you do not recommend. 
 }`;
 
   const hint =
-    'Schema: { "createFolder": boolean, "folderName": string|null, "createStructure": boolean, "structure": [{"folderName":"string","fileIndexes":[number]}]|null, "notes": {"style":"outline"|"cornell"|"summary"|"bullets","detail":"brief"|"standard"|"detailed","customStructure":"string","title":"string"}|null, "flashcards": {"count":number,"mode":"mixed"|"concept"|"factual"|"cloze","deckName":"string"}|null, "teach": {"level":"beginner"|"intermediate"|"advanced","title":"string"}|null, "workspace": {"name":"string"}|null, "reasoning":"string" }';
+    'Schema: { "createFolder": boolean, "folderName": string|null, "createStructure": boolean, "structure": [{"folderName":"string","fileIndexes":[number]}]|null, "notes": {"style":"outline"|"cornell"|"summary"|"bullets","detail":"brief"|"standard"|"detailed","customStructure":"string","title":"string","includeImages":boolean}|null, "flashcards": {"count":number,"mode":"mixed"|"concept"|"factual"|"cloze","deckName":"string"}|null, "teach": {"level":"beginner"|"intermediate"|"advanced","title":"string"}|null, "workspace": {"name":"string"}|null, "reasoning":"string" }';
 
   const result = await generateJson<PlanSuggestion>(model, userPrompt, hint);
   return {
@@ -313,7 +315,7 @@ Suggest the following JSON plan. Use ": null" for actions you do not recommend. 
     folderName: result.folderName || null,
     createStructure: Boolean(result.createStructure),
     structure: Array.isArray(result.structure) ? result.structure.filter((s) => s.folderName && Array.isArray(s.fileIndexes)) : null,
-    notes: result.notes ?? null,
+    notes: result.notes ? { ...result.notes, includeImages: result.notes.includeImages !== false } : null,
     flashcards: result.flashcards ?? null,
     teach: result.teach ?? null,
     workspace: result.workspace && result.workspace.name ? result.workspace : null,
@@ -441,13 +443,22 @@ export async function processUploads(
     const { model } = await acquireLlmModel(userId);
 
     if (actions.notes) {
-      const { style, detail, customStructure, title } = actions.notes;
+      const { style, detail, customStructure, title, includeImages = true } = actions.notes;
       const combined = combinedSourceText(sources);
-      const notes = await generateText(
+      const generated = await generateImageAwareNotes({
         model,
-        notetakingPrompt(combined, style, "Study materials", { detail, customStructure }, language),
-        "You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information."
-      );
+        userId,
+        sourceText: combined,
+        sourceLabel: "Study materials",
+        style,
+        detail,
+        customStructure,
+        language,
+        includeImages,
+        visionCapable: modelSupportsVision(cfg.provider, cfg.modelId),
+        sourceFiles: sources.map((source) => ({ fileId: source.fileId, sourceName: source.name })),
+      });
+      const notes = generated.notes;
       const noteTitle = (title || `Notes: ${actions.createFolder ? actions.folderName : sources[0].name}`).trim().slice(0, 200);
       const note = await prisma.note.create({
         data: { userId, title: noteTitle, content: notes, tags: "notes,ai,upload" },
