@@ -15,6 +15,7 @@ import {
 import { computeNextRunAt } from "../services/ntfy/proactive-scheduler";
 import { nextRunAt } from "../services/ntfy/scheduler";
 import prisma from "../db/client";
+import { getUserLanguage, setUserLanguage } from "../services/language";
 
 const settings = new Hono();
 settings.use("*", authMiddleware);
@@ -24,6 +25,20 @@ settings.get("/timezone", async (c) => {
   const { userId } = c.get("auth");
   const timezone = await getUserTimezone(userId);
   return c.json({ timezone, serverTimezone: SERVER_TIMEZONE });
+});
+
+const languageSchema = z.object({ language: z.enum(["en", "cs"]) });
+
+settings.get("/language", async (c) => {
+  const { userId } = c.get("auth");
+  return c.json({ language: await getUserLanguage(userId) });
+});
+
+settings.put("/language", zValidator("json", languageSchema), async (c) => {
+  const { userId } = c.get("auth");
+  const { language } = c.req.valid("json");
+  await setUserLanguage(userId, language);
+  return c.json({ language });
 });
 
 const tzSchema = z.object({ timezone: z.string().min(1).max(100) });

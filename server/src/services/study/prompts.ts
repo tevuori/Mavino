@@ -1,15 +1,14 @@
 // ===== Study Hub prompt builders =====
 // Focused prompts for each study workflow. Used by routes/study.ts.
 
-export type StudyLanguage = "en" | "cs";
+import { languageInstruction, type AppLanguage } from "../language";
+
+export type StudyLanguage = AppLanguage;
 
 /** Returns a language instruction appended to prompts so the LLM outputs
  *  in the user's chosen language. English is the default (no instruction). */
-export function langInstr(lang?: StudyLanguage): string {
-  if (lang === "cs") {
-    return "\n\nIMPORTANT: Write your ENTIRE response in Czech (čeština) — all questions, answers, explanations, headings, and labels must be in Czech. Keep technical terms in their accepted Czech form.";
-  }
-  return "";
+export function langInstr(lang: StudyLanguage = "en"): string {
+  return `\n\nIMPORTANT: ${languageInstruction(lang)}`;
 }
 
 export interface FlashcardSpec {
@@ -84,7 +83,7 @@ ${sourceText}
 """${langInstr(lang)}`;
 }
 
-export function studyGuidePrompt(notes: { title: string; content: string }[]): string {
+export function studyGuidePrompt(notes: { title: string; content: string }[], lang?: StudyLanguage): string {
   const combined = notes
     .map((n) => `### ${n.title}\n\n${n.content}`)
     .join("\n\n---\n\n");
@@ -93,7 +92,7 @@ export function studyGuidePrompt(notes: { title: string; content: string }[]): s
 Notes:
 """
 ${combined}
-"""`;
+"""${langInstr(lang)}`;
 }
 
 export function syllabusTasksPrompt(sourceText: string, lang?: StudyLanguage): string {

@@ -4,6 +4,7 @@ import { useFeatures } from "./store/features";
 import { usePlugins } from "./store/plugins";
 import { startNotificationPolling, stopNotificationPolling } from "./store/notifications";
 import { useFormFactor, initFormFactorListeners } from "./store/formfactor";
+import { useLanguage } from "./store/language";
 import { installGlobalErrorHandlers } from "./services/errorReporter";
 import { cleanupStaleServiceWorkersInDev } from "./services/sw-cleanup";
 import BootScreen from "./shell/BootScreen";
@@ -16,6 +17,7 @@ import UpdateDialog from "./shell/UpdateDialog";
 import ReloadPrompt from "./shell/ReloadPrompt";
 import PerformanceMonitorRunner from "./shell/PerformanceMonitorRunner";
 import GlobalErrorBoundary from "./shell/GlobalErrorBoundary";
+import { useI18n } from "./i18n";
 
 type Phase = "boot" | "app";
 
@@ -23,7 +25,9 @@ export default function App() {
   const { status, user, refresh } = useAuth();
   const loadFeatures = useFeatures((s) => s.load);
   const loadPlugins = usePlugins((s) => s.load);
+  const loadLanguage = useLanguage((s) => s.load);
   const mode = useFormFactor((s) => s.mode);
+  const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("boot");
 
   // On mount, check existing token + set up form-factor listeners + global error handlers
@@ -44,11 +48,12 @@ export default function App() {
     if (status === "authenticated") {
       void loadFeatures();
       void loadPlugins();
+      void loadLanguage();
       startNotificationPolling();
     } else {
       stopNotificationPolling();
     }
-  }, [status, loadFeatures, loadPlugins]);
+  }, [status, loadFeatures, loadPlugins, loadLanguage]);
 
   if (phase === "boot") {
     return <BootScreen onDone={() => setPhase("app")} />;
@@ -64,7 +69,7 @@ export default function App() {
   if (status === "loading") {
     return (
       <div className="flex h-full w-full items-center justify-center bg-slate-950 text-slate-400">
-        Loading...
+        {t("loading")}
       </div>
     );
   }

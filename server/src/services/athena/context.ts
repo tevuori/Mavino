@@ -9,6 +9,7 @@ import { readFile } from "node:fs/promises";
 import prisma from "../../db/client";
 import type { ClientWindowInfo } from "./tools/plugin";
 import { getUserTimezone } from "../timezone";
+import { getUserLanguage, languageInstruction } from "../language";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 const RECENT_FILE_COUNT = 5;
@@ -254,7 +255,7 @@ export async function buildSystemPrompt(
   userId: string,
   windows: ClientWindowInfo[] = []
 ): Promise<string> {
-  const [recent, summary, user, memories, tz] = await Promise.all([
+  const [recent, summary, user, memories, tz, language] = await Promise.all([
     recentFilesContext(userId),
     workspaceSummary(userId),
     prisma.user.findUnique({ where: { id: userId }, select: { athenaInstructions: true, displayName: true, role: true } }),
@@ -265,6 +266,7 @@ export async function buildSystemPrompt(
       select: { id: true, content: true, category: true },
     }),
     getUserTimezone(userId),
+    getUserLanguage(userId),
   ]);
   const winCtx = windowsContext(windows);
   const browserCtx = browserTabsContext(windows);
@@ -373,8 +375,11 @@ export async function buildSystemPrompt(
     ? "- Circle (Pro — shared study spaces): circle_list_groups (list the user's study groups), circle_get_group (get a group's members + shared decks/folders), circle_create_group (create a new study group — returns an invite code to share with classmates), circle_join_group (join a group with an invite code), circle_share_deck (share a flashcard deck to a group — read or write permission), circle_share_folder (share a note folder to a group), circle_accessible_decks (list decks shared with the user from their groups), open_circle (open the Circle app, optionally focused on a group). Use circle_create_group when the user says 'create a study group', 'set up a shared space with my classmates', or wants to collaborate. Use circle_join_group when they have an invite code.\n"
     : "";
   const now = new Date();
-  const dateLine = `Current date/time: ${now.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short", timeZone: tz })} (ISO: ${now.toISOString()}). The user's timezone is ${tz} — interpret any wall-clock times the user mentions (e.g. "3pm", "tomorrow at 9") as being in ${tz}, and emit fireAt / dueDate timestamps as ISO 8601 with the ${tz} offset (or convert to UTC with a trailing Z). Use this as "today" when the user says "today" — do not guess the date. Calendar/task tools accept ISO 8601 timestamps (e.g. ${now.toISOString().slice(0, 10)}T00:00:00Z).`;
+  const locale = language === "cs" ? "cs-CZ" : "en-US";
+  const dateLine = `Current date/time: ${now.toLocaleString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short", timeZone: tz })} (ISO: ${now.toISOString()}). The user's timezone is ${tz} — interpret any wall-clock times the user mentions (e.g. "3pm", "tomorrow at 9") as being in ${tz}, and emit fireAt / dueDate timestamps as ISO 8601 with the ${tz} offset (or convert to UTC with a trailing Z). Use this as "today" when the user says "today" — do not guess the date. Calendar/task tools accept ISO 8601 timestamps (e.g. ${now.toISOString().slice(0, 10)}T00:00:00Z).`;
   return `You are Mavino, the user's personal workspace assistant living inside their Mavino Student OS desktop. You can see and act on the user's workspace through tools.
+
+LANGUAGE: ${languageInstruction(language)} This setting has priority over the language of source documents unless a tool call carries an explicit application-level language override.
 
 ${dateLine}
 ${nameBlock}

@@ -26,6 +26,7 @@ import {
 import { logSessionSafe } from "../../study/logSession";
 import { createQuiz, type StoredQuizQuestion } from "../../study/quiz-store";
 import { withStudyGate } from "./study-gate";
+import { getUserLanguage } from "../../language";
 
 const rawStudyTools: ToolDef[] = [
   {
@@ -62,7 +63,7 @@ const rawStudyTools: ToolDef[] = [
       try {
         result = await generateJson<{ cards: FlashcardSpec[] }>(
           model,
-          flashcardsPrompt(resolved.text, count, "mixed"),
+          flashcardsPrompt(resolved.text, count, "mixed", await getUserLanguage(userId)),
           flashcardsSchemaHint()
         );
       } catch (e) {
@@ -130,7 +131,7 @@ const rawStudyTools: ToolDef[] = [
       try {
         summary = await generateText(
           model,
-          summarizePrompt(resolved.text, mode),
+          summarizePrompt(resolved.text, mode, await getUserLanguage(userId)),
           "You are a study assistant. Summarize accurately in clear Markdown. Do not invent information."
         );
       } catch (e) {
@@ -195,7 +196,7 @@ const rawStudyTools: ToolDef[] = [
       try {
         result = await generateJson<{ tasks: SyllabusTaskSpec[] }>(
           model,
-          syllabusTasksPrompt(resolved.text),
+          syllabusTasksPrompt(resolved.text, await getUserLanguage(userId)),
           syllabusTasksSchemaHint()
         );
       } catch (e) {
@@ -298,7 +299,7 @@ const rawStudyTools: ToolDef[] = [
       try {
         explanation = await generateText(
           model,
-          explainPrompt(resolved.text, depth),
+          explainPrompt(resolved.text, depth, await getUserLanguage(userId)),
           "You are a study assistant. Explain clearly and accurately in Markdown with examples. Do not invent information."
         );
       } catch (e) {
@@ -362,7 +363,7 @@ const rawStudyTools: ToolDef[] = [
       try {
         guide = await generateText(
           model,
-          studyGuidePrompt(combined),
+          studyGuidePrompt(combined, await getUserLanguage(userId)),
           "You are a study assistant. Create a clear, comprehensive study guide in Markdown. Do not invent information."
         );
       } catch (e) {
@@ -431,7 +432,7 @@ const rawStudyTools: ToolDef[] = [
       try {
         result = await generateJson<{ questions: QuizQuestionSpec[] }>(
           model,
-          quizGeneratePrompt(resolved.text, count, ["mcq", "short"]),
+          quizGeneratePrompt(resolved.text, count, ["mcq", "short"], await getUserLanguage(userId)),
           quizGenerateSchemaHint()
         );
       } catch (e) {

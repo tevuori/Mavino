@@ -27,6 +27,7 @@ import {
 } from "./mapy";
 import { getUserConfig, buildModel, acquireLlmModel } from "./athena/llm";
 import { generateText } from "./study/llm-json";
+import { getUserLanguage, languageInstruction } from "./language";
 
 // ===== Difficulty presets =====
 
@@ -549,7 +550,7 @@ async function narrateTour(userId: string, tour: NarrateInput): Promise<string> 
     })
     .join("\n\n");
 
-  const userPrompt = `Generate a hiking tour plan in Markdown for the following auto-generated multi-day hike. Be practical, encouraging, and specific — use the real stats and POIs below, don't invent places.
+  const userPrompt = `Generate a hiking tour plan in Markdown for the following auto-generated multi-day hike. Be practical, encouraging, and specific — use the real stats and POIs below, don't invent places. ${languageInstruction(await getUserLanguage(userId))}
 
 Tour: ${tour.baseName}${tour.mode === "through" && tour.endName ? ` → ${tour.endName}` : ""} (${tour.mode === "hub" ? "hub-and-spoke, returning to base each evening" : "point-to-point through-hike"})
 Days: ${tour.numDays}

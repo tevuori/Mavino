@@ -26,6 +26,7 @@ import HighlightableMarkdown from "../apps/study/HighlightableMarkdown";
 import type { CitationMeta } from "../apps/study/CitationMarkdown";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../services/speech";
 import { findHighlightRange } from "../apps/study/highlightRange";
+import { useLanguage } from "../store/language";
 import {
   MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileLoading, MobileTextarea,
 } from "./MobileUi";
@@ -59,7 +60,10 @@ interface Props {
   onClose?: () => void;
 }
 
-export default function MobileTeach({ initialSessionId = null, language = "en", onClose }: Props) {
+export default function MobileTeach({ initialSessionId = null, language: requestedLanguage, onClose }: Props) {
+  const globalLanguage = useLanguage((state) => state.language);
+  const languagePreference = useLanguage((state) => state.overrides.teach);
+  const language = requestedLanguage ?? (languagePreference === "global" ? globalLanguage : languagePreference);
   // ----- pre-session setup -----
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(new Set());
   const [studentLevel, setStudentLevel] = useState<StudentLevel>("intermediate");

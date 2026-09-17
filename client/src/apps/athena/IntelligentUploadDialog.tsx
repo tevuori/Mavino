@@ -15,6 +15,7 @@ import {
   type IntelligentProcessResult,
   type StudyLanguage,
 } from "../../services/athena";
+import { useLanguage, type LanguagePreference } from "../../store/language";
 
 interface Props {
   staged: IntelligentUploadFile[];
@@ -48,13 +49,13 @@ const TEACH_LEVELS: { value: NonNullable<IntelligentProcessActions["teach"]>["le
   { value: "advanced", label: "Advanced" },
 ];
 
-const LANGUAGE_KEY = "study-language";
 const IMAGE_NOTES_KEY = "image-aware-notes";
 
 export default function IntelligentUploadDialog({ staged, onClose, onResult }: Props) {
-  const [language, setLanguage] = useState<StudyLanguage>(() => {
-    return (localStorage.getItem(LANGUAGE_KEY) as StudyLanguage) || "en";
-  });
+  const globalLanguage = useLanguage((state) => state.language);
+  const languagePreference = useLanguage((state) => state.overrides["intelligent-upload"]);
+  const setLanguageOverride = useLanguage((state) => state.setOverride);
+  const language: StudyLanguage = languagePreference === "global" ? globalLanguage : languagePreference;
   const [actions, setActions] = useState<IntelligentProcessActions>({
     createFolder: false,
     folderName: null,
@@ -129,14 +130,6 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
 
   const setAction = <K extends keyof IntelligentProcessActions>(key: K, value: IntelligentProcessActions[K]) => {
     setActions((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const toggleLanguage = () => {
-    setLanguage((prev) => {
-      const next = prev === "en" ? "cs" : "en";
-      localStorage.setItem(LANGUAGE_KEY, next);
-      return next;
-    });
   };
 
   const toggleNote = (enabled: boolean) => {
@@ -222,15 +215,20 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
             <h2 className="text-sm font-semibold text-ink">Mavino: process uploaded files</h2>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={toggleLanguage}
-              disabled={processing || suggesting}
-              className="flex items-center gap-1 rounded-md border border-edge px-1.5 py-0.5 text-[10px] font-medium text-ink-muted transition hover:bg-surface-3 hover:text-ink disabled:opacity-40"
-              title="Switch output language"
-            >
+            <label className="flex items-center gap-1 rounded-md border border-edge px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
               <Languages size={11} />
-              {language === "en" ? "EN" : "CS"}
-            </button>
+              <select
+                value={languagePreference}
+                onChange={(event) => setLanguageOverride("intelligent-upload", event.target.value as LanguagePreference)}
+                disabled={processing || suggesting}
+                className="bg-transparent outline-none disabled:opacity-40"
+                title="Output language"
+              >
+                <option value="global">Global ({globalLanguage.toUpperCase()})</option>
+                <option value="en">EN</option>
+                <option value="cs">CS</option>
+              </select>
+            </label>
             <button
               onClick={onClose}
               disabled={processing || suggesting}

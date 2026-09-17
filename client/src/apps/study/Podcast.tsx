@@ -7,6 +7,7 @@ import WorkspaceSourceSelector from "./WorkspaceSourceSelector";
 import HighlightableMarkdown from "./HighlightableMarkdown";
 import { ActionButton, ErrorBanner, Loading, SuccessBanner } from "./ui";
 import { useWindows } from "../../store/windows";
+import { useLanguage, type LanguagePreference } from "../../store/language";
 
 interface Props { initialPodcastId?: string | null; initialWorkspaceId?: string | null; language?: "en" | "cs" }
 const fieldClass = "w-full rounded-lg border border-edge bg-surface px-3 py-2 text-xs text-ink outline-none focus:border-accent";
@@ -22,14 +23,17 @@ function statusStyle(status: PodcastRow["status"]) {
   return "bg-amber-500/15 text-amber-500";
 }
 
-export default function Podcast({ initialPodcastId, initialWorkspaceId, language: initialLanguage = "en" }: Props) {
+export default function Podcast({ initialPodcastId, initialWorkspaceId }: Props) {
+  const globalLanguage = useLanguage((state) => state.language);
+  const languagePreference = useLanguage((state) => state.overrides.podcast);
+  const setLanguageOverride = useLanguage((state) => state.setOverride);
+  const language = languagePreference === "global" ? globalLanguage : languagePreference;
   const [library, setLibrary] = useState<StudySource[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [podcasts, setPodcasts] = useState<PodcastRow[]>([]);
   const [active, setActive] = useState<PodcastRow | null>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [voices, setVoices] = useState<PollyVoice[]>([]);
-  const [language, setLanguage] = useState<"en" | "cs">(initialLanguage);
   const [engine, setEngine] = useState<PodcastEngine>("neural");
   const [voice1, setVoice1] = useState("");
   const [voice2, setVoice2] = useState("");
@@ -145,7 +149,7 @@ export default function Podcast({ initialPodcastId, initialWorkspaceId, language
           <div className="mb-3 flex items-center gap-2"><Users size={15} className="text-accent" /><h3 className="text-sm font-semibold text-ink">2. Direct the episode</h3></div>
           <div className="grid gap-3 @2xl:grid-cols-2">
             <label className="text-[11px] text-ink-muted">Episode title<input className={`${fieldClass} mt-1`} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Generated from sources" /></label>
-            <label className="text-[11px] text-ink-muted">Language<select className={`${fieldClass} mt-1`} value={language} onChange={(event) => setLanguage(event.target.value as "en" | "cs")}><option value="en">English</option><option value="cs">Čeština</option></select></label>
+            <label className="text-[11px] text-ink-muted">Language<select className={`${fieldClass} mt-1`} value={languagePreference} onChange={(event) => setLanguageOverride("podcast", event.target.value as LanguagePreference)}><option value="global">Use global — {globalLanguage === "cs" ? "Čeština" : "English"}</option><option value="en">English</option><option value="cs">Čeština</option></select></label>
             <label className="text-[11px] text-ink-muted">Length<select className={`${fieldClass} mt-1`} value={length} onChange={(event) => setLength(event.target.value as typeof length)}><option value="short">Quick · 3–4 min</option><option value="medium">Standard · 5–8 min</option><option value="long">Deep dive · 10–12 min</option></select></label>
             <label className="text-[11px] text-ink-muted">Tone<select className={`${fieldClass} mt-1`} value={tone} onChange={(event) => setTone(event.target.value as typeof tone)}><option value="engaging">Engaging</option><option value="academic">Academic</option><option value="relaxed">Relaxed</option><option value="debate">Friendly debate</option></select></label>
           </div>

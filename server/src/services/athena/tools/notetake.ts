@@ -12,6 +12,7 @@ import { generateText } from "../../study/llm-json";
 import { notetakingPrompt, type NoteStyle, type NoteDetail } from "../../study/prompts";
 import { generateImageAwareNotes } from "../../study/image-aware-notes";
 import { logSessionSafe } from "../../study/logSession";
+import { getUserLanguage } from "../../language";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 
@@ -96,7 +97,7 @@ export const notetakeTools: ToolDef[] = [
       try {
         notes = await generateText(
           model,
-          notetakingPrompt(page.content, style, page.title || page.finalUrl, { detail, customStructure }),
+          notetakingPrompt(page.content, style, page.title || page.finalUrl, { detail, customStructure }, await getUserLanguage(userId)),
           "You are a study assistant. Take accurate, well-organized notes in Markdown. Do not invent information."
         );
       } catch (e) {
@@ -221,6 +222,7 @@ export const notetakeTools: ToolDef[] = [
           style,
           detail,
           customStructure,
+          language: await getUserLanguage(userId),
           includeImages,
           visionCapable,
           sourceFiles: [{ fileId: file.id, sourceName: file.name }],

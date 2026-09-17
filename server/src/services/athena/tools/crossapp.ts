@@ -10,6 +10,7 @@ import { resolveDefaultTaskWorkspace } from "./tasks";
 import { getUserConfig, buildModel, acquireLlmModel } from "../llm";
 import { generateJson, generateText } from "../../study/llm-json";
 import { syllabusTasksPrompt, syllabusTasksSchemaHint, type SyllabusTaskSpec } from "../../study/prompts";
+import { getUserLanguage, languageInstruction } from "../../language";
 
 export const crossAppTools: ToolDef[] = [
   {
@@ -41,7 +42,7 @@ export const crossAppTools: ToolDef[] = [
         try {
           const result = await generateJson<{ tasks: SyllabusTaskSpec[] }>(
             model,
-            syllabusTasksPrompt(note.content),
+            syllabusTasksPrompt(note.content, await getUserLanguage(userId)),
             syllabusTasksSchemaHint()
           );
           const tasks = (result.tasks ?? []).filter((t) => t.title?.trim());
@@ -104,7 +105,7 @@ export const crossAppTools: ToolDef[] = [
       try {
         result = await generateJson<{ tasks: SyllabusTaskSpec[] }>(
           model,
-          syllabusTasksPrompt(note.content),
+          syllabusTasksPrompt(note.content, await getUserLanguage(userId)),
           syllabusTasksSchemaHint()
         );
       } catch (e) {
@@ -171,7 +172,7 @@ export const crossAppTools: ToolDef[] = [
         try {
           content = await generateText(
             model,
-            `Expand the following task into detailed, useful notes in Markdown. Include relevant context, steps, and considerations. Do not invent unrelated information.\n\nTask: ${task.title}\nDescription: ${task.description || "(none)"}`,
+            `Expand the following task into detailed, useful notes in Markdown. Include relevant context, steps, and considerations. Do not invent unrelated information. ${languageInstruction(await getUserLanguage(userId))}\n\nTask: ${task.title}\nDescription: ${task.description || "(none)"}`,
             "You are a study assistant. Write clear, useful notes in Markdown."
           );
         } catch (e) {

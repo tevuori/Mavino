@@ -7,6 +7,7 @@ import { useWindows } from "../store/windows";
 import { useSettings, type WallpaperId, type AnimatedBgId } from "../store/settings";
 import ContextMenu, { type MenuItem } from "./ContextMenu";
 import { RefreshCw, FolderPlus, Image, Trash2, Film } from "lucide-react";
+import { useI18n } from "../i18n";
 
 const WALLPAPERS: { id: WallpaperId; name: string }[] = [
   { id: "aurora", name: "Aurora" },
@@ -31,6 +32,7 @@ const QUICK_ANIM_BGS: { id: AnimatedBgId; name: string }[] = [
 export default function Desktop() {
   const { open } = useWindows();
   const apps = useAccessibleApps();
+  const { appName } = useI18n();
   const { setWallpaper, setAnimatedBg } = useSettings();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [wallpaperSubmenu, setWallpaperSubmenu] = useState(false);
@@ -116,7 +118,7 @@ export default function Desktop() {
           .map((app) => (
             <button
               key={app.id}
-              onDoubleClick={() => open({ appId: app.id, title: app.name, icon: app.icon })}
+              onDoubleClick={() => open({ appId: app.id, title: appName(app.id, app.name), icon: app.icon })}
               onClick={(e) => e.stopPropagation()}
               className="group flex h-[88px] w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition hover:bg-white/10 focus:bg-accent/20"
             >
@@ -129,7 +131,7 @@ export default function Desktop() {
                 )}
               </div>
               <span className="line-clamp-2 w-full text-xs font-medium leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                {app.name}
+                {appName(app.id, app.name)}
               </span>
             </button>
           ))}

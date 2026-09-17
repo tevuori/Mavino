@@ -5,6 +5,7 @@ import { renderAppIcon } from "./AppIcon";
 import { useAccessibleApps } from "../store/features";
 import { useWindows } from "../store/windows";
 import { useAuth } from "../store/auth";
+import { useI18n } from "../i18n";
 
 interface Props {
   open: boolean;
@@ -15,6 +16,7 @@ export default function StartMenu({ open, onClose }: Props) {
   const { open: openWindow } = useWindows();
   const { user, logout } = useAuth();
   const apps = useAccessibleApps();
+  const { appName } = useI18n();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -34,10 +36,10 @@ export default function StartMenu({ open, onClose }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const filtered = apps.filter((a) => a.name.toLowerCase().includes(query.toLowerCase()));
+  const filtered = apps.filter((a) => appName(a.id, a.name).toLowerCase().includes(query.toLowerCase()));
 
   const launch = (id: (typeof apps)[number]) => {
-    openWindow({ appId: id.id, title: id.name, icon: id.icon });
+    openWindow({ appId: id.id, title: appName(id.id, id.name), icon: id.icon });
     onClose();
   };
 
@@ -81,7 +83,7 @@ export default function StartMenu({ open, onClose }: Props) {
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-ink">{app.name}</span>
+                  <span className="text-xs text-ink">{appName(app.id, app.name)}</span>
                 </button>
               ))}
               {filtered.length === 0 && (

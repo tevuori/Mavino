@@ -10,6 +10,7 @@ import SystemTray from "./SystemTray";
 import WorkspaceSwitcher from "../wm/WorkspaceSwitcher";
 import ContextMenu, { type MenuItem } from "./ContextMenu";
 import type { AppId } from "../store/windows";
+import { useI18n } from "../i18n";
 
 interface Props {
   onOpenOverview?: () => void;
@@ -18,6 +19,7 @@ interface Props {
 export default function Taskbar({ onOpenOverview }: Props) {
   const { windows, focusedId, restoreOrMinimize, open } = useWindows();
   const apps = useAccessibleApps();
+  const { appName } = useI18n();
   const activeWorkspaceId = useWindows((s) => s.activeWorkspaceId);
   const switchWorkspace = useWindows((s) => s.switchWorkspace);
   const { pins, isPinned, togglePin } = useTaskbarPins();
@@ -60,8 +62,8 @@ export default function Taskbar({ onOpenOverview }: Props) {
         onClick: () => togglePin(appId),
       },
       {
-        label: `Open ${app.name}`,
-        onClick: () => open({ appId: app.id, title: app.name, icon: app.icon }),
+        label: `Open ${appName(app.id, app.name)}`,
+        onClick: () => open({ appId: app.id, title: appName(app.id, app.name), icon: app.icon }),
       },
     ];
   };
@@ -97,7 +99,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
                 key={app.id}
                 onClick={() => {
                   if (appWindows.length === 0) {
-                    open({ appId: app.id, title: app.name, icon: app.icon });
+                    open({ appId: app.id, title: appName(app.id, app.name), icon: app.icon });
                   } else {
                     // Prefer the topmost window of this app on the current workspace.
                     const onCurrent = appWindows.filter((w) => w.workspaceId === activeWorkspaceId);
@@ -122,7 +124,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
                       ? "text-ink hover:bg-surface-3"
                       : "text-ink-muted hover:bg-surface-3 hover:text-ink"
                 }`}
-                title={app.name}
+                title={appName(app.id, app.name)}
               >
                 {renderAppIcon(app, { size: 18 })}
                 {app.access === "preview" && (

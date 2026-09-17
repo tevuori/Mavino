@@ -12,6 +12,7 @@ import {
 import { echoApi, type EchoSessionStatus, type EchoConceptMatch } from "../services/echo";
 import type { MobileTool } from "./MobileLauncher";
 import { MobileContainer, MobileHeader, MobileEmpty } from "./MobileUi";
+import { useLanguage } from "../store/language";
 
 function formatTime(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -30,6 +31,9 @@ export default function MobileEcho({ onClose, onOpenTool }: { onClose: () => voi
   const [history, setHistory] = useState<EchoSessionStatus[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
+  const globalLanguage = useLanguage((state) => state.language);
+  const languagePreference = useLanguage((state) => state.overrides.echo);
+  const language = languagePreference === "global" ? globalLanguage : languagePreference;
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -119,7 +123,7 @@ export default function MobileEcho({ onClose, onOpenTool }: { onClose: () => voi
     setError(null);
     try {
       if (!sessionIdRef.current) {
-        const s = await echoApi.start({ language: "en" });
+        const s = await echoApi.start({ language });
         sessionIdRef.current = s.id;
         setSession(s);
       }
@@ -162,7 +166,7 @@ export default function MobileEcho({ onClose, onOpenTool }: { onClose: () => voi
       setMicError(e instanceof Error ? e.message : "Failed to access microphone");
       setRecording(false);
     }
-  }, [sendChunks]);
+  }, [sendChunks, language]);
 
   const stopRecording = useCallback(async () => {
     if (chunksRef.current.length > 0) await sendChunks();

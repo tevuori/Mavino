@@ -23,6 +23,7 @@ import {
   Lock,
 } from "lucide-react";
 import type { WindowInstance } from "../../store/windows";
+import { useLanguage, type LanguagePreference } from "../../store/language";
 import type { SourceDescriptor, SourceKind, StudyLanguage } from "../../services/study";
 import CollapsibleSidebar from "../../wm/CollapsibleSidebar";
 import GenerateFlashcards from "./GenerateFlashcards";
@@ -95,9 +96,14 @@ function isFunctionMode(mode: Mode) {
 export default function StudyApp({ win }: { win: WindowInstance }) {
   const [mode, setMode] = useState<Mode>("home");
   const [lockedMode, setLockedMode] = useState<Mode | null>(null);
-  const [language, setLanguage] = useState<StudyLanguage>(() => {
-    return (localStorage.getItem("study-language") as StudyLanguage) || "en";
-  });
+  const globalLanguage = useLanguage((state) => state.language);
+  const languagePreference = useLanguage((state) => state.overrides.study);
+  const teachPreference = useLanguage((state) => state.overrides.teach);
+  const lecturePreference = useLanguage((state) => state.overrides.lecture);
+  const setLanguageOverride = useLanguage((state) => state.setOverride);
+  const language: StudyLanguage = languagePreference === "global" ? globalLanguage : languagePreference;
+  const teachLanguage: StudyLanguage = teachPreference === "global" ? globalLanguage : teachPreference;
+  const lectureLanguage: StudyLanguage = lecturePreference === "global" ? globalLanguage : lecturePreference;
   const [initialSource, setInitialSource] = useState<SourceDescriptor | null>(null);
   const [appendDeck, setAppendDeck] = useState<{ id: string; name: string } | null>(null);
   const [preloadedQuizId, setPreloadedQuizId] = useState<string | null>(null);
@@ -123,14 +129,6 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
       // Show the upgrade card for this locked function
       setLockedMode(m);
     }
-  };
-
-  const toggleLanguage = () => {
-    setLanguage((prev) => {
-      const next = prev === "en" ? "cs" : "en";
-      localStorage.setItem("study-language", next);
-      return next;
-    });
   };
 
   // Honor a payload sent when opening (e.g. from Athena's open_study_hub or
@@ -209,14 +207,19 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
         <div className="flex items-center gap-2 border-b border-edge px-3 py-3">
           <GraduationCap size={16} className="text-accent" />
           <span className="text-sm font-semibold text-ink">Study Hub</span>
-          <button
-            onClick={toggleLanguage}
-            className="ml-auto flex items-center gap-1 rounded-md border border-edge px-1.5 py-0.5 text-[10px] font-medium text-ink-muted transition hover:bg-surface-3 hover:text-ink"
-            title="Switch output language"
-          >
+          <label className="ml-auto flex items-center gap-1 rounded-md border border-edge px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
             <Languages size={11} />
-            {language === "en" ? "EN" : "CS"}
-          </button>
+            <select
+              value={languagePreference}
+              onChange={(event) => setLanguageOverride("study", event.target.value as LanguagePreference)}
+              className="bg-transparent outline-none"
+              title="Study Hub output language"
+            >
+              <option value="global">Global ({globalLanguage.toUpperCase()})</option>
+              <option value="en">EN</option>
+              <option value="cs">CS</option>
+            </select>
+          </label>
         </div>
         <div className="flex flex-1 flex-col gap-0.5 p-2">
           {MODES.map((m) => {
@@ -272,7 +275,7 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
           </div>
         ) : activeMode === "teach" ? (
           <div className="h-full">
-            <TeacherMode initialSessionId={initialSessionId} language={language} />
+            <TeacherMode initialSessionId={initialSessionId} language={teachLanguage} />
           </div>
         ) : activeMode === "graph" ? (
           <div className="h-full">
@@ -292,7 +295,7 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
               if (opts?.workspaceId) setInitialWorkspaceId(opts.workspaceId);
             }} />}
             {activeMode === "podcast" && <Podcast initialPodcastId={initialPodcastId} initialWorkspaceId={initialWorkspaceId} language={language} />}
-            {activeMode === "lecture" && <LectureNotes language={language} />}
+            {activeMode === "lecture" && <LectureNotes language={lectureLanguage} />}
             {activeMode === "flashcards" && <GenerateFlashcards initialSource={initialSource} initialGraphId={initialGraphId} appendDeck={appendDeck} language={language} />}
             {activeMode === "summarize" && <Summarize initialSource={initialSource} initialGraphId={initialGraphId} language={language} />}
             {activeMode === "explain" && <Explain initialSource={initialSource} initialGraphId={initialGraphId} language={language} />}

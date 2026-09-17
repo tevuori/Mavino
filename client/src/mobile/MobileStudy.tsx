@@ -10,6 +10,7 @@ import type { Note, VFile } from "../types";
 import type { MobileTool } from "./MobileLauncher";
 import type { MobileToolPayload } from "./MobileToolPage";
 import { useStudyFunctions } from "../apps/study/useStudyFunctions";
+import { useLanguage } from "../store/language";
 import {
   MobileButton, MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileLoading,
   MobileMarkdown, MobileTextarea,
@@ -48,7 +49,10 @@ export default function MobileStudy({
   const [sourceKind, setSourceKind] = useState<SourceKind>("paste");
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
-  const [language, setLanguage] = useState<"en" | "cs">("en");
+  const globalLanguage = useLanguage((state) => state.language);
+  const languagePreference = useLanguage((state) => state.overrides.study);
+  const setLanguageOverride = useLanguage((state) => state.setOverride);
+  const language = languagePreference === "global" ? globalLanguage : languagePreference;
   const [working, setWorking] = useState(false);
   const [result, setResult] = useState<{ title: string; body: string } | null>(null);
   const [resultNoteId, setResultNoteId] = useState<string | null>(null);
@@ -288,8 +292,8 @@ export default function MobileStudy({
 
         {/* Language */}
         <div className="mb-4 flex gap-2">
-          <button type="button" onClick={() => setLanguage("en")} className={`rounded-2xl px-4 py-2 text-sm font-medium ${language === "en" ? "bg-accent text-accent-fg" : "bg-surface-2 text-ink-muted"}`}>English</button>
-          <button type="button" onClick={() => setLanguage("cs")} className={`rounded-2xl px-4 py-2 text-sm font-medium ${language === "cs" ? "bg-accent text-accent-fg" : "bg-surface-2 text-ink-muted"}`}>Čeština</button>
+          <button type="button" onClick={() => setLanguageOverride("study", "en")} className={`rounded-2xl px-4 py-2 text-sm font-medium ${language === "en" ? "bg-accent text-accent-fg" : "bg-surface-2 text-ink-muted"}`}>English</button>
+          <button type="button" onClick={() => setLanguageOverride("study", "cs")} className={`rounded-2xl px-4 py-2 text-sm font-medium ${language === "cs" ? "bg-accent text-accent-fg" : "bg-surface-2 text-ink-muted"}`}>Čeština</button>
         </div>
 
         <MobileButton onClick={() => void run()} disabled={working || !selectedAction} className="mb-4 w-full">

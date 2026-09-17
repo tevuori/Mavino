@@ -25,6 +25,7 @@ import {
 import { echoApi, type EchoSessionStatus, type EchoConceptMatch } from "../../services/echo";
 import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
+import { useLanguage } from "../../store/language";
 
 // ----- mastery badge (shared with Atlas) -----
 function MasteryBadge({ mastery }: { mastery: number }) {
@@ -56,7 +57,10 @@ export default function EchoApp({ win: _win }: { win: WindowInstance }) {
   const [history, setHistory] = useState<EchoSessionStatus[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
-  const [language, setLanguage] = useState<"en" | "cs">("en");
+  const globalLanguage = useLanguage((state) => state.language);
+  const languagePreference = useLanguage((state) => state.overrides.echo);
+  const setLanguageOverride = useLanguage((state) => state.setOverride);
+  const language = languagePreference === "global" ? globalLanguage : languagePreference;
 
   // Refs for the recording loop.
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -348,7 +352,7 @@ export default function EchoApp({ win: _win }: { win: WindowInstance }) {
           weakConcepts={weakConcepts}
           knownConcepts={knownConcepts}
           language={language}
-          onLanguageChange={setLanguage}
+          onLanguageChange={(next) => setLanguageOverride("echo", next)}
           onStart={startRecording}
           onStop={stopRecording}
           transcriptEndRef={transcriptEndRef}

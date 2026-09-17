@@ -15,7 +15,6 @@ import {
   groundedQaSystemPrompt,
   quizGradePrompt,
   quizGradeSchemaHint,
-  type StudyLanguage,
   type GroundedSource,
   type NoteStyle,
   type NoteDetail,
@@ -25,6 +24,7 @@ import { generateImageAwareNotes } from "../../study/image-aware-notes";
 import { logSessionSafe } from "../../study/logSession";
 import { Message } from "multi-llm-ts";
 import { withStudyGate } from "./study-gate";
+import { getUserLanguage } from "../../language";
 
 /** Helper: resolve an array of on-the-fly source descriptors into cached
  *  StudySource rows, returning their ids. Used by chat/podcast/teacher tools
@@ -331,7 +331,7 @@ const rawStudyHubTools: ToolDef[] = [
       messages.push({ role: "user", content: question, timestamp: new Date().toISOString() });
 
       const { model } = await acquireLlmModel(userId);
-      const sysPrompt = groundedQaSystemPrompt(sources, "en" as StudyLanguage);
+      const sysPrompt = groundedQaSystemPrompt(sources, await getUserLanguage(userId));
       const thread: Message[] = [new Message("system", sysPrompt)];
       for (const m of messages) {
         // Strip the "## Sources" section from prior assistant turns to keep
@@ -417,7 +417,7 @@ const rawStudyHubTools: ToolDef[] = [
       try {
         script = await generateText(
           model,
-          podcastScriptPrompt(sources, host1Label, host2Label, "en" as StudyLanguage),
+          podcastScriptPrompt(sources, host1Label, host2Label, await getUserLanguage(userId)),
           "You are a podcast scriptwriter. Output ONLY the dialogue lines in the exact 'Host: text' format requested. No preamble, no commentary, no markdown fences."
         );
       } catch (e) {
@@ -632,7 +632,7 @@ const rawStudyHubTools: ToolDef[] = [
         const { model } = await acquireLlmModel(userId);
         const result = await generateJson<{ correct: boolean; explanation: string; modelAnswer: string }>(
           model,
-          quizGradePrompt(quiz.sourceText, question, answer, "en" as StudyLanguage),
+          quizGradePrompt(quiz.sourceText, question, answer, await getUserLanguage(userId)),
           quizGradeSchemaHint()
         );
         return {

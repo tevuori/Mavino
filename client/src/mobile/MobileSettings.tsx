@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Lock, LogOut, Monitor, Moon, Palette, Sun, Trash2, User } from "lucide-react";
+import { Languages, Lock, LogOut, Monitor, Moon, Palette, Sun, Trash2, User } from "lucide-react";
 import { useAuth } from "../store/auth";
 import { useSettings, type WallpaperId, type AnimatedBgId } from "../store/settings";
 import { useFormFactor } from "../store/formfactor";
+import { useLanguage } from "../store/language";
 import { authApi } from "../services/auth";
 import type { AuthDevice } from "../services/auth";
 import { MobileContainer, MobileHeader, MobileInput, MobileSelect } from "./MobileUi";
@@ -20,6 +21,7 @@ export default function MobileSettings({ onClose }: { onClose?: () => void }) {
   const logout = useAuth((s) => s.logout);
   const settings = useSettings();
   const formFactor = useFormFactor();
+  const languageSettings = useLanguage();
 
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [current, setCurrent] = useState("");
@@ -117,6 +119,21 @@ export default function MobileSettings({ onClose }: { onClose?: () => void }) {
         <MobileSelect value={settings.animatedBg} onChange={(e) => settings.setAnimatedBg(e.target.value as AnimatedBgId)}>
           {ANIMATED.map((a) => <option key={a} value={a}>{a}</option>)}
         </MobileSelect>
+      </section>
+
+      <section className="mb-5 rounded-2xl border border-edge bg-surface-2 p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Languages size={18} className="text-accent" />
+          <p className="text-sm font-semibold text-ink">Language & Region</p>
+        </div>
+        <label className="mb-1 block text-xs font-medium text-ink-muted">Application language</label>
+        <MobileSelect value={languageSettings.language} onChange={(event) => void languageSettings.setLanguage(event.target.value as "en" | "cs")}>
+          <option value="en">English</option>
+          <option value="cs">Čeština</option>
+        </MobileSelect>
+        <button type="button" onClick={languageSettings.resetOverrides} className="mt-3 w-full rounded-xl bg-surface-3 py-2.5 text-sm text-ink-muted">
+          Reset app overrides
+        </button>
       </section>
 
       <section className="mb-5 rounded-2xl border border-edge bg-surface-2 p-4">

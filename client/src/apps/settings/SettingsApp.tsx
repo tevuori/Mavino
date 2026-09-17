@@ -23,6 +23,7 @@ import {
   Puzzle,
   Keyboard,
   Activity,
+  Languages,
 } from "lucide-react";
 import { useAuth } from "../../store/auth";
 import type { WindowInstance } from "../../store/windows";
@@ -51,6 +52,8 @@ import DateTimeSection from "./sections/DateTimeSection";
 import LegalSection from "./sections/LegalSection";
 import ShortcutsSection from "./sections/ShortcutsSection";
 import PerformanceAnalysisSection from "./sections/PerformanceAnalysisSection";
+import LanguageSection from "./sections/LanguageSection";
+import { useI18n, type MessageKey } from "../../i18n";
 
 interface SectionDef {
   id: string;
@@ -69,6 +72,7 @@ const SECTIONS: SectionDef[] = [
   { id: "animated-bg", label: "Animated BG", icon: <Film size={15} /> },
   { id: "account", label: "Account", icon: <User size={15} /> },
   { id: "date-time", label: "Date & Time", icon: <Clock size={15} /> },
+  { id: "language", label: "Language & Region", icon: <Languages size={15} /> },
   { id: "sound-athena", label: "Sound & Mavino", icon: <Volume2 size={15} /> },
   { id: "athena", label: "Mavino Assistant", icon: <Sparkles size={15} /> },
   { id: "integrations", label: "Integrations", icon: <Plug size={15} /> },
@@ -89,8 +93,21 @@ const SECTIONS: SectionDef[] = [
   { id: "about", label: "About", icon: <Info size={15} /> },
 ];
 
+const SECTION_KEYS: Partial<Record<string, MessageKey>> = {
+  appearance: "appearance",
+  wallpaper: "wallpaper",
+  shortcuts: "shortcuts",
+  account: "account",
+  "date-time": "dateTime",
+  language: "languageRegion",
+  integrations: "integrations",
+  notifications: "notifications",
+  about: "about",
+};
+
 export default function SettingsApp({ win }: { win: WindowInstance }) {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [active, setActive] = useState<string | null>((win.payload?.section as string) || "appearance");
   const isAdmin = user?.role === "ADMIN";
   const isManager = user?.role === "MANAGER";
@@ -110,6 +127,7 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
     if (active === "animated-bg") return <AnimatedBgSection />;
     if (active === "account") return <AccountSection />;
     if (active === "date-time") return <DateTimeSection />;
+    if (active === "language") return <LanguageSection />;
     if (active === "sound-athena") return <SoundAthenaSection />;
     if (active === "athena") return <AthenaSection />;
     if (active === "integrations") return <IntegrationsSection />;
@@ -144,7 +162,7 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
         toggleLabel="Settings"
       >
         <h2 className="mb-3 px-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-          Settings
+          {t("settings")}
         </h2>
         <nav className="space-y-1 text-sm">
           {visibleSections.map((s) => (
@@ -158,7 +176,7 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
               }`}
             >
               {s.icon}
-              <span>{s.label}</span>
+              <span>{SECTION_KEYS[s.id] ? t(SECTION_KEYS[s.id]!) : s.label}</span>
             </button>
           ))}
         </nav>

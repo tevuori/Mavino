@@ -25,6 +25,7 @@ import prisma from "../db/client";
 import { generateJson, generateText } from "./study/llm-json";
 import { fetchUrl } from "./fetcher";
 import { webSearch } from "./search";
+import { getUserLanguage, languageInstruction } from "./language";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 const MAX_PAPER_CHARS = 30000;
@@ -727,7 +728,7 @@ async function generateReviewContent(
     return `- "${source}" cites "${target}"${c.context ? `: ${c.context.slice(0, 150)}` : ""}`;
   }).join("\n");
 
-  const prompt = `You are a research assistant helping a student write a literature review. Draft a structured literature review in Markdown based on the following research project.
+  const prompt = `You are a research assistant helping a student write a literature review. Draft a structured literature review in Markdown based on the following research project. ${languageInstruction(await getUserLanguage(userId))}
 
 **Research question:** ${project.researchQuestion || "(not specified)"}
 
