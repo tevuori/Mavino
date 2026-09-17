@@ -95,7 +95,7 @@ const VISION_PATTERNS: RegExp[] = [
   /grok-vision/,
   /qwen2-vl/i,
   /phi-4-multimodal/i,
-  /deepseek.*v4/i,
+  /deepseek-flash/i,
 ];
 
 /** Return true if the provider+model combination is known to support image input. */
