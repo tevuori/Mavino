@@ -215,8 +215,8 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
                 </span>
               </button>
               <p className="mt-1.5 text-[10px] text-ink-muted">
-                Text is extracted server-side. Scanned/image-only PDFs can't be processed.
-                With a vision-capable model, useful extracted figures are analyzed and embedded in the notes.
+                Text is extracted server-side. With a vision-capable model, full PDF pages—including scans,
+                formulas, diagrams, and useful figures—are analyzed and useful figures are embedded in the notes.
               </p>
             </div>
           ) : (

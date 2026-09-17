@@ -34,6 +34,14 @@ export interface SavedImage extends ExtractedImage {
   downloadUrl: string;
 }
 
+export interface PdfPageImage {
+  pageNumber: number;
+  width: number;
+  height: number;
+  mimeType: "image/png";
+  data: Uint8Array;
+}
+
 /** Options controlling extraction. */
 export interface ExtractPdfImagesOptions {
   /** Skip images whose width OR height is smaller than this (px). */
@@ -154,6 +162,30 @@ export async function extractPdfImages(
   }
 
   return result;
+}
+
+export async function renderPdfPages(
+  buffer: Buffer | Uint8Array,
+  desiredWidth = 1200
+): Promise<PdfPageImage[]> {
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  try {
+    const result = await parser.getScreenshot({
+      desiredWidth,
+      imageDataUrl: false,
+      imageBuffer: true,
+    });
+    return result.pages.map((page) => ({
+      pageNumber: page.pageNumber,
+      width: page.width,
+      height: page.height,
+      mimeType: "image/png" as const,
+      data: page.data,
+    }));
+  } finally {
+    await parser.destroy();
+  }
 }
 
 /**

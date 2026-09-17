@@ -2,7 +2,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import type { LlmModel } from "multi-llm-ts";
 import prisma from "../../db/client";
-import { extractPdfImages, saveExtractedImages, type SavedImage } from "../pdf-images";
+import { extractPdfImages, renderPdfPages, saveExtractedImages, type PdfPageImage, type SavedImage } from "../pdf-images";
 import { generateText, generateVisionText } from "./llm-json";
 import {
   notetakingPrompt,
@@ -52,8 +52,9 @@ export function ensureMarkdownImages(notes: string, images: SavedImage[]): strin
   return `${notes.trim()}\n\n## Figures from the source\n\n${figures}`.trim();
 }
 
-async function extractSourceImages(userId: string, sources: SourceFileRef[]): Promise<SavedImage[]> {
+async function extractSourceImages(userId: string, sources: SourceFileRef[]): Promise<{ saved: SavedImage[]; pages: PdfPageImage[] }> {
   const saved: SavedImage[] = [];
+  const pages: PdfPageImage[] = [];
   let totalBytes = 0;
   for (const source of sources) {
     const file = await prisma.vFile.findFirst({ where: { id: source.fileId, userId } });
@@ -62,18 +63,20 @@ async function extractSourceImages(userId: string, sources: SourceFileRef[]): Pr
       const buf = await readFile(path.join(UPLOAD_DIR, file.storageKey));
       const remaining = Math.max(0, 12 - saved.length);
       const remainingBytes = Math.max(0, 8 * 1024 * 1024 - totalBytes);
-      if (remaining === 0 || remainingBytes === 0) break;
-      const extracted = await extractPdfImages(buf, { minDimension: 120, maxImages: remaining, maxTotalBytes: remainingBytes });
+      const extracted = remaining > 0 && remainingBytes > 0
+        ? await extractPdfImages(buf, { minDimension: 120, maxImages: remaining, maxTotalBytes: remainingBytes })
+        : [];
       if (extracted.length > 0) {
         const sourceImages = await saveExtractedImages(userId, extracted, file.folderId, source.sourceName || file.name);
         saved.push(...sourceImages);
         totalBytes += sourceImages.reduce((sum, image) => sum + image.data.length, 0);
       }
+      pages.push(...await renderPdfPages(buf));
     } catch (error) {
       console.error(`[image-aware-notes] image extraction failed for ${file.name}:`, error);
     }
   }
-  return saved;
+  return { saved, pages };
 }
 
 export async function generateImageAwareNotes(options: GenerateImageAwareNotesOptions): Promise<ImageAwareNotesResult> {
@@ -87,8 +90,8 @@ export async function generateImageAwareNotes(options: GenerateImageAwareNotesOp
     return { notes, imagesIncluded: false, extractedImageCount: 0 };
   }
 
-  const images = await extractSourceImages(options.userId, options.sourceFiles);
-  if (images.length === 0) {
+  const { saved: images, pages } = await extractSourceImages(options.userId, options.sourceFiles);
+  if (pages.length === 0) {
     const notes = await generateText(
       options.model,
       notetakingPrompt(options.sourceText, options.style, options.sourceLabel, noteOptions, options.language),
@@ -116,11 +119,11 @@ export async function generateImageAwareNotes(options: GenerateImageAwareNotesOp
   const generated = await generateVisionText(
     options.model,
     systemPrompt,
-    userPrompt,
-    images.map((image) => ({
-      label: image.file.name,
-      mimeType: image.mimeType,
-      base64: Buffer.from(image.data).toString("base64"),
+    `${userPrompt}\n\nThe ${pages.length} attached vision images are full-page PDF renders in page order. Read all visible text, mathematical notation, formulas, diagrams, and worked examples from them. Use LaTeX for mathematical notation. Treat extracted text as a supplement; when it omits formula glyphs or diagram content, recover that content from the page renders.`,
+    pages.map((page) => ({
+      label: `PDF page ${page.pageNumber}`,
+      mimeType: page.mimeType,
+      base64: Buffer.from(page.data).toString("base64"),
     }))
   );
   return {
