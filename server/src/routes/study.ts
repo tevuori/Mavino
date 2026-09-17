@@ -12,6 +12,7 @@ import { getUserConfig, buildModel, isLlmConfiguredFor, acquireLlmModel, modelSu
 import { resolveSource, resolveAndCache, type SourceDescriptor, type ResolvedSource } from "../services/study/source";
 import { generateJson, generateText } from "../services/study/llm-json";
 import { generateImageAwareNotes } from "../services/study/image-aware-notes";
+import { getUserLanguage } from "../services/language";
 import {
   syllabusTasksPrompt,
   syllabusTasksSchemaHint,
@@ -667,13 +668,14 @@ const notesFromSourceSchema = z.object({
   title: z.string().max(200).optional(),
   tags: z.string().max(200).optional(),
   folderId: z.string().nullable().optional(),
-  language: languageSchema,
+  language: z.enum(["en", "cs"]).optional(),
   includeImages: z.boolean().optional().default(true),
 });
 
 study.post("/notes-from-source", studyFunctionMiddleware("notes_from_source"), zValidator("json", notesFromSourceSchema), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
+  const language = body.language ?? await getUserLanguage(userId);
   const loaded = await loadModel(c, userId);
   if ("error" in loaded) return loaded.error;
 
@@ -698,7 +700,7 @@ study.post("/notes-from-source", studyFunctionMiddleware("notes_from_source"), z
       style: body.style as NoteStyle,
       detail: body.detail as NoteDetail,
       customStructure: body.customStructure,
-      language: body.language as StudyLanguage,
+      language,
       includeImages: body.includeImages,
       visionCapable,
       sourceFiles: resolved.kind === "file" ? [{ fileId: resolved.ref, sourceName: resolved.name }] : [],

@@ -31,6 +31,10 @@ export async function setUserLanguage(userId: string, language: AppLanguage): Pr
   cache.set(userId, language);
 }
 
+export function resolveAppLanguage(requested: unknown, stored: AppLanguage): AppLanguage {
+  return isAppLanguage(requested) ? requested : stored;
+}
+
 export function languageName(language: AppLanguage): string {
   return language === "cs" ? "Czech (čeština)" : "English";
 }

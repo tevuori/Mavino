@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isAppLanguage, languageInstruction, languageName } from "./language";
+import { isAppLanguage, languageInstruction, languageName, resolveAppLanguage } from "./language";
 
 describe("application language", () => {
   test("validates supported languages", () => {
@@ -13,6 +13,11 @@ describe("application language", () => {
     expect(languageInstruction("en")).toContain("English");
     expect(languageInstruction("cs")).toContain("Czech (čeština)");
     expect(languageInstruction("en")).toContain("Do not infer the output language from source material");
+  });
+
+  test("uses the stored global language when a request omits an override", () => {
+    expect(resolveAppLanguage(undefined, "cs")).toBe("cs");
+    expect(resolveAppLanguage("en", "cs")).toBe("en");
   });
 
   test("returns display names", () => {
