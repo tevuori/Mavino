@@ -1,16 +1,25 @@
-import { useEffect, useRef, useState } from "react";
-import { Mic, Play, Square } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Mic, Pause, Play, Square, Volume2 } from "lucide-react";
 import { voiceApi } from "../services/voice";
+import { filesApi, isAudioFile } from "../services/files";
+import { useMobileToast } from "../store/mobileToast";
 import type { Note, VFile } from "../types";
-import { MobileContainer, MobileEmpty, MobileHeader, MobileTextarea } from "./MobileUi";
+import { MobileContainer, MobileEmpty, MobileHeader, MobileLoading, MobileTextarea } from "./MobileUi";
 
 export default function MobileVoice({ onClose }: { onClose?: () => void }) {
+  const toast = useMobileToast((s) => s.show);
   const [supported, setSupported] = useState(false);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ note: Note; file: VFile; transcript: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Past recordings
+  const [audioFiles, setAudioFiles] = useState<VFile[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(true);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -21,6 +30,19 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
       !!(navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function" && typeof MediaRecorder !== "undefined")
     );
   }, []);
+
+  const loadAudioFiles = useCallback(async () => {
+    setLoadingFiles(true);
+    try {
+      const res = await filesApi.all({ recent: true });
+      setAudioFiles(res.files.filter((f) => isAudioFile(f)).slice(0, 30));
+    } catch {
+      setAudioFiles([]);
+    }
+    setLoadingFiles(false);
+  }, []);
+
+  useEffect(() => { void loadAudioFiles(); }, [loadAudioFiles]);
 
   useEffect(() => {
     if (recording) {
@@ -47,7 +69,9 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
       setRecording(true);
       setSeconds(0);
       setResult(null);
-    } catch { /* ignore */ }
+    } catch {
+      toast("Could not access microphone", "error");
+    }
   };
 
   const stop = () => {
@@ -67,6 +91,7 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
     try {
       const res = await voiceApi.save(blob);
       setResult(res);
+      void loadAudioFiles();
     } catch (e) {
       setResult(null);
       setError(e instanceof Error ? e.message : "Transcription failed");
@@ -74,11 +99,46 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
     setLoading(false);
   };
 
+  const playFile = (file: VFile) => {
+    if (playingId === file.id) {
+      // Toggle pause/play
+      if (audioRef.current) {
+        if (audioRef.current.paused) audioRef.current.play();
+        else audioRef.current.pause();
+      }
+      return;
+    }
+    // Stop current
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    const audio = new Audio(filesApi.downloadUrl(file.id));
+    audio.onended = () => { setPlayingId(null); audioRef.current = null; };
+    audio.onerror = () => { setPlayingId(null); toast("Playback failed", "error"); };
+    audio.play().catch(() => { toast("Playback failed", "error"); });
+    audioRef.current = audio;
+    setPlayingId(file.id);
+  };
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    };
+  }, []);
+
   const fmt = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   return (
     <MobileContainer>
-      <MobileHeader title="Voice Notes" subtitle="Record, transcribe" onClose={onClose} />
+      <MobileHeader title="Voice Notes" subtitle="Record, transcribe, listen" onClose={onClose} />
 
       {!supported && (
         <p className="mb-4 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
@@ -88,7 +148,7 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
 
       <div className="mb-6 rounded-2xl border border-edge bg-surface-2 p-6 text-center">
         <div className="mb-2 text-4xl font-mono font-bold text-ink">{fmt(seconds)}</div>
-        <p className="text-xs text-ink-muted">{recording ? "Recording…" : "Ready to record"}</p>
+        <p className="text-xs text-ink-muted">{recording ? "Recording..." : "Ready to record"}</p>
         <div className="mt-4 flex justify-center gap-4">
           {!recording ? (
             <button
@@ -111,33 +171,81 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
         </div>
       </div>
 
-      {loading && <p className="mb-4 text-center text-sm text-ink-muted">Transcribing…</p>}
+      {loading && <p className="mb-4 text-center text-sm text-ink-muted">Transcribing...</p>}
 
       {error && (
         <p className="mb-4 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</p>
       )}
 
       {result && (result.note || result.transcript) && (
-        <div className="rounded-2xl border border-edge bg-surface-2 p-4">
+        <div className="mb-6 rounded-2xl border border-accent/30 bg-accent/[0.06] p-4">
           <div className="mb-2 flex items-center gap-2">
-            <Play size={16} className="text-accent" />
+            <Volume2 size={16} className="text-accent" />
             <span className="font-medium text-ink">{result.note.title || "Voice note"}</span>
           </div>
           {result.transcript ? (
             <MobileTextarea
               readOnly
               value={result.transcript}
-              rows={5}
-              className="mb-3 border-0 bg-surface-2"
+              rows={4}
+              className="mb-3 border-0 bg-transparent"
             />
           ) : (
             <p className="mb-3 text-sm text-ink-muted">No transcript available</p>
           )}
-          <p className="text-xs text-ink-muted">Saved as file: {result.file?.name}</p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => playFile(result.file)}
+              className="flex items-center gap-1.5 rounded-xl bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent active:bg-accent/25"
+            >
+              {playingId === result.file?.id ? <Pause size={12} /> : <Play size={12} />}
+              {playingId === result.file?.id ? "Pause" : "Play"}
+            </button>
+            <span className="text-xs text-ink-muted">{result.file?.name}</span>
+          </div>
         </div>
       )}
 
-      {!result && !loading && <MobileEmpty text="Tap the mic to record a voice note." />}
+      {/* Past recordings */}
+      <div>
+        <p className="mb-3 text-sm font-semibold text-ink">Past recordings</p>
+        {loadingFiles ? (
+          <MobileLoading />
+        ) : audioFiles.length === 0 ? (
+          <MobileEmpty text="No audio files yet. Record your first voice note above." />
+        ) : (
+          <div className="space-y-2">
+            {audioFiles.map((f) => {
+              const isPlaying = playingId === f.id;
+              return (
+                <article
+                  key={f.id}
+                  className={`flex items-center gap-3 rounded-2xl border p-3 active:bg-surface-3 ${
+                    isPlaying ? "border-accent/30 bg-accent/[0.06]" : "border-edge bg-surface-2"
+                  }`}
+                  onClick={() => playFile(f)}
+                >
+                  <button
+                    type="button"
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                      isPlaying ? "bg-accent text-white" : "bg-surface-3 text-ink-muted"
+                    }`}
+                  >
+                    {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{f.name}</p>
+                    <p className="text-xs text-ink-muted">
+                      {new Date(f.createdAt).toLocaleDateString()} · {formatSize(f.size)}
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </MobileContainer>
   );
 }

@@ -3,6 +3,8 @@ import { BellRing, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { remindersApi } from "../services/reminders";
 import type { Reminder, ReminderInput, ReminderStatus } from "../services/reminders";
 import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading, MobileSelect, MobileTextarea } from "./MobileUi";
+import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
 
 type Tab = "pending" | "fired" | "cancelled" | "new";
 
@@ -58,6 +60,8 @@ export default function MobileReminders({ onClose }: { onClose?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [refreshKey, setRefreshKey] = useState(0);
+  const { confirm } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
 
   const load = useCallback(async () => {
     if (tab === "new") {
@@ -81,13 +85,13 @@ export default function MobileReminders({ onClose }: { onClose?: () => void }) {
   }, [tab]);
 
   const onCancel = async (id: string) => {
-    await remindersApi.cancel(id).catch(() => {});
+    await remindersApi.cancel(id).catch(() => { toast("Failed to cancel reminder", "error"); });
     setRefreshKey((k) => k + 1);
   };
 
   const onDelete = async (id: string) => {
-    if (!window.confirm("Delete this reminder permanently?")) return;
-    await remindersApi.delete(id).catch(() => {});
+    if (!(await confirm("Delete this reminder permanently?"))) return;
+    await remindersApi.delete(id).catch(() => { toast("Failed to delete reminder", "error"); });
     setRefreshKey((k) => k + 1);
   };
 

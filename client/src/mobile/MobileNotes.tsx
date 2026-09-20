@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bold, Code, Folder, GraduationCap, Heading, Image as ImageIcon, Italic, Link2,
-  List, MoreVertical, Pin, Plus, Search, Sparkles, Tag, Trash2, Download, FileText,
+  List, Loader2, MoreVertical, Pin, Plus, Search, Sparkles, Tag, Trash2, Download, FileText,
 } from "lucide-react";
 import { notesApi } from "../services/notes";
 import { filesApi } from "../services/files";
 import type { Note, NoteFolder } from "../types";
 import type { MobileTool } from "./MobileLauncher";
 import type { MobileToolPayload } from "./MobileToolPage";
+import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
+import { usePullToRefresh } from "./usePullToRefresh";
 import {
   MobileButton, MobileCard, MobileChip, MobileContainer, MobileEmpty, MobileFab,
   MobileHeader, MobileInput, MobileLoading, MobileMarkdown, MobileModal, MobileTextarea,
@@ -36,6 +39,9 @@ export default function MobileNotes({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [tags, setTags] = useState("");
+  const { confirm, prompt } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
+  const loadNotesRef = useRef<() => Promise<void>>();
 
   // Folder management
   const [folderMenuOpen, setFolderMenuOpen] = useState<NoteFolder | null>(null);
@@ -67,6 +73,11 @@ export default function MobileNotes({
     setNotes(list);
     setLoading(false);
   }, [query, folderId]);
+
+  loadNotesRef.current = loadNotes;
+  const { pullDist, refreshing, touchHandlers, pullIndicatorStyle } = usePullToRefresh(
+    useCallback(async () => { await loadNotesRef.current?.(); }, []),
+  );
 
   useEffect(() => {
     void loadFolders();
@@ -126,14 +137,14 @@ export default function MobileNotes({
     const next = !selected.pinned;
     setSelected((n) => (n ? { ...n, pinned: next } : null));
     setNotes((list) => list.map((n) => (n.id === selected.id ? { ...n, pinned: next } : n)));
-    await notesApi.update(selected.id, { pinned: next }).catch(() => {});
+    await notesApi.update(selected.id, { pinned: next }).catch(() => { toast("Failed to pin note", "error"); });
     setNoteMenuOpen(false);
   };
 
   const deleteNote = async () => {
     if (!selected) return;
-    if (!window.confirm("Delete this note?")) return;
-    await notesApi.delete(selected.id).catch(() => {});
+    if (!(await confirm("Delete this note?"))) return;
+    await notesApi.delete(selected.id).catch(() => { toast("Failed to delete note", "error"); });
     setNotes((list) => list.filter((n) => n.id !== selected.id));
     setSelected(null);
     setView("list");
@@ -141,7 +152,7 @@ export default function MobileNotes({
   };
 
   const createFolder = async () => {
-    const name = window.prompt("Folder name");
+    const name = await prompt("Folder name");
     if (!name?.trim()) return;
     const res = await notesApi.createFolder({ name: name.trim() }).catch(() => null);
     if (res?.folder) setFolders((list) => [...list, res.folder]);
@@ -166,8 +177,8 @@ export default function MobileNotes({
 
   const deleteFolder = async (folder: NoteFolder) => {
     setFolderMenuOpen(null);
-    if (!window.confirm(`Delete folder "${folder.name}"? Notes inside will be moved to All Notes.`)) return;
-    await notesApi.deleteFolder(folder.id).catch(() => {});
+    if (!(await confirm(`Delete folder "${folder.name}"? Notes inside will be moved to All Notes.`))) return;
+    await notesApi.deleteFolder(folder.id).catch(() => { toast("Failed to delete folder", "error"); });
     setFolders((list) => list.filter((f) => f.id !== folder.id));
     if (folderId === folder.id) setFolderId(null);
     void loadNotes();
@@ -240,11 +251,11 @@ export default function MobileNotes({
     }
   };
 
-  const insertLink = () => {
-    const url = window.prompt("Link URL");
+  const insertLink = async () => {
+    const url = await prompt("Link URL");
     if (!url) return;
     const el = textareaRef.current;
-    const text = el && el.selectionStart !== el.selectionEnd ? content.slice(el.selectionStart, el.selectionEnd) : window.prompt("Link text") || "link";
+    const text = el && el.selectionStart !== el.selectionEnd ? content.slice(el.selectionStart, el.selectionEnd) : (await prompt("Link text")) || "link";
     insertText(`[${text}](${url})`);
   };
 
@@ -438,7 +449,10 @@ export default function MobileNotes({
 
   // ===== List view =====
   return (
-    <MobileContainer>
+    <MobileContainer {...touchHandlers}>
+      <div className="flex items-center justify-center overflow-hidden transition-[height] duration-200" style={pullIndicatorStyle}>
+        <Loader2 size={20} className={`text-accent ${refreshing || pullDist > 8 ? "animate-spin" : ""}`} />
+      </div>
       <MobileHeader
         title="Notes"
         subtitle="Capture ideas"

@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Globe, Link2, Search, Sparkles, Trash2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowLeft as BackIcon, ArrowRight as ForwardIcon, Globe, Link2, Search, Sparkles, Trash2 } from "lucide-react";
 import { browserApi } from "../services/browser";
-import { MobileContainer, MobileEmpty, MobileHeader, MobileInput, MobileTextarea } from "./MobileUi";
+import { useMobileToast } from "../store/mobileToast";
+import { MobileEmpty, MobileHeader, MobileInput, MobileTextarea } from "./MobileUi";
 
 const QUICK_LINKS = [
   { name: "Wikipedia", url: "https://en.wikipedia.org" },
@@ -11,12 +12,16 @@ const QUICK_LINKS = [
 ];
 
 export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
+  const toast = useMobileToast((s) => s.show);
   const [url, setUrl] = useState("");
   const [current, setCurrent] = useState("");
   const [tab, setTab] = useState<"web" | "text">("web");
   const [pageText, setPageText] = useState<null | { title: string; content: string; error?: string }>(null);
   const [loading, setLoading] = useState(false);
+
+  // Navigation history with index for back/forward
   const [history, setHistory] = useState<string[]>([]);
+  const historyIdx = useRef(-1);
 
   const go = (u: string) => {
     let target = u.trim();
@@ -26,7 +31,33 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
     setCurrent(target);
     setPageText(null);
     setTab("web");
-    if (!history.includes(target)) setHistory((h) => [target, ...h].slice(0, 20));
+    // Push to history: trim forward entries if we navigated back then typed a new URL
+    const newHistory = [...history.slice(0, historyIdx.current + 1), target].slice(-30);
+    setHistory(newHistory);
+    historyIdx.current = newHistory.length - 1;
+  };
+
+  const canGoBack = historyIdx.current > 0;
+  const canGoForward = historyIdx.current < history.length - 1;
+
+  const goBack = () => {
+    if (!canGoBack) return;
+    historyIdx.current -= 1;
+    const target = history[historyIdx.current];
+    setUrl(target);
+    setCurrent(target);
+    setPageText(null);
+    setTab("web");
+  };
+
+  const goForward = () => {
+    if (!canGoForward) return;
+    historyIdx.current += 1;
+    const target = history[historyIdx.current];
+    setUrl(target);
+    setCurrent(target);
+    setPageText(null);
+    setTab("web");
   };
 
   const extract = async () => {
@@ -45,17 +76,18 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
   };
 
   const clearCookies = async () => {
-    await browserApi.clearCookies().catch(() => {});
+    await browserApi.clearCookies().catch(() => { toast("Failed to clear cookies", "error"); });
     setPageText({ title: "Cleared", content: "Browser cookie jar cleared." });
     setTab("text");
   };
 
   return (
     <div className="flex h-full flex-col bg-surface">
-      <MobileContainer>
+      {/* Fixed header area */}
+      <div className="shrink-0 px-5 pt-[max(1rem,env(safe-area-inset-top))]">
         <MobileHeader title="Browser" subtitle="Research with Mavino" onClose={onClose} />
 
-        <div className="mb-3 flex gap-2 rounded-2xl border border-edge bg-surface-2 p-2">
+        <div className="mb-2 flex gap-2 rounded-2xl border border-edge bg-surface-2 p-2">
           <Globe size={18} className="mt-2.5 ml-2 shrink-0 text-ink-muted" />
           <MobileInput
             value={url}
@@ -73,7 +105,26 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
           </button>
         </div>
 
-        <div className="mb-4 flex gap-2">
+        <div className="mb-2 flex gap-2">
+          {/* Back / Forward buttons */}
+          <button
+            type="button"
+            onClick={goBack}
+            disabled={!canGoBack}
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:bg-surface-3 disabled:opacity-30"
+            aria-label="Back"
+          >
+            <BackIcon size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={goForward}
+            disabled={!canGoForward}
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:bg-surface-3 disabled:opacity-30"
+            aria-label="Forward"
+          >
+            <ForwardIcon size={16} />
+          </button>
           <button
             type="button"
             onClick={() => setTab("web")}
@@ -89,7 +140,7 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
               tab === "text" ? "bg-accent text-ink" : "bg-surface-2 text-ink-muted"
             } disabled:opacity-50`}
           >
-            <Sparkles size={14} /> {loading ? "Reading…" : "Extract"}
+            <Sparkles size={14} /> {loading ? "Reading..." : "Extract"}
           </button>
           <button
             type="button"
@@ -99,12 +150,15 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
             <Trash2 size={16} />
           </button>
         </div>
+      </div>
 
+      {/* Content area — fills remaining height */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
         {tab === "web" && current && (
           <iframe
             src={browserApi.proxyUrl(current)}
             title="browser"
-            className="mb-4 h-96 w-full rounded-2xl border border-edge bg-surface-2"
+            className="h-full w-full rounded-2xl border border-edge bg-surface-2"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           />
         )}
@@ -117,7 +171,7 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
                 {pageText.error ? (
                   <p className="text-sm text-rose-300">{pageText.error}</p>
                 ) : (
-                  <MobileTextarea readOnly value={pageText.content} rows={12} className="border-0 bg-transparent text-ink-muted" />
+                  <MobileTextarea readOnly value={pageText.content} rows={16} className="border-0 bg-transparent text-ink-muted" />
                 )}
               </>
             ) : (
@@ -126,40 +180,42 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
           </div>
         )}
 
-        {!current && (
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {QUICK_LINKS.map((l) => (
-              <button
-                key={l.url}
-                type="button"
-                onClick={() => go(l.url)}
-                className="flex items-center gap-2 rounded-2xl border border-edge bg-surface-2 p-4 text-left active:bg-surface-3"
-              >
-                <Link2 size={18} className="text-accent" />
-                <span className="text-sm text-ink">{l.name}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {history.length > 0 && (
-          <div className="mt-4">
-            <p className="mb-2 text-xs font-semibold text-ink-muted">History</p>
-            <div className="flex flex-wrap gap-2">
-              {history.map((h) => (
+        {!current && tab === "web" && (
+          <>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {QUICK_LINKS.map((l) => (
                 <button
-                  key={h}
+                  key={l.url}
                   type="button"
-                  onClick={() => go(h)}
-                  className="max-w-[10rem] truncate rounded-full bg-surface-2 px-3 py-1 text-xs text-ink-muted"
+                  onClick={() => go(l.url)}
+                  className="flex items-center gap-2 rounded-2xl border border-edge bg-surface-2 p-4 text-left active:bg-surface-3"
                 >
-                  {h.replace(/^https?:\/\//, "")}
+                  <Link2 size={18} className="text-accent" />
+                  <span className="text-sm text-ink">{l.name}</span>
                 </button>
               ))}
             </div>
-          </div>
+
+            {history.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-semibold text-ink-muted">History</p>
+                <div className="flex flex-wrap gap-2">
+                  {history.map((h, i) => (
+                    <button
+                      key={`${h}-${i}`}
+                      type="button"
+                      onClick={() => go(h)}
+                      className="max-w-[10rem] truncate rounded-full bg-surface-2 px-3 py-1 text-xs text-ink-muted"
+                    >
+                      {h.replace(/^https?:\/\//, "")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
-      </MobileContainer>
+      </div>
     </div>
   );
 }

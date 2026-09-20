@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GraduationCap, Plus, Trash2 } from "lucide-react";
 import { gradesApi, computeGPA, coursePercentage, percentageToLetter, scoreColor } from "../services/grades";
+import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
 import type { Assignment, Course } from "../types";
 import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading, MobileSelect } from "./MobileUi";
 
 const COLORS = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#8b5cf6", "#ef4444", "#14b8a6"];
 
 export default function MobileGrades({ onClose }: { onClose?: () => void }) {
+  const { confirm } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
   const [courses, setCourses] = useState<Course[]>([]);
   const [semesters, setSemesters] = useState<string[]>([]);
   const [semester, setSemester] = useState<string>("");
@@ -37,14 +41,14 @@ export default function MobileGrades({ onClose }: { onClose?: () => void }) {
       semester: semester || undefined,
       credits: Number(form.credits) || 0,
       color: form.color,
-    }).catch(() => {});
+    }).catch(() => { toast("Failed to save course", "error"); });
     setForm({ name: "", code: "", credits: 3, color: COLORS[0] });
     void load();
   };
 
   const deleteCourse = async (c: Course) => {
-    if (!window.confirm(`Delete ${c.name}?`)) return;
-    await gradesApi.deleteCourse(c.id).catch(() => {});
+    if (!(await confirm(`Delete ${c.name}?`))) return;
+    await gradesApi.deleteCourse(c.id).catch(() => { toast("Failed to delete course", "error"); });
     void load();
   };
 
@@ -169,6 +173,8 @@ export default function MobileGrades({ onClose }: { onClose?: () => void }) {
 }
 
 function CourseDetail({ course, onBack, onUpdate }: { course: Course; onBack: () => void; onUpdate: () => void }) {
+  const { confirm } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
   const [assignments, setAssignments] = useState<Assignment[]>(course.assignments);
   const [name, setName] = useState("");
   const [score, setScore] = useState("");
@@ -191,8 +197,8 @@ function CourseDetail({ course, onBack, onUpdate }: { course: Course; onBack: ()
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm("Delete this assignment?")) return;
-    await gradesApi.deleteAssignment(id).catch(() => {});
+    if (!(await confirm("Delete this assignment?"))) return;
+    await gradesApi.deleteAssignment(id).catch(() => { toast("Failed to delete assignment", "error"); });
     setAssignments((list) => list.filter((a) => a.id !== id));
     onUpdate();
   };

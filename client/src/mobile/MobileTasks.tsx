@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Circle, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, Circle, Loader2, Plus, Trash2 } from "lucide-react";
 import { tasksApi, STATUS_LABELS } from "../services/tasks";
 import { taskWorkspacesApi } from "../services/task-workspaces";
 import type { Task, TaskPriority, TaskStatus, TaskWorkspace } from "../types";
@@ -7,6 +7,9 @@ import {
   MobileButton, MobileContainer, MobileEmpty, MobileFab, MobileInput, MobileLoading,
   MobileModal, MobileSelect, MobileTextarea,
 } from "./MobileUi";
+import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
+import { usePullToRefresh } from "./usePullToRefresh";
 
 const priorityStyle: Record<TaskPriority, string> = { HIGH: "bg-rose-400", MEDIUM: "bg-amber-400", LOW: "bg-sky-400" };
 const priorityLabel: Record<TaskPriority, string> = { HIGH: "High", MEDIUM: "Medium", LOW: "Low" };
@@ -34,6 +37,9 @@ export default function MobileTasks() {
   const [editDue, setEditDue] = useState("");
   const [editWs, setEditWs] = useState<string>("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const { confirm } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
+  const loadRef = useRef<() => Promise<void>>();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,6 +57,11 @@ export default function MobileTasks() {
     setLoading(false);
   }, [activeWsId]);
 
+  loadRef.current = load;
+  const { pullDist, refreshing, touchHandlers, pullIndicatorStyle } = usePullToRefresh(
+    useCallback(async () => { await loadRef.current?.(); }, []),
+  );
+
   useEffect(() => { void load(); }, [load]);
 
   const visible = useMemo(() => tasks.filter((task) => status === "all" || task.status === status).sort((a, b) => Number(a.status === "DONE") - Number(b.status === "DONE") || +new Date(a.dueDate || "2999-01-01") - +new Date(b.dueDate || "2999-01-01")), [tasks, status]);
@@ -63,7 +74,7 @@ export default function MobileTasks() {
       priority: draftPriority,
       workspaceId: activeWsId ?? undefined,
       dueDate: draftDue ? new Date(draftDue).toISOString() : null,
-    }).catch(() => null);
+    }).catch(() => { toast("Failed to create task", "error"); });
     if (result) setTasks((list) => [result.task, ...list]);
     setDraft("");
     setDraftPriority("MEDIUM");
@@ -76,7 +87,7 @@ export default function MobileTasks() {
   const toggle = async (task: Task) => {
     const next: TaskStatus = task.status === "DONE" ? "TODO" : "DONE";
     setTasks((list) => list.map((item) => item.id === task.id ? { ...item, status: next } : item));
-    await tasksApi.update(task.id, { status: next }).catch(() => { void load(); });
+    await tasksApi.update(task.id, { status: next }).catch(() => { toast("Failed to update task", "error"); void load(); });
   };
 
   const selectWs = (id: string | null) => {
@@ -120,14 +131,17 @@ export default function MobileTasks() {
 
   const deleteTask = async () => {
     if (!editing) return;
-    if (!window.confirm("Delete this task?")) return;
-    await tasksApi.delete(editing.id).catch(() => {});
+    if (!(await confirm("Delete this task?"))) return;
+    await tasksApi.delete(editing.id).catch(() => { toast("Failed to delete task", "error"); });
     setTasks((list) => list.filter((t) => t.id !== editing.id));
     setEditing(null);
   };
 
   return (
-    <MobileContainer>
+    <MobileContainer {...touchHandlers}>
+      <div className="flex items-center justify-center overflow-hidden transition-[height] duration-200" style={pullIndicatorStyle}>
+        <Loader2 size={20} className={`text-accent ${refreshing || pullDist > 8 ? "animate-spin" : ""}`} />
+      </div>
       <header className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-accent">Get it done</p>

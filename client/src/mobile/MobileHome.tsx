@@ -9,6 +9,9 @@ import type { MobileRoute } from "../shell/mobile/MobileShell";
 import type { MobileTool } from "./MobileLauncher";
 import type { MobileToolPayload } from "./MobileToolPage";
 import { MobileCard, MobileIconChip } from "./MobileUi";
+import { NotificationBell } from "./MobileNotifications";
+import MobileSearch from "./MobileSearch";
+import MobileInstallBanner from "./MobileInstallBanner";
 
 export default function MobileHome({
   onNavigate,
@@ -97,8 +100,15 @@ export default function MobileHome({
           <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight text-ink">{firstName ? `Hello, ${firstName}` : "Hello"}</h1>
           <p className="mt-2 text-sm text-ink-muted">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
         </div>
-        <div className="brand-gradient flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-lg shadow-accent/30">{(firstName.slice(0, 1) || "A").toUpperCase()}</div>
+        <div className="flex shrink-0 items-center gap-2">
+          <NotificationBell />
+          <div className="brand-gradient flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-lg shadow-accent/30">{(firstName.slice(0, 1) || "A").toUpperCase()}</div>
+        </div>
       </header>
+
+      <MobileSearch onOpenTool={onOpenTool} />
+
+      <MobileInstallBanner />
 
       <section className="brand-border-glow mb-6 rounded-3xl border border-transparent bg-surface-2 p-5 shadow-[0_8px_28px_-12px_rgb(var(--brand-violet)/0.45)]">
         <div className="flex items-start justify-between gap-4">

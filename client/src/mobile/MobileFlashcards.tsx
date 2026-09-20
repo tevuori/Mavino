@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Brain, MoreVertical, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { flashcardsApi } from "../services/flashcards";
+import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
 import type { Flashcard, FlashcardDeck } from "../types";
 import {
   MobileButton, MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput,
@@ -10,6 +12,8 @@ import {
 const DECK_COLORS = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#8b5cf6"];
 
 export default function MobileFlashcards({ onClose }: { onClose?: () => void }) {
+  const { confirm } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
   const [decks, setDecks] = useState<(FlashcardDeck & { _count: { cards: number } })[]>([]);
   const [view, setView] = useState<"decks" | "cards" | "review">("decks");
   const [selectedDeck, setSelectedDeck] = useState<FlashcardDeck | null>(null);
@@ -136,7 +140,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
         if (selectedDeck?.id === res.deck.id) setSelectedDeck(res.deck);
       }
     } else {
-      await flashcardsApi.createDeck({ name: deckName.trim(), description: deckDesc, color: deckColor }).catch(() => {});
+      await flashcardsApi.createDeck({ name: deckName.trim(), description: deckDesc, color: deckColor }).catch(() => { toast("Failed to create deck", "error"); });
       await loadDecks();
     }
     setDeckFormOpen(false);
@@ -145,8 +149,8 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
   const deleteDeck = async (deck: FlashcardDeck) => {
     const fullDeck = decks.find((d) => d.id === deck.id);
     const cardCount = fullDeck?._count?.cards ?? 0;
-    if (!window.confirm(`Delete "${deck.name}" and its ${cardCount} cards?`)) return;
-    await flashcardsApi.deleteDeck(deck.id).catch(() => {});
+    if (!(await confirm(`Delete "${deck.name}" and its ${cardCount} cards?`))) return;
+    await flashcardsApi.deleteDeck(deck.id).catch(() => { toast("Failed to delete deck", "error"); });
     await loadDecks();
     setDeckMenu(null);
     if (selectedDeck?.id === deck.id) setView("decks");
@@ -172,7 +176,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
       const res = await flashcardsApi.updateCard(editingCard.id, { front: cardFront.trim(), back: cardBack.trim() }).catch(() => null);
       if (res?.card) setCards((list) => list.map((c) => (c.id === res.card.id ? res.card : c)));
     } else {
-      await flashcardsApi.createCard(selectedDeck.id, { front: cardFront.trim(), back: cardBack.trim() }).catch(() => {});
+      await flashcardsApi.createCard(selectedDeck.id, { front: cardFront.trim(), back: cardBack.trim() }).catch(() => { toast("Failed to create card", "error"); });
       if (selectedDeck) await openDeck(selectedDeck);
       await loadDecks();
     }
@@ -180,8 +184,8 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
   };
 
   const deleteCard = async (id: string) => {
-    if (!window.confirm("Delete this card?")) return;
-    await flashcardsApi.deleteCard(id).catch(() => {});
+    if (!(await confirm("Delete this card?"))) return;
+    await flashcardsApi.deleteCard(id).catch(() => { toast("Failed to delete card", "error"); });
     if (selectedDeck) await openDeck(selectedDeck);
     await loadDecks();
     setCardMenu(null);
@@ -201,7 +205,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
   const reviewCard = async (quality: number) => {
     const card = reviewQueue[reviewIdx];
     if (!card) return;
-    await flashcardsApi.reviewCard(card.id, quality).catch(() => {});
+    await flashcardsApi.reviewCard(card.id, quality).catch(() => { toast("Review failed", "error"); });
     if (reviewIdx + 1 < reviewQueue.length) {
       setReviewIdx((i) => i + 1);
       setFlipped(false);

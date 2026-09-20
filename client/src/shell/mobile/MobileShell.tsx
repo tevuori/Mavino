@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { CalendarDays, CheckSquare, Home, MoreHorizontal } from "lucide-react";
 import MobileHome from "../../mobile/MobileHome";
 import MobileTasks from "../../mobile/MobileTasks";
@@ -7,6 +7,7 @@ import MobileAthena from "../../mobile/MobileAthena";
 import MobileLauncher, { type MobileTool } from "../../mobile/MobileLauncher";
 import MobileToolPage, { type MobileToolPayload } from "../../mobile/MobileToolPage";
 import MobileOnboarding from "../../mobile/MobileOnboarding";
+import { MobileDialogRenderer, MobileToastRenderer } from "../../mobile/MobileUi";
 import { useAuth } from "../../store/auth";
 import { useSettings } from "../../store/settings";
 import AppLogo from "../AppLogo";
@@ -50,19 +51,42 @@ export default function MobileShell() {
     setRoute(r);
   };
 
-  const openTool = (nextTool: MobileTool, payload?: MobileToolPayload) => {
+  // Track whether a popstate-triggered close is in progress so we don't
+  // push a duplicate history entry when the tool state changes.
+  const poppingRef = useRef(false);
+
+  const openTool = useCallback((nextTool: MobileTool, payload?: MobileToolPayload) => {
     setTool(nextTool);
     setToolPayload(payload ?? null);
-  };
+    // Push a history entry so the hardware/browser back button closes the
+    // tool instead of navigating away from the app entirely.
+    if (!poppingRef.current) {
+      history.pushState({ mobileTool: nextTool }, "");
+    }
+  }, []);
 
-  const closeTool = () => {
+  const closeTool = useCallback(() => {
     setTool(null);
     setToolPayload(null);
     // Deliberately don't touch `route` here — it already reflects whichever
     // screen the tool was opened from (Home, or the "More" launcher), so
     // closing the tool naturally reveals that screen again instead of
     // always bouncing back to Home.
-  };
+  }, []);
+
+  // Listen for popstate (hardware back button / browser back) to close the
+  // active tool page instead of leaving the app.
+  useEffect(() => {
+    const onPopState = () => {
+      if (tool) {
+        poppingRef.current = true;
+        closeTool();
+        poppingRef.current = false;
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [tool, closeTool]);
 
   const activeIndex = tool ? -1 : ROUTE_ORDER.indexOf(route);
 
@@ -147,6 +171,8 @@ export default function MobileShell() {
           </div>
         </nav>
       </div>
+      <MobileDialogRenderer />
+      <MobileToastRenderer />
     </main>
   );
 }

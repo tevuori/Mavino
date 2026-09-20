@@ -1,13 +1,15 @@
-import { forwardRef, useEffect } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Monitor, Plus, X } from "lucide-react";
 import type { ReactNode, InputHTMLAttributes, TextareaHTMLAttributes, SelectHTMLAttributes } from "react";
+import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 
-export function MobileContainer({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`mx-auto min-w-0 max-w-md px-5 pb-7 pt-[max(1.5rem,env(safe-area-inset-top))] ${className}`}>{children}</div>;
+export function MobileContainer({ children, className = "", ...rest }: { children: ReactNode; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={`mx-auto min-w-0 max-w-md px-5 pb-7 pt-[max(1.5rem,env(safe-area-inset-top))] ${className}`} {...rest}>{children}</div>;
 }
 
 export function MobileHeader({
@@ -375,6 +377,107 @@ export function MobileDesktopNote({ text }: { text: string }) {
     <div className="mb-4 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent/[0.07] px-4 py-3 text-xs leading-5 text-ink-muted">
       <MobileIconChip icon={<Monitor size={14} />} size="sm" />
       <span className="pt-1.5">{text}</span>
+    </div>
+  );
+}
+
+/**
+ * Global renderer for imperative confirm/prompt dialogs on mobile.
+ * Mount once in MobileShell. Uses the `useMobileDialog` Zustand store.
+ */
+export function MobileDialogRenderer() {
+  const { dialog, _resolve, _dismiss } = useMobileDialog();
+  const [inputValue, setInputValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (dialog.type === "prompt") {
+      setInputValue(dialog.defaultValue ?? "");
+      // Wait for the DOM to paint, then focus
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [dialog.type, dialog.defaultValue]);
+
+  if (!dialog.type) return null;
+
+  const onConfirm = () => {
+    if (dialog.type === "prompt") _resolve(inputValue);
+    else _resolve(true);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[19000] flex items-end justify-center bg-black/60" onClick={_dismiss}>
+      <div
+        className="w-full max-w-md rounded-t-3xl border border-edge bg-surface p-5 pt-3 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-4 h-1.5 w-10 shrink-0 rounded-full bg-surface-3" aria-hidden />
+        <p className="mb-4 text-sm leading-6 text-ink">{dialog.message}</p>
+        {dialog.type === "prompt" && (
+          <input
+            ref={inputRef}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onConfirm();
+              }
+            }}
+            className="mb-4 w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15"
+          />
+        )}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={_dismiss}
+            className="flex-1 rounded-2xl bg-surface-2 py-3 text-sm font-medium text-ink-muted active:bg-surface-3"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className={`flex-1 rounded-2xl py-3 text-sm font-semibold active:scale-[.98] ${
+              dialog.type === "confirm"
+                ? "bg-rose-500/15 text-rose-400 active:bg-rose-500/25"
+                : "brand-gradient text-white shadow-md shadow-accent/30"
+            }`}
+          >
+            {dialog.type === "confirm" ? "Delete" : "OK"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Global toast renderer for mobile. Mount once in MobileShell.
+ * Toasts auto-dismiss after 3.5s. Tap to dismiss early.
+ */
+export function MobileToastRenderer() {
+  const { toasts, dismiss } = useMobileToast();
+  if (toasts.length === 0) return null;
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-[19500] flex flex-col items-center gap-2 px-4">
+      {toasts.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => dismiss(t.id)}
+          className={`pointer-events-auto w-full max-w-sm animate-[slideDown_0.25s_ease-out] rounded-2xl border px-4 py-3 text-sm font-medium shadow-xl backdrop-blur-xl ${
+            t.variant === "error"
+              ? "border-red-500/30 bg-red-500/15 text-red-300"
+              : t.variant === "success"
+                ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+                : "border-edge bg-surface/95 text-ink"
+          }`}
+        >
+          {t.message}
+        </button>
+      ))}
     </div>
   );
 }
