@@ -9,6 +9,7 @@ import type { Note, NoteFolder } from "../types";
 import type { MobileTool } from "./MobileLauncher";
 import type { MobileToolPayload } from "./MobileToolPage";
 import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
 import {
   MobileButton, MobileCard, MobileChip, MobileContainer, MobileEmpty, MobileFab,
   MobileHeader, MobileInput, MobileLoading, MobileMarkdown, MobileModal, MobileTextarea,
@@ -38,6 +39,7 @@ export default function MobileNotes({
   const [content, setContent] = useState("");
   const [tags, setTags] = useState("");
   const { confirm, prompt } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
 
   // Folder management
   const [folderMenuOpen, setFolderMenuOpen] = useState<NoteFolder | null>(null);
@@ -128,14 +130,14 @@ export default function MobileNotes({
     const next = !selected.pinned;
     setSelected((n) => (n ? { ...n, pinned: next } : null));
     setNotes((list) => list.map((n) => (n.id === selected.id ? { ...n, pinned: next } : n)));
-    await notesApi.update(selected.id, { pinned: next }).catch(() => {});
+    await notesApi.update(selected.id, { pinned: next }).catch(() => { toast("Failed to pin note", "error"); });
     setNoteMenuOpen(false);
   };
 
   const deleteNote = async () => {
     if (!selected) return;
     if (!(await confirm("Delete this note?"))) return;
-    await notesApi.delete(selected.id).catch(() => {});
+    await notesApi.delete(selected.id).catch(() => { toast("Failed to delete note", "error"); });
     setNotes((list) => list.filter((n) => n.id !== selected.id));
     setSelected(null);
     setView("list");
@@ -169,7 +171,7 @@ export default function MobileNotes({
   const deleteFolder = async (folder: NoteFolder) => {
     setFolderMenuOpen(null);
     if (!(await confirm(`Delete folder "${folder.name}"? Notes inside will be moved to All Notes.`))) return;
-    await notesApi.deleteFolder(folder.id).catch(() => {});
+    await notesApi.deleteFolder(folder.id).catch(() => { toast("Failed to delete folder", "error"); });
     setFolders((list) => list.filter((f) => f.id !== folder.id));
     if (folderId === folder.id) setFolderId(null);
     void loadNotes();

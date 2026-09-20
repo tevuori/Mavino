@@ -207,6 +207,11 @@ body {
   to { opacity: 1; }
 }
 
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-1rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ===== Interactive Teacher: CodeMirror highlight decorations ===== */
 /* Transient highlight applied by the show-control channel when Athena points
    at a passage while teaching. Mark = inline text range; line = full line. */

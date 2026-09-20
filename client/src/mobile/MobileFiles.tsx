@@ -4,7 +4,7 @@ import {
   Star, Trash2, Upload, FolderInput, GraduationCap, ExternalLink,
 } from "lucide-react";
 import {
-  filesApi, formatBytes, isImageFile, isTextFile,
+  filesApi, formatBytes, isAudioFile, isImageFile, isPdfFile, isTextFile,
   openTargetForFile,
 } from "../services/files";
 import type { VFile, VFolder } from "../types";
@@ -14,6 +14,7 @@ import {
   MobileButton, MobileContainer, MobileEmpty, MobileFab, MobileInput, MobileLoading, MobileModal,
 } from "./MobileUi";
 import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
 
 const EXT_EMOJI: Record<string, string> = {
   image: "🖼️", pdf: "📕", audio: "🎵", video: "🎬", text: "📝", archive: "🗜️", code: "💻", default: "📄",
@@ -56,9 +57,12 @@ export default function MobileFiles({
 
   // Image preview
   const [previewImg, setPreviewImg] = useState<VFile | null>(null);
+  const [previewText, setPreviewText] = useState<{ file: VFile; content: string } | null>(null);
+  const [previewPdf, setPreviewPdf] = useState<VFile | null>(null);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
   const { confirm } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,7 +97,7 @@ export default function MobileFiles({
 
   const createFolder = async () => {
     if (!newFolder.trim()) return;
-    const res = await filesApi.createFolder({ name: newFolder.trim(), parentId: folderId }).catch(() => null);
+    const res = await filesApi.createFolder({ name: newFolder.trim(), parentId: folderId }).catch(() => { toast("Failed to create folder", "error"); return null; });
     if (res?.folder) setFolders((list) => [...list, res.folder]);
     setNewFolder("");
     setShowCreate(false);
@@ -102,20 +106,20 @@ export default function MobileFiles({
   const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    await filesApi.upload(file, folderId).catch(() => {});
+    await filesApi.upload(file, folderId).catch(() => { toast("Upload failed", "error"); });
     e.target.value = "";
     void load();
   };
 
   const toggleStar = async (f: VFile) => {
-    await filesApi.toggleStar(f.id).catch(() => {});
+    await filesApi.toggleStar(f.id).catch(() => { toast("Failed to star file", "error"); });
     setFiles((list) => list.map((x) => x.id === f.id ? { ...x, starred: !x.starred } : x));
     setFileMenu(null);
   };
 
   const remove = async (f: VFile) => {
     if (!(await confirm(`Delete ${f.name}?`))) return;
-    await filesApi.delete(f.id).catch(() => {});
+    await filesApi.delete(f.id).catch(() => { toast("Failed to delete file", "error"); });
     setFiles((list) => list.filter((x) => x.id !== f.id));
     setFileMenu(null);
   };
@@ -132,10 +136,10 @@ export default function MobileFiles({
       return;
     }
     if (renameTarget.kind === "file") {
-      await filesApi.rename(renameTarget.id, renameValue.trim()).catch(() => {});
+      await filesApi.rename(renameTarget.id, renameValue.trim()).catch(() => { toast("Failed to rename", "error"); });
       setFiles((list) => list.map((f) => (f.id === renameTarget.id ? { ...f, name: renameValue.trim() } : f)));
     } else {
-      await filesApi.renameFolder(renameTarget.id, renameValue.trim()).catch(() => {});
+      await filesApi.renameFolder(renameTarget.id, renameValue.trim()).catch(() => { toast("Failed to rename folder", "error"); });
       setFolders((list) => list.map((f) => (f.id === renameTarget.id ? { ...f, name: renameValue.trim() } : f)));
     }
     setRenameTarget(null);
@@ -143,26 +147,36 @@ export default function MobileFiles({
 
   const moveFile = async (targetFolderId: string | null) => {
     if (!moveTarget) return;
-    await filesApi.move(moveTarget.id, targetFolderId).catch(() => {});
+    await filesApi.move(moveTarget.id, targetFolderId).catch(() => { toast("Failed to move file", "error"); });
     setFiles((list) => list.filter((f) => f.id !== moveTarget.id));
     setMoveTarget(null);
   };
 
-  const openFile = (f: VFile) => {
+  const openFile = async (f: VFile) => {
     setFileMenu(null);
     if (isImageFile(f)) {
       setPreviewImg(f);
       return;
     }
-    const target = openTargetForFile(f);
-    if (target === "editor") {
-      onOpenTool?.("editor", { /* editor opens by file id via payload not supported yet */ });
-      // Fall back to download if no editor payload wiring
-      window.open(filesApi.downloadUrl(f.id), "_blank");
-    } else {
-      // Viewer: open in new tab via download URL (mobile doesn't have a Viewer tool page)
-      window.open(filesApi.downloadUrl(f.id), "_blank");
+    if (isPdfFile(f)) {
+      setPreviewPdf(f);
+      return;
     }
+    if (isTextFile(f)) {
+      try {
+        const res = await filesApi.getContent(f.id);
+        setPreviewText({ file: f, content: res.content });
+      } catch {
+        toast("Failed to load file", "error");
+      }
+      return;
+    }
+    if (isAudioFile(f)) {
+      const audio = new Audio(filesApi.downloadUrl(f.id));
+      audio.play().catch(() => { toast("Playback failed", "error"); });
+      return;
+    }
+    window.open(filesApi.downloadUrl(f.id), "_blank");
   };
 
   const openInStudy = (f: VFile) => {
@@ -240,7 +254,7 @@ export default function MobileFiles({
         ) : files.length ? (
           files.map((f) => (
             <article key={f.id} className="flex items-center gap-3 rounded-2xl border border-edge bg-surface-2 p-4">
-              <button type="button" onClick={() => openFile(f)} className="min-w-0 flex-1 text-left">
+              <button type="button" onClick={() => void openFile(f)} className="min-w-0 flex-1 text-left">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">{emojiFor(f)}</span>
                   <span className="min-w-0 flex-1 truncate font-medium text-ink">{f.name}</span>
@@ -270,7 +284,7 @@ export default function MobileFiles({
           <div className="fixed inset-0 z-40" onClick={() => setFileMenu(null)} />
           <div className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-t-3xl border border-edge bg-surface p-2 shadow-2xl sm:bottom-auto sm:top-1/3 sm:rounded-3xl">
             <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">{fileMenu.name}</p>
-            <button type="button" onClick={() => openFile(fileMenu)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-ink active:bg-surface-2">
+            <button type="button" onClick={() => void openFile(fileMenu)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-ink active:bg-surface-2">
               <ExternalLink size={18} /> Open
             </button>
             <button type="button" onClick={() => startRename({ kind: "file", id: fileMenu.id, name: fileMenu.name })} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-ink active:bg-surface-2">
@@ -347,6 +361,57 @@ export default function MobileFiles({
             <Plus size={22} className="rotate-45" />
           </button>
           <img src={filesApi.downloadUrl(previewImg.id)} alt={previewImg.name} className="max-h-[90vh] max-w-full rounded-2xl" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
+
+      {/* Text file preview */}
+      {previewText && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-surface" onClick={() => setPreviewText(null)}>
+          <div className="flex shrink-0 items-center justify-between border-b border-edge px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))]" onClick={(e) => e.stopPropagation()}>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-ink">{previewText.file.name}</p>
+              <p className="text-xs text-ink-muted">Text preview</p>
+            </div>
+            <button type="button" onClick={() => setPreviewText(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink-muted">
+              <Plus size={20} className="rotate-45" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto p-5" onClick={(e) => e.stopPropagation()}>
+            <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-6 text-ink">{previewText.content}</pre>
+          </div>
+        </div>
+      )}
+
+      {/* PDF preview */}
+      {previewPdf && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-surface" onClick={() => setPreviewPdf(null)}>
+          <div className="flex shrink-0 items-center justify-between border-b border-edge px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))]" onClick={(e) => e.stopPropagation()}>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-ink">{previewPdf.name}</p>
+              <p className="text-xs text-ink-muted">PDF preview</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <a
+                href={filesApi.downloadUrl(previewPdf.id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-xl bg-surface-2 px-3 py-2 text-xs text-ink-muted active:bg-surface-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink size={14} /> Open
+              </a>
+              <button type="button" onClick={() => setPreviewPdf(null)} className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-ink-muted">
+                <Plus size={20} className="rotate-45" />
+              </button>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1" onClick={(e) => e.stopPropagation()}>
+            <iframe
+              src={filesApi.downloadUrl(previewPdf.id)}
+              title={previewPdf.name}
+              className="h-full w-full border-0"
+            />
+          </div>
         </div>
       )}
     </MobileContainer>

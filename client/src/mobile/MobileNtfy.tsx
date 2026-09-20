@@ -3,10 +3,12 @@ import { Bell, BellRing, MessageSquare, Plus, RefreshCw, Send, Trash2 } from "lu
 import { ntfyApi, type NtfyConfigInput, type NtfyCronJob, type NtfyMessage, type NtfyStatus } from "../services/ntfy";
 import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading, MobileSelect, MobileTextarea } from "./MobileUi";
 import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
 
 type Tab = "status" | "messages" | "send" | "cron";
 
 export default function MobileNtfy({ onClose }: { onClose?: () => void }) {
+  const toast = useMobileToast((s) => s.show);
   const [tab, setTab] = useState<Tab>("messages");
 
   return (
@@ -75,6 +77,7 @@ function NtfyMessages() {
 }
 
 function NtfySend({ onSent }: { onSent: () => void }) {
+  const toast = useMobileToast((s) => s.show);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [priority, setPriority] = useState(3);
@@ -83,7 +86,7 @@ function NtfySend({ onSent }: { onSent: () => void }) {
   const submit = async () => {
     if (!body.trim()) return;
     setSending(true);
-    await ntfyApi.send({ title: title.trim() || undefined, body: body.trim(), priority }).catch(() => {});
+    await ntfyApi.send({ title: title.trim() || undefined, body: body.trim(), priority }).catch(() => { toast("Failed to send", "error"); });
     setSending(false);
     setTitle(""); setBody(""); setPriority(3);
     onSent();
@@ -113,6 +116,7 @@ function NtfyCron() {
   const [jobs, setJobs] = useState<NtfyCronJob[]>([]);
   const [loading, setLoading] = useState(true);
   const { confirm } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -124,17 +128,17 @@ function NtfyCron() {
   useEffect(() => { void load(); }, [load]);
 
   const toggle = async (job: NtfyCronJob) => {
-    await ntfyApi.updateCronJob(job.id, { enabled: !job.enabled }).catch(() => {});
+    await ntfyApi.updateCronJob(job.id, { enabled: !job.enabled }).catch(() => { toast("Failed to update job", "error"); });
     void load();
   };
 
   const run = async (job: NtfyCronJob) => {
-    await ntfyApi.runCronJob(job.id).catch(() => {});
+    await ntfyApi.runCronJob(job.id).catch(() => { toast("Failed to run job", "error"); });
   };
 
   const remove = async (job: NtfyCronJob) => {
     if (!(await confirm(`Delete ${job.name}?`))) return;
-    await ntfyApi.deleteCronJob(job.id).catch(() => {});
+    await ntfyApi.deleteCronJob(job.id).catch(() => { toast("Failed to delete job", "error"); });
     void load();
   };
 
@@ -172,6 +176,7 @@ function NtfyCron() {
 }
 
 function NtfyStatusView() {
+  const toast = useMobileToast((s) => s.show);
   const [status, setStatus] = useState<NtfyStatus | null>(null);
   const [config, setConfig] = useState<NtfyConfigInput>({});
 
@@ -192,7 +197,7 @@ function NtfyStatusView() {
   useEffect(() => { void load(); }, [load]);
 
   const save = async () => {
-    await ntfyApi.saveConfig(config).catch(() => {});
+    await ntfyApi.saveConfig(config).catch(() => { toast("Failed to save config", "error"); });
     void load();
   };
 

@@ -8,6 +8,7 @@ import {
   MobileModal, MobileSelect, MobileTextarea,
 } from "./MobileUi";
 import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
 
 const priorityStyle: Record<TaskPriority, string> = { HIGH: "bg-rose-400", MEDIUM: "bg-amber-400", LOW: "bg-sky-400" };
 const priorityLabel: Record<TaskPriority, string> = { HIGH: "High", MEDIUM: "Medium", LOW: "Low" };
@@ -36,6 +37,7 @@ export default function MobileTasks() {
   const [editWs, setEditWs] = useState<string>("");
   const [savingEdit, setSavingEdit] = useState(false);
   const { confirm } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,7 +67,7 @@ export default function MobileTasks() {
       priority: draftPriority,
       workspaceId: activeWsId ?? undefined,
       dueDate: draftDue ? new Date(draftDue).toISOString() : null,
-    }).catch(() => null);
+    }).catch(() => { toast("Failed to create task", "error"); });
     if (result) setTasks((list) => [result.task, ...list]);
     setDraft("");
     setDraftPriority("MEDIUM");
@@ -78,7 +80,7 @@ export default function MobileTasks() {
   const toggle = async (task: Task) => {
     const next: TaskStatus = task.status === "DONE" ? "TODO" : "DONE";
     setTasks((list) => list.map((item) => item.id === task.id ? { ...item, status: next } : item));
-    await tasksApi.update(task.id, { status: next }).catch(() => { void load(); });
+    await tasksApi.update(task.id, { status: next }).catch(() => { toast("Failed to update task", "error"); void load(); });
   };
 
   const selectWs = (id: string | null) => {
@@ -123,7 +125,7 @@ export default function MobileTasks() {
   const deleteTask = async () => {
     if (!editing) return;
     if (!(await confirm("Delete this task?"))) return;
-    await tasksApi.delete(editing.id).catch(() => {});
+    await tasksApi.delete(editing.id).catch(() => { toast("Failed to delete task", "error"); });
     setTasks((list) => list.filter((t) => t.id !== editing.id));
     setEditing(null);
   };

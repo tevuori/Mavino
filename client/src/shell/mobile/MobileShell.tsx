@@ -7,7 +7,7 @@ import MobileAthena from "../../mobile/MobileAthena";
 import MobileLauncher, { type MobileTool } from "../../mobile/MobileLauncher";
 import MobileToolPage, { type MobileToolPayload } from "../../mobile/MobileToolPage";
 import MobileOnboarding from "../../mobile/MobileOnboarding";
-import { MobileDialogRenderer } from "../../mobile/MobileUi";
+import { MobileDialogRenderer, MobileToastRenderer } from "../../mobile/MobileUi";
 import { useAuth } from "../../store/auth";
 import { useSettings } from "../../store/settings";
 import AppLogo from "../AppLogo";
@@ -172,6 +172,7 @@ export default function MobileShell() {
         </nav>
       </div>
       <MobileDialogRenderer />
+      <MobileToastRenderer />
     </main>
   );
 }

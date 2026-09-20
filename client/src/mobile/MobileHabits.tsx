@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Flame, Plus, Trash2 } from "lucide-react";
 import { habitsApi } from "../services/habits";
 import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
 import type { Habit, HabitStats } from "../types";
 import {
   MobileContainer,
@@ -33,6 +34,7 @@ function lastDays(count: number): string[] {
 
 export default function MobileHabits({ onClose }: { onClose?: () => void }) {
   const { confirm } = useMobileDialog();
+  const toast = useMobileToast((s) => s.show);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [stats, setStats] = useState<HabitStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,8 +71,8 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
 
   const toggleToday = async (h: Habit) => {
     const done = isDoneToday(h);
-    if (done) await habitsApi.unlog(h.id, today).catch(() => {});
-    else await habitsApi.log(h.id, today, 1).catch(() => {});
+    if (done) await habitsApi.unlog(h.id, today).catch(() => { toast("Failed to update habit", "error"); });
+    else await habitsApi.log(h.id, today, 1).catch(() => { toast("Failed to update habit", "error"); });
     await refresh();
   };
 
@@ -86,7 +88,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
         linkedApp: null,
         linkedMetric: null,
       })
-      .catch(() => {});
+      .catch(() => { toast("Failed to save habit", "error"); });
     setName("");
     setIcon(HABIT_ICONS[0]);
     setColor(HABIT_COLORS[0]);
@@ -99,7 +101,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
   const deleteHabit = async () => {
     if (!selected) return;
     if (!(await confirm("Delete this habit?"))) return;
-    await habitsApi.delete(selected.id).catch(() => {});
+    await habitsApi.delete(selected.id).catch(() => { toast("Failed to delete habit", "error"); });
     setSelected(null);
     setView("list");
     await refresh();

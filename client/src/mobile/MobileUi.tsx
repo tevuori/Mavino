@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Monitor, Plus, X } from "lucide-react";
 import type { ReactNode, InputHTMLAttributes, TextareaHTMLAttributes, SelectHTMLAttributes } from "react";
 import { useMobileDialog } from "../store/mobileDialog";
+import { useMobileToast } from "../store/mobileToast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -447,6 +448,36 @@ export function MobileDialogRenderer() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Global toast renderer for mobile. Mount once in MobileShell.
+ * Toasts auto-dismiss after 3.5s. Tap to dismiss early.
+ */
+export function MobileToastRenderer() {
+  const { toasts, dismiss } = useMobileToast();
+  if (toasts.length === 0) return null;
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-[19500] flex flex-col items-center gap-2 px-4">
+      {toasts.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => dismiss(t.id)}
+          className={`pointer-events-auto w-full max-w-sm animate-[slideDown_0.25s_ease-out] rounded-2xl border px-4 py-3 text-sm font-medium shadow-xl backdrop-blur-xl ${
+            t.variant === "error"
+              ? "border-red-500/30 bg-red-500/15 text-red-300"
+              : t.variant === "success"
+                ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+                : "border-edge bg-surface/95 text-ink"
+          }`}
+        >
+          {t.message}
+        </button>
+      ))}
     </div>
   );
 }
