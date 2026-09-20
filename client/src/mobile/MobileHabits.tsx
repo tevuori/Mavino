@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Flame, Plus, Trash2 } from "lucide-react";
 import { habitsApi } from "../services/habits";
+import { useMobileDialog } from "../store/mobileDialog";
 import type { Habit, HabitStats } from "../types";
 import {
   MobileContainer,
@@ -31,6 +32,7 @@ function lastDays(count: number): string[] {
 }
 
 export default function MobileHabits({ onClose }: { onClose?: () => void }) {
+  const { confirm } = useMobileDialog();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [stats, setStats] = useState<HabitStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +98,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
 
   const deleteHabit = async () => {
     if (!selected) return;
-    if (!window.confirm("Delete this habit?")) return;
+    if (!(await confirm("Delete this habit?"))) return;
     await habitsApi.delete(selected.id).catch(() => {});
     setSelected(null);
     setView("list");

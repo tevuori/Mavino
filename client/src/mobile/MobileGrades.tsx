@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GraduationCap, Plus, Trash2 } from "lucide-react";
 import { gradesApi, computeGPA, coursePercentage, percentageToLetter, scoreColor } from "../services/grades";
+import { useMobileDialog } from "../store/mobileDialog";
 import type { Assignment, Course } from "../types";
 import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading, MobileSelect } from "./MobileUi";
 
 const COLORS = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#8b5cf6", "#ef4444", "#14b8a6"];
 
 export default function MobileGrades({ onClose }: { onClose?: () => void }) {
+  const { confirm } = useMobileDialog();
   const [courses, setCourses] = useState<Course[]>([]);
   const [semesters, setSemesters] = useState<string[]>([]);
   const [semester, setSemester] = useState<string>("");
@@ -43,7 +45,7 @@ export default function MobileGrades({ onClose }: { onClose?: () => void }) {
   };
 
   const deleteCourse = async (c: Course) => {
-    if (!window.confirm(`Delete ${c.name}?`)) return;
+    if (!(await confirm(`Delete ${c.name}?`))) return;
     await gradesApi.deleteCourse(c.id).catch(() => {});
     void load();
   };
@@ -169,6 +171,7 @@ export default function MobileGrades({ onClose }: { onClose?: () => void }) {
 }
 
 function CourseDetail({ course, onBack, onUpdate }: { course: Course; onBack: () => void; onUpdate: () => void }) {
+  const { confirm } = useMobileDialog();
   const [assignments, setAssignments] = useState<Assignment[]>(course.assignments);
   const [name, setName] = useState("");
   const [score, setScore] = useState("");
@@ -191,7 +194,7 @@ function CourseDetail({ course, onBack, onUpdate }: { course: Course; onBack: ()
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm("Delete this assignment?")) return;
+    if (!(await confirm("Delete this assignment?"))) return;
     await gradesApi.deleteAssignment(id).catch(() => {});
     setAssignments((list) => list.filter((a) => a.id !== id));
     onUpdate();

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Brain, MoreVertical, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { flashcardsApi } from "../services/flashcards";
+import { useMobileDialog } from "../store/mobileDialog";
 import type { Flashcard, FlashcardDeck } from "../types";
 import {
   MobileButton, MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput,
@@ -10,6 +11,7 @@ import {
 const DECK_COLORS = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#8b5cf6"];
 
 export default function MobileFlashcards({ onClose }: { onClose?: () => void }) {
+  const { confirm } = useMobileDialog();
   const [decks, setDecks] = useState<(FlashcardDeck & { _count: { cards: number } })[]>([]);
   const [view, setView] = useState<"decks" | "cards" | "review">("decks");
   const [selectedDeck, setSelectedDeck] = useState<FlashcardDeck | null>(null);
@@ -145,7 +147,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
   const deleteDeck = async (deck: FlashcardDeck) => {
     const fullDeck = decks.find((d) => d.id === deck.id);
     const cardCount = fullDeck?._count?.cards ?? 0;
-    if (!window.confirm(`Delete "${deck.name}" and its ${cardCount} cards?`)) return;
+    if (!(await confirm(`Delete "${deck.name}" and its ${cardCount} cards?`))) return;
     await flashcardsApi.deleteDeck(deck.id).catch(() => {});
     await loadDecks();
     setDeckMenu(null);
@@ -180,7 +182,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
   };
 
   const deleteCard = async (id: string) => {
-    if (!window.confirm("Delete this card?")) return;
+    if (!(await confirm("Delete this card?"))) return;
     await flashcardsApi.deleteCard(id).catch(() => {});
     if (selectedDeck) await openDeck(selectedDeck);
     await loadDecks();

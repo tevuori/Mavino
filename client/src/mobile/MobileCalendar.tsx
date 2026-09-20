@@ -5,6 +5,7 @@ import type { CalendarEvent } from "../types";
 import {
   MobileButton, MobileContainer, MobileEmpty, MobileFab, MobileInput, MobileModal, MobileTextarea,
 } from "./MobileUi";
+import { useMobileDialog } from "../store/mobileDialog";
 
 type ViewMode = "agenda" | "day";
 const EVENT_COLORS = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#ef4444"];
@@ -31,6 +32,7 @@ export default function MobileCalendar() {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const { confirm } = useMobileDialog();
 
   // Agenda: 14-day window starting at cursor
   const agendaStart = useMemo(() => startOfDay(cursor), [cursor]);
@@ -107,7 +109,7 @@ export default function MobileCalendar() {
 
   const remove = async () => {
     if (!editing) return;
-    if (!window.confirm("Delete this event?")) return;
+    if (!(await confirm("Delete this event?"))) return;
     await calendarApi.delete(editing.id).catch(() => {});
     setEvents((list) => list.filter((e) => e.id !== editing.id));
     setEditorOpen(false);

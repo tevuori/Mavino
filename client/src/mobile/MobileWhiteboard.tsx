@@ -3,6 +3,7 @@ import { PenTool, Plus, Trash2 } from "lucide-react";
 import { whiteboardsApi } from "../services/whiteboards";
 import type { Whiteboard, WhiteboardSummary } from "../types";
 import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading, MobileTextarea } from "./MobileUi";
+import { useMobileDialog } from "../store/mobileDialog";
 
 type AnyEl = Record<string, unknown> & { type: string };
 
@@ -107,6 +108,7 @@ export default function MobileWhiteboard({ onClose }: { onClose?: () => void }) 
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
+  const { confirm } = useMobileDialog();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -134,7 +136,7 @@ export default function MobileWhiteboard({ onClose }: { onClose?: () => void }) 
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm("Delete this whiteboard?")) return;
+    if (!(await confirm("Delete this whiteboard?"))) return;
     await whiteboardsApi.delete(id).catch(() => {});
     setWhiteboards((list) => list.filter((w) => w.id !== id));
     if (selected?.id === id) setSelected(null);

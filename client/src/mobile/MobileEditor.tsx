@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileText, Plus, Save, Search, Trash2 } from "lucide-react";
 import { filesApi, isTextFile } from "../services/files";
+import { useMobileDialog } from "../store/mobileDialog";
 import type { VFile } from "../types";
 import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading, MobileTextarea } from "./MobileUi";
 
 export default function MobileEditor({ onClose }: { onClose?: () => void }) {
+  const { confirm } = useMobileDialog();
   const [files, setFiles] = useState<VFile[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -60,7 +62,7 @@ export default function MobileEditor({ onClose }: { onClose?: () => void }) {
   };
 
   const remove = async (f: VFile) => {
-    if (!window.confirm(`Delete ${f.name}?`)) return;
+    if (!(await confirm(`Delete ${f.name}?`))) return;
     await filesApi.delete(f.id).catch(() => {});
     setFiles((list) => list.filter((x) => x.id !== f.id));
     if (selected?.id === f.id) setSelected(null);

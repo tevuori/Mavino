@@ -3,6 +3,7 @@ import { BellRing, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { remindersApi } from "../services/reminders";
 import type { Reminder, ReminderInput, ReminderStatus } from "../services/reminders";
 import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading, MobileSelect, MobileTextarea } from "./MobileUi";
+import { useMobileDialog } from "../store/mobileDialog";
 
 type Tab = "pending" | "fired" | "cancelled" | "new";
 
@@ -58,6 +59,7 @@ export default function MobileReminders({ onClose }: { onClose?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [refreshKey, setRefreshKey] = useState(0);
+  const { confirm } = useMobileDialog();
 
   const load = useCallback(async () => {
     if (tab === "new") {
@@ -86,7 +88,7 @@ export default function MobileReminders({ onClose }: { onClose?: () => void }) {
   };
 
   const onDelete = async (id: string) => {
-    if (!window.confirm("Delete this reminder permanently?")) return;
+    if (!(await confirm("Delete this reminder permanently?"))) return;
     await remindersApi.delete(id).catch(() => {});
     setRefreshKey((k) => k + 1);
   };

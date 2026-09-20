@@ -1,6 +1,7 @@
-import { forwardRef, useEffect } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Monitor, Plus, X } from "lucide-react";
 import type { ReactNode, InputHTMLAttributes, TextareaHTMLAttributes, SelectHTMLAttributes } from "react";
+import { useMobileDialog } from "../store/mobileDialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -375,6 +376,77 @@ export function MobileDesktopNote({ text }: { text: string }) {
     <div className="mb-4 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent/[0.07] px-4 py-3 text-xs leading-5 text-ink-muted">
       <MobileIconChip icon={<Monitor size={14} />} size="sm" />
       <span className="pt-1.5">{text}</span>
+    </div>
+  );
+}
+
+/**
+ * Global renderer for imperative confirm/prompt dialogs on mobile.
+ * Mount once in MobileShell. Uses the `useMobileDialog` Zustand store.
+ */
+export function MobileDialogRenderer() {
+  const { dialog, _resolve, _dismiss } = useMobileDialog();
+  const [inputValue, setInputValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (dialog.type === "prompt") {
+      setInputValue(dialog.defaultValue ?? "");
+      // Wait for the DOM to paint, then focus
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [dialog.type, dialog.defaultValue]);
+
+  if (!dialog.type) return null;
+
+  const onConfirm = () => {
+    if (dialog.type === "prompt") _resolve(inputValue);
+    else _resolve(true);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[19000] flex items-end justify-center bg-black/60" onClick={_dismiss}>
+      <div
+        className="w-full max-w-md rounded-t-3xl border border-edge bg-surface p-5 pt-3 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-4 h-1.5 w-10 shrink-0 rounded-full bg-surface-3" aria-hidden />
+        <p className="mb-4 text-sm leading-6 text-ink">{dialog.message}</p>
+        {dialog.type === "prompt" && (
+          <input
+            ref={inputRef}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onConfirm();
+              }
+            }}
+            className="mb-4 w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15"
+          />
+        )}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={_dismiss}
+            className="flex-1 rounded-2xl bg-surface-2 py-3 text-sm font-medium text-ink-muted active:bg-surface-3"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className={`flex-1 rounded-2xl py-3 text-sm font-semibold active:scale-[.98] ${
+              dialog.type === "confirm"
+                ? "bg-rose-500/15 text-rose-400 active:bg-rose-500/25"
+                : "brand-gradient text-white shadow-md shadow-accent/30"
+            }`}
+          >
+            {dialog.type === "confirm" ? "Delete" : "OK"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

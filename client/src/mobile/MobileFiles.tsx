@@ -13,6 +13,7 @@ import type { MobileToolPayload } from "./MobileToolPage";
 import {
   MobileButton, MobileContainer, MobileEmpty, MobileFab, MobileInput, MobileLoading, MobileModal,
 } from "./MobileUi";
+import { useMobileDialog } from "../store/mobileDialog";
 
 const EXT_EMOJI: Record<string, string> = {
   image: "🖼️", pdf: "📕", audio: "🎵", video: "🎬", text: "📝", archive: "🗜️", code: "💻", default: "📄",
@@ -57,6 +58,7 @@ export default function MobileFiles({
   const [previewImg, setPreviewImg] = useState<VFile | null>(null);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const { confirm } = useMobileDialog();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,7 +114,7 @@ export default function MobileFiles({
   };
 
   const remove = async (f: VFile) => {
-    if (!window.confirm(`Delete ${f.name}?`)) return;
+    if (!(await confirm(`Delete ${f.name}?`))) return;
     await filesApi.delete(f.id).catch(() => {});
     setFiles((list) => list.filter((x) => x.id !== f.id));
     setFileMenu(null);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Bell, BellRing, MessageSquare, Plus, RefreshCw, Send, Trash2 } from "lucide-react";
 import { ntfyApi, type NtfyConfigInput, type NtfyCronJob, type NtfyMessage, type NtfyStatus } from "../services/ntfy";
 import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading, MobileSelect, MobileTextarea } from "./MobileUi";
+import { useMobileDialog } from "../store/mobileDialog";
 
 type Tab = "status" | "messages" | "send" | "cron";
 
@@ -111,6 +112,7 @@ function NtfySend({ onSent }: { onSent: () => void }) {
 function NtfyCron() {
   const [jobs, setJobs] = useState<NtfyCronJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const { confirm } = useMobileDialog();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,7 +133,7 @@ function NtfyCron() {
   };
 
   const remove = async (job: NtfyCronJob) => {
-    if (!window.confirm(`Delete ${job.name}?`)) return;
+    if (!(await confirm(`Delete ${job.name}?`))) return;
     await ntfyApi.deleteCronJob(job.id).catch(() => {});
     void load();
   };
