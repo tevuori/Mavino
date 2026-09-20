@@ -29,7 +29,13 @@
 import type { LlmModel } from "multi-llm-ts";
 import prisma from "../db/client";
 import { generateJson } from "./study/llm-json";
-import type { ConceptGraphData, ConceptNode, ConceptEdge } from "./study/graph";
+import {
+  getOrBuildGraph,
+  type CachedStudySource,
+  type ConceptGraphData,
+  type ConceptNode,
+  type ConceptEdge,
+} from "./study/graph";
 
 // ----- Atlas data shape (stored as JSON in AtlasGraph.data) -----
 
@@ -224,6 +230,17 @@ export async function isAtlasStale(userId: string): Promise<boolean> {
     if (!snap) return true;
     if (snap !== g.updatedAt.toISOString()) return true;
   }
+  // Atlas now auto-builds ConceptGraphs for un-graphed StudySources, so any
+  // new or updated source (e.g. uploaded file, refreshed text cache) should
+  // prompt a rebuild.
+  const latestSource = await prisma.studySource.findFirst({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+    select: { updatedAt: true },
+  });
+  if (latestSource && latestSource.updatedAt.getTime() > row.updatedAt.getTime()) {
+    return true;
+  }
   return false;
 }
 
@@ -299,6 +316,52 @@ export async function buildAtlasData(userId: string, model: LlmModel): Promise<A
     where: { userId, status: "ready" },
     orderBy: { updatedAt: "desc" },
   });
+
+  // 1b. Auto-build ConceptGraphs for any StudySources that aren't already part
+  // of a ready ConceptGraph, so Atlas can include every file/note/URL the user
+  // has in their Study Hub. These cached graphs are reused by Study Hub too.
+  const studySources = await prisma.studySource.findMany({
+    where: { userId },
+    select: { id: true, name: true, kind: true, refId: true, textCache: true },
+  });
+  const graphedSourceIds = new Set<string>();
+  for (const row of graphRows) {
+    try {
+      const ids = JSON.parse(row.sourceIds) as string[];
+      ids.forEach((id) => graphedSourceIds.add(id));
+    } catch {
+      // ignore malformed sourceIds
+    }
+  }
+  const ungraphedSources = studySources.filter(
+    (s) => !graphedSourceIds.has(s.id) && s.textCache.trim().length > 0
+  );
+  for (const src of ungraphedSources) {
+    try {
+      const cached: CachedStudySource = {
+        id: src.id,
+        name: src.name,
+        kind: src.kind as CachedStudySource["kind"],
+        refId: src.refId,
+        textCache: src.textCache,
+      };
+      const built = await getOrBuildGraph(userId, model, [cached]);
+      graphRows.push({
+        id: built.id,
+        name: built.name,
+        sourceIds: JSON.stringify([src.id]),
+        data: JSON.stringify(built.data),
+        status: "ready",
+        createdAt: built.createdAt,
+        updatedAt: built.updatedAt,
+      } as (typeof graphRows)[number]);
+    } catch (e) {
+      console.warn(
+        `Atlas: failed to build graph for source ${src.id} (${src.name}):`,
+        e instanceof Error ? e.message : e
+      );
+    }
+  }
 
   const graphs: { id: string; name: string; data: ConceptGraphData }[] = [];
   for (const row of graphRows) {

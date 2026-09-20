@@ -6,6 +6,7 @@ import MobileCalendar from "../../mobile/MobileCalendar";
 import MobileAthena from "../../mobile/MobileAthena";
 import MobileLauncher, { type MobileTool } from "../../mobile/MobileLauncher";
 import MobileToolPage, { type MobileToolPayload } from "../../mobile/MobileToolPage";
+import MobileOnboarding from "../../mobile/MobileOnboarding";
 import { useAuth } from "../../store/auth";
 import { useSettings } from "../../store/settings";
 import AppLogo from "../AppLogo";
@@ -26,6 +27,7 @@ export default function MobileShell() {
   const [tool, setTool] = useState<MobileTool | null>(null);
   const [toolPayload, setToolPayload] = useState<MobileToolPayload | null>(null);
   const { user, logout } = useAuth();
+  const hasOnboarded = useSettings((s) => s.hasOnboarded);
   const setHasOnboarded = useSettings((s) => s.setHasOnboarded);
   const isDemo = user?.role === "DEMO";
 
@@ -63,6 +65,11 @@ export default function MobileShell() {
   };
 
   const activeIndex = tool ? -1 : ROUTE_ORDER.indexOf(route);
+
+  // Show mobile onboarding for first-time users (demo users skip it).
+  if (!hasOnboarded && !isDemo) {
+    return <MobileOnboarding />;
+  }
 
   return (
     <main className="mobile-shell relative flex h-full w-full overflow-hidden bg-surface text-ink" aria-label="Mavino mobile">
