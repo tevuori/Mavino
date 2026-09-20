@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bold, Code, Folder, GraduationCap, Heading, Image as ImageIcon, Italic, Link2,
-  List, MoreVertical, Pin, Plus, Search, Sparkles, Tag, Trash2, Download, FileText,
+  List, Loader2, MoreVertical, Pin, Plus, Search, Sparkles, Tag, Trash2, Download, FileText,
 } from "lucide-react";
 import { notesApi } from "../services/notes";
 import { filesApi } from "../services/files";
@@ -10,6 +10,7 @@ import type { MobileTool } from "./MobileLauncher";
 import type { MobileToolPayload } from "./MobileToolPage";
 import { useMobileDialog } from "../store/mobileDialog";
 import { useMobileToast } from "../store/mobileToast";
+import { usePullToRefresh } from "./usePullToRefresh";
 import {
   MobileButton, MobileCard, MobileChip, MobileContainer, MobileEmpty, MobileFab,
   MobileHeader, MobileInput, MobileLoading, MobileMarkdown, MobileModal, MobileTextarea,
@@ -40,6 +41,7 @@ export default function MobileNotes({
   const [tags, setTags] = useState("");
   const { confirm, prompt } = useMobileDialog();
   const toast = useMobileToast((s) => s.show);
+  const loadNotesRef = useRef<() => Promise<void>>();
 
   // Folder management
   const [folderMenuOpen, setFolderMenuOpen] = useState<NoteFolder | null>(null);
@@ -71,6 +73,11 @@ export default function MobileNotes({
     setNotes(list);
     setLoading(false);
   }, [query, folderId]);
+
+  loadNotesRef.current = loadNotes;
+  const { pullDist, refreshing, touchHandlers, pullIndicatorStyle } = usePullToRefresh(
+    useCallback(async () => { await loadNotesRef.current?.(); }, []),
+  );
 
   useEffect(() => {
     void loadFolders();
@@ -442,7 +449,10 @@ export default function MobileNotes({
 
   // ===== List view =====
   return (
-    <MobileContainer>
+    <MobileContainer {...touchHandlers}>
+      <div className="flex items-center justify-center overflow-hidden transition-[height] duration-200" style={pullIndicatorStyle}>
+        <Loader2 size={20} className={`text-accent ${refreshing || pullDist > 8 ? "animate-spin" : ""}`} />
+      </div>
       <MobileHeader
         title="Notes"
         subtitle="Capture ideas"

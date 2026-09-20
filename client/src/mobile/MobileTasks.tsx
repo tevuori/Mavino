@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Circle, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, Circle, Loader2, Plus, Trash2 } from "lucide-react";
 import { tasksApi, STATUS_LABELS } from "../services/tasks";
 import { taskWorkspacesApi } from "../services/task-workspaces";
 import type { Task, TaskPriority, TaskStatus, TaskWorkspace } from "../types";
@@ -9,6 +9,7 @@ import {
 } from "./MobileUi";
 import { useMobileDialog } from "../store/mobileDialog";
 import { useMobileToast } from "../store/mobileToast";
+import { usePullToRefresh } from "./usePullToRefresh";
 
 const priorityStyle: Record<TaskPriority, string> = { HIGH: "bg-rose-400", MEDIUM: "bg-amber-400", LOW: "bg-sky-400" };
 const priorityLabel: Record<TaskPriority, string> = { HIGH: "High", MEDIUM: "Medium", LOW: "Low" };
@@ -38,6 +39,7 @@ export default function MobileTasks() {
   const [savingEdit, setSavingEdit] = useState(false);
   const { confirm } = useMobileDialog();
   const toast = useMobileToast((s) => s.show);
+  const loadRef = useRef<() => Promise<void>>();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,6 +56,11 @@ export default function MobileTasks() {
     }
     setLoading(false);
   }, [activeWsId]);
+
+  loadRef.current = load;
+  const { pullDist, refreshing, touchHandlers, pullIndicatorStyle } = usePullToRefresh(
+    useCallback(async () => { await loadRef.current?.(); }, []),
+  );
 
   useEffect(() => { void load(); }, [load]);
 
@@ -131,7 +138,10 @@ export default function MobileTasks() {
   };
 
   return (
-    <MobileContainer>
+    <MobileContainer {...touchHandlers}>
+      <div className="flex items-center justify-center overflow-hidden transition-[height] duration-200" style={pullIndicatorStyle}>
+        <Loader2 size={20} className={`text-accent ${refreshing || pullDist > 8 ? "animate-spin" : ""}`} />
+      </div>
       <header className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-accent">Get it done</p>

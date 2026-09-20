@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Clock, MapPin, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Clock, Loader2, MapPin, Plus, Trash2 } from "lucide-react";
 import { calendarApi } from "../services/calendar";
 import type { CalendarEvent } from "../types";
 import {
@@ -7,8 +7,9 @@ import {
 } from "./MobileUi";
 import { useMobileDialog } from "../store/mobileDialog";
 import { useMobileToast } from "../store/mobileToast";
+import { usePullToRefresh } from "./usePullToRefresh";
 
-type ViewMode = "agenda" | "day";
+type ViewMode = "agenda" | "day" | "month";
 const EVENT_COLORS = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#ef4444"];
 
 function startOfDay(d: Date) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
@@ -35,6 +36,7 @@ export default function MobileCalendar() {
   const [saving, setSaving] = useState(false);
   const { confirm } = useMobileDialog();
   const toast = useMobileToast((s) => s.show);
+  const loadRef = useRef<() => Promise<void>>();
 
   // Agenda: 14-day window starting at cursor
   const agendaStart = useMemo(() => startOfDay(cursor), [cursor]);
@@ -44,14 +46,25 @@ export default function MobileCalendar() {
   const dayStart = useMemo(() => startOfDay(cursor), [cursor]);
   const dayEnd = useMemo(() => addDays(dayStart, 1), [dayStart]);
 
+  // Month view bounds
+  const monthStart = useMemo(() => new Date(cursor.getFullYear(), cursor.getMonth(), 1), [cursor]);
+  const monthEnd = useMemo(() => new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999), [cursor]);
+
   const load = useCallback(async () => {
     setLoading(true);
-    const from = view === "agenda" ? agendaStart.toISOString() : dayStart.toISOString();
-    const to = view === "agenda" ? agendaEnd.toISOString() : dayEnd.toISOString();
+    let from: string, to: string;
+    if (view === "agenda") { from = agendaStart.toISOString(); to = agendaEnd.toISOString(); }
+    else if (view === "month") { from = monthStart.toISOString(); to = monthEnd.toISOString(); }
+    else { from = dayStart.toISOString(); to = dayEnd.toISOString(); }
     const result = await calendarApi.feed(from, to).catch(() => null);
     setEvents((result?.events ?? []).sort((a, b) => +new Date(a.start) - +new Date(b.start)));
     setLoading(false);
-  }, [view, agendaStart, agendaEnd, dayStart, dayEnd]);
+  }, [view, agendaStart, agendaEnd, dayStart, dayEnd, monthStart, monthEnd]);
+
+  loadRef.current = load;
+  const { pullDist, refreshing, touchHandlers, pullIndicatorStyle } = usePullToRefresh(
+    useCallback(async () => { await loadRef.current?.(); }, []),
+  );
 
   useEffect(() => { void load(); }, [load]);
 
@@ -131,7 +144,10 @@ export default function MobileCalendar() {
   const dayEvents = useMemo(() => events.filter((e) => sameDay(new Date(e.start), dayStart)), [events, dayStart]);
 
   return (
-    <MobileContainer>
+    <MobileContainer {...touchHandlers}>
+      <div className="flex items-center justify-center overflow-hidden transition-[height] duration-200" style={pullIndicatorStyle}>
+        <Loader2 size={20} className={`text-accent ${refreshing || pullDist > 8 ? "animate-spin" : ""}`} />
+      </div>
       <header className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-accent">Keep the day clear</p>
@@ -143,22 +159,25 @@ export default function MobileCalendar() {
       {/* View toggle */}
       <div className="mb-4 flex justify-center">
         <div className="inline-flex rounded-full border border-edge bg-surface-2 p-1">
-          <button type="button" onClick={() => setView("agenda")} className={`rounded-full px-5 py-1.5 text-sm font-medium transition ${view === "agenda" ? "brand-gradient text-white" : "text-ink-muted"}`}>Agenda</button>
-          <button type="button" onClick={() => setView("day")} className={`rounded-full px-5 py-1.5 text-sm font-medium transition ${view === "day" ? "brand-gradient text-white" : "text-ink-muted"}`}>Day</button>
+          <button type="button" onClick={() => setView("agenda")} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${view === "agenda" ? "brand-gradient text-white" : "text-ink-muted"}`}>Agenda</button>
+          <button type="button" onClick={() => setView("day")} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${view === "day" ? "brand-gradient text-white" : "text-ink-muted"}`}>Day</button>
+          <button type="button" onClick={() => setView("month")} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${view === "month" ? "brand-gradient text-white" : "text-ink-muted"}`}>Month</button>
         </div>
       </div>
 
       {/* Date navigation */}
       <div className="mb-5 flex items-center justify-between rounded-2xl border border-edge bg-surface-2 p-2">
-        <button type="button" onClick={() => setCursor((d) => addDays(d, view === "agenda" ? -14 : -1))} className="flex h-9 w-9 items-center justify-center rounded-xl text-ink active:bg-surface-3" aria-label="Previous">
+        <button type="button" onClick={() => setCursor((d) => view === "agenda" ? addDays(d, -14) : view === "month" ? new Date(d.getFullYear(), d.getMonth() - 1, 1) : addDays(d, -1))} className="flex h-9 w-9 items-center justify-center rounded-xl text-ink active:bg-surface-3" aria-label="Previous">
           <ChevronLeft size={20} />
         </button>
         <button type="button" onClick={() => setCursor(new Date())} className="rounded-xl px-4 py-2 text-sm font-semibold text-ink">
           {view === "agenda"
             ? `${agendaStart.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${addDays(agendaStart, 13).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+            : view === "month"
+            ? cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" })
             : cursor.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
         </button>
-        <button type="button" onClick={() => setCursor((d) => addDays(d, view === "agenda" ? 14 : 1))} className="flex h-9 w-9 items-center justify-center rounded-xl text-ink active:bg-surface-3" aria-label="Next">
+        <button type="button" onClick={() => setCursor((d) => view === "agenda" ? addDays(d, 14) : view === "month" ? new Date(d.getFullYear(), d.getMonth() + 1, 1) : addDays(d, 1))} className="flex h-9 w-9 items-center justify-center rounded-xl text-ink active:bg-surface-3" aria-label="Next">
           <ChevronRight size={20} />
         </button>
       </div>
@@ -184,6 +203,13 @@ export default function MobileCalendar() {
         ) : (
           <MobileEmpty text="No events in the next two weeks. Tap + to add one." />
         )
+      ) : view === "month" ? (
+        <MonthGrid
+          year={cursor.getFullYear()}
+          month={cursor.getMonth()}
+          events={events}
+          onSelectDay={(d) => { setCursor(d); setView("day"); }}
+        />
       ) : dayEvents.length ? (
         <div className="space-y-2">
           {dayEvents.map((event) => (
@@ -263,5 +289,81 @@ function EventCard({ event, onClick }: { event: CalendarEvent; onClick: () => vo
         )}
       </div>
     </button>
+  );
+}
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function MonthGrid({
+  year,
+  month,
+  events,
+  onSelectDay,
+}: {
+  year: number;
+  month: number;
+  events: CalendarEvent[];
+  onSelectDay: (d: Date) => void;
+}) {
+  const today = new Date();
+  const isToday = (d: Date) => sameDay(d, today);
+
+  // Build the grid: weeks start on Monday
+  const firstOfMonth = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  // 0=Sun,1=Mon...6=Sat → shift so Monday=0
+  const startDow = (firstOfMonth.getDay() + 6) % 7;
+
+  // Map events by day key
+  const eventsByDay = new Map<string, CalendarEvent[]>();
+  for (const ev of events) {
+    const key = fmtKey(new Date(ev.start));
+    const list = eventsByDay.get(key);
+    if (list) list.push(ev);
+    else eventsByDay.set(key, [ev]);
+  }
+
+  // Build 6-week grid (42 cells)
+  const cells: (Date | null)[] = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+  while (cells.length < 42) cells.push(null);
+
+  return (
+    <div className="rounded-2xl border border-edge bg-surface-2 p-3">
+      <div className="mb-2 grid grid-cols-7 text-center text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+        {WEEKDAYS.map((d) => <span key={d}>{d}</span>)}
+      </div>
+      <div className="grid grid-cols-7 gap-px">
+        {cells.map((date, i) => {
+          if (!date) return <div key={`empty-${i}`} className="aspect-square" />;
+          const dayEvts = eventsByDay.get(fmtKey(date)) ?? [];
+          const isT = isToday(date);
+          return (
+            <button
+              key={date.getDate()}
+              type="button"
+              onClick={() => onSelectDay(date)}
+              className={`flex aspect-square flex-col items-center justify-center rounded-xl text-sm transition active:bg-surface-3 ${
+                isT ? "bg-accent font-bold text-white" : "text-ink hover:bg-surface-3"
+              }`}
+            >
+              {date.getDate()}
+              {dayEvts.length > 0 && (
+                <div className="mt-0.5 flex gap-0.5">
+                  {dayEvts.slice(0, 3).map((ev, j) => (
+                    <span
+                      key={j}
+                      className="h-1 w-1 rounded-full"
+                      style={{ backgroundColor: ev.color || "#818cf8" }}
+                    />
+                  ))}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

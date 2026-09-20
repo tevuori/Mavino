@@ -10,6 +10,8 @@ import type { MobileTool } from "./MobileLauncher";
 import type { MobileToolPayload } from "./MobileToolPage";
 import { MobileCard, MobileIconChip } from "./MobileUi";
 import { NotificationBell } from "./MobileNotifications";
+import MobileSearch from "./MobileSearch";
+import MobileInstallBanner from "./MobileInstallBanner";
 
 export default function MobileHome({
   onNavigate,
@@ -103,6 +105,10 @@ export default function MobileHome({
           <div className="brand-gradient flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-lg shadow-accent/30">{(firstName.slice(0, 1) || "A").toUpperCase()}</div>
         </div>
       </header>
+
+      <MobileSearch onOpenTool={onOpenTool} />
+
+      <MobileInstallBanner />
 
       <section className="brand-border-glow mb-6 rounded-3xl border border-transparent bg-surface-2 p-5 shadow-[0_8px_28px_-12px_rgb(var(--brand-violet)/0.45)]">
         <div className="flex items-start justify-between gap-4">

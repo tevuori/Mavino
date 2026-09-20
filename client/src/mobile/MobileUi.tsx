@@ -8,8 +8,8 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 
-export function MobileContainer({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`mx-auto min-w-0 max-w-md px-5 pb-7 pt-[max(1.5rem,env(safe-area-inset-top))] ${className}`}>{children}</div>;
+export function MobileContainer({ children, className = "", ...rest }: { children: ReactNode; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={`mx-auto min-w-0 max-w-md px-5 pb-7 pt-[max(1.5rem,env(safe-area-inset-top))] ${className}`} {...rest}>{children}</div>;
 }
 
 export function MobileHeader({
