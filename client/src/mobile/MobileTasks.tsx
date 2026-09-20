@@ -214,9 +214,9 @@ export default function MobileTasks() {
             </button>
             <button type="button" onClick={() => openEditor(task)} className="min-w-0 flex-1 text-left">
               <p className={`truncate text-sm font-semibold ${task.status === "DONE" ? "text-ink-muted line-through" : "text-ink"}`}>{task.title}</p>
-              <p className="mt-1 text-xs text-ink-muted">
-                {task.dueDate ? new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "No deadline"}
-                {task.description ? <span className="ml-1 truncate">· {task.description}</span> : null}
+              <p className="mt-1 flex min-w-0 text-xs text-ink-muted">
+                <span className="shrink-0">{task.dueDate ? new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "No deadline"}</span>
+                {task.description ? <span className="ml-1 min-w-0 truncate">· {task.description}</span> : null}
               </p>
             </button>
             <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${priorityStyle[task.priority]}`} />
