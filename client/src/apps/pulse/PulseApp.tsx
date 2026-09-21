@@ -30,6 +30,7 @@ import {
 } from "../../services/pulse";
 import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
+import { confirmDialog } from "../../store/mobileDialog";
 
 // ----- helpers -----
 
@@ -312,12 +313,12 @@ export default function PulseApp({ win: _win }: { win: WindowInstance }) {
   };
 
   const rebuild = async () => {
-    if (state?.data && !confirm("Rebuild your Pulse forecast? This re-fits all forgetting curves from your latest review history.")) return;
+    if (state?.data && !(await confirmDialog("Rebuild your Pulse forecast? This re-fits all forgetting curves from your latest review history.", { confirmLabel: "Rebuild" }))) return;
     await build();
   };
 
   const deleteForecast = async () => {
-    if (!confirm("Delete your Pulse forecast? This cannot be undone.")) return;
+    if (!(await confirmDialog("Delete your Pulse forecast? This cannot be undone.", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await pulseApi.delete();
       setState(null);

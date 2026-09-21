@@ -15,6 +15,7 @@ import { microsoftApi } from "../../services/microsoft";
 import { apiUrl } from "../../services/api";
 import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
+import { alertDialog, confirmDialog } from "../../store/mobileDialog";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
 import type { CalendarEvent, Task, Course } from "../../types";
 import { linksApi } from "../../services/links";
@@ -352,19 +353,19 @@ export default function CalendarApp({ win }: { win: WindowInstance }) {
       setEditing(null);
       refresh();
     } catch (e) {
-      alert((e as Error).message);
+      void alertDialog((e as Error).message);
     }
   };
 
   const deleteEvent = async (id: string) => {
-    if (!confirm("Delete this event?")) return;
+    if (!(await confirmDialog("Delete this event?", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await calendarApi.delete(id);
       setShowEditor(false);
       setEditing(null);
       refresh();
     } catch (e) {
-      alert((e as Error).message);
+      void alertDialog((e as Error).message);
     }
   };
 
@@ -372,10 +373,10 @@ export default function CalendarApp({ win }: { win: WindowInstance }) {
     const text = await file.text();
     try {
       const { imported } = await calendarApi.importIcs(text);
-      alert(`Imported ${imported} event(s).`);
+      void alertDialog(`Imported ${imported} event(s).`);
       refresh();
     } catch (e) {
-      alert(`Import failed: ${(e as Error).message}`);
+      void alertDialog(`Import failed: ${(e as Error).message}`);
     }
   };
 
@@ -451,7 +452,7 @@ export default function CalendarApp({ win }: { win: WindowInstance }) {
       });
       refresh();
     } catch (err) {
-      alert((err as Error).message);
+      void alertDialog((err as Error).message);
     }
   };
 

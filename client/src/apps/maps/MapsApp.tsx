@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import type { WindowInstance } from "../../store/windows";
 import { useMaps, type MapCommand, type MapPoi, type MapWaypoint } from "../../store/maps";
+import { confirmDialog, promptDialog } from "../../store/mobileDialog";
 import {
   mapyApi,
   type GeocodeItem,
@@ -714,7 +715,7 @@ export default function MapsApp({ win }: { win: WindowInstance }) {
       setError("No route to save. Plan a route first.");
       return;
     }
-    const name = prompt("Trip name:", `Trip ${new Date().toLocaleDateString()}`);
+    const name = await promptDialog("Trip name:", `Trip ${new Date().toLocaleDateString()}`);
     if (!name) return;
     try {
       await mapyApi.saveTrip({
@@ -741,7 +742,7 @@ export default function MapsApp({ win }: { win: WindowInstance }) {
   };
 
   const deleteTrip = async (id: string) => {
-    if (!confirm("Delete this trip?")) return;
+    if (!(await confirmDialog("Delete this trip?", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await mapyApi.deleteTrip(id);
       setTrips((prev) => prev.filter((t) => t.id !== id));

@@ -20,6 +20,7 @@ import LinkDragHandle from "../links/LinkDragHandle";
 import LinkBadge from "../links/LinkBadge";
 import { useLinkDrop } from "../links/useLinkDrop";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
+import { confirmDialog } from "../../store/mobileDialog";
 
 const WS_COLORS = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#8b5cf6", "#ef4444"];
 const ACTIVE_WS_KEY = "athena.activeTaskWorkspace";
@@ -217,7 +218,7 @@ export default function TasksApp(_: { win: WindowInstance }) {
   const deleteWs = async (ws: TaskWorkspace) => {
     const wsWithCount = workspaces.find((w) => w.id === ws.id);
     const count = wsWithCount?.taskCount ?? 0;
-    if (!confirm(`Delete workspace "${ws.name}" and all ${count} task${count === 1 ? "" : "s"} in it?`)) return;
+    if (!(await confirmDialog(`Delete workspace "${ws.name}" and all ${count} task${count === 1 ? "" : "s"} in it?`, { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await taskWorkspacesApi.delete(ws.id);
       if (activeWsId === ws.id) selectWs(null);

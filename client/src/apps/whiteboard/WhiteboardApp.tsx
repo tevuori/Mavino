@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, ArrowLeft, Pencil, Trash2, Loader2, AlertCircle } from "lucide-react";
 import type { WindowInstance } from "../../store/windows";
 import { useWindows } from "../../store/windows";
+import { confirmDialog, promptDialog } from "../../store/mobileDialog";
 import { whiteboardsApi } from "../../services/whiteboards";
 import type { WhiteboardSummary } from "../../types";
 import type { WhiteboardElement, Tool, ImageEl } from "./elements";
@@ -103,7 +104,7 @@ export default function WhiteboardApp({ win }: { win: WindowInstance }) {
   }, []);
 
   const deleteBoard = useCallback(async (id: string) => {
-    if (!confirm("Delete this whiteboard? This cannot be undone.")) return;
+    if (!(await confirmDialog("Delete this whiteboard? This cannot be undone.", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await whiteboardsApi.delete(id);
       setBoards((b) => b.filter((x) => x.id !== id));
@@ -153,9 +154,9 @@ export default function WhiteboardApp({ win }: { win: WindowInstance }) {
     });
   }, [elements]);
 
-  const clearCanvas = useCallback(() => {
+  const clearCanvas = useCallback(async () => {
     if (elements.length === 0) return;
-    if (!confirm("Clear the entire canvas?")) return;
+    if (!(await confirmDialog("Clear the entire canvas?", { danger: true, confirmLabel: "Clear" }))) return;
     commit(elements, []);
     setSelectedId(null);
   }, [elements, commit]);
@@ -449,9 +450,9 @@ function BoardList({
                 </div>
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      const name = prompt("Rename whiteboard:", b.name);
+                      const name = await promptDialog("Rename whiteboard:", b.name);
                       if (name && name.trim()) onRename(b.id, name.trim());
                     }}
                     className="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700"

@@ -19,6 +19,7 @@ import { filesApi } from "../../services/files";
 import { getToken } from "../../services/api";
 import { linksApi } from "../../services/links";
 import { useSettings } from "../../store/settings";
+import { confirmDialog, promptDialog } from "../../store/mobileDialog";
 import { useWindows } from "../../store/windows";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
 import type { Note, NoteFolder } from "../../types";
@@ -177,7 +178,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
   };
 
   const createFolder = async () => {
-    const name = prompt("Folder name:");
+    const name = await promptDialog("Folder name:");
     if (!name) return;
     try {
       const { folder } = await notesApi.createFolder({ name, parentId: selectedFolder });
@@ -209,7 +210,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
 
   const deleteFolder = async (folder: NoteFolder) => {
     setFolderMenu(null);
-    if (!confirm(`Delete folder "${folder.name}"? Notes inside will be moved to All Notes.`)) return;
+    if (!(await confirmDialog(`Delete folder "${folder.name}"? Notes inside will be moved to All Notes.`, { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await notesApi.deleteFolder(folder.id);
       setFolders((prev) => prev.filter((f) => f.id !== folder.id));
@@ -342,7 +343,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
   }, []);
 
   const deleteNote = async (id: string) => {
-    if (!confirm("Delete this note?")) return;
+    if (!(await confirmDialog("Delete this note?", { danger: true, confirmLabel: "Delete" }))) return;
     const timer = saveTimersRef.current.get(id);
     if (timer) {
       clearTimeout(timer);

@@ -6,6 +6,7 @@ import { ntfyApi } from "../../../services/ntfy";
 import { mapyApi } from "../../../services/maps";
 import { useWindows } from "../../../store/windows";
 import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass } from "../ui";
+import { confirmDialog } from "../../../store/mobileDialog";
 
 export default function IntegrationsSection() {
   return (
@@ -103,7 +104,7 @@ function SpotifyCard() {
   };
 
   const disconnect = async () => {
-    if (!confirm("Remove your stored Spotify credentials?")) return;
+    if (!(await confirmDialog("Remove your stored Spotify credentials?", { danger: true, confirmLabel: "Remove" }))) return;
     setBusy(true);
     setErr(false);
     setMsg(null);
@@ -278,7 +279,7 @@ function MicrosoftCard() {
   };
 
   const disconnect = async () => {
-    if (!confirm("Remove your stored Microsoft credentials?")) return;
+    if (!(await confirmDialog("Remove your stored Microsoft credentials?", { danger: true, confirmLabel: "Remove" }))) return;
     setBusy(true);
     setErr(false);
     setMsg(null);
@@ -496,7 +497,7 @@ function MapyCard() {
   };
 
   const disconnect = async () => {
-    if (!confirm("Remove your stored Mapy.cz API key?")) return;
+    if (!(await confirmDialog("Remove your stored Mapy.cz API key?", { danger: true, confirmLabel: "Remove" }))) return;
     setBusy(true);
     setErr(false);
     setMsg(null);

@@ -5,6 +5,7 @@ import { getAthenaInstructions, setAthenaInstructions } from "../../../services/
 import { ttsApi, type TtsConfig } from "../../../services/tts";
 import { useAuth } from "../../../store/auth";
 import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass } from "../ui";
+import { confirmDialog } from "../../../store/mobileDialog";
 
 export default function AthenaSection() {
   return (
@@ -143,7 +144,7 @@ function TtsConfigCard() {
   };
 
   const remove = async () => {
-    if (!confirm("Remove your stored ElevenLabs API key?")) return;
+    if (!(await confirmDialog("Remove your stored ElevenLabs API key?", { danger: true, confirmLabel: "Remove" }))) return;
     setBusy(true);
     setErr(false);
     setMsg(null);
@@ -292,7 +293,7 @@ function LlmConfigCard() {
   };
 
   const remove = async () => {
-    if (!confirm("Remove your stored AI API key?")) return;
+    if (!(await confirmDialog("Remove your stored AI API key?", { danger: true, confirmLabel: "Remove" }))) return;
     setBusy(true);
     setErr(false);
     setMsg(null);

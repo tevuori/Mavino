@@ -16,6 +16,7 @@ import type { VFile, VFolder, FolderTreeNode, StorageInfo } from "../../types";
 import type { WindowInstance } from "../../store/windows";
 import { useWindows } from "../../store/windows";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
+import { alertDialog, confirmDialog, promptDialog } from "../../store/mobileDialog";
 import ContextMenu, { type MenuItem } from "../../shell/ContextMenu";
 import CollapsibleSidebar from "../../wm/CollapsibleSidebar";
 import { setLinkPayload } from "../links/linkDnd";
@@ -381,7 +382,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
 
   // ---- File operations ----
   const createFolder = useCallback(async (parentId?: string | null) => {
-    const name = prompt("Folder name:");
+    const name = await promptDialog("Folder name:");
     if (!name) return;
     try {
       const { folder } = await filesApi.createFolder({ name, parentId: parentId ?? currentFolder });
@@ -390,12 +391,12 @@ export default function FilesApp(_: { win: WindowInstance }) {
       void loadTree();
     } catch (e) {
       console.error(e);
-      alert("Failed to create folder");
+      void alertDialog("Failed to create folder");
     }
   }, [currentFolder, loadTree]);
 
   const createTextFile = useCallback(async () => {
-    const name = prompt("File name (e.g. notes.txt):", "untitled.txt");
+    const name = await promptDialog("File name (e.g. notes.txt):", "untitled.txt");
     if (!name) return;
     try {
       const { file } = await filesApi.createText({ name, folderId: currentFolder, content: "" });
@@ -410,7 +411,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       });
     } catch (e) {
       console.error(e);
-      alert("Failed to create file");
+      void alertDialog("Failed to create file");
     }
   }, [currentFolder, openWindow, loadStorage]);
 
@@ -423,7 +424,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
         setIntelligentStaged(staged);
       } catch (err) {
         console.error(err);
-        alert("Upload failed");
+        void alertDialog("Upload failed");
       } finally {
         setUploading(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -443,7 +444,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       void loadTree();
     } catch (err) {
       console.error(err);
-      alert("Upload failed");
+      void alertDialog("Upload failed");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -477,7 +478,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error(e);
-      alert("Failed to create zip");
+      void alertDialog("Failed to create zip");
     }
   }, []);
 
@@ -493,12 +494,12 @@ export default function FilesApp(_: { win: WindowInstance }) {
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error(e);
-      alert("Failed to create zip");
+      void alertDialog("Failed to create zip");
     }
   }, []);
 
   const deleteFile = useCallback(async (file: VFile) => {
-    if (!confirm(`Delete "${file.name}"?`)) return;
+    if (!(await confirmDialog(`Delete "${file.name}"?`, { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await filesApi.delete(file.id);
       setFiles((prev) => prev.filter((f) => f.id !== file.id));
@@ -512,7 +513,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
   }, [preview, loadStorage, loadTree]);
 
   const deleteFolder = useCallback(async (folder: VFolder) => {
-    if (!confirm(`Delete folder "${folder.name}" and all its contents?`)) return;
+    if (!(await confirmDialog(`Delete folder "${folder.name}" and all its contents?`, { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await filesApi.deleteFolder(folder.id);
       setFolders((prev) => prev.filter((f) => f.id !== folder.id));
@@ -527,7 +528,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
   const deleteSelected = useCallback(async () => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    if (!confirm(`Delete ${ids.length} selected item(s)?`)) return;
+    if (!(await confirmDialog(`Delete ${ids.length} selected item(s)?`, { danger: true, confirmLabel: "Delete" }))) return;
     const fileIds = ids.filter((id) => files.some((f) => f.id === id));
     const folderIds = ids.filter((id) => folders.some((f) => f.id === id));
     try {
@@ -542,7 +543,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       void loadTree();
     } catch (e) {
       console.error(e);
-      alert("Some items failed to delete");
+      void alertDialog("Some items failed to delete");
     }
   }, [selected, preview, files, folders, load, loadStorage, loadTree]);
 
@@ -554,7 +555,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       if (preview?.id === id) setPreview({ ...preview, name: newName.trim() });
     } catch (e) {
       console.error(e);
-      alert("Rename failed");
+      void alertDialog("Rename failed");
     }
   }, [preview]);
 
@@ -566,7 +567,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       setAllFolders((prev) => prev.map((f) => f.id === id ? { ...f, name: newName.trim() } : f));
     } catch (e) {
       console.error(e);
-      alert("Rename failed");
+      void alertDialog("Rename failed");
     }
   }, []);
 
@@ -578,7 +579,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       void loadTree();
     } catch (e) {
       console.error(e);
-      alert("Move failed");
+      void alertDialog("Move failed");
     }
   }, [loadTree]);
 
@@ -589,7 +590,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       void loadTree();
     } catch (e) {
       console.error(e);
-      alert("Move failed");
+      void alertDialog("Move failed");
     }
   }, [load, loadTree]);
 
@@ -600,7 +601,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       void loadStorage();
     } catch (e) {
       console.error(e);
-      alert("Duplicate failed");
+      void alertDialog("Duplicate failed");
     }
   }, [loadStorage]);
 
@@ -654,7 +655,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       void loadStorage();
     } catch (e) {
       console.error(e);
-      alert("Paste failed");
+      void alertDialog("Paste failed");
     }
   }, [clipboard, currentFolder, load, loadStorage, loadTree]);
 

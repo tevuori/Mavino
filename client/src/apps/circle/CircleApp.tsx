@@ -23,6 +23,7 @@ import {
 import { flashcardsApi } from "../../services/flashcards";
 import { notesApi } from "../../services/notes";
 import type { WindowInstance } from "../../store/windows";
+import { confirmDialog } from "../../store/mobileDialog";
 
 // ----- main component -----
 
@@ -72,7 +73,7 @@ export default function CircleApp({ win }: { win: WindowInstance }) {
   }, [win.id, loadGroups, loadGroup]);
 
   const handleLeaveGroup = async () => {
-    if (!activeGroup || !confirm("Leave this group? You'll lose access to shared resources.")) return;
+    if (!activeGroup || !(await confirmDialog("Leave this group? You'll lose access to shared resources.", { danger: true, confirmLabel: "Leave" }))) return;
     try {
       await circleApi.leaveGroup(activeGroup.id);
       setActiveGroup(null);
@@ -83,7 +84,7 @@ export default function CircleApp({ win }: { win: WindowInstance }) {
   };
 
   const handleDeleteGroup = async () => {
-    if (!activeGroup || !confirm("Delete this group? All shared resources will be unshared. This cannot be undone.")) return;
+    if (!activeGroup || !(await confirmDialog("Delete this group? All shared resources will be unshared. This cannot be undone.", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await circleApi.deleteGroup(activeGroup.id);
       setActiveGroup(null);
@@ -287,7 +288,7 @@ function GroupDetailView({
   };
 
   const handleRemoveMember = async (memberUserId: string, memberName: string) => {
-    if (!confirm(`Remove ${memberName} from the group?`)) return;
+    if (!(await confirmDialog(`Remove ${memberName} from the group?`, { danger: true, confirmLabel: "Remove" }))) return;
     try {
       await circleApi.removeMember(group.id, memberUserId);
       await onRefresh();

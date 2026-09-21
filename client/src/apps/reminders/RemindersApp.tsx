@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { remindersApi } from "../../services/reminders";
 import type { Reminder, ReminderInput, ReminderStatus } from "../../services/reminders";
+import { confirmDialog } from "../../store/mobileDialog";
 
 type Tab = "pending" | "fired" | "cancelled" | "new";
 
@@ -94,7 +95,7 @@ export default function RemindersApp() {
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm("Delete this reminder permanently?")) return;
+    if (!(await confirmDialog("Delete this reminder permanently?", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await remindersApi.delete(id);
       setRefreshKey((k) => k + 1);

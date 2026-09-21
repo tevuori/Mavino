@@ -3,6 +3,7 @@ import { User, Loader2, KeyRound, ShieldCheck, MonitorSmartphone, Trash2 } from 
 import { useAuth } from "../../../store/auth";
 import { authApi, type AuthDevice } from "../../../services/auth";
 import { SectionHeader, Card, Field, SaveButton, MsgBox, inputClass } from "../ui";
+import { confirmDialog } from "../../../store/mobileDialog";
 import TwoFactorSection from "./TwoFactorSection";
 
 const AVATAR_PRESETS = [
@@ -50,7 +51,7 @@ export default function AccountSection() {
   }, [refreshDevices]);
 
   const revokeDevice = async (id: string) => {
-    if (!confirm("Revoke this device? It will be signed out immediately.")) return;
+    if (!(await confirmDialog("Revoke this device? It will be signed out immediately.", { danger: true, confirmLabel: "Revoke" }))) return;
     try {
       await authApi.revokeDevice(id);
       await refreshDevices();
@@ -60,7 +61,7 @@ export default function AccountSection() {
   };
 
   const revokeAll = async () => {
-    if (!confirm("Revoke ALL remembered devices? You'll need to sign in again on every device.")) return;
+    if (!(await confirmDialog("Revoke ALL remembered devices? You'll need to sign in again on every device.", { danger: true, confirmLabel: "Revoke" }))) return;
     try {
       await authApi.revokeAllDevices();
       await refreshDevices();

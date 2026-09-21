@@ -3,6 +3,7 @@ import { Info, RefreshCw, Loader2, Heart, Sparkles, DownloadCloud, CheckCircle2,
 import { Capacitor } from "@capacitor/core";
 import { useSettings } from "../../../store/settings";
 import { SectionHeader, Card, StatusPill } from "../ui";
+import { confirmDialog } from "../../../store/mobileDialog";
 import { isAutoUpdateAvailable, checkForUpdate, getInstalledVersion } from "../../../services/updater";
 import { apiUrl, getBaseUrl, setBaseUrl } from "../../../services/api";
 import { useUpdater } from "../../../store/updater";
@@ -74,8 +75,8 @@ export default function AboutSection() {
     }
   };
 
-  const resetDefaults = () => {
-    if (!confirm("Reset all appearance, wallpaper, and notification settings to defaults?")) return;
+  const resetDefaults = async () => {
+    if (!(await confirmDialog("Reset all appearance, wallpaper, and notification settings to defaults?", { danger: true, confirmLabel: "Reset" }))) return;
     setResetting(true);
     setTheme("dark");
     setAccent("#6366f1");

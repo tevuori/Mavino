@@ -4,6 +4,7 @@ import { filesApi } from "../../../services/files";
 import { useAuth } from "../../../store/auth";
 import { getToken, apiUrl } from "../../../services/api";
 import { SectionHeader, Card, MsgBox, inputClass } from "../ui";
+import { confirmDialog } from "../../../store/mobileDialog";
 
 function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -50,8 +51,8 @@ export default function DataStorageSection() {
     }
   };
 
-  const clearCache = () => {
-    if (!confirm("Clear all local cached data (window layouts, settings cache, etc.)? Your account data on the server is not affected.")) return;
+  const clearCache = async () => {
+    if (!(await confirmDialog("Clear all local cached data (window layouts, settings cache, etc.)? Your account data on the server is not affected.", { danger: true, confirmLabel: "Clear" }))) return;
     // Preserve the auth token so the user stays logged in.
     const token = localStorage.getItem("athena.token");
     localStorage.clear();
@@ -61,8 +62,8 @@ export default function DataStorageSection() {
 
   const doDelete = async () => {
     if (!delPw) return;
-    if (!confirm("Permanently delete your account and ALL your data? This cannot be undone.")) return;
-    if (!confirm("Really delete everything? This is your final confirmation.")) return;
+    if (!(await confirmDialog("Permanently delete your account and ALL your data? This cannot be undone.", { danger: true, confirmLabel: "Delete" }))) return;
+    if (!(await confirmDialog("Really delete everything? This is your final confirmation.", { danger: true, confirmLabel: "Delete" }))) return;
     setDelBusy(true);
     setDelErr(null);
     try {

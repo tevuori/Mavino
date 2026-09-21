@@ -25,6 +25,7 @@ import {
 } from "../../services/crunch";
 import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
+import { confirmDialog } from "../../store/mobileDialog";
 
 // ----- helpers -----
 
@@ -508,7 +509,7 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
   };
 
   const deletePlan = async () => {
-    if (!confirm("Delete your entire Crunch plan? This cannot be undone.")) return;
+    if (!(await confirmDialog("Delete your entire Crunch plan? This cannot be undone.", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await crunchApi.delete();
       setState(null);

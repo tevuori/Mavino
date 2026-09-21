@@ -14,6 +14,7 @@ import {
 import type { WindowInstance } from "../../store/windows";
 import { subscriptionsApi, type SubscriptionStatus, type SubscriptionPlan } from "../../services/subscriptions";
 import { useFeatures } from "../../store/features";
+import { confirmDialog } from "../../store/mobileDialog";
 import { studyFunctionsApi, type StudyFunctionDef } from "../../services/study-functions";
 import { APPS } from "../registry";
 
@@ -142,7 +143,7 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
   };
 
   const handleCancel = async () => {
-    if (!confirm("Cancel your subscription? You'll keep access until the end of the current billing period.")) return;
+    if (!(await confirmDialog("Cancel your subscription? You'll keep access until the end of the current billing period.", { danger: true, confirmLabel: "Cancel subscription" }))) return;
     setActionLoading("cancel");
     setError(null);
     try {

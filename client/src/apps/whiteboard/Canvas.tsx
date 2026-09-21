@@ -12,6 +12,7 @@ import type {
   BBox,
 } from "./elements";
 import { newId, bboxOf, hitTest, moveEl, scaleElToBbox, downscaleDataUrl } from "./elements";
+import { promptDialog } from "../../store/mobileDialog";
 
 const CANVAS_W = 2000;
 const CANVAS_H = 1400;
@@ -214,7 +215,7 @@ export default function Canvas({
     [elements]
   );
 
-  const handlePointerDown = (e: React.PointerEvent) => {
+  const handlePointerDown = async (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     const { x, y } = getPoint(e);
     (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -271,7 +272,7 @@ export default function Canvas({
     }
 
     if (tool === "text") {
-      const text = window.prompt("Enter text:");
+      const text = await promptDialog("Enter text:");
       if (text && text.trim()) {
         const el: TextEl = {
           id: newId(),

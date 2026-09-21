@@ -8,6 +8,7 @@ import SnapPreview from "../wm/SnapPreview";
 import AltTabSwitcher from "../wm/AltTabSwitcher";
 import WorkspaceOverview from "../wm/WorkspaceOverview";
 import CommandPalette from "./CommandPalette";
+import DialogRenderer from "./DialogRenderer";
 import QuickCapture from "./QuickCapture";
 import AthenaQuickPanel from "./AthenaQuickPanel";
 import OnboardingOverlay from "./OnboardingOverlay";
@@ -105,6 +106,7 @@ export default function DesktopEnvironment() {
         <WorkspaceOverview open={overviewOpen} onClose={() => setOverviewOpen(false)} />
         <CommandPalette />
         <QuickCapture />
+        <DialogRenderer />
         {!hasOnboarded && !isDemo && <OnboardingOverlay />}
       </div>
     </div>

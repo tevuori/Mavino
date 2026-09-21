@@ -38,6 +38,7 @@ import {
 import { filesApi, isPdfFile, isImageFile, isAudioFile, isVideoFile } from "../../services/files";
 import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
+import { confirmDialog } from "../../store/mobileDialog";
 import type { VFile } from "../../types";
 
 // ----- helpers -----
@@ -194,7 +195,7 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
 
   const handleDeleteProject = async () => {
     if (!activeProject) return;
-    if (!confirm(`Delete "${activeProject.title}" and all its papers?`)) return;
+    if (!(await confirmDialog(`Delete "${activeProject.title}" and all its papers?`, { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await compassApi.deleteProject(activeProject.id);
       setActiveProject(null);
@@ -265,7 +266,7 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
 
   const handleDeletePaper = async (paperId: string) => {
     if (!activeProject) return;
-    if (!confirm("Remove this paper from the project?")) return;
+    if (!(await confirmDialog("Remove this paper from the project?", { danger: true, confirmLabel: "Remove" }))) return;
     try {
       await compassApi.deletePaper(activeProject.id, paperId);
       setSelectedPaperId(null);

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Sparkles, KeyRound, Gauge, Trash2, Check, AlertCircle, Play, Loader2 } from "lucide-react";
 import { adminLlmApi, type GlobalLlmConfig, type TierRateLimitsMap, type DemoConfig } from "../../../services/admin-llm";
 import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass } from "../ui";
+import { confirmDialog } from "../../../store/mobileDialog";
 
 export default function LlmAdminSection() {
   return (
@@ -82,7 +83,7 @@ function GlobalKeyCard() {
   };
 
   const removeKey = async () => {
-    if (!confirm("Remove the global LLM API key? Users will need their own keys (if in per-user mode).")) return;
+    if (!(await confirmDialog("Remove the global LLM API key? Users will need their own keys (if in per-user mode).", { danger: true, confirmLabel: "Remove" }))) return;
     setBusy(true);
     setErr(false);
     setMsg(null);

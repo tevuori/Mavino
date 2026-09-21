@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { AlertTriangle, CheckCircle, Loader2, Trash2, Check, Filter, RefreshCw, Server, Monitor } from "lucide-react";
 import { adminErrorsApi, type ErrorLogItem, type ErrorLogStats } from "../../../services/admin-errors";
 import { SectionHeader, Card, StatusPill, MsgBox } from "../ui";
+import { confirmDialog } from "../../../store/mobileDialog";
 
 export default function ErrorLogSection() {
   const [items, setItems] = useState<ErrorLogItem[]>([]);
@@ -60,7 +61,7 @@ export default function ErrorLogSection() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this error log entry?")) return;
+    if (!(await confirmDialog("Delete this error log entry?", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await adminErrorsApi.delete(id);
       await refresh();
@@ -71,7 +72,7 @@ export default function ErrorLogSection() {
   };
 
   const deleteResolved = async () => {
-    if (!confirm("Delete all resolved error log entries? This cannot be undone.")) return;
+    if (!(await confirmDialog("Delete all resolved error log entries? This cannot be undone.", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       const r = await adminErrorsApi.deleteResolved();
       setMsg(`Deleted ${r.count} resolved entries.`);

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { ntfyApi } from "../../services/ntfy";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
+import { confirmDialog } from "../../store/mobileDialog";
 import type { NtfyStatus, NtfyMessage, NtfyCronJob, NtfyCronInput } from "../../services/ntfy";
 
 type Tab = "setup" | "messages" | "cron";
@@ -154,7 +155,7 @@ function SetupTab({ status, onSaved }: { status: NtfyStatus | null; onSaved: () 
   };
 
   const remove = async () => {
-    if (!confirm("Remove Ntfy configuration? This stops the inbox subscriber.")) return;
+    if (!(await confirmDialog("Remove Ntfy configuration? This stops the inbox subscriber.", { danger: true, confirmLabel: "Remove" }))) return;
     try {
       await ntfyApi.deleteConfig();
       setMsg({ kind: "ok", text: "Configuration removed." });
@@ -423,7 +424,7 @@ function CronTab() {
   };
 
   const del = async (job: NtfyCronJob) => {
-    if (!confirm(`Delete cron job "${job.name}"?`)) return;
+    if (!(await confirmDialog(`Delete cron job "${job.name}"?`, { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await ntfyApi.deleteCronJob(job.id);
       refresh();

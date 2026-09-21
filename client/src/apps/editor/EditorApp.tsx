@@ -14,6 +14,7 @@ import { filesApi, isMarkdownFile, formatBytes } from "../../services/files";
 import { languageForFile } from "./languages";
 import { useSettings } from "../../store/settings";
 import { useWindows } from "../../store/windows";
+import { promptDialog } from "../../store/mobileDialog";
 import { useShowControl } from "../../store/showControl";
 import { useCodemirrorShowControl } from "../shared/useCodemirrorShowControl";
 import { useCodemirrorHighlights } from "../shared/useCodemirrorHighlights";
@@ -110,7 +111,7 @@ export default function EditorApp({ win }: { win: WindowInstance }) {
     setError(null);
     // New file: need a name → create via /text
     if (!currentFileId) {
-      const finalName = prompt("Save as (file name):", name) ?? "";
+      const finalName = (await promptDialog("Save as (file name):", name)) ?? "";
       if (!finalName.trim()) return;
       setSaving(true);
       try {

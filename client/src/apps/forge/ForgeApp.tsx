@@ -33,6 +33,7 @@ import { filesApi } from "../../services/files";
 import { notesApi } from "../../services/notes";
 import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
+import { confirmDialog } from "../../store/mobileDialog";
 import type { VFile } from "../../types";
 
 // ----- helpers -----
@@ -132,7 +133,7 @@ export default function ForgeApp({ win }: { win: WindowInstance }) {
   }, [win.id, loadSets, loadSet]);
 
   const handleDeleteSet = async (setId: string) => {
-    if (!confirm("Delete this problem set and all its problems?")) return;
+    if (!(await confirmDialog("Delete this problem set and all its problems?", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await forgeApi.deleteSet(setId);
       await loadSets();

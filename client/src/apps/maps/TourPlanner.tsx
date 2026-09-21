@@ -7,6 +7,7 @@
 // single day, or schedule it to the Calendar.
 
 import { useState } from "react";
+import { confirmDialog, promptDialog } from "../../store/mobileDialog";
 import {
   MapPin,
   Flag,
@@ -153,7 +154,7 @@ export default function TourPlanner({ resolvePlace, onDrawTour, onClearMap }: Pr
 
   const save = async () => {
     if (!tour) return;
-    const name = prompt("Tour name:", `${tour.baseName} ${tour.numDays}-day ${tour.difficulty} hike`);
+    const name = await promptDialog("Tour name:", `${tour.baseName} ${tour.numDays}-day ${tour.difficulty} hike`);
     if (!name) return;
     setSaving(true);
     setError(null);
@@ -224,7 +225,7 @@ export default function TourPlanner({ resolvePlace, onDrawTour, onClearMap }: Pr
   };
 
   const deleteSaved = async (id: string) => {
-    if (!confirm("Delete this tour and all its days?")) return;
+    if (!(await confirmDialog("Delete this tour and all its days?", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await tourApi.delete(id);
       setSavedTours((prev) => prev.filter((t) => t.id !== id));

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { GraduationCap, Loader2, Cloud, KeyRound, Trash2 } from "lucide-react";
 import { SectionHeader, Card, SaveButton, Field, StatusPill, inputClass } from "../ui";
+import { confirmDialog } from "../../../store/mobileDialog";
 import { studyFunctionsApi, type StudyFunctionDef, type StudyFunctionConfig } from "../../../services/study-functions";
 import { adminPollyApi, type PollyAdminConfig } from "../../../services/admin-polly";
 
@@ -61,7 +62,7 @@ function PollyConfigCard() {
     finally { setBusy(false); }
   };
   const remove = async () => {
-    if (!confirm("Remove the global AWS Polly credentials?")) return;
+    if (!(await confirmDialog("Remove the global AWS Polly credentials?", { danger: true, confirmLabel: "Remove" }))) return;
     setBusy(true);
     try { await adminPollyApi.remove(); await refresh(); setMessage("Stored credentials removed."); }
     finally { setBusy(false); }

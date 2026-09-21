@@ -4,6 +4,7 @@ import { usersApi } from "../../../services/users";
 import { useAuth } from "../../../store/auth";
 import type { AdminUser, UserRole } from "../../../types";
 import { SectionHeader, Card, Field, inputClass } from "../ui";
+import { confirmDialog } from "../../../store/mobileDialog";
 
 const AVATAR_PRESETS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
@@ -172,7 +173,7 @@ function UserRow({
   const canManage = me?.role === "ADMIN" || (isManager && u.role !== "ADMIN");
 
   const del = async () => {
-    if (!confirm(`Delete user "${u.username}"? This removes all their data.`)) return;
+    if (!(await confirmDialog(`Delete user "${u.username}"? This removes all their data.`, { danger: true, confirmLabel: "Delete" }))) return;
     setBusy(true);
     setErr(null);
     try {

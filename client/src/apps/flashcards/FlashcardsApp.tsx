@@ -9,6 +9,7 @@ import { linksApi } from "../../services/links";
 import type { Flashcard, FlashcardDeck } from "../../types";
 import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
+import { confirmDialog } from "../../store/mobileDialog";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
 import { setLinkPayload } from "../links/linkDnd";
 import LinkDragHandle from "../links/LinkDragHandle";
@@ -136,7 +137,7 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
   };
 
   const deleteCard = async (cardId: string) => {
-    if (!confirm("Delete this card?")) return;
+    if (!(await confirmDialog("Delete this card?", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await flashcardsApi.deleteCard(cardId);
       setCards((cs) => cs.filter((c) => c.id !== cardId));
@@ -144,8 +145,8 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
     } catch (e) { setError((e as Error).message); }
   };
 
-  const confirmDeleteDeck = (deck: FlashcardDeck & { _count: { cards: number } }) => {
-    if (!confirm(`Delete deck "${deck.name}" and all ${deck._count.cards} card${deck._count.cards === 1 ? "" : "s"}?`)) return;
+  const confirmDeleteDeck = async (deck: FlashcardDeck & { _count: { cards: number } }) => {
+    if (!(await confirmDialog(`Delete deck "${deck.name}" and all ${deck._count.cards} card${deck._count.cards === 1 ? "" : "s"}?`, { danger: true, confirmLabel: "Delete" }))) return;
     deleteDeck(deck.id);
   };
 

@@ -18,6 +18,7 @@ import {
   type ConceptBridge, type BridgeStats,
 } from "../../services/bridge";
 import type { WindowInstance } from "../../store/windows";
+import { confirmDialog } from "../../store/mobileDialog";
 
 // ----- helpers -----
 
@@ -94,7 +95,7 @@ export default function BridgeApp({ win }: { win: WindowInstance }) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this connection?")) return;
+    if (!(await confirmDialog("Delete this connection?", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await bridgeApi.delete(id);
       setBridges((prev) => prev.filter((b) => b.id !== id));

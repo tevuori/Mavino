@@ -400,8 +400,10 @@ export function MobileDialogRenderer() {
 
   if (!dialog.type) return null;
 
+  const opts = dialog.options ?? {};
   const onConfirm = () => {
     if (dialog.type === "prompt") _resolve(inputValue);
+    else if (dialog.type === "alert") _resolve(undefined);
     else _resolve(true);
   };
 
@@ -412,6 +414,7 @@ export function MobileDialogRenderer() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-4 h-1.5 w-10 shrink-0 rounded-full bg-surface-3" aria-hidden />
+        {opts.title && <h2 className="mb-1.5 text-sm font-semibold text-ink">{opts.title}</h2>}
         <p className="mb-4 text-sm leading-6 text-ink">{dialog.message}</p>
         {dialog.type === "prompt" && (
           <input
@@ -428,23 +431,25 @@ export function MobileDialogRenderer() {
           />
         )}
         <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={_dismiss}
-            className="flex-1 rounded-2xl bg-surface-2 py-3 text-sm font-medium text-ink-muted active:bg-surface-3"
-          >
-            Cancel
-          </button>
+          {dialog.type !== "alert" && (
+            <button
+              type="button"
+              onClick={_dismiss}
+              className="flex-1 rounded-2xl bg-surface-2 py-3 text-sm font-medium text-ink-muted active:bg-surface-3"
+            >
+              {opts.cancelLabel ?? "Cancel"}
+            </button>
+          )}
           <button
             type="button"
             onClick={onConfirm}
             className={`flex-1 rounded-2xl py-3 text-sm font-semibold active:scale-[.98] ${
-              dialog.type === "confirm"
+              opts.danger || (dialog.type === "confirm" && !opts.confirmLabel)
                 ? "bg-rose-500/15 text-rose-400 active:bg-rose-500/25"
                 : "brand-gradient text-white shadow-md shadow-accent/30"
             }`}
           >
-            {dialog.type === "confirm" ? "Delete" : "OK"}
+            {opts.confirmLabel ?? (dialog.type === "confirm" ? "Delete" : "OK")}
           </button>
         </div>
       </div>

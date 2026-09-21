@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { pluginsAdminApi, type AdminPlugin, type PluginManifestInput } from "../../../services/plugins";
 import { SectionHeader, Card, MsgBox, inputClass } from "../ui";
+import { confirmDialog } from "../../../store/mobileDialog";
 
 export default function PluginsAdminSection() {
   const [plugins, setPlugins] = useState<AdminPlugin[]>([]);
@@ -59,7 +60,7 @@ export default function PluginsAdminSection() {
   };
 
   const remove = async (p: AdminPlugin) => {
-    if (!confirm(`Delete "${p.name}" from the catalog? This uninstalls it from all users.`)) return;
+    if (!(await confirmDialog(`Delete "${p.name}" from the catalog? This uninstalls it from all users.`, { danger: true, confirmLabel: "Delete" }))) return;
     setBusyKey(p.pluginKey);
     try {
       await pluginsAdminApi.remove(p.pluginKey);

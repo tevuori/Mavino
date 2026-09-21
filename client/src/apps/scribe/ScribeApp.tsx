@@ -23,6 +23,7 @@ import {
   type ScribeDocumentSummary, type ScribeDocument, type ScribeFeedback, type ScribeIssue,
 } from "../../services/scribe";
 import type { WindowInstance } from "../../store/windows";
+import { confirmDialog } from "../../store/mobileDialog";
 
 // ----- helpers -----
 
@@ -87,7 +88,7 @@ export default function ScribeApp({ win }: { win: WindowInstance }) {
   }, [win.id, loadDocuments, loadDocument]);
 
   const handleDelete = async (docId: string) => {
-    if (!confirm("Delete this document and all its feedback?")) return;
+    if (!(await confirmDialog("Delete this document and all its feedback?", { danger: true, confirmLabel: "Delete" }))) return;
     try {
       await scribeApi.deleteDocument(docId);
       setActiveDoc(null);

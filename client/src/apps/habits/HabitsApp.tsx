@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Flame, Plus, Trash2, Check, X, RefreshCw, TrendingUp } from "lucide-react";
 import { habitsApi } from "../../services/habits";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
+import { alertDialog } from "../../store/mobileDialog";
 import type { Habit, HabitStats } from "../../types";
 
 interface PomodoroStats {
@@ -109,7 +110,7 @@ export default function HabitsApp() {
       }
       refresh();
     } catch (e) {
-      alert((e as Error).message);
+      void alertDialog((e as Error).message);
     }
   };
 
@@ -130,7 +131,7 @@ export default function HabitsApp() {
       setCadence("daily"); setTarget(1); setLinkedApp(null); setLinkedMetric(null);
       refresh();
     } catch (e) {
-      alert((e as Error).message);
+      void alertDialog((e as Error).message);
     }
   };
 
@@ -141,7 +142,7 @@ export default function HabitsApp() {
       setConfirmingDelete(false);
       refresh();
     } catch (e) {
-      alert((e as Error).message);
+      void alertDialog((e as Error).message);
     }
   };
 
