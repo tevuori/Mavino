@@ -87,9 +87,10 @@ function logToChecks(log: TeacherComprehensionEntry[], totalMessages: number): C
     answered: true,
     answer: e.answer,
     grading: false,
-    // No per-message association was persisted for these (server log only),
-    // so fall back to the end of the transcript in chronological order.
-    afterMessageIndex: totalMessages,
+    // Older sessions have no per-message association persisted — those fall
+    // back to the end of the transcript. New checks store the index of the
+    // assistant message that asked them so they restore in place.
+    afterMessageIndex: typeof e.messageIndex === "number" ? e.messageIndex : totalMessages,
     assessment: { passed: e.passed, score: e.passed ? 1 : 0, feedback: e.feedback ?? "", misconception: e.misconception },
   }));
 }
@@ -135,6 +136,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
   const [exporting, setExporting] = useState<string | null>(null);
   const [exportResult, setExportResult] = useState<string>("");
   const [lastTurn, setLastTurn] = useState<string>("");
+  const lastTurnHiddenRef = useRef(false);
 
   const handleRef = useRef<TeacherChatHandle | null>(null);
   const streamTextRef = useRef("");
@@ -413,7 +415,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     onTurnDoneRef.current = cb;
   }, []);
 
-  const send = useCallback((text: string) => {
+  const send = useCallback((text: string, opts?: { hidden?: boolean }) => {
     if (!sessionId || !text.trim() || streaming) return;
     setError("");
     setStreaming(true);
@@ -421,7 +423,13 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     streamTextRef.current = "";
     setToolChips([]);
     setLastTurn(text);
-    setMessages((prev) => [...prev, { role: "user", content: text, timestamp: new Date().toISOString() }]);
+    lastTurnHiddenRef.current = Boolean(opts?.hidden);
+    setMessages((prev) => [...prev, {
+      role: "user",
+      content: text,
+      hidden: opts?.hidden === true ? true : undefined,
+      timestamp: new Date().toISOString(),
+    }]);
 
     const state: TeacherSessionState = {
       ...teachStateRef.current,
@@ -481,7 +489,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
           onTurnDoneRef.current?.(finalText);
         },
       },
-      { windows: windowSnapshot?.() ?? [], sourceHistory: sourceHistoryRef.current, state, language }
+      { windows: windowSnapshot?.() ?? [], sourceHistory: sourceHistoryRef.current, state, language, hidden: opts?.hidden }
     );
   }, [sessionId, streaming, dispatchAction, windowSnapshot, language, messages.length]);
 
@@ -498,7 +506,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
       const last = prev[prev.length - 1];
       return last?.role === "user" && last.content === lastTurn ? prev.slice(0, -1) : prev;
     });
-    send(lastTurn);
+    send(lastTurn, { hidden: lastTurnHiddenRef.current });
   }, [lastTurn, send]);
 
   // After creating a new session (and optionally generating a plan) start the
@@ -525,6 +533,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
         question: check.question,
         answer,
         expectedConcept: check.expectedConcept,
+        messageIndex: check.afterMessageIndex,
         language,
       });
       assessment = res.assessment;
@@ -538,8 +547,9 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
       prev.map((c) => (c.id === id ? { ...c, grading: false, assessment } : c))
     );
     // Feed the answer back as a turn: the prompt now carries the misconception,
-    // so a failed check makes Athena re-explain before moving on.
-    if (answer.trim()) send(answer.trim());
+    // so a failed check makes Athena re-explain before moving on. The answer is
+    // hidden in the transcript — it is already shown inside the check card.
+    if (answer.trim()) send(answer.trim(), { hidden: true });
   }, [comprehensionChecks, sessionId, language, send]);
 
   // ----- exports -----

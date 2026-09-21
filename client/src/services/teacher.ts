@@ -42,6 +42,8 @@ export interface TeacherComprehensionEntry {
   misconception?: string;
   question?: string;
   answer?: string;
+  /** Index of the assistant message that asked this check (transcript anchoring). */
+  messageIndex?: number;
   at?: string;
 }
 
@@ -96,6 +98,8 @@ export interface TeacherMessage {
   role: "user" | "assistant";
   content: string;
   tools?: { id: string; name: string; state: string }[];
+  /** Persisted but not rendered in the transcript (e.g. comprehension-check answers). */
+  hidden?: boolean;
   timestamp?: string;
 }
 
@@ -158,7 +162,7 @@ export const teacherApi = {
   /** Grade an answer to a comprehension check (server-side, real assessment). */
   async assess(
     id: string,
-    input: { question: string; answer: string; expectedConcept?: string; language?: "en" | "cs" }
+    input: { question: string; answer: string; expectedConcept?: string; messageIndex?: number; language?: "en" | "cs" }
   ): Promise<{ assessment: TeacherAssessment; state: TeacherSessionState }> {
     return api.post(`/api/teacher/${id}/assess`, input);
   },
@@ -194,6 +198,8 @@ export function streamTeacherTurn(
     sourceHistory?: TeacherSourceHistoryEntry[];
     state?: TeacherSessionState;
     language?: "en" | "cs";
+    /** Store the user message but keep it hidden in the transcript. */
+    hidden?: boolean;
   } = {}
 ): TeacherChatHandle {
   const controller = new AbortController();
@@ -210,6 +216,7 @@ export function streamTeacherTurn(
         },
         body: JSON.stringify({
           message,
+          hidden: opts.hidden === true ? true : undefined,
           language: opts.language ?? "en",
           windows: opts.windows ?? [],
           sourceHistory: opts.sourceHistory ?? [],

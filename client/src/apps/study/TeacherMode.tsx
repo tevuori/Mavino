@@ -952,6 +952,10 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             const isSpeaking = tts.speakingId === msgId && tts.playing;
             return (
               <Fragment key={i}>
+                {/* Hidden messages (e.g. comprehension-check answers fed back
+                    to the model) keep their index for check anchoring but do
+                    not render a bubble. */}
+                {!m.hidden && (
                 <div className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`group max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                     m.role === "user" ? "bg-accent/15 text-ink" : "bg-surface-2 text-ink"
@@ -1000,6 +1004,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                     )}
                   </div>
                 </div>
+                )}
                 {/* Comprehension checks stay pinned right after the assistant
                     message that asked them, instead of piling up at the
                     bottom as the conversation grows. */}

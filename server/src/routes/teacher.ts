@@ -56,6 +56,8 @@ interface StoredMessage {
   role: "user" | "assistant";
   content: string;
   tools?: { id: string; name: string; state: string }[];
+  /** Hidden from the transcript UI (e.g. comprehension-check answers fed back as a turn). */
+  hidden?: boolean;
   timestamp: string;
 }
 
@@ -373,6 +375,8 @@ const assessSchema = z.object({
   question: z.string().min(1).max(2000),
   answer: z.string().max(4000),
   expectedConcept: z.string().max(200).optional(),
+  /** Index of the assistant message that asked the check (transcript anchoring). */
+  messageIndex: z.number().int().min(0).optional(),
   language: z.enum(["en", "cs"]).optional().default("en"),
 });
 
@@ -410,6 +414,7 @@ teacher.post("/:id/assess", zValidator("json", assessSchema), async (c) => {
     misconception: result.misconception,
     question: body.question,
     answer: body.answer,
+    messageIndex: body.messageIndex,
   });
   const updated = await prisma.teacherSession.update({
     where: { id: row.id },
@@ -601,6 +606,8 @@ teacher.post("/:id/export", zValidator("json", exportSchema), async (c) => {
 
 const streamSchema = z.object({
   message: z.string().min(1).max(20000),
+  /** Store the user message but hide it in the transcript UI (comprehension answers). */
+  hidden: z.boolean().optional(),
   language: z.enum(["en", "cs"]).optional().default("en"),
   windows: z.array(z.any()).optional(),
   /** Updated source-history + state sent by the client after each turn. */
@@ -648,7 +655,12 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
   thread.push(new Message("user", body.message));
 
   // Persist the user message immediately.
-  const userMsg: StoredMessage = { role: "user", content: body.message, timestamp: new Date().toISOString() };
+  const userMsg: StoredMessage = {
+    role: "user",
+    content: body.message,
+    hidden: body.hidden === true ? true : undefined,
+    timestamp: new Date().toISOString(),
+  };
   const updatedMessages = [...history2, userMsg];
 
   // Attach PDF images to the LLM thread for vision-capable models.
@@ -663,8 +675,11 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
   if (shouldAttachImages) {
     try {
       const imageAttachments = await loadImageAttachments(sourceImages);
+      // Attachments must go on a USER message — providers reject images in
+      // system messages ("400 Image in system message is unsupported").
+      const userMessage = thread[thread.length - 1];
       for (const img of imageAttachments) {
-        thread[0].attach(new Attachment(img.base64, img.mimeType));
+        userMessage.attach(new Attachment(img.base64, img.mimeType));
       }
       state.imagesAttachedOnTurn = updatedMessages.length;
       delete (state as any).reattachImages;

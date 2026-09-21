@@ -41,6 +41,8 @@ export interface ComprehensionEntry {
   misconception?: string;
   question?: string;
   answer?: string;
+  /** Index of the assistant message that asked this check (UI anchoring). */
+  messageIndex?: number;
   at?: string;
 }
 
@@ -169,6 +171,7 @@ export function applyAssessmentToState(
     misconception?: string;
     question?: string;
     answer?: string;
+    messageIndex?: number;
   }
 ): TeacherSessionState {
   const concept = result.concept.trim();
@@ -192,6 +195,7 @@ export function applyAssessmentToState(
       misconception: result.misconception,
       question: result.question,
       answer: result.answer,
+      messageIndex: result.messageIndex,
       at,
     },
   ];

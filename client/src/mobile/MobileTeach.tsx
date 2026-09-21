@@ -589,6 +589,9 @@ export default function MobileTeach({ initialSessionId = null, language: request
         )}
         {messages.map((m, i) => (
           <Fragment key={i}>
+            {/* Hidden messages (comprehension-check answers) keep their index
+                for check anchoring but do not render a bubble. */}
+            {!m.hidden && (
             <div className={m.role === "user" ? "flex justify-end" : ""}>
               {m.role === "user" ? (
                 <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-accent px-3.5 py-2 text-sm text-ink">
@@ -630,6 +633,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
                 </div>
               )}
             </div>
+            )}
             {/* Comprehension checks stay pinned right after the assistant
                 message that asked them, instead of piling up at the bottom
                 as the conversation grows. */}
