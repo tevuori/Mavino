@@ -23,6 +23,7 @@ import { useShowControl, type ShowCommand } from "../../store/showControl";
 import { useCodemirrorShowControl } from "../shared/useCodemirrorShowControl";
 import { languageForFile } from "../editor/languages";
 import { PptxViewer } from "../shared/PptxViewer";
+import { PdfJsViewer } from "../shared/PdfJsViewer";
 
 /** The source currently shown in the pane. */
 export interface PaneSource {
@@ -380,14 +381,13 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
   const downloadUrl = filesApi.downloadUrl(source.refId);
 
   if (isPdfFile(fileMeta)) {
-    // Build the PDF URL fragment: page navigation takes priority over search.
-    const fragment = pdfPage ? `page=${pdfPage}` : pdfSearch ? `search=${encodeURIComponent(pdfSearch)}` : "";
     return (
-      <iframe
-        key={fragment || "default"}
-        src={fragment ? `${downloadUrl}#${fragment}` : downloadUrl}
-        className="h-full w-full border-0"
-        title={fileMeta.name}
+      <PdfJsViewer
+        key={downloadUrl}
+        fileUrl={downloadUrl}
+        page={pdfPage}
+        searchText={pdfSearch}
+        onDocumentError={(err) => onError(err)}
       />
     );
   }

@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "test": "bun test",
     "preview": "vite preview --host",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "node scripts/copy-pdf-worker.js"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
@@ -41,6 +42,7 @@
     "katex": "^0.18.4",
     "leaflet": "1.9.4",
     "lucide-react": "^0.469.0",
+    "pdfjs-dist": "^6.3.289",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -29,6 +29,7 @@ import type { CitationTarget } from "../apps/study/studyMarkdown";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../services/speech";
 import { findHighlightRange } from "../apps/study/highlightRange";
 import { PptxViewer } from "../apps/shared/PptxViewer";
+import { PdfJsViewer } from "../apps/shared/PdfJsViewer";
 import { useLanguage } from "../store/language";
 import {
   MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileLoading, MobileTextarea,
@@ -708,16 +709,13 @@ export default function MobileTeach({ initialSessionId = null, language: request
                   />
                 </div>
               ) : isPdfSheet(sheet) ? (
-                <iframe
-                  key={sheet.pageNumber ? `page-${sheet.pageNumber}` : "default"}
-                  src={
-                    sheet.pageNumber
-                      ? `${filesApi.downloadUrl(sheet.refId)}#page=${sheet.pageNumber}`
-                      : filesApi.downloadUrl(sheet.refId)
-                  }
-                  className="h-[60vh] w-full rounded-lg border-0 bg-white"
-                  title={sheet.name}
-                />
+                <div className="h-[60vh] w-full rounded-lg border border-edge bg-white overflow-hidden">
+                  <PdfJsViewer
+                    fileUrl={filesApi.downloadUrl(sheet.refId)}
+                    page={sheet.pageNumber}
+                    searchText={sheet.highlight}
+                  />
+                </div>
               ) : (
                 <SourceText text={sheet.text ?? ""} highlight={sheet.highlight} posStart={sheet.posStart} posEnd={sheet.posEnd} />
               )}

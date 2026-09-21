@@ -11,6 +11,7 @@ import { useShowControl, type ShowCommand } from "../../store/showControl";
 import type { WindowInstance } from "../../store/windows";
 import type { VFile } from "../../types";
 import { PptxViewer } from "../shared/PptxViewer";
+import { PdfJsViewer } from "../shared/PdfJsViewer";
 
 export default function ViewerApp({ win }: { win: WindowInstance }) {
   const fileId = win.payload?.fileId as string | undefined;
@@ -165,18 +166,13 @@ export default function ViewerApp({ win }: { win: WindowInstance }) {
           </div>
         )}
         {isPdfFile(file) && (
-          <iframe
-            key={pdfPage ? `page-${pdfPage}` : pdfSearch ?? "default"}
-            src={
-              pdfPage
-                ? `${filesApi.downloadUrl(file.id)}#page=${pdfPage}`
-                : pdfSearch
-                  ? `${filesApi.downloadUrl(file.id)}#search=${encodeURIComponent(pdfSearch)}`
-                  : filesApi.downloadUrl(file.id)
-            }
-            className="h-full w-full border-0"
-            title={file.name}
-          />
+          <div className="h-full w-full">
+            <PdfJsViewer
+              fileUrl={filesApi.downloadUrl(file.id)}
+              page={pdfPage ?? undefined}
+              searchText={pdfSearch ?? undefined}
+            />
+          </div>
         )}
         {isAudioFile(file) && <AudioViewer file={file} />}
         {isVideoFile(file) && <VideoViewer file={file} />}
