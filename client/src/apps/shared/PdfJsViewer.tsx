@@ -36,13 +36,16 @@ export function PdfJsViewer({
   const viewerRef = useRef<any>(null);
   const eventBusRef = useRef<any>(null);
   const findControllerRef = useRef<any>(null);
+  const onDocumentErrorRef = useRef(onDocumentError);
   const [loaded, setLoaded] = useState(false);
+  onDocumentErrorRef.current = onDocumentError;
 
-  // Initialize the PDF.js viewer layer once.
+  // Initialize the PDF.js viewer layer once per document.
   useEffect(() => {
     if (!containerRef.current || !viewerElementRef.current) return;
     const container = containerRef.current;
     const viewerElement = viewerElementRef.current;
+    setLoaded(false);
 
     const eventBus = new pdfjsViewer.EventBus();
     const linkService = new pdfjsViewer.PDFLinkService({ eventBus });
@@ -61,6 +64,11 @@ export function PdfJsViewer({
     eventBusRef.current = eventBus;
     findControllerRef.current = findController;
 
+    const fitPageWidth = () => {
+      pdfViewer.currentScaleValue = "page-width";
+    };
+    eventBus.on("pagesinit", fitPageWidth);
+
     let destroyed = false;
     const loadingTask = pdfjs.getDocument({ url: fileUrl });
     loadingTask.promise
@@ -72,17 +80,21 @@ export function PdfJsViewer({
         setLoaded(true);
       })
       .catch((err: unknown) => {
-        if (!destroyed) onDocumentError?.(err instanceof Error ? err.message : String(err));
+        if (!destroyed) onDocumentErrorRef.current?.(err instanceof Error ? err.message : String(err));
       });
 
     return () => {
       destroyed = true;
+      eventBus.off("pagesinit", fitPageWidth);
+      viewerRef.current = null;
+      eventBusRef.current = null;
+      findControllerRef.current = null;
       try { loadingTask.destroy(); } catch { /* noop */ }
       try { pdfViewer.setDocument(null as any); } catch { /* noop */ }
       try { findController.setDocument(null as any); } catch { /* noop */ }
       try { linkService.setDocument(null as any); } catch { /* noop */ }
     };
-  }, [fileUrl, onDocumentError]);
+  }, [fileUrl]);
 
   // Jump to the requested page once the document is loaded.
   useEffect(() => {

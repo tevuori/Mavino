@@ -331,7 +331,7 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
   // Apply the pending highlight (PDF #search= or #page=) once metadata has loaded.
   // Re-runs whenever a NEW pending highlight arrives, not just on first load.
   useEffect(() => {
-    if (!fileMeta || !pending) return;
+    if (!fileMeta || !pending || isPptxFile(fileMeta)) return;
     const key = JSON.stringify(pending);
     if (appliedPendingKeyRef.current === key) return;
     appliedPendingKeyRef.current = key;
@@ -348,9 +348,9 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
   // Consume subsequent show-control commands (highlight/scroll → PDF #search=).
   const cmd = commands[paneId];
   useEffect(() => {
-    if (!cmd || cmd.seq === lastSeq.current) return;
+    if (!cmd || cmd.seq === lastSeq.current || !fileMeta) return;
+    if (isPptxFile(fileMeta)) return;
     lastSeq.current = cmd.seq;
-    if (!fileMeta) { reportResult(paneId, cmd.seq, cmd.kind, false, "not-loaded"); return; }
     if (isPdfFile(fileMeta) && (cmd.kind === "highlight" || cmd.kind === "scroll_to")) {
       // Page navigation takes priority over text search.
       if (typeof cmd.page === "number" && cmd.page >= 1) {
@@ -380,6 +380,17 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
   if (!fileMeta) return null;
   const downloadUrl = filesApi.downloadUrl(source.refId);
 
+  if (isPptxFile(fileMeta)) {
+    return (
+      <PptxViewer
+        fileId={source.refId}
+        paneId={paneId}
+        pendingSlide={pending?.scrollToSlide}
+        pendingText={pending?.text}
+        onPendingApplied={onPendingApplied}
+      />
+    );
+  }
   if (isPdfFile(fileMeta)) {
     return (
       <PdfJsViewer
@@ -463,7 +474,6 @@ function BrowserPane({ paneId, source, pending, onPendingApplied, onLoadingChang
     if (!iframe?.contentWindow || !loadedRef.current) {
       // Queue until the iframe is ready.
       pendingCmdRef.current = cmd;
-      if (!loadedRef.current) reportResult(paneId, cmd.seq, cmd.kind, false, "not-loaded");
       return;
     }
     iframe.contentWindow.postMessage(

@@ -44,7 +44,7 @@ export function PptxViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const lastSeq = useRef(0);
-  const appliedPendingRef = useRef(false);
+  const appliedPendingKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,7 +53,7 @@ export function PptxViewer({
     setSlides(null);
     setActiveSlide(1);
     setActiveSearch(undefined);
-    appliedPendingRef.current = false;
+    appliedPendingKeyRef.current = null;
     filesApi
       .getPptx(fileId)
       .then((data) => {
@@ -70,12 +70,14 @@ export function PptxViewer({
   }, [fileId]);
 
   useEffect(() => {
-    if (!slides || appliedPendingRef.current) return;
+    if (!slides || (pendingSlide === undefined && !pendingText)) return;
+    const key = JSON.stringify([pendingSlide, pendingText]);
+    if (appliedPendingKeyRef.current === key) return;
     if (typeof pendingSlide === "number" && pendingSlide >= 1 && pendingSlide <= slides.length) {
       setActiveSlide(pendingSlide);
     }
     if (pendingText) setActiveSearch(pendingText);
-    appliedPendingRef.current = true;
+    appliedPendingKeyRef.current = key;
     onPendingApplied?.();
   }, [slides, pendingSlide, pendingText, onPendingApplied]);
 

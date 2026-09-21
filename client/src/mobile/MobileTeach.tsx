@@ -95,6 +95,8 @@ export default function MobileTeach({ initialSessionId = null, language: request
   const [input, setInput] = useState("");
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [sheet, setSheet] = useState<SourceSheet | null>(null);
+  const sheetRef = useRef<SourceSheet | null>(null);
+  sheetRef.current = sheet;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const followStreamRef = useRef(true);
@@ -119,6 +121,16 @@ export default function MobileTeach({ initialSessionId = null, language: request
   const openSourceSheet = useCallback((
     entry: { windowId: string; refId: string; name: string; kind: string; highlight?: string; posStart?: number; posEnd?: number; pageNumber?: number; slideNumber?: number }
   ) => {
+    const current = sheetRef.current;
+    if (current?.windowId === entry.windowId && current.refId === entry.refId) {
+      setSheet({ ...current, ...entry });
+      return;
+    }
+    const visualFile = entry.kind === "file" && /\.(pdf|pptx)$/i.test(entry.name);
+    if (visualFile) {
+      setSheet({ ...entry, loading: false });
+      return;
+    }
     setSheet({ ...entry, loading: true });
     void (async () => {
       const text = await resolveSourceText(entry.refId);
@@ -153,11 +165,13 @@ export default function MobileTeach({ initialSessionId = null, language: request
           if (prev.some((h) => h.windowId === windowId)) {
             return prev.map((h) => (h.windowId === windowId ? {
               ...h, lastHighlight: highlightText, lastPosStart: posStart, lastPosEnd: posEnd,
+              lastPage: pageNumber ?? h.lastPage, lastSlide: slideNumber ?? h.lastSlide,
             } : h));
           }
           return [...prev, {
             windowId, index: prev.length + 1, name, kind, refId,
             lastHighlight: highlightText, lastPosStart: posStart, lastPosEnd: posEnd,
+            lastPage: pageNumber, lastSlide: slideNumber,
           }];
         });
         openSourceSheet({ windowId, refId, name, kind, highlight: highlightText, posStart, posEnd, pageNumber, slideNumber });
@@ -173,15 +187,25 @@ export default function MobileTeach({ initialSessionId = null, language: request
         const slideNumber = typeof p.slideNumber === "number" ? p.slideNumber : undefined;
         if (kind === "clear_highlight") {
           setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, highlight: undefined, posStart: undefined, posEnd: undefined } : prev));
-        } else if (kind === "highlight" && (text || (typeof posStart === "number" && typeof posEnd === "number"))) {
-          setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, highlight: text, posStart, posEnd } : prev));
+        } else if (kind === "highlight" || kind === "scroll_to") {
+          setSheet((prev) => (prev && prev.windowId === windowId ? {
+            ...prev,
+            ...(text ? { highlight: text } : {}),
+            ...(typeof posStart === "number" ? { posStart } : {}),
+            ...(typeof posEnd === "number" ? { posEnd } : {}),
+            ...(typeof pageNumber === "number" ? { pageNumber } : {}),
+            ...(typeof slideNumber === "number" ? { slideNumber } : {}),
+          } : prev));
           setSourceHistory?.((prev) =>
-            prev.map((h) => (h.windowId === windowId ? { ...h, lastHighlight: text, lastPosStart: posStart, lastPosEnd: posEnd } : h))
+            prev.map((h) => (h.windowId === windowId ? {
+              ...h,
+              ...(text ? { lastHighlight: text } : {}),
+              ...(typeof posStart === "number" ? { lastPosStart: posStart } : {}),
+              ...(typeof posEnd === "number" ? { lastPosEnd: posEnd } : {}),
+              ...(typeof pageNumber === "number" ? { lastPage: pageNumber } : {}),
+              ...(typeof slideNumber === "number" ? { lastSlide: slideNumber } : {}),
+            } : h))
           );
-        } else if (kind === "scroll_to" && typeof pageNumber === "number") {
-          setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, pageNumber } : prev));
-        } else if (kind === "scroll_to" && typeof slideNumber === "number") {
-          setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, slideNumber } : prev));
         }
         break;
       }
@@ -193,6 +217,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
             windowId: entry.windowId, refId: entry.refId, name: entry.name,
             kind: entry.kind, highlight: entry.lastHighlight,
             posStart: entry.lastPosStart, posEnd: entry.lastPosEnd,
+            pageNumber: entry.lastPage, slideNumber: entry.lastSlide,
           });
         }
         break;

@@ -213,7 +213,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
    *  the highlight is guaranteed to be picked up (the `pending` prop is only
    *  consumed once per source load). */
   const applyPaneHighlight = useCallback((highlight: PaneHighlight | null) => {
-    if (!highlight || (!highlight.text && highlight.posStart === undefined && highlight.line === undefined)) {
+    if (!highlight || (!highlight.text && highlight.posStart === undefined && highlight.line === undefined && highlight.scrollToPage === undefined && highlight.scrollToSlide === undefined)) {
       issueShowCommand(paneId, "clear_highlight");
       return;
     }
@@ -223,6 +223,8 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
       posEnd: highlight.posEnd,
       lineStart: highlight.line,
       lineEnd: highlight.lineEnd ?? highlight.line,
+      page: highlight.scrollToPage,
+      slide: highlight.scrollToSlide,
     });
   }, [issueShowCommand, paneId]);
 
@@ -238,15 +240,21 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         const name = String(p.title ?? "Source");
         const kind = String(p.sourceKind ?? "");
         const windowId = sourceRef || name;
-        const scrollToPage = typeof p.scrollToPage === "number" ? p.scrollToPage : undefined;
         const hl = (p.highlight as Record<string, unknown> | undefined);
-        const highlight: PaneHighlight | null = (hl || scrollToPage) ? {
+        const scrollToPage = typeof hl?.scrollToPage === "number"
+          ? hl.scrollToPage
+          : typeof p.scrollToPage === "number" ? p.scrollToPage : undefined;
+        const scrollToSlide = typeof hl?.scrollToSlide === "number"
+          ? hl.scrollToSlide
+          : typeof p.scrollToSlide === "number" ? p.scrollToSlide : undefined;
+        const highlight: PaneHighlight | null = (hl || scrollToPage || scrollToSlide) ? {
           text: typeof hl?.text === "string" ? hl.text : undefined,
           posStart: typeof hl?.posStart === "number" ? hl.posStart : undefined,
           posEnd: typeof hl?.posEnd === "number" ? hl.posEnd : undefined,
           line: typeof hl?.line === "number" ? hl.line : undefined,
           lineEnd: typeof hl?.lineEnd === "number" ? hl.lineEnd : undefined,
           scrollToPage,
+          scrollToSlide,
         } : null;
         sourceMetaRef.current[windowId] = { appId, openPayload };
         // If this source is already the one shown in the pane, DON'T remount
@@ -254,13 +262,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         // citing the same source turn after turn) — just re-issue the
         // highlight through the live command channel.
         if (paneSourceRef.current?.windowId === windowId) {
-          // scrollToPage needs the pending-highlight path (updates the iframe
-          // URL fragment), so go through switchPane for the same source.
-          if (highlight?.scrollToPage) {
-            setPanePending(highlight);
-          } else {
-            applyPaneHighlight(highlight);
-          }
+          applyPaneHighlight(highlight);
         } else {
           const src = buildPaneSource({ windowId, appId, refId: sourceRef, name, kind, openPayload });
           switchPane(src, highlight);
@@ -275,6 +277,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             lastPosStart: highlight?.posStart ?? (idx >= 0 ? prev[idx].lastPosStart : undefined),
             lastPosEnd: highlight?.posEnd ?? (idx >= 0 ? prev[idx].lastPosEnd : undefined),
             lastPage: highlight?.scrollToPage ?? (idx >= 0 ? prev[idx].lastPage : undefined),
+            lastSlide: highlight?.scrollToSlide ?? (idx >= 0 ? prev[idx].lastSlide : undefined),
             appId: appId as TeacherSourceHistoryEntry["appId"],
             openPayload,
           };
@@ -310,19 +313,22 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             const appId = (meta?.appId ?? entry.appId ?? inferred.appId) as PaneSource["appId"];
             const openPayload = meta?.openPayload ?? entry.openPayload ?? inferred.openPayload;
             const src = buildPaneSource({ windowId: winId, appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload });
-            const pending: PaneHighlight | null = kind === "highlight"
+            const pending: PaneHighlight | null = kind === "highlight" || kind === "scroll_to"
               ? { text: payload.text, posStart: payload.posStart, posEnd: payload.posEnd, line: payload.lineStart, lineEnd: payload.lineEnd, scrollToPage: payload.page, scrollToSlide: payload.slide }
-              : kind === "scroll_to" && typeof payload.page === "number"
-                ? { scrollToPage: payload.page }
-                : kind === "scroll_to" && typeof payload.slide === "number"
-                  ? { scrollToSlide: payload.slide }
-                  : null;
+              : null;
             switchPane(src, pending);
           }
         }
-        if (kind === "highlight" && p.text) {
+        if (kind === "highlight" || kind === "scroll_to") {
           setSourceHistory?.((prev) =>
-            prev.map((h) => (h.windowId === winId ? { ...h, lastHighlight: String(p.text) } : h))
+            prev.map((h) => (h.windowId === winId ? {
+              ...h,
+              ...(p.text ? { lastHighlight: String(p.text) } : {}),
+              ...(typeof p.posStart === "number" ? { lastPosStart: p.posStart } : {}),
+              ...(typeof p.posEnd === "number" ? { lastPosEnd: p.posEnd } : {}),
+              ...(typeof p.pageNumber === "number" ? { lastPage: p.pageNumber } : {}),
+              ...(typeof p.slideNumber === "number" ? { lastSlide: p.slideNumber } : {}),
+            } : h))
           );
         }
         break;
@@ -336,7 +342,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           const appId = (meta?.appId ?? entry.appId ?? inferred.appId) as PaneSource["appId"];
           const openPayload = meta?.openPayload ?? entry.openPayload ?? inferred.openPayload;
           const src = buildPaneSource({ windowId: winId, appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload });
-          switchPane(src, entry.lastHighlight ? {
+          switchPane(src, entry.lastPage ? { scrollToPage: entry.lastPage } : entry.lastSlide ? { scrollToSlide: entry.lastSlide } : entry.lastHighlight ? {
             text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd,
           } : null);
         }
@@ -433,9 +439,13 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             windowId: cited.windowId, appId, refId: cited.refId,
             name: cited.name, kind: cited.kind, openPayload,
           });
-          switchPane(src, cited.lastHighlight ? {
+          switchPane(src, cited.lastPage ? { scrollToPage: cited.lastPage } : cited.lastSlide ? { scrollToSlide: cited.lastSlide } : cited.lastHighlight ? {
             text: cited.lastHighlight, posStart: cited.lastPosStart, posEnd: cited.lastPosEnd,
           } : null);
+        } else if (cited.lastPage) {
+          issueShowCommand(paneId, "scroll_to", { page: cited.lastPage });
+        } else if (cited.lastSlide) {
+          issueShowCommand(paneId, "scroll_to", { slide: cited.lastSlide });
         } else if (typeof cited.lastPosStart === "number" && typeof cited.lastPosEnd === "number") {
           issueShowCommand(paneId, "highlight", { posStart: cited.lastPosStart, posEnd: cited.lastPosEnd });
         } else if (cited.lastHighlight) {
@@ -578,7 +588,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
       kind: last.kind,
       openPayload: meta?.openPayload ?? last.openPayload ?? inferred.openPayload,
     });
-    switchPane(src, last.lastPage ? { scrollToPage: last.lastPage } : last.lastHighlight ? {
+    switchPane(src, last.lastPage ? { scrollToPage: last.lastPage } : last.lastSlide ? { scrollToSlide: last.lastSlide } : last.lastHighlight ? {
       text: last.lastHighlight, posStart: last.lastPosStart, posEnd: last.lastPosEnd,
     } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -607,9 +617,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         ? { scrollToPage: target.page }
         : entry?.lastPage
           ? { scrollToPage: entry.lastPage }
-          : entry?.lastHighlight
-            ? { text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd }
-            : null;
+          : entry?.lastSlide
+            ? { scrollToSlide: entry.lastSlide }
+            : entry?.lastHighlight
+              ? { text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd }
+              : null;
     // The side-by-side source pane is only rendered on wide screens; on narrow
     // desktops fall back to a floating window so the citation always does something.
     const paneVisible = sourcePaneRef.current && sourcePaneRef.current.offsetParent !== null;
