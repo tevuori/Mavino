@@ -24,6 +24,7 @@ import { useCodemirrorShowControl } from "../shared/useCodemirrorShowControl";
 import { languageForFile } from "../editor/languages";
 import { PptxViewer } from "../shared/PptxViewer";
 import { PdfJsViewer } from "../shared/PdfJsViewer";
+import { positiveInteger } from "./sourceNavigation";
 
 /** The source currently shown in the pane. */
 export interface PaneSource {
@@ -299,6 +300,7 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
   const [pdfSearch, setPdfSearch] = useState<string | undefined>(undefined);
   /** PDF fragment for page navigation (e.g. "page=3"). Takes priority over search. */
   const [pdfPage, setPdfPage] = useState<number | undefined>(undefined);
+  const [pdfNavigationKey, setPdfNavigationKey] = useState(0);
   const lastSeq = useRef(0);
   const appliedPendingKeyRef = useRef<string | null>(null);
 
@@ -312,6 +314,7 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
     setFileMeta(null);
     setPdfSearch(undefined);
     setPdfPage(undefined);
+    setPdfNavigationKey(0);
     appliedPendingKeyRef.current = null;
     (async () => {
       try {
@@ -335,8 +338,9 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
     const key = JSON.stringify(pending);
     if (appliedPendingKeyRef.current === key) return;
     appliedPendingKeyRef.current = key;
-    if (pending.scrollToPage && pending.scrollToPage >= 1) {
-      setPdfPage(pending.scrollToPage);
+    const page = positiveInteger(pending.scrollToPage);
+    if (page !== undefined) {
+      setPdfPage(page);
       setPdfSearch(undefined);
     } else if (pending.text) {
       const q = pending.text.length > 60 ? pending.text.slice(0, 60).trim() : pending.text;
@@ -353,9 +357,11 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
     lastSeq.current = cmd.seq;
     if (isPdfFile(fileMeta) && (cmd.kind === "highlight" || cmd.kind === "scroll_to")) {
       // Page navigation takes priority over text search.
-      if (typeof cmd.page === "number" && cmd.page >= 1) {
-        setPdfPage(cmd.page);
+      const page = positiveInteger(cmd.page);
+      if (page !== undefined) {
+        setPdfPage(page);
         setPdfSearch(undefined);
+        setPdfNavigationKey(cmd.seq);
         reportResult(paneId, cmd.seq, cmd.kind, true);
         return;
       }
@@ -364,6 +370,7 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
         const q = raw.length > 60 ? raw.slice(0, 60).trim() : raw;
         setPdfSearch(q || undefined);
         setPdfPage(undefined);
+        setPdfNavigationKey(cmd.seq);
         reportResult(paneId, cmd.seq, cmd.kind, Boolean(q));
       } else {
         reportResult(paneId, cmd.seq, cmd.kind, true);
@@ -371,6 +378,7 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
     } else if (cmd.kind === "clear_highlight") {
       setPdfSearch(undefined);
       setPdfPage(undefined);
+      setPdfNavigationKey(cmd.seq);
       reportResult(paneId, cmd.seq, cmd.kind, true);
     } else {
       reportResult(paneId, cmd.seq, cmd.kind, false, "unsupported-type");
@@ -398,6 +406,7 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
         fileUrl={downloadUrl}
         page={pdfPage}
         searchText={pdfSearch}
+        navigationKey={pdfNavigationKey}
         onDocumentError={(err) => onError(err)}
       />
     );

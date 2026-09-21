@@ -28,6 +28,7 @@ import type { CitationMeta } from "../apps/study/CitationMarkdown";
 import type { CitationTarget } from "../apps/study/studyMarkdown";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../services/speech";
 import { findHighlightRange } from "../apps/study/highlightRange";
+import { sourceNavigationFromAction, sourceNavigationFromCommand, sourceNavigationFromHistory, sourceNavigationHistoryPatch } from "../apps/study/sourceNavigation";
 import { PptxViewer } from "../apps/shared/PptxViewer";
 import { PdfJsViewer } from "../apps/shared/PdfJsViewer";
 import { useLanguage } from "../store/language";
@@ -71,6 +72,7 @@ interface SourceSheet {
   pageNumber?: number;
   /** For PPTX: 1-based slide to scroll to. */
   slideNumber?: number;
+  navigationKey: number;
   error?: string;
 }
 
@@ -123,15 +125,15 @@ export default function MobileTeach({ initialSessionId = null, language: request
   ) => {
     const current = sheetRef.current;
     if (current?.windowId === entry.windowId && current.refId === entry.refId) {
-      setSheet({ ...current, ...entry });
+      setSheet({ ...current, ...entry, navigationKey: current.navigationKey + 1 });
       return;
     }
     const visualFile = entry.kind === "file" && /\.(pdf|pptx)$/i.test(entry.name);
     if (visualFile) {
-      setSheet({ ...entry, loading: false });
+      setSheet({ ...entry, loading: false, navigationKey: 1 });
       return;
     }
-    setSheet({ ...entry, loading: true });
+    setSheet({ ...entry, loading: true, navigationKey: 1 });
     void (async () => {
       const text = await resolveSourceText(entry.refId);
       setSheet((prev) =>
@@ -157,21 +159,22 @@ export default function MobileTeach({ initialSessionId = null, language: request
         const highlightText = typeof highlight?.text === "string" ? highlight.text : undefined;
         const posStart = typeof highlight?.posStart === "number" ? highlight.posStart : undefined;
         const posEnd = typeof highlight?.posEnd === "number" ? highlight.posEnd : undefined;
-        const pageNumber = typeof highlight?.scrollToPage === "number" ? highlight.scrollToPage : undefined;
-        const slideNumber = typeof highlight?.scrollToSlide === "number" ? highlight.scrollToSlide : undefined;
+        const navigation = sourceNavigationFromAction(p);
+        const pageNumber = navigation.page;
+        const slideNumber = navigation.slide;
         // Phones have no window ids — key source history by the source ref.
         const windowId = refId || name;
         setSourceHistory?.((prev) => {
           if (prev.some((h) => h.windowId === windowId)) {
             return prev.map((h) => (h.windowId === windowId ? {
               ...h, lastHighlight: highlightText, lastPosStart: posStart, lastPosEnd: posEnd,
-              lastPage: pageNumber ?? h.lastPage, lastSlide: slideNumber ?? h.lastSlide,
+              ...sourceNavigationHistoryPatch(navigation, Boolean(highlightText || posStart !== undefined || posEnd !== undefined)),
             } : h));
           }
           return [...prev, {
             windowId, index: prev.length + 1, name, kind, refId,
             lastHighlight: highlightText, lastPosStart: posStart, lastPosEnd: posEnd,
-            lastPage: pageNumber, lastSlide: slideNumber,
+            ...sourceNavigationHistoryPatch(navigation, Boolean(highlightText || posStart !== undefined || posEnd !== undefined)),
           }];
         });
         openSourceSheet({ windowId, refId, name, kind, highlight: highlightText, posStart, posEnd, pageNumber, slideNumber });
@@ -183,18 +186,20 @@ export default function MobileTeach({ initialSessionId = null, language: request
         const text = typeof p.text === "string" ? p.text : undefined;
         const posStart = typeof p.posStart === "number" ? p.posStart : undefined;
         const posEnd = typeof p.posEnd === "number" ? p.posEnd : undefined;
-        const pageNumber = typeof p.pageNumber === "number" ? p.pageNumber : undefined;
-        const slideNumber = typeof p.slideNumber === "number" ? p.slideNumber : undefined;
+        const navigation = sourceNavigationFromCommand(p);
+        const pageNumber = navigation.page;
+        const slideNumber = navigation.slide;
         if (kind === "clear_highlight") {
           setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, highlight: undefined, posStart: undefined, posEnd: undefined } : prev));
         } else if (kind === "highlight" || kind === "scroll_to") {
           setSheet((prev) => (prev && prev.windowId === windowId ? {
             ...prev,
-            ...(text ? { highlight: text } : {}),
-            ...(typeof posStart === "number" ? { posStart } : {}),
-            ...(typeof posEnd === "number" ? { posEnd } : {}),
-            ...(typeof pageNumber === "number" ? { pageNumber } : {}),
-            ...(typeof slideNumber === "number" ? { slideNumber } : {}),
+            navigationKey: prev.navigationKey + 1,
+            highlight: text,
+            posStart,
+            posEnd,
+            pageNumber,
+            slideNumber,
           } : prev));
           setSourceHistory?.((prev) =>
             prev.map((h) => (h.windowId === windowId ? {
@@ -202,8 +207,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
               ...(text ? { lastHighlight: text } : {}),
               ...(typeof posStart === "number" ? { lastPosStart: posStart } : {}),
               ...(typeof posEnd === "number" ? { lastPosEnd: posEnd } : {}),
-              ...(typeof pageNumber === "number" ? { lastPage: pageNumber } : {}),
-              ...(typeof slideNumber === "number" ? { lastSlide: slideNumber } : {}),
+              ...sourceNavigationHistoryPatch(navigation, Boolean(text || posStart !== undefined || posEnd !== undefined)),
             } : h))
           );
         }
@@ -267,10 +271,12 @@ export default function MobileTeach({ initialSessionId = null, language: request
     // when switching sources, to avoid re-rendering on every sentence.
     const switchingIn = !prev || prev.citations[0] !== seg.citations[0];
     if (switchingIn) {
+      const navigation = sourceNavigationFromHistory(cited);
       openSourceSheet({
         windowId: cited.windowId, refId: cited.refId, name: cited.name,
         kind: cited.kind, highlight: cited.lastHighlight,
         posStart: cited.lastPosStart, posEnd: cited.lastPosEnd,
+        pageNumber: navigation.page, slideNumber: navigation.slide,
       });
     }
   }, [openSourceSheet]);
@@ -747,6 +753,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
                     paneId={`mobile-${sheet.windowId}`}
                     pendingSlide={sheet.slideNumber}
                     pendingText={sheet.highlight}
+                    navigationKey={sheet.navigationKey}
                   />
                 </div>
               ) : isPdfSheet(sheet) ? (
@@ -754,11 +761,18 @@ export default function MobileTeach({ initialSessionId = null, language: request
                   <PdfJsViewer
                     fileUrl={filesApi.downloadUrl(sheet.refId)}
                     page={sheet.pageNumber}
-                    searchText={sheet.highlight}
+                    searchText={sheet.pageNumber === undefined ? sheet.highlight : undefined}
+                    navigationKey={sheet.navigationKey}
                   />
                 </div>
               ) : (
-                <SourceText text={sheet.text ?? ""} highlight={sheet.highlight} posStart={sheet.posStart} posEnd={sheet.posEnd} />
+                <SourceText
+                  text={sheet.text ?? ""}
+                  highlight={sheet.highlight}
+                  posStart={sheet.posStart}
+                  posEnd={sheet.posEnd}
+                  navigationKey={sheet.navigationKey}
+                />
               )}
             </div>
           </div>
@@ -772,7 +786,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
  *  Resolves the highlight by character offset (exact) first, then exact text,
  *  then fuzzy token-overlap so a paraphrased phrase still lands on the right
  *  passage instead of the first occurrence of a common word. */
-function SourceText({ text, highlight, posStart, posEnd }: { text: string; highlight?: string; posStart?: number; posEnd?: number }) {
+function SourceText({ text, highlight, posStart, posEnd, navigationKey }: { text: string; highlight?: string; posStart?: number; posEnd?: number; navigationKey: number }) {
   const markRef = useRef<HTMLElement>(null);
   const range = highlight || (typeof posStart === "number" && typeof posEnd === "number")
     ? findHighlightRange(text, { posStart, posEnd, text: highlight })
@@ -780,7 +794,7 @@ function SourceText({ text, highlight, posStart, posEnd }: { text: string; highl
 
   useEffect(() => {
     markRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [range?.from, range?.to]);
+  }, [range?.from, range?.to, navigationKey]);
 
   if (!range) {
     return <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-ink-muted">{text}</pre>;

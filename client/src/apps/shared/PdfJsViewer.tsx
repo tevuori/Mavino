@@ -18,6 +18,7 @@ interface PdfJsViewerProps {
   page?: number;
   /** Text to search/highlight across the document. */
   searchText?: string;
+  navigationKey?: number;
   /** Optional classes for the scrollable container. */
   className?: string;
   /** Called when the PDF fails to load. */
@@ -28,6 +29,7 @@ export function PdfJsViewer({
   fileUrl,
   page,
   searchText,
+  navigationKey,
   className = "",
   onDocumentError,
 }: PdfJsViewerProps) {
@@ -64,10 +66,10 @@ export function PdfJsViewer({
     eventBusRef.current = eventBus;
     findControllerRef.current = findController;
 
-    const fitPageWidth = () => {
-      pdfViewer.currentScaleValue = "page-width";
+    const fitPage = () => {
+      pdfViewer.currentScaleValue = "page-fit";
     };
-    eventBus.on("pagesinit", fitPageWidth);
+    eventBus.on("pagesinit", fitPage);
 
     let destroyed = false;
     const loadingTask = pdfjs.getDocument({ url: fileUrl });
@@ -85,7 +87,7 @@ export function PdfJsViewer({
 
     return () => {
       destroyed = true;
-      eventBus.off("pagesinit", fitPageWidth);
+      eventBus.off("pagesinit", fitPage);
       viewerRef.current = null;
       eventBusRef.current = null;
       findControllerRef.current = null;
@@ -98,9 +100,9 @@ export function PdfJsViewer({
 
   // Jump to the requested page once the document is loaded.
   useEffect(() => {
-    if (!loaded || !viewerRef.current || typeof page !== "number") return;
-    viewerRef.current.currentPageNumber = page;
-  }, [loaded, page]);
+    if (!loaded || !viewerRef.current || typeof page !== "number" || !Number.isInteger(page) || page < 1) return;
+    viewerRef.current.currentPageNumber = Math.min(page, viewerRef.current.pagesCount);
+  }, [loaded, page, navigationKey]);
 
   // Run/clear the find controller when search text changes.
   useEffect(() => {
@@ -124,7 +126,7 @@ export function PdfJsViewer({
         highlightAll: false,
       });
     }
-  }, [loaded, searchText]);
+  }, [loaded, searchText, navigationKey]);
 
   return (
     <div className={`relative h-full w-full ${className}`}>

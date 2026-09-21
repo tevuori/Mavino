@@ -35,6 +35,7 @@ import { useTeacherSession } from "./useTeacherSession";
 import { prepareSpeech, segmentAtOffset, type SpeechSegment } from "./teacherSpeech";
 import { LessonAgenda, ToolChipRow, ComprehensionCard, PaceFeedbackRow, ExportMenu } from "./teachPanels";
 import TeachSourcePane, { type PaneSource, type PaneHighlight } from "./TeachSourcePane";
+import { sourceNavigationFromAction, sourceNavigationFromCommand, sourceNavigationHistoryPatch } from "./sourceNavigation";
 import type { CitationTarget } from "./studyMarkdown";
 import TeachErrorBoundary from "./TeachErrorBoundary";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../../services/speech";
@@ -241,12 +242,9 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         const kind = String(p.sourceKind ?? "");
         const windowId = sourceRef || name;
         const hl = (p.highlight as Record<string, unknown> | undefined);
-        const scrollToPage = typeof hl?.scrollToPage === "number"
-          ? hl.scrollToPage
-          : typeof p.scrollToPage === "number" ? p.scrollToPage : undefined;
-        const scrollToSlide = typeof hl?.scrollToSlide === "number"
-          ? hl.scrollToSlide
-          : typeof p.scrollToSlide === "number" ? p.scrollToSlide : undefined;
+        const navigation = sourceNavigationFromAction(p);
+        const scrollToPage = navigation.page;
+        const scrollToSlide = navigation.slide;
         const highlight: PaneHighlight | null = (hl || scrollToPage || scrollToSlide) ? {
           text: typeof hl?.text === "string" ? hl.text : undefined,
           posStart: typeof hl?.posStart === "number" ? hl.posStart : undefined,
@@ -276,8 +274,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             lastHighlight: highlight?.text ?? (idx >= 0 ? prev[idx].lastHighlight : undefined),
             lastPosStart: highlight?.posStart ?? (idx >= 0 ? prev[idx].lastPosStart : undefined),
             lastPosEnd: highlight?.posEnd ?? (idx >= 0 ? prev[idx].lastPosEnd : undefined),
-            lastPage: highlight?.scrollToPage ?? (idx >= 0 ? prev[idx].lastPage : undefined),
-            lastSlide: highlight?.scrollToSlide ?? (idx >= 0 ? prev[idx].lastSlide : undefined),
+            ...sourceNavigationHistoryPatch(navigation, Boolean(highlight?.text || highlight?.posStart !== undefined || highlight?.posEnd !== undefined)),
             appId: appId as TeacherSourceHistoryEntry["appId"],
             openPayload,
           };
@@ -290,6 +287,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         const winId = String(p.windowId ?? "");
         const kind = p.kind as "scroll_to" | "highlight" | "clear_highlight";
         const isActive = paneSourceRef.current?.windowId === winId;
+        const navigation = sourceNavigationFromCommand(p);
         const payload: Partial<ShowCommand> = {
           text: typeof p.text === "string" ? p.text : undefined,
           posStart: typeof p.posStart === "number" ? p.posStart : undefined,
@@ -297,8 +295,8 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           lineStart: p.lineStart,
           lineEnd: p.lineEnd,
           line: p.line,
-          page: typeof p.pageNumber === "number" ? p.pageNumber : undefined,
-          slide: typeof p.slideNumber === "number" ? p.slideNumber : undefined,
+          page: navigation.page,
+          slide: navigation.slide,
         };
         if (isActive) {
           if (kind === "clear_highlight") issueShowCommand(paneId, "clear_highlight");
@@ -326,8 +324,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
               ...(p.text ? { lastHighlight: String(p.text) } : {}),
               ...(typeof p.posStart === "number" ? { lastPosStart: p.posStart } : {}),
               ...(typeof p.posEnd === "number" ? { lastPosEnd: p.posEnd } : {}),
-              ...(typeof p.pageNumber === "number" ? { lastPage: p.pageNumber } : {}),
-              ...(typeof p.slideNumber === "number" ? { lastSlide: p.slideNumber } : {}),
+              ...sourceNavigationHistoryPatch(navigation, Boolean(p.text || typeof p.posStart === "number" || typeof p.posEnd === "number")),
             } : h))
           );
         }

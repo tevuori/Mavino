@@ -24,6 +24,7 @@ interface PptxViewerProps {
   pendingText?: string;
   /** Called after the pending highlight has been applied. */
   onPendingApplied?: () => void;
+  navigationKey?: number;
   /** Extra classes for the outer container. */
   className?: string;
 }
@@ -34,6 +35,7 @@ export function PptxViewer({
   pendingSlide,
   pendingText,
   onPendingApplied,
+  navigationKey,
   className = "",
 }: PptxViewerProps) {
   const commands = useShowControl((s) => s.commands);
@@ -70,34 +72,45 @@ export function PptxViewer({
   }, [fileId]);
 
   useEffect(() => {
-    if (!slides || (pendingSlide === undefined && !pendingText)) return;
-    const key = JSON.stringify([pendingSlide, pendingText]);
+    if (pendingSlide === undefined && !pendingText) {
+      appliedPendingKeyRef.current = null;
+      return;
+    }
+    if (!slides) return;
+    const key = JSON.stringify([pendingSlide, pendingText, navigationKey]);
     if (appliedPendingKeyRef.current === key) return;
-    if (typeof pendingSlide === "number" && pendingSlide >= 1 && pendingSlide <= slides.length) {
+    if (typeof pendingSlide === "number" && Number.isInteger(pendingSlide) && pendingSlide >= 1 && pendingSlide <= slides.length) {
       setActiveSlide(pendingSlide);
     }
-    if (pendingText) setActiveSearch(pendingText);
+    setActiveSearch(pendingText);
     appliedPendingKeyRef.current = key;
     onPendingApplied?.();
-  }, [slides, pendingSlide, pendingText, onPendingApplied]);
+  }, [slides, pendingSlide, pendingText, navigationKey, onPendingApplied]);
 
   const cmd = commands[paneId];
   useEffect(() => {
     if (!cmd || cmd.seq === lastSeq.current || !slides) return;
     lastSeq.current = cmd.seq;
     if (cmd.kind === "highlight" || cmd.kind === "scroll_to") {
-      if (typeof cmd.slide === "number" && cmd.slide >= 1 && cmd.slide <= slides.length) {
+      if (typeof cmd.slide === "number" && Number.isInteger(cmd.slide) && cmd.slide >= 1 && cmd.slide <= slides.length) {
         setActiveSlide(cmd.slide);
         setActiveSearch(cmd.text);
         reportResult(paneId, cmd.seq, cmd.kind, true);
         return;
       }
       if (cmd.text) {
-        setActiveSearch(cmd.text);
-        reportResult(paneId, cmd.seq, cmd.kind, true);
+        const search = cmd.text;
+        const matchingSlide = slides.findIndex((slide) => slide.text.toLowerCase().includes(search.toLowerCase()));
+        if (matchingSlide >= 0) {
+          setActiveSlide(matchingSlide + 1);
+          setActiveSearch(search);
+          reportResult(paneId, cmd.seq, cmd.kind, true);
+        } else {
+          reportResult(paneId, cmd.seq, cmd.kind, false, "no-match");
+        }
         return;
       }
-      reportResult(paneId, cmd.seq, cmd.kind, true);
+      reportResult(paneId, cmd.seq, cmd.kind, cmd.slide === undefined, cmd.slide === undefined ? undefined : "no-match");
     } else if (cmd.kind === "clear_highlight") {
       setActiveSearch(undefined);
       reportResult(paneId, cmd.seq, cmd.kind, true);
