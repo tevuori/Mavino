@@ -603,7 +603,14 @@ export default function MobileTeach({ initialSessionId = null, language: request
                 message that asked them, instead of piling up at the bottom
                 as the conversation grows. */}
             {comprehensionChecks.filter((c) => c.afterMessageIndex === i).map((c) => (
-              <ComprehensionCard key={c.id} check={c} onAnswer={(a) => void answerComprehension(c.id, a)} fullWidth />
+              <ComprehensionCard
+                key={c.id}
+                check={c}
+                onAnswer={(a) => void answerComprehension(c.id, a)}
+                citations={citationMeta}
+                onOpenCitation={openCitation}
+                fullWidth
+              />
             ))}
           </Fragment>
         ))}
@@ -628,7 +635,14 @@ export default function MobileTeach({ initialSessionId = null, language: request
 
         {/* Checks asked during the turn that's still streaming render here. */}
         {comprehensionChecks.filter((c) => c.afterMessageIndex >= messages.length).map((c) => (
-          <ComprehensionCard key={c.id} check={c} onAnswer={(a) => void answerComprehension(c.id, a)} fullWidth />
+          <ComprehensionCard
+            key={c.id}
+            check={c}
+            onAnswer={(a) => void answerComprehension(c.id, a)}
+            citations={citationMeta}
+            onOpenCitation={openCitation}
+            fullWidth
+          />
         ))}
 
         {error && (

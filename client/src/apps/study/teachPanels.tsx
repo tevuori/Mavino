@@ -14,6 +14,9 @@ import type {
   PaceFeedback,
 } from "../../services/teacher";
 import type { ComprehensionCheck, ToolChip } from "./useTeacherSession";
+import CitationMarkdown from "./CitationMarkdown";
+import type { CitationMeta } from "./CitationMarkdown";
+import type { CitationTarget } from "./studyMarkdown";
 
 /** Pass rate of a concept, 0..1 (0 when never checked). */
 export function passRate(entry: TeacherMasteryEntry | undefined): number {
@@ -168,10 +171,14 @@ export function ToolChipRow({ chips }: { chips: ToolChip[] }) {
 export function ComprehensionCard({
   check,
   onAnswer,
+  citations,
+  onOpenCitation,
   fullWidth = false,
 }: {
   check: ComprehensionCheck;
   onAnswer: (answer: string) => void;
+  citations?: CitationMeta[];
+  onOpenCitation?: (target: CitationTarget) => void;
   fullWidth?: boolean;
 }) {
   const [answer, setAnswer] = useState("");
@@ -195,15 +202,30 @@ export function ComprehensionCard({
           {graded ? (assessment.passed ? "Correct" : "Not quite") : "Comprehension check"}
           {check.grading && <Loader2 size={11} className="animate-spin" />}
         </div>
-        <p className="mb-2 text-ink">{check.question}</p>
+        <div className="mb-2 text-ink">
+          <CitationMarkdown
+            content={check.question}
+            citations={citations}
+            onOpenCitation={onOpenCitation}
+            className="text-sm"
+          />
+        </div>
 
         {check.answered ? (
           <div className="flex flex-col gap-1">
-            <p className="text-xs text-ink-muted">Your answer: {check.answer}</p>
+            <div className="text-xs text-ink-muted">
+              Your answer: <CitationMarkdown content={check.answer ?? ""} className="text-xs" />
+            </div>
             {check.grading && <p className="text-xs text-ink-muted">Checking your answer…</p>}
-            {assessment && <p className="text-xs text-ink">{assessment.feedback}</p>}
+            {assessment && (
+              <div className="text-xs text-ink">
+                <CitationMarkdown content={assessment.feedback} citations={citations} onOpenCitation={onOpenCitation} className="text-xs" />
+              </div>
+            )}
             {assessment?.misconception && (
-              <p className="text-[11px] text-amber-400">Watch out: {assessment.misconception}</p>
+              <div className="text-[11px] text-amber-400">
+                Watch out: <CitationMarkdown content={assessment.misconception} className="text-[11px]" />
+              </div>
             )}
           </div>
         ) : check.options && check.options.length > 0 ? (
@@ -214,7 +236,7 @@ export function ComprehensionCard({
                 onClick={() => onAnswer(opt)}
                 className="rounded-md border border-edge bg-surface px-2.5 py-2 text-left text-xs text-ink transition hover:border-accent/50 hover:bg-surface-2"
               >
-                {opt}
+                <CitationMarkdown content={opt} citations={citations} onOpenCitation={onOpenCitation} className="text-xs" />
               </button>
             ))}
           </div>

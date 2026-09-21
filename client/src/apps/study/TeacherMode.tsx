@@ -995,7 +995,13 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                     message that asked them, instead of piling up at the
                     bottom as the conversation grows. */}
                 {comprehensionChecks.filter((c) => c.afterMessageIndex === i).map((c) => (
-                  <ComprehensionCard key={c.id} check={c} onAnswer={(ans) => void answerComprehension(c.id, ans)} />
+                  <ComprehensionCard
+                    key={c.id}
+                    check={c}
+                    onAnswer={(ans) => void answerComprehension(c.id, ans)}
+                    citations={citationMeta}
+                    onOpenCitation={openCitation}
+                  />
                 ))}
               </Fragment>
             );
@@ -1022,7 +1028,13 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           {/* Checks asked during the turn that's still streaming (or that
               somehow outran the message list) render here, at the end. */}
           {comprehensionChecks.filter((c) => c.afterMessageIndex >= messages.length).map((c) => (
-            <ComprehensionCard key={c.id} check={c} onAnswer={(ans) => void answerComprehension(c.id, ans)} />
+            <ComprehensionCard
+              key={c.id}
+              check={c}
+              onAnswer={(ans) => void answerComprehension(c.id, ans)}
+              citations={citationMeta}
+              onOpenCitation={openCitation}
+            />
           ))}
         </div>
 
