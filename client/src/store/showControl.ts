@@ -25,6 +25,8 @@ export interface ShowCommand {
   line?: number;
   /** scroll_to / highlight: a character offset in the document. */
   pos?: number;
+  /** scroll_to: a 1-based page number to scroll to (PDF). */
+  page?: number;
   /** scroll_to / highlight: text to search for in the document (first match). */
   text?: string;
   /** highlight: start line of a line-range highlight (1-based, inclusive). */

@@ -25,6 +25,7 @@ export default function ViewerApp({ win }: { win: WindowInstance }) {
   const lastShowSeq = useRef(0);
   const activeShowCmd = showCommands[win.id];
   const [pdfSearch, setPdfSearch] = useState<string | null>(null);
+  const [pdfPage, setPdfPage] = useState<number | null>(null);
   useEffect(() => {
     if (!activeShowCmd || activeShowCmd.seq === lastShowSeq.current) return;
     lastShowSeq.current = activeShowCmd.seq;
@@ -33,7 +34,9 @@ export default function ViewerApp({ win }: { win: WindowInstance }) {
     if (!file) {
       reportShowResult(win.id, activeShowCmd.seq, activeShowCmd.kind, false, "file-not-found");
     } else if (activeShowCmd.kind === "highlight" || activeShowCmd.kind === "scroll_to") {
-      const showable = isPdfFile(file) ? Boolean(activeShowCmd.text ?? activeShowCmd.selector) : isImageFile(file);
+      const showable = isPdfFile(file)
+        ? Boolean(activeShowCmd.text ?? activeShowCmd.selector ?? activeShowCmd.page)
+        : isImageFile(file);
       reportShowResult(
         win.id,
         activeShowCmd.seq,
@@ -42,18 +45,27 @@ export default function ViewerApp({ win }: { win: WindowInstance }) {
         showable ? undefined : isPdfFile(file) ? "no-match" : "unsupported-type"
       );
     }
-    // For PDFs: use PDF Open Parameters (#search=) to jump to text in the
-    // native viewer. For audio/video: seek via the media element. For images:
-    // handled by the ImageViewer via the command prop below.
+    // For PDFs: use PDF Open Parameters (#page= or #search=) to jump to a page
+    // or highlight text in the native viewer. Page takes priority. For
+    // audio/video: seek via the media element. For images: handled by the
+    // ImageViewer via the command prop below.
     if (file && isPdfFile(file) && (activeShowCmd.kind === "scroll_to" || activeShowCmd.kind === "highlight")) {
-      const raw = activeShowCmd.text ?? activeShowCmd.selector ?? "";
-      if (raw) {
-        // Truncate to first ~60 chars to avoid highlighting huge portions
-        // of the document. PDF #search= highlights ALL occurrences, so a
-        // long text would highlight too much. A shorter, specific snippet
-        // jumps to the right passage without over-highlighting.
-        const q = raw.length > 60 ? raw.slice(0, 60).trim() : raw;
-        if (q) setPdfSearch(q);
+      if (typeof activeShowCmd.page === "number" && activeShowCmd.page >= 1) {
+        setPdfPage(activeShowCmd.page);
+        setPdfSearch(null);
+      } else {
+        const raw = activeShowCmd.text ?? activeShowCmd.selector ?? "";
+        if (raw) {
+          // Truncate to first ~60 chars to avoid highlighting huge portions
+          // of the document. PDF #search= highlights ALL occurrences, so a
+          // long text would highlight too much. A shorter, specific snippet
+          // jumps to the right passage without over-highlighting.
+          const q = raw.length > 60 ? raw.slice(0, 60).trim() : raw;
+          if (q) {
+            setPdfSearch(q);
+            setPdfPage(null);
+          }
+        }
       }
     }
     if (file && (isAudioFile(file) || isVideoFile(file)) && activeShowCmd.kind === "scroll_to") {
@@ -148,11 +160,13 @@ export default function ViewerApp({ win }: { win: WindowInstance }) {
         {isImageFile(file) && <ImageViewer file={file} command={activeShowCmd} />}
         {isPdfFile(file) && (
           <iframe
-            key={pdfSearch ?? "default"}
+            key={pdfPage ? `page-${pdfPage}` : pdfSearch ?? "default"}
             src={
-              pdfSearch
-                ? `${filesApi.downloadUrl(file.id)}#search=${encodeURIComponent(pdfSearch)}`
-                : filesApi.downloadUrl(file.id)
+              pdfPage
+                ? `${filesApi.downloadUrl(file.id)}#page=${pdfPage}`
+                : pdfSearch
+                  ? `${filesApi.downloadUrl(file.id)}#search=${encodeURIComponent(pdfSearch)}`
+                  : filesApi.downloadUrl(file.id)
             }
             className="h-full w-full border-0"
             title={file.name}

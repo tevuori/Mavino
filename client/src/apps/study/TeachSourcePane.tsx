@@ -299,6 +299,13 @@ function ViewerPane({ paneId, source, pending, onPendingApplied, onLoadingChange
     lastSeq.current = cmd.seq;
     if (!fileMeta) { reportResult(paneId, cmd.seq, cmd.kind, false, "not-loaded"); return; }
     if (isPdfFile(fileMeta) && (cmd.kind === "highlight" || cmd.kind === "scroll_to")) {
+      // Page navigation takes priority over text search.
+      if (typeof cmd.page === "number" && cmd.page >= 1) {
+        setPdfPage(cmd.page);
+        setPdfSearch(undefined);
+        reportResult(paneId, cmd.seq, cmd.kind, true);
+        return;
+      }
       const raw = cmd.text ?? "";
       if (raw) {
         const q = raw.length > 60 ? raw.slice(0, 60).trim() : raw;

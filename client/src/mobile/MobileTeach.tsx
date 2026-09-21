@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { StudentLevel, TeachingStyle } from "../services/teacher";
 import { studySourcesApi, type StudySource } from "../services/study-sources";
+import { filesApi } from "../services/files";
 import type { AthenaClientAction } from "../services/athena";
 import { useTeacherSession } from "../apps/study/useTeacherSession";
 import { useTeacherTts } from "../apps/study/useTeacherTts";
@@ -35,6 +36,12 @@ import {
 const LEVELS: StudentLevel[] = ["beginner", "intermediate", "advanced"];
 const STYLES: TeachingStyle[] = ["explain", "socratic"];
 
+function isPdfSheet(sheet: SourceSheet): boolean {
+  if (sheet.kind !== "file") return false;
+  const name = sheet.name.toLowerCase();
+  return name.endsWith(".pdf") || sheet.refId.toLowerCase().endsWith(".pdf");
+}
+
 const KIND_ICON: Record<string, typeof BookOpen> = {
   note: BookOpen, file: BookOpen, paste: BookOpen, url: BookOpen,
 };
@@ -52,6 +59,8 @@ interface SourceSheet {
   /** Character offsets of the resolved anchor (exact, preferred over text search). */
   posStart?: number;
   posEnd?: number;
+  /** For PDFs: 1-based page to scroll to. */
+  pageNumber?: number;
   error?: string;
 }
 
@@ -98,7 +107,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
   }, []);
 
   const openSourceSheet = useCallback((
-    entry: { windowId: string; refId: string; name: string; kind: string; highlight?: string; posStart?: number; posEnd?: number }
+    entry: { windowId: string; refId: string; name: string; kind: string; highlight?: string; posStart?: number; posEnd?: number; pageNumber?: number }
   ) => {
     setSheet({ ...entry, loading: true });
     void (async () => {
@@ -126,6 +135,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
         const highlightText = typeof highlight?.text === "string" ? highlight.text : undefined;
         const posStart = typeof highlight?.posStart === "number" ? highlight.posStart : undefined;
         const posEnd = typeof highlight?.posEnd === "number" ? highlight.posEnd : undefined;
+        const pageNumber = typeof highlight?.scrollToPage === "number" ? highlight.scrollToPage : undefined;
         // Phones have no window ids — key source history by the source ref.
         const windowId = refId || name;
         setSourceHistory?.((prev) => {
@@ -139,7 +149,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
             lastHighlight: highlightText, lastPosStart: posStart, lastPosEnd: posEnd,
           }];
         });
-        openSourceSheet({ windowId, refId, name, kind, highlight: highlightText, posStart, posEnd });
+        openSourceSheet({ windowId, refId, name, kind, highlight: highlightText, posStart, posEnd, pageNumber });
         break;
       }
       case "show_command": {
@@ -148,6 +158,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
         const text = typeof p.text === "string" ? p.text : undefined;
         const posStart = typeof p.posStart === "number" ? p.posStart : undefined;
         const posEnd = typeof p.posEnd === "number" ? p.posEnd : undefined;
+        const pageNumber = typeof p.pageNumber === "number" ? p.pageNumber : undefined;
         if (kind === "clear_highlight") {
           setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, highlight: undefined, posStart: undefined, posEnd: undefined } : prev));
         } else if (kind === "highlight" && (text || (typeof posStart === "number" && typeof posEnd === "number"))) {
@@ -155,6 +166,8 @@ export default function MobileTeach({ initialSessionId = null, language: request
           setSourceHistory?.((prev) =>
             prev.map((h) => (h.windowId === windowId ? { ...h, lastHighlight: text, lastPosStart: posStart, lastPosEnd: posEnd } : h))
           );
+        } else if (kind === "scroll_to" && typeof pageNumber === "number") {
+          setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, pageNumber } : prev));
         }
         break;
       }
@@ -672,6 +685,17 @@ export default function MobileTeach({ initialSessionId = null, language: request
                 </div>
               ) : sheet.error ? (
                 <p className="text-sm text-ink-muted">{sheet.error}</p>
+              ) : isPdfSheet(sheet) ? (
+                <iframe
+                  key={sheet.pageNumber ? `page-${sheet.pageNumber}` : "default"}
+                  src={
+                    sheet.pageNumber
+                      ? `${filesApi.downloadUrl(sheet.refId)}#page=${sheet.pageNumber}`
+                      : filesApi.downloadUrl(sheet.refId)
+                  }
+                  className="h-[60vh] w-full rounded-lg border-0 bg-white"
+                  title={sheet.name}
+                />
               ) : (
                 <SourceText text={sheet.text ?? ""} highlight={sheet.highlight} posStart={sheet.posStart} posEnd={sheet.posEnd} />
               )}

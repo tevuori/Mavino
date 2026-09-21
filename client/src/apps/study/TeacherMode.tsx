@@ -293,6 +293,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           lineStart: p.lineStart,
           lineEnd: p.lineEnd,
           line: p.line,
+          page: typeof p.pageNumber === "number" ? p.pageNumber : undefined,
         };
         if (isActive) {
           if (kind === "clear_highlight") issueShowCommand(paneId, "clear_highlight");
@@ -307,7 +308,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             const appId = (meta?.appId ?? entry.appId ?? inferred.appId) as PaneSource["appId"];
             const openPayload = meta?.openPayload ?? entry.openPayload ?? inferred.openPayload;
             const src = buildPaneSource({ windowId: winId, appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload });
-            const pending: PaneHighlight | null = kind === "highlight" ? { text: payload.text, posStart: payload.posStart, posEnd: payload.posEnd, line: payload.lineStart, lineEnd: payload.lineEnd } : null;
+            const pending: PaneHighlight | null = kind === "highlight"
+              ? { text: payload.text, posStart: payload.posStart, posEnd: payload.posEnd, line: payload.lineStart, lineEnd: payload.lineEnd, scrollToPage: payload.page }
+              : kind === "scroll_to" && typeof payload.page === "number"
+                ? { scrollToPage: payload.page }
+                : null;
             switchPane(src, pending);
           }
         }

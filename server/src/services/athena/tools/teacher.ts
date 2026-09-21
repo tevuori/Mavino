@@ -99,6 +99,7 @@ export const teacherTools: ToolDef[] = [
       { name: "highlightText", type: "string", description: "Text to scroll to and highlight (first occurrence)" },
       { name: "highlightLine", type: "number", description: "1-based line number to scroll to / start of line-range highlight" },
       { name: "highlightLineEnd", type: "number", description: "End line (inclusive) of a line-range highlight" },
+      { name: "pageNumber", type: "number", description: "1-based PDF page number to scroll to (takes priority over highlightText for PDFs)" },
       { name: "label", type: "string", description: "Optional human label for the source (e.g. 'ML notes')" },
     ],
     handler: async (args, { userId }) => {
@@ -161,6 +162,7 @@ export const teacherTools: ToolDef[] = [
       const requestedHighlight = args.highlightText ? String(args.highlightText) : undefined;
       const highlightLine = typeof args.highlightLine === "number" ? Number(args.highlightLine) : undefined;
       const highlightLineEnd = typeof args.highlightLineEnd === "number" ? Number(args.highlightLineEnd) : undefined;
+      const pageNumber = typeof args.pageNumber === "number" ? Number(args.pageNumber) : undefined;
 
       // Resolve the requested phrase to a verbatim span + character offsets in
       // the cached source text. The offsets let the client highlight the EXACT
@@ -206,6 +208,7 @@ export const teacherTools: ToolDef[] = [
           posEnd: highlightPosEnd,
           line: highlightLine,
           lineEnd: highlightLineEnd,
+          scrollToPage: pageNumber,
         },
         ...(highlightWarning ? { warning: highlightWarning } : {}),
       };
@@ -216,13 +219,15 @@ export const teacherTools: ToolDef[] = [
     description:
       "Highlight a passage in an already-open source window (without re-opening it). " +
       "Provide the windowId (from list_open_windows or the show_source result) and either text, or lineStart+lineEnd for a line range. " +
-      "For text, pass a SHORT specific phrase (max ~50 chars) — not a long paragraph, to avoid over-highlighting.",
+      "For text, pass a SHORT specific phrase (max ~50 chars) — not a long paragraph, to avoid over-highlighting. " +
+      "For PDFs, you can also pass pageNumber (1-based) to first jump to that page before highlighting.",
     clientAction: true,
     parameters: [
       { name: "windowId", type: "string", description: "Target window id", required: true },
       { name: "text", type: "string", description: "Text to highlight (first occurrence)" },
       { name: "lineStart", type: "number", description: "Start line (1-based, inclusive) for a line-range highlight" },
       { name: "lineEnd", type: "number", description: "End line (1-based, inclusive) for a line-range highlight" },
+      { name: "pageNumber", type: "number", description: "1-based PDF page number to jump to before highlighting" },
     ],
     handler: async (args) => ({
       action: "show_command",
@@ -231,18 +236,20 @@ export const teacherTools: ToolDef[] = [
       text: args.text ? String(args.text) : undefined,
       lineStart: typeof args.lineStart === "number" ? Number(args.lineStart) : undefined,
       lineEnd: typeof args.lineEnd === "number" ? Number(args.lineEnd) : undefined,
+      pageNumber: typeof args.pageNumber === "number" ? Number(args.pageNumber) : undefined,
     }),
   },
   {
     name: "scroll_source",
     description:
-      "Scroll an already-open source window to a passage or line without highlighting. " +
-      "Provide the windowId and either text or line.",
+      "Scroll an already-open source window to a passage, line or PDF page without highlighting. " +
+      "Provide the windowId and either text, line, or pageNumber (for PDFs).",
     clientAction: true,
     parameters: [
       { name: "windowId", type: "string", description: "Target window id", required: true },
       { name: "text", type: "string", description: "Text to scroll to (first occurrence)" },
       { name: "line", type: "number", description: "1-based line number to scroll to" },
+      { name: "pageNumber", type: "number", description: "1-based PDF page number to scroll to" },
     ],
     handler: async (args) => ({
       action: "show_command",
@@ -250,6 +257,7 @@ export const teacherTools: ToolDef[] = [
       kind: "scroll_to",
       text: args.text ? String(args.text) : undefined,
       line: typeof args.line === "number" ? Number(args.line) : undefined,
+      pageNumber: typeof args.pageNumber === "number" ? Number(args.pageNumber) : undefined,
     }),
   },
   {
