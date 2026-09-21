@@ -328,6 +328,8 @@ export default function MobileTeach({ initialSessionId = null, language: request
       highlight: entry?.lastHighlight,
       posStart: entry?.lastPosStart,
       posEnd: entry?.lastPosEnd,
+      pageNumber: target.label === "page" ? target.page : entry?.lastPage,
+      slideNumber: target.label === "slide" ? target.page : undefined,
     });
   }, [attachedSources, sourceHistory, openSourceSheet]);
 

@@ -13,7 +13,7 @@
 //  - Source-history is tracked in local state and sent back to the server on
 //    each turn so Athena can resolve "go back to the first file".
 
-import { useState, useEffect, useRef, useCallback, lazy, Suspense, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, Fragment } from "react";
 import {
   Sparkles, Send, Square, Plus, Trash2,
   ChevronDown, GraduationCap, MessageSquare, Check,
@@ -129,6 +129,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const [paneSource, setPaneSource] = useState<PaneSource | null>(null);
   const [panePending, setPanePending] = useState<PaneHighlight | null>(null);
   const paneSourceRef = useRef<PaneSource | null>(null);
+  const sourcePaneRef = useRef<HTMLDivElement>(null);
   paneSourceRef.current = paneSource;
   const collapsedSidebarFor = useRef<string | null>(null);
   const restoredPaneFor = useRef<string | null>(null);
@@ -600,16 +601,42 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
       kind: source.kind,
       openPayload: meta?.openPayload ?? entry?.openPayload ?? inferred.openPayload,
     });
-    switchPane(src, target.page ? { scrollToPage: target.page } : entry?.lastPage ? {
-      scrollToPage: entry.lastPage,
-    } : entry?.lastHighlight ? {
-      text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd,
-    } : null);
-  }, [attachedSources, sourceHistory, buildPaneSource, switchPane]);
+    const paneHighlight: PaneHighlight | null = target.label === "slide" && typeof target.page === "number"
+      ? { scrollToSlide: target.page }
+      : typeof target.page === "number"
+        ? { scrollToPage: target.page }
+        : entry?.lastPage
+          ? { scrollToPage: entry.lastPage }
+          : entry?.lastHighlight
+            ? { text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd }
+            : null;
+    // The side-by-side source pane is only rendered on wide screens; on narrow
+    // desktops fall back to a floating window so the citation always does something.
+    const paneVisible = sourcePaneRef.current && sourcePaneRef.current.offsetParent !== null;
+    if (paneVisible) {
+      switchPane(src, paneHighlight);
+    } else {
+      const winId = openWindow({
+        appId: src.appId,
+        title: src.name,
+        icon: APP_ICONS[src.appId] ?? "AppWindow",
+        payload: src.openPayload,
+      });
+      if (winId && paneHighlight) {
+        setTimeout(() => {
+          if (paneHighlight.scrollToPage || paneHighlight.scrollToSlide) {
+            issueShowCommand(winId, "scroll_to", { page: paneHighlight.scrollToPage, slide: paneHighlight.scrollToSlide });
+          } else if (paneHighlight.text) {
+            issueShowCommand(winId, "highlight", { text: paneHighlight.text, posStart: paneHighlight.posStart, posEnd: paneHighlight.posEnd });
+          }
+        }, 100);
+      }
+    }
+  }, [attachedSources, sourceHistory, buildPaneSource, switchPane, openWindow, issueShowCommand]);
 
-  const citationMeta = attachedSources.map((source, index) => ({
+  const citationMeta = useMemo(() => attachedSources.map((source, index) => ({
     index: index + 1, name: source.name, kind: source.kind, refId: source.refId,
-  }));
+  })), [attachedSources]);
 
   const startSession = () => {
     void startNewSession({
@@ -1107,7 +1134,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           Replaces floating source windows — the teacher's show_source /
           highlight_source / focus_source / close_source commands drive this
           pane via the shared show-control channel (paneId). */}
-      <div className="hidden w-[30rem] shrink-0 @4xl:flex">
+      <div ref={sourcePaneRef} className="hidden w-[30rem] shrink-0 @4xl:flex">
         <TeachSourcePane
           paneId={paneId}
           source={paneSource}
