@@ -1,6 +1,7 @@
 FROM node:22-alpine AS build
 WORKDIR /app
-COPY package.json scripts/copy-pdf-worker.js ./scripts/
+COPY package.json ./
+COPY scripts/copy-pdf-worker.js ./scripts/
 RUN npm install
 COPY . .
 RUN npm run build
