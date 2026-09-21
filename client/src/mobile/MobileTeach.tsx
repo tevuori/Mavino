@@ -24,6 +24,7 @@ import { prepareSpeech, segmentAtOffset, type SpeechSegment } from "../apps/stud
 import { LessonAgenda, ToolChipRow, ComprehensionCard, PaceFeedbackRow, ExportMenu } from "../apps/study/teachPanels";
 import HighlightableMarkdown from "../apps/study/HighlightableMarkdown";
 import type { CitationMeta } from "../apps/study/CitationMarkdown";
+import type { CitationTarget } from "../apps/study/studyMarkdown";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../services/speech";
 import { findHighlightRange } from "../apps/study/highlightRange";
 import { useLanguage } from "../store/language";
@@ -77,6 +78,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
   const [sheet, setSheet] = useState<SourceSheet | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const followStreamRef = useRef(true);
   const sessionRef = useRef<ReturnType<typeof useTeacherSession> | null>(null);
 
   // ----- source bottom-sheet: resolve text + apply highlight -----
@@ -278,23 +280,29 @@ export default function MobileTeach({ initialSessionId = null, language: request
   // ----- misc -----
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, streamText, comprehensionChecks]);
+    const element = scrollRef.current;
+    if (element && followStreamRef.current) element.scrollTop = element.scrollHeight;
+  }, [messages, streamText]);
 
   const citationMeta: CitationMeta[] = useMemo(
-    () => sourceHistory.map((h) => ({ index: h.index, name: h.name, kind: h.kind, refId: h.refId })),
-    [sourceHistory]
+    () => attachedSources.map((source, index) => ({ index: index + 1, name: source.name, kind: source.kind, refId: source.refId })),
+    [attachedSources]
   );
 
-  const openCitation = useCallback((index: number) => {
-    const entry = sourceHistory.find((h) => h.index === index);
-    if (entry) {
-      openSourceSheet({
-        windowId: entry.windowId, refId: entry.refId, name: entry.name,
-        kind: entry.kind, highlight: entry.lastHighlight,
-      });
-    }
-  }, [sourceHistory, openSourceSheet]);
+  const openCitation = useCallback((target: CitationTarget) => {
+    const source = attachedSources[target.index - 1];
+    if (!source) return;
+    const entry = sourceHistory.find((item) => item.refId === source.refId);
+    openSourceSheet({
+      windowId: entry?.windowId ?? source.refId,
+      refId: source.refId,
+      name: source.name,
+      kind: source.kind,
+      highlight: entry?.lastHighlight,
+      posStart: entry?.lastPosStart,
+      posEnd: entry?.lastPosEnd,
+    });
+  }, [attachedSources, sourceHistory, openSourceSheet]);
 
   const toggleSource = (id: string) => {
     setSelectedSourceIds((prev) => {
@@ -508,7 +516,14 @@ export default function MobileTeach({ initialSessionId = null, language: request
       </div>
 
       {/* transcript */}
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto pb-3">
+      <div
+        ref={scrollRef}
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          followStreamRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48;
+        }}
+        className="flex-1 space-y-3 overflow-y-auto pb-3"
+      >
         {messages.length === 0 && !streaming && (
           <MobileEmpty text="Ask a question, or tap the mic to speak. Mavino will teach from your sources." />
         )}

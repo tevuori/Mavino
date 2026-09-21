@@ -191,7 +191,7 @@ files.patch("/folders/:id/move", zValidator("json", moveFolderSchema), async (c)
 files.get("/", async (c) => {
   const { userId } = c.get("auth");
   const folderId = c.req.query("folderId");
-  const where: Record<string, unknown> = { userId };
+  const where: Record<string, unknown> = { userId, internal: false };
   if (folderId) where.folderId = folderId === "null" ? null : folderId;
   const list = await prisma.vFile.findMany({ where: where as never, orderBy: { name: "asc" } });
   return c.json({ files: list });
@@ -203,7 +203,7 @@ files.get("/all", async (c) => {
   const q = c.req.query("q")?.trim();
   const starred = c.req.query("starred") === "true";
   const recent = c.req.query("recent") === "true";
-  const where: Record<string, unknown> = { userId };
+  const where: Record<string, unknown> = { userId, internal: false };
   if (starred) where.starred = true;
   if (q) where.name = { contains: q, mode: "insensitive" };
   const orderBy = recent
@@ -224,7 +224,7 @@ files.get("/tree", async (c) => {
     prisma.vFolder.findMany({ where: { userId }, orderBy: { name: "asc" } }),
     prisma.vFile.groupBy({
       by: ["folderId"],
-      where: { userId },
+      where: { userId, internal: false },
       _count: { _all: true },
     }),
   ]);

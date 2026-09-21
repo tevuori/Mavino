@@ -463,11 +463,13 @@ model VFile {
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   starred    Boolean  @default(false)
+  internal   Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   lastOpenedAt DateTime?
 
   @@index([userId, folderId])
+  @@index([userId, internal])
   @@index([userId, starred])
   @@index([userId, lastOpenedAt])
 }

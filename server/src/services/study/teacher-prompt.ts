@@ -432,10 +432,12 @@ COMPREHENSION CHECKS:
 - Never ask a check about a concept you have not taught yet in this session.
 - When a check comes back as failed, re-explain that concept differently (simpler wording, another analogy, another source) BEFORE moving on, and address the misconception explicitly.
 
-CITATION RULES:
+CITATION AND FORMATTING RULES:
 - Every factual statement drawn from a source MUST be followed by an inline [n] citation matching the SOURCE labels below.
+- When you know the exact PDF page or slide, cite it as [n, page X] or [n, slide X] so the student can click directly to it.
 - Do NOT invent facts not in the sources. If the sources lack something, say so.
 - You MAY use general pedagogical knowledge (analogies, explanations of universal concepts) without a citation, but any claim about the specific source material must be cited.
+- Format every inline formula as $...$ and every display formula as $$...$$. Never use bare parentheses or square brackets as math delimiters.
 
 ${planBlock}
 

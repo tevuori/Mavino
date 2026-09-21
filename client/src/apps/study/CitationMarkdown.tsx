@@ -13,6 +13,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import type { Components } from "react-markdown";
+import { parseCitationHref, preprocessStudyMarkdown, type CitationTarget } from "./studyMarkdown";
 
 export interface CitationMeta {
   index: number;
@@ -24,34 +25,12 @@ export interface CitationMeta {
 interface Props {
   content: string;
   citations?: CitationMeta[];
-  onOpenCitation?: (index: number) => void;
+  onOpenCitation?: (target: CitationTarget) => void;
   className?: string;
 }
 
-/** Transform [n] markers (outside ``` fences) into markdown citation links. */
-function injectCitationLinks(md: string): string {
-  const lines = md.split("\n");
-  let inFence = false;
-  const out: string[] = [];
-  for (const line of lines) {
-    if (/^```/.test(line.trim())) {
-      inFence = !inFence;
-      out.push(line);
-      continue;
-    }
-    if (inFence) {
-      out.push(line);
-      continue;
-    }
-    // Replace [n] (not followed by "(" so we don't touch real markdown links)
-    // with a bold-numbered link to #cite-<n>.
-    out.push(line.replace(/\[(\d+)\](?!\()/g, (_m, n) => `[**${n}**](#cite-${n})`));
-  }
-  return out.join("\n");
-}
-
 export default function CitationMarkdown({ content, citations, onOpenCitation, className }: Props) {
-  const transformed = useMemo(() => injectCitationLinks(content), [content]);
+  const transformed = useMemo(() => preprocessStudyMarkdown(content), [content]);
   const citeMap = useMemo(() => {
     const m = new Map<number, CitationMeta>();
     for (const c of citations ?? []) m.set(c.index, c);
@@ -61,18 +40,18 @@ export default function CitationMarkdown({ content, citations, onOpenCitation, c
   const components: Components = useMemo(
     () => ({
       a({ href, children, ...rest }) {
-        if (href && href.startsWith("#cite-")) {
-          const n = Number(href.slice("#cite-".length));
-          const meta = citeMap.get(n);
+        const target = parseCitationHref(href);
+        if (target) {
+          const meta = citeMap.get(target.index);
           return (
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
-                onOpenCitation?.(n);
+                onOpenCitation?.(target);
               }}
               className="mx-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded bg-accent/15 px-1 align-super text-[10px] font-semibold text-accent transition hover:bg-accent/30"
-              title={meta ? `Source [${n}]: ${meta.name}` : `Source [${n}]`}
+              title={meta ? `Source [${target.index}]: ${meta.name}` : `Source [${target.index}]`}
             >
               {children}
             </button>

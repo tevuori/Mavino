@@ -229,6 +229,7 @@ export async function saveExtractedImages(
         size: img.data.length,
         storageKey,
         folderId,
+        internal: true,
       },
     });
 

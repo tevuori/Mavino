@@ -456,7 +456,18 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
           setStreamText("");
           const firstTurn = messages.length === 0;
           void (async () => {
-            await loadSession(sessionId);
+            try {
+              const { session: persisted } = await teacherApi.get(sessionId);
+              setMessages(persisted.messages ?? []);
+              setSession((prev) => prev ? {
+                ...persisted,
+                state: { ...persisted.state, ...teachStateRef.current, sourceHistory: sourceHistoryRef.current },
+              } : persisted);
+            } catch {
+              if (finalText.trim()) {
+                setMessages((prev) => [...prev, { role: "assistant", content: finalText, timestamp: new Date().toISOString() }]);
+              }
+            }
             // Give the session a real topic title instead of the raw first
             // message once there is something to summarize.
             if (firstTurn && finalText.trim()) {
@@ -472,7 +483,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
       },
       { windows: windowSnapshot?.() ?? [], sourceHistory: sourceHistoryRef.current, state, language }
     );
-  }, [sessionId, streaming, dispatchAction, windowSnapshot, language, loadSession, messages.length]);
+  }, [sessionId, streaming, dispatchAction, windowSnapshot, language, messages.length]);
 
   const stop = useCallback(() => {
     handleRef.current?.abort();

@@ -38,6 +38,7 @@ import type {
   HighlightColor, HighlightScope, StudyHighlight,
 } from "../../services/study-highlights";
 import type { CitationMeta } from "./CitationMarkdown";
+import { parseCitationHref, preprocessStudyMarkdown, type CitationTarget } from "./studyMarkdown";
 
 /** Stable empty array so the `byKey[contentKey] ?? EMPTY` selector returns a
  *  consistent reference (avoids spurious re-renders when no highlights exist). */
@@ -52,7 +53,7 @@ export interface Props {
   sourceName?: string;
   /** Citation support (subsumes CitationMarkdown). */
   citations?: CitationMeta[];
-  onOpenCitation?: (index: number) => void;
+  onOpenCitation?: (target: CitationTarget) => void;
   className?: string;
   /** Disable highlighting (e.g. while content is streaming). Default true. */
   enabled?: boolean;
@@ -213,18 +214,18 @@ export default function HighlightableMarkdown({
   const components: Components = useMemo(
     () => ({
       a({ href, children, ...rest }) {
-        if (href && href.startsWith("#cite-")) {
-          const n = Number(href.slice("#cite-".length));
-          const meta = citeMap.get(n);
+        const target = parseCitationHref(href);
+        if (target) {
+          const meta = citeMap.get(target.index);
           return (
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
-                onOpenCitation?.(n);
+                onOpenCitation?.(target);
               }}
               className="mx-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded bg-accent/15 px-1 align-super text-[10px] font-semibold text-accent transition hover:bg-accent/30"
-              title={meta ? `Source [${n}]: ${meta.name}` : `Source [${n}]`}
+              title={meta ? `Source [${target.index}]: ${meta.name}` : `Source [${target.index}]`}
             >
               {children}
             </button>
@@ -240,25 +241,7 @@ export default function HighlightableMarkdown({
     [citeMap, onOpenCitation]
   );
 
-  // Inject [n] citation links (same transform as CitationMarkdown).
-  const transformed = useMemo(() => {
-    const lines = content.split("\n");
-    let inFence = false;
-    const out: string[] = [];
-    for (const line of lines) {
-      if (/^```/.test(line.trim())) {
-        inFence = !inFence;
-        out.push(line);
-        continue;
-      }
-      if (inFence) {
-        out.push(line);
-        continue;
-      }
-      out.push(line.replace(/\[(\d+)\](?!\()/g, (_m, n) => `[**${n}**](#cite-${n})`));
-    }
-    return out.join("\n");
-  }, [content]);
+  const transformed = useMemo(() => preprocessStudyMarkdown(content), [content]);
 
   // Apply highlight marks after render (and whenever content/highlights change).
   useLayoutEffect(() => {

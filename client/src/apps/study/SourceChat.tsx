@@ -470,8 +470,8 @@ export default function SourceChat({ initialChatId, initialWorkspaceId, language
                     scopeId={chatId ? `${chatId}#msg-${i}` : `msg-${i}`}
                     sourceName={chat?.title ? `Chat: ${chat.title}` : "Study chat"}
                     citations={citationMeta(m.citations)}
-                    onOpenCitation={(idx) => {
-                      const cite = m.citations?.find((c) => c.index === idx);
+                    onOpenCitation={(target) => {
+                      const cite = m.citations?.find((c) => c.index === target.index);
                       if (cite) openCitation(cite);
                     }}
                   />

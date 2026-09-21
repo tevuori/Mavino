@@ -35,6 +35,7 @@ import { useTeacherSession } from "./useTeacherSession";
 import { prepareSpeech, segmentAtOffset, type SpeechSegment } from "./teacherSpeech";
 import { LessonAgenda, ToolChipRow, ComprehensionCard, PaceFeedbackRow, ExportMenu } from "./teachPanels";
 import TeachSourcePane, { type PaneSource, type PaneHighlight } from "./TeachSourcePane";
+import type { CitationTarget } from "./studyMarkdown";
 import TeachErrorBoundary from "./TeachErrorBoundary";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../../services/speech";
 import type { AthenaClientAction, AthenaWindowState } from "../../services/athena";
@@ -153,6 +154,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   }, [paneId, removeShowWindow]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const followStreamRef = useRef(true);
   const windowsRef = useRef(windows);
   windowsRef.current = windows;
   const autoSpeakRef = useRef(autoSpeak);
@@ -268,9 +270,10 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             windowId,
             index: idx >= 0 ? prev[idx].index : prev.length + 1,
             name, kind, refId: sourceRef,
-            lastHighlight: highlight?.text,
-            lastPosStart: highlight?.posStart,
-            lastPosEnd: highlight?.posEnd,
+            lastHighlight: highlight?.text ?? (idx >= 0 ? prev[idx].lastHighlight : undefined),
+            lastPosStart: highlight?.posStart ?? (idx >= 0 ? prev[idx].lastPosStart : undefined),
+            lastPosEnd: highlight?.posEnd ?? (idx >= 0 ? prev[idx].lastPosEnd : undefined),
+            lastPage: highlight?.scrollToPage ?? (idx >= 0 ? prev[idx].lastPage : undefined),
             appId: appId as TeacherSourceHistoryEntry["appId"],
             openPayload,
           };
@@ -532,8 +535,9 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
 
   // Auto-scroll to bottom on new content.
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, streamText, comprehensionChecks]);
+    const element = scrollRef.current;
+    if (element && followStreamRef.current) element.scrollTop = element.scrollHeight;
+  }, [messages, streamText]);
 
   // Keep the pre-session selection in sync with the loaded session.
   useEffect(() => {
@@ -565,7 +569,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
       kind: last.kind,
       openPayload: meta?.openPayload ?? last.openPayload ?? inferred.openPayload,
     });
-    switchPane(src, last.lastHighlight ? {
+    switchPane(src, last.lastPage ? { scrollToPage: last.lastPage } : last.lastHighlight ? {
       text: last.lastHighlight, posStart: last.lastPosStart, posEnd: last.lastPosEnd,
     } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -573,26 +577,31 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
 
   // ----- citations -----
 
-  const openCitation = useCallback((index: number) => {
-    const entry = sourceHistory.find((h) => h.index === index);
-    if (!entry) return;
-    const inferred = inferSourceApp(entry.kind, entry.refId);
-    const meta = sourceMetaRef.current[entry.windowId];
+  const openCitation = useCallback((target: CitationTarget) => {
+    const source = attachedSources[target.index - 1];
+    if (!source) return;
+    const entry = sourceHistory.find((h) => h.refId === source.refId);
+    const windowId = entry?.windowId ?? source.refId;
+    const inferred = inferSourceApp(source.kind, source.refId);
+    const meta = sourceMetaRef.current[windowId];
     const src = buildPaneSource({
-      windowId: entry.windowId,
-      appId: (meta?.appId ?? entry.appId ?? inferred.appId) as PaneSource["appId"],
-      refId: entry.refId,
-      name: entry.name,
-      kind: entry.kind,
-      openPayload: meta?.openPayload ?? entry.openPayload ?? inferred.openPayload,
+      windowId,
+      appId: (meta?.appId ?? entry?.appId ?? inferred.appId) as PaneSource["appId"],
+      refId: source.refId,
+      name: source.name,
+      kind: source.kind,
+      openPayload: meta?.openPayload ?? entry?.openPayload ?? inferred.openPayload,
     });
-    switchPane(src, entry.lastHighlight ? {
+    switchPane(src, target.page ? { scrollToPage: target.page } : entry?.lastPage ? {
+      scrollToPage: entry.lastPage,
+    } : entry?.lastHighlight ? {
       text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd,
     } : null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceHistory, buildPaneSource, switchPane]);
+  }, [attachedSources, sourceHistory, buildPaneSource, switchPane]);
 
-  const citationMeta = sourceHistory.map((h) => ({ index: h.index, name: h.name, kind: h.kind, refId: h.refId }));
+  const citationMeta = attachedSources.map((source, index) => ({
+    index: index + 1, name: source.name, kind: source.kind, refId: source.refId,
+  }));
 
   const startSession = () => {
     void startNewSession({
@@ -879,7 +888,14 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         )}
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+        <div
+          ref={scrollRef}
+          onScroll={(event) => {
+            const element = event.currentTarget;
+            followStreamRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48;
+          }}
+          className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1"
+        >
           {messages.length === 0 && !streamText && session && (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-ink-muted">
               <GraduationCap size={40} className="opacity-30" />
@@ -1063,14 +1079,15 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             <span className="text-[10px] uppercase tracking-wide text-ink-muted">Open sources:</span>
             {sourceHistory.map((h) => {
               const Icon = KIND_ICON[h.kind] ?? FileText;
+              const sourceIndex = attachedSources.findIndex((source) => source.refId === h.refId) + 1;
               return (
                 <button
                   key={h.windowId}
-                  onClick={() => openCitation(h.index)}
+                  onClick={() => sourceIndex > 0 && openCitation({ index: sourceIndex })}
                   className="flex items-center gap-1 rounded-md border border-edge bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-muted hover:bg-surface-3 hover:text-ink"
                   title={`Focus ${h.name}`}
                 >
-                  <Icon size={10} /> [{h.index}] {h.name}
+                  <Icon size={10} /> [{sourceIndex || h.index}] {h.name}
                 </button>
               );
             })}
