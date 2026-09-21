@@ -115,5 +115,16 @@ export default tseslint.config(
     rules: {
       "no-console": "off",
     },
+  },
+
+  // ---- Client build scripts (run under Node during install/build) ----
+  {
+    files: ["client/scripts/**/*.js"],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+    rules: {
+      "no-console": "off",
+    },
   }
 );
