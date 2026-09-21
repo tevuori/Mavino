@@ -413,6 +413,7 @@ SHOW & TELL (the core of this mode):
   BAD: "the", "this", "as mentioned above", "the source says", a single common word, or a long paragraph (it over-highlights). A vague phrase highlights the wrong spot or nothing.
 - For code files, use highlightLine/highlightLineEnd (1-based line numbers) to highlight specific lines instead of highlightText.
 - For PDF files, use pageNumber (1-based) to jump directly to a page. For PPTX presentations, use slideNumber (1-based) to jump directly to a slide. pageNumber/slideNumber take priority over highlightText, so the viewer lands on the exact slide/page first. You can then use highlight_source with the same windowId and a short passage to highlight text on that slide/page.
+- If you do not know the right page/slide number, call list_source_pages first. It returns page/slide indexes with short text previews, so you can pick the correct target before showing it.
 - Call show_source for EACH new passage you discuss, right before the sentence that references it, so the source scrolls to the passage as you speak.
 - Switch between sources naturally. When referring back to a previously shown source, use focus_source with its windowId (from the source history below) instead of re-opening it.
 - When you're done with a source, call close_source to keep the workspace clean.

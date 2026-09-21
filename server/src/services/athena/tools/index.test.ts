@@ -79,7 +79,7 @@ describe("tool scoping", () => {
 
   it("exposes exactly the Teach Me action tools in teacher mode", async () => {
     const tools = await toolsForTeacher("user-paid", "PAID");
-    expect(tools.length).toBe(10);
+    expect(tools.length).toBe(11);
     expect(tools.every((t) => t.scopes?.includes("teacher"))).toBe(true);
     const names = tools.map((t) => t.name).sort();
     const expected = [
@@ -89,6 +89,7 @@ describe("tool scoping", () => {
       "finish_lesson",
       "focus_source",
       "highlight_source",
+      "list_source_pages",
       "mark_concept_covered",
       "point_at_image",
       "scroll_source",
@@ -149,8 +150,8 @@ describe("AthenaToolsPlugin tool serialization", () => {
       windows: [],
     });
     const openAiTools = await plugin.getTools();
-    expect(openAiTools.length).toBe(10);
-    expect(openAiTools.every((t) => t.function.name.startsWith("show_") || t.function.name.startsWith("highlight_") || t.function.name.startsWith("scroll_") || t.function.name.startsWith("clear_") || t.function.name.startsWith("focus_") || t.function.name.startsWith("close_") || t.function.name.startsWith("check_") || t.function.name.startsWith("mark_") || t.function.name.startsWith("finish_") || t.function.name.startsWith("point_"))).toBe(true);
+    expect(openAiTools.length).toBe(11);
+    expect(openAiTools.every((t) => t.function.name.startsWith("show_") || t.function.name.startsWith("highlight_") || t.function.name.startsWith("scroll_") || t.function.name.startsWith("clear_") || t.function.name.startsWith("focus_") || t.function.name.startsWith("close_") || t.function.name.startsWith("check_") || t.function.name.startsWith("mark_") || t.function.name.startsWith("finish_") || t.function.name.startsWith("point_") || t.function.name.startsWith("list_"))).toBe(true);
   });
 });
 

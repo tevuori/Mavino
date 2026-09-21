@@ -20,6 +20,7 @@ import path from "node:path";
 import type { ToolDef, ClientWindowInfo } from "./plugin";
 import prisma from "../../../db/client";
 import { resolveSource, type SourceKind } from "../../study/source";
+import { buildSourceOutline } from "../../study/source-outline";
 import { resolveAnchor } from "../../study/highlight-anchor";
 
 // ----- file-type → app mapping (mirrors client openTargetForFile) -----
@@ -375,6 +376,60 @@ export const teacherTools: ToolDef[] = [
         ? (args.needsReview as unknown[]).map((c) => String(c)).filter(Boolean).slice(0, 10)
         : undefined,
     }),
+  },
+  {
+    name: "list_source_pages",
+    description:
+      "List the pages of a PDF or the slides of a PPTX source with a short text preview for each. " +
+      "Use this when you need to know the exact page/slide numbers before calling show_source, scroll_source or highlight_source. " +
+      "Returns page/slide index and a short preview. If the source has more pages than maxPages, the result is truncated and you are told the total count.",
+    clientAction: false,
+    parameters: [
+      { name: "sourceId", type: "string", description: "StudySource id from the session source list" },
+      { name: "kind", type: "string", description: "Source kind (use if no sourceId)", enum: ["file"] },
+      { name: "refId", type: "string", description: "File id (use if no sourceId)" },
+      { name: "maxPages", type: "number", description: "Maximum number of pages/slides to return (default 30)" },
+    ],
+    handler: async (args, { userId }) => {
+      // Resolve the file reference (same pattern as show_source).
+      let refId = "";
+      let name: string | undefined;
+
+      const sourceId = args.sourceId ? String(args.sourceId) : undefined;
+      if (sourceId) {
+        const ss = await prisma.studySource.findFirst({ where: { id: sourceId, userId } });
+        if (ss) {
+          refId = ss.refId;
+          name = ss.name;
+        } else {
+          refId = String(args.refId ?? "");
+          if (!refId) return { error: "Source not found. Provide kind+refId." };
+        }
+      } else {
+        refId = String(args.refId ?? "");
+        if (!refId) return { error: "Provide sourceId or kind+refId." };
+      }
+
+      const file = await prisma.vFile.findFirst({ where: { id: refId, userId } });
+      if (!file) return { error: `File '${refId}' not found.` };
+      if (!name) name = file.name;
+
+      const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
+      const abs = path.join(UPLOAD_DIR, file.storageKey);
+      const outline = await buildSourceOutline(
+        file.name,
+        file.mimeType,
+        () => import("node:fs/promises").then((m) => m.readFile(abs)),
+        typeof args.maxPages === "number" && args.maxPages > 0 ? Number(args.maxPages) : undefined
+      );
+
+      return {
+        fileName: file.name,
+        totalPages: outline.total,
+        truncated: outline.truncated,
+        pages: outline.pages,
+      };
+    },
   },
   {
     name: "point_at_image",
