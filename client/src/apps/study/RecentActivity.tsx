@@ -42,10 +42,10 @@ export default function RecentActivity() {
       openWindow({ appId: "flashcards", title: "Flashcards", icon: "Brain", payload: { deckId: meta.deckId as string } });
     } else if ((s.type === "summary" || s.type === "explain" || s.type === "study_guide") && meta.noteId) {
       openWindow({ appId: "notes", title: "Notes", icon: "StickyNote", payload: { noteId: meta.noteId as string } });
-    } else if (s.type === "quiz" && s.sourceRef && s.sourceRef !== "paste") {
+    } else if (s.type === "quiz" && s.sourceRef && !s.sourceRef.startsWith("paste")) {
       // Restart a quiz from the same source (note/file).
       const mode = "quiz";
-      const sourceKind = s.sourceRef === "paste" ? "paste" : "note";
+      const sourceKind = s.sourceRef.startsWith("paste") ? "paste" : "note";
       openWindow({
         appId: "study",
         title: "Study Hub",
@@ -68,7 +68,7 @@ export default function RecentActivity() {
     const meta = s.meta as Record<string, unknown>;
     if (s.type === "flashcards" && meta.deckId) return true;
     if ((s.type === "summary" || s.type === "explain" || s.type === "study_guide") && meta.noteId) return true;
-    if (s.type === "quiz" && s.sourceRef && s.sourceRef !== "paste") return true;
+    if (s.type === "quiz" && s.sourceRef && !s.sourceRef.startsWith("paste")) return true;
     if (s.type === "syllabus") return true;
     if (s.type === "chat" && meta.chatId) return true;
     if (s.type === "podcast" && meta.podcastId) return true;

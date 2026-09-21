@@ -6,6 +6,7 @@
 // StudySource for reuse across grounded Q&A / podcasts.
 
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import prisma from "../../db/client";
 import { fetchUrl } from "../fetcher";
@@ -116,7 +117,11 @@ export async function resolveSource(
   if (src.kind === "paste" || (!src.id && src.text != null && src.kind !== "url")) {
     const text = String(src.text ?? "");
     const t = truncate(text);
-    return { name: "Pasted text", text: t.text, ref: "paste", truncated: t.truncated, kind: "paste" };
+    // Pasted text has no backing entity to reference — key the cache row by a
+    // content hash so identical pastes dedupe but distinct pastes get their
+    // own StudySource row instead of overwriting each other's textCache.
+    const ref = `paste:${createHash("sha256").update(t.text).digest("hex").slice(0, 16)}`;
+    return { name: src.name?.trim() || "Pasted text", text: t.text, ref, truncated: t.truncated, kind: "paste" };
   }
 
   if (src.kind === "note") {

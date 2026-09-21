@@ -103,7 +103,7 @@ podcasts.post("/generate", zValidator("json", generateSchema), async (c) => {
   for (const sourceId of body.sourceIds) {
     const source = rows.find((row) => row.id === sourceId);
     const targetType = source?.kind === "note" ? "note" : source?.kind === "file" ? "file" : null;
-    if (source && targetType && source.refId && source.refId !== "paste") {
+    if (source && targetType && source.refId && !source.refId.startsWith("paste")) {
       const pair = canonicalPair({ type: "podcast", id: result.podcast.id }, { type: targetType, id: source.refId });
       await prisma.itemLink.upsert({ where: { userId_srcType_srcId_dstType_dstId: { userId, ...pair } }, update: {}, create: { userId, ...pair } });
     }

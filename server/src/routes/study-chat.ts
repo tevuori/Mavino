@@ -168,7 +168,7 @@ chat.post("/", zValidator("json", createSchema), async (c) => {
     const src = await prisma.studySource.findFirst({ where: { id: sid, userId } });
     if (!src) continue;
     const targetType = src.kind === "note" ? "note" : src.kind === "file" ? "file" : null;
-    if (targetType && src.refId && src.refId !== "paste") {
+    if (targetType && src.refId && !src.refId.startsWith("paste")) {
       const pair = canonicalPair(
         { type: "studyChat", id: created.id },
         { type: targetType, id: src.refId }
