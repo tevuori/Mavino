@@ -32,6 +32,7 @@ export function PdfJsViewer({
   onDocumentError,
 }: PdfJsViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewerElementRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
   const eventBusRef = useRef<any>(null);
   const findControllerRef = useRef<any>(null);
@@ -39,14 +40,16 @@ export function PdfJsViewer({
 
   // Initialize the PDF.js viewer layer once.
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !viewerElementRef.current) return;
     const container = containerRef.current;
+    const viewerElement = viewerElementRef.current;
 
     const eventBus = new pdfjsViewer.EventBus();
     const linkService = new pdfjsViewer.PDFLinkService({ eventBus });
     const findController = new pdfjsViewer.PDFFindController({ eventBus, linkService });
     const pdfViewer = new pdfjsViewer.PDFViewer({
       container,
+      viewer: viewerElement,
       eventBus,
       linkService,
       findController,
@@ -112,9 +115,10 @@ export function PdfJsViewer({
   }, [loaded, searchText]);
 
   return (
-    <div
-      ref={containerRef}
-      className={`h-full w-full overflow-auto ${className}`}
-    />
+    <div className={`relative h-full w-full ${className}`}>
+      <div ref={containerRef} className="absolute inset-0 overflow-auto">
+        <div ref={viewerElementRef} className="pdfViewer" />
+      </div>
+    </div>
   );
 }
