@@ -12,9 +12,9 @@ function transformTextSegment(segment: string): string {
   value = value.replace(/^\s*\[\s*((?=[^\]]*(?:\\[A-Za-z]+|[_^]\{?\w|\b(?:s|a|x|y|z|f|g)_\d))[^\]]*[=+\-*/^_\\][^\]]*)\s*\]\s*$/gm, (_match, math: string) => `$$${math.trim()}$$`);
 
   value = value.replace(
-    /\[(\d+)\s*,\s*(?:(p(?:age)?\.?|str(?:ana)?\.?|slide|slid(?:e|u)?)\s*)?(\d+)\](?!\()/gi,
+    /\[(\d+)\s*,\s*(?:(p(?:ages?)?\.?|str(?:ana|any)?\.?|slid(?:es?|u|y)?)\s*)?(\d+)(?:\s*[–—-]\s*\d+)?\](?!\()/gi,
     (_match, index: string, rawLabel: string | undefined, page: string) => {
-      const label = rawLabel && /slide|slid/i.test(rawLabel) ? "slide" : "page";
+      const label = rawLabel && /slid/i.test(rawLabel) ? "slide" : "page";
       return `[**${index}, ${label} ${page}**](#cite-${index}-${label}-${page})`;
     }
   );

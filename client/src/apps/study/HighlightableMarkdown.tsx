@@ -211,18 +211,28 @@ export default function HighlightableMarkdown({
     return m;
   }, [citations]);
 
+  // Stable component map: if the `a` renderer's identity changed on every
+  // render (because onOpenCitation / citeMap are recreated upstream), React
+  // would unmount+remount every citation chip on each parent re-render — a
+  // click landing between pointerdown and mousedown then dies because the
+  // button is gone mid-press. Read the mutable bits through refs instead.
+  const citeMapRef = useRef(citeMap);
+  citeMapRef.current = citeMap;
+  const onOpenCitationRef = useRef(onOpenCitation);
+  onOpenCitationRef.current = onOpenCitation;
+
   const components: Components = useMemo(
     () => ({
       a({ href, children, ...rest }) {
         const target = parseCitationHref(href);
         if (target) {
-          const meta = citeMap.get(target.index);
+          const meta = citeMapRef.current.get(target.index);
           return (
             <button
               type="button"
               onClick={(e) => {
                 e.preventDefault();
-                onOpenCitation?.(target);
+                onOpenCitationRef.current?.(target);
               }}
               className="mx-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded bg-accent/15 px-1 align-super text-[10px] font-semibold text-accent transition hover:bg-accent/30"
               title={meta ? `Source [${target.index}]: ${meta.name}` : `Source [${target.index}]`}
@@ -238,7 +248,7 @@ export default function HighlightableMarkdown({
         );
       },
     }),
-    [citeMap, onOpenCitation]
+    []
   );
 
   const transformed = useMemo(() => preprocessStudyMarkdown(content), [content]);

@@ -339,12 +339,15 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
     if (appliedPendingKeyRef.current === key) return;
     appliedPendingKeyRef.current = key;
     const page = positiveInteger(pending.scrollToPage);
+    const q = pending.text ? (pending.text.length > 60 ? pending.text.slice(0, 60).trim() : pending.text) : "";
     if (page !== undefined) {
       setPdfPage(page);
-      setPdfSearch(undefined);
-    } else if (pending.text) {
-      const q = pending.text.length > 60 ? pending.text.slice(0, 60).trim() : pending.text;
-      if (q) { setPdfSearch(q); setPdfPage(undefined); }
+      // Keep the text search too — PDF.js find starts from the current page,
+      // so the passage still gets highlighted instead of just scrolling.
+      setPdfSearch(q || undefined);
+    } else if (q) {
+      setPdfSearch(q);
+      setPdfPage(undefined);
     }
     onPendingApplied();
   }, [fileMeta, pending, onPendingApplied]);
@@ -356,18 +359,19 @@ function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange
     if (isPptxFile(fileMeta)) return;
     lastSeq.current = cmd.seq;
     if (isPdfFile(fileMeta) && (cmd.kind === "highlight" || cmd.kind === "scroll_to")) {
-      // Page navigation takes priority over text search.
       const page = positiveInteger(cmd.page);
+      const raw = cmd.text ?? "";
+      const q = raw.length > 60 ? raw.slice(0, 60).trim() : raw;
       if (page !== undefined) {
         setPdfPage(page);
-        setPdfSearch(undefined);
+        // Keep the text search too — PDF.js find starts from the current page,
+        // so the passage still gets highlighted instead of just scrolling.
+        setPdfSearch(q || undefined);
         setPdfNavigationKey(cmd.seq);
         reportResult(paneId, cmd.seq, cmd.kind, true);
         return;
       }
-      const raw = cmd.text ?? "";
       if (raw) {
-        const q = raw.length > 60 ? raw.slice(0, 60).trim() : raw;
         setPdfSearch(q || undefined);
         setPdfPage(undefined);
         setPdfNavigationKey(cmd.seq);

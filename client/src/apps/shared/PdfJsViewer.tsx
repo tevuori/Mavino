@@ -100,8 +100,20 @@ export function PdfJsViewer({
 
   // Jump to the requested page once the document is loaded.
   useEffect(() => {
-    if (!loaded || !viewerRef.current || typeof page !== "number" || !Number.isInteger(page) || page < 1) return;
-    viewerRef.current.currentPageNumber = Math.min(page, viewerRef.current.pagesCount);
+    const viewer = viewerRef.current;
+    if (!loaded || !viewer || typeof page !== "number" || !Number.isInteger(page) || page < 1) return;
+    const apply = () => {
+      // pagesCount is 0 before pagesinit — setting currentPageNumber then
+      // makes PDF.js throw "0 is not a valid page".
+      if (viewer.pagesCount) viewer.currentPageNumber = Math.min(page, viewer.pagesCount);
+    };
+    if (viewer.pagesCount) {
+      apply();
+      return;
+    }
+    const bus = eventBusRef.current;
+    bus?.on("pagesinit", apply);
+    return () => { bus?.off("pagesinit", apply); };
   }, [loaded, page, navigationKey]);
 
   // Run/clear the find controller when search text changes.

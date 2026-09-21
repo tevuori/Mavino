@@ -73,12 +73,19 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function inferSourceApp(kind: string, refId: string): { appId: PaneSource["appId"]; openPayload: Record<string, unknown> } {
+const VIEWER_FILE_EXTS = new Set(["pdf", "pptx", "png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "bmp"]);
+
+function inferSourceApp(kind: string, refId: string, name = ""): { appId: PaneSource["appId"]; openPayload: Record<string, unknown> } {
   switch (kind) {
     case "note":
       return { appId: "notes", openPayload: { noteId: refId } };
-    case "file":
+    case "file": {
+      // Binary previews (PDF/PPTX/images) belong in the file viewer — routing
+      // them to the editor ends in "Not a text file" from filesApi.getContent.
+      const ext = name.split(".").pop()?.toLowerCase() ?? "";
+      if (VIEWER_FILE_EXTS.has(ext)) return { appId: "viewer", openPayload: { fileId: refId } };
       return { appId: "editor", openPayload: { fileId: refId } };
+    }
     case "url":
       return { appId: "browser", openPayload: { url: refId } };
     default:
@@ -306,15 +313,26 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           // Target a background source: switch the pane to it and apply after load.
           const entry = sessionRef.current?.sourceHistory.find((h) => h.windowId === winId);
           const meta = sourceMetaRef.current[winId];
+          const pending: PaneHighlight | null = kind === "highlight" || kind === "scroll_to"
+            ? { text: payload.text, posStart: payload.posStart, posEnd: payload.posEnd, line: payload.lineStart, lineEnd: payload.lineEnd, scrollToPage: payload.page, scrollToSlide: payload.slide }
+            : null;
           if (entry) {
-            const inferred = inferSourceApp(entry.kind, entry.refId);
+            const inferred = inferSourceApp(entry.kind, entry.refId, entry.name);
             const appId = (meta?.appId ?? entry.appId ?? inferred.appId) as PaneSource["appId"];
             const openPayload = meta?.openPayload ?? entry.openPayload ?? inferred.openPayload;
             const src = buildPaneSource({ windowId: winId, appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload });
-            const pending: PaneHighlight | null = kind === "highlight" || kind === "scroll_to"
-              ? { text: payload.text, posStart: payload.posStart, posEnd: payload.posEnd, line: payload.lineStart, lineEnd: payload.lineEnd, scrollToPage: payload.page, scrollToSlide: payload.slide }
-              : null;
             switchPane(src, pending);
+          } else {
+            // No history entry (e.g. the windowId is a bare refId) — resolve
+            // the source from the session's attached sources instead.
+            const source = sessionRef.current?.attachedSources.find((s) => s.refId === winId);
+            if (source) {
+              const inferred = inferSourceApp(source.kind, source.refId, source.name);
+              switchPane(buildPaneSource({
+                windowId: winId, appId: inferred.appId, refId: source.refId,
+                name: source.name, kind: source.kind, openPayload: inferred.openPayload,
+              }), pending);
+            }
           }
         }
         if (kind === "highlight" || kind === "scroll_to") {
@@ -335,13 +353,25 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         const entry = sessionRef.current?.sourceHistory.find((h) => h.windowId === winId);
         const meta = sourceMetaRef.current[winId];
         if (entry) {
-          const inferred = inferSourceApp(entry.kind, entry.refId);
+          const inferred = inferSourceApp(entry.kind, entry.refId, entry.name);
           const appId = (meta?.appId ?? entry.appId ?? inferred.appId) as PaneSource["appId"];
           const openPayload = meta?.openPayload ?? entry.openPayload ?? inferred.openPayload;
           const src = buildPaneSource({ windowId: winId, appId, refId: entry.refId, name: entry.name, kind: entry.kind, openPayload });
           switchPane(src, entry.lastPage ? { scrollToPage: entry.lastPage } : entry.lastSlide ? { scrollToSlide: entry.lastSlide } : entry.lastHighlight ? {
             text: entry.lastHighlight, posStart: entry.lastPosStart, posEnd: entry.lastPosEnd,
           } : null);
+        } else {
+          // The source may have no history entry yet (persisted history lags
+          // a turn behind) — fall back to the attached sources so focus_source
+          // still brings the document up instead of silently no-op'ing.
+          const source = sessionRef.current?.attachedSources.find((s) => s.refId === winId);
+          if (source) {
+            const inferred = inferSourceApp(source.kind, source.refId, source.name);
+            switchPane(buildPaneSource({
+              windowId: winId, appId: inferred.appId, refId: source.refId,
+              name: source.name, kind: source.kind, openPayload: inferred.openPayload,
+            }), null);
+          }
         }
         break;
       }
@@ -354,7 +384,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             const last = next[next.length - 1];
             const meta = last ? sourceMetaRef.current[last.windowId] : undefined;
             if (last) {
-              const inferred = inferSourceApp(last.kind, last.refId);
+              const inferred = inferSourceApp(last.kind, last.refId, last.name);
               const appId = (meta?.appId ?? last.appId ?? inferred.appId) as PaneSource["appId"];
               const openPayload = meta?.openPayload ?? last.openPayload ?? inferred.openPayload;
               const src = buildPaneSource({ windowId: last.windowId, appId, refId: last.refId, name: last.name, kind: last.kind, openPayload });
@@ -429,7 +459,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         // Switch the pane to the cited source if it's not already active.
         if (paneSourceRef.current?.windowId !== cited.windowId) {
           const meta = sourceMetaRef.current[cited.windowId];
-          const inferred = inferSourceApp(cited.kind, cited.refId);
+          const inferred = inferSourceApp(cited.kind, cited.refId, cited.name);
           const appId = (meta?.appId ?? cited.appId ?? inferred.appId) as PaneSource["appId"];
           const openPayload = meta?.openPayload ?? cited.openPayload ?? inferred.openPayload;
           const src = buildPaneSource({
@@ -575,7 +605,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     restoredPaneFor.current = sessionId;
     if (!sessionId || paneSource || sourceHistory.length === 0) return;
     const last = sourceHistory[sourceHistory.length - 1];
-    const inferred = inferSourceApp(last.kind, last.refId);
+    const inferred = inferSourceApp(last.kind, last.refId, last.name);
     const meta = sourceMetaRef.current[last.windowId];
     const src = buildPaneSource({
       windowId: last.windowId,
@@ -598,7 +628,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     if (!source) return;
     const entry = sourceHistory.find((h) => h.refId === source.refId);
     const windowId = entry?.windowId ?? source.refId;
-    const inferred = inferSourceApp(source.kind, source.refId);
+    const inferred = inferSourceApp(source.kind, source.refId, source.name);
     const meta = sourceMetaRef.current[windowId];
     const src = buildPaneSource({
       windowId,

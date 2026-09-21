@@ -11,7 +11,7 @@
 // Source-window handling differs per form factor, so the caller supplies a
 // `dispatchSourceAction` handler; every other client_action is handled here.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   teacherApi,
   streamTeacherTurn,
@@ -476,6 +476,11 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
                 setMessages((prev) => [...prev, { role: "assistant", content: finalText, timestamp: new Date().toISOString() }]);
               }
             }
+            // The stream request carried a pre-turn state snapshot, so the
+            // server persisted a sourceHistory missing entries created during
+            // this turn. Push the real history now that the stream has ended.
+            teacherApi.patch(sessionId, { state: { sourceHistory: sourceHistoryRef.current } })
+              .catch(() => { /* non-fatal — the next turn carries it */ });
             // Give the session a real topic title instead of the raw first
             // message once there is something to summarize.
             if (firstTurn && finalText.trim()) {
@@ -574,9 +579,14 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     }
   }, [sessionId, language]);
 
-  const attachedSources = (session?.sourceIds ?? [])
-    .map((id) => library.find((s) => s.id === id))
-    .filter((s): s is StudySource => s !== undefined);
+  // Memoized: a fresh array every render would invalidate the citation-chip
+  // components map downstream and remount every chip (swallowing clicks).
+  const attachedSources = useMemo(
+    () => (session?.sourceIds ?? [])
+      .map((id) => library.find((s) => s.id === id))
+      .filter((s): s is StudySource => s !== undefined),
+    [session?.sourceIds, library]
+  );
 
   return {
     // data
