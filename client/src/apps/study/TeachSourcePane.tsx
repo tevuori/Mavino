@@ -16,12 +16,13 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { markdown } from "@codemirror/lang-markdown";
 import { BookOpen, Loader2, X, AlertTriangle, ExternalLink } from "lucide-react";
 import { notesApi } from "../../services/notes";
-import { filesApi, isPdfFile, isImageFile } from "../../services/files";
+import { filesApi, isPdfFile, isPptxFile, isImageFile } from "../../services/files";
 import { browserApi } from "../../services/browser";
 import { useSettings } from "../../store/settings";
 import { useShowControl, type ShowCommand } from "../../store/showControl";
 import { useCodemirrorShowControl } from "../shared/useCodemirrorShowControl";
 import { languageForFile } from "../editor/languages";
+import { PptxViewer } from "../shared/PptxViewer";
 
 /** The source currently shown in the pane. */
 export interface PaneSource {
@@ -44,6 +45,8 @@ export interface PaneHighlight {
   lineEnd?: number;
   /** For PDFs: scroll to this 1-based page number instead of a text search. */
   scrollToPage?: number;
+  /** For PPTX: scroll to this 1-based slide number. */
+  scrollToSlide?: number;
 }
 
 interface Props {
@@ -139,7 +142,7 @@ function SourceContent(props: ContentProps) {
     return <CodemirrorPane {...props} />;
   }
   if (appId === "viewer") {
-    return <ViewerPane {...props} />;
+    return <FileViewer {...props} />;
   }
   if (appId === "browser") {
     return <BrowserPane {...props} />;
@@ -237,9 +240,58 @@ function CodemirrorPane({ paneId, source, pending, onPendingApplied, onLoadingCh
   );
 }
 
+// ----- PPTX slide viewer (wraps the PDF/image viewer for non-PPTX files) -----
+
+function PptxPane({ paneId, source, pending, onPendingApplied, onLoadingChange, onError, isDark }: ContentProps) {
+  const [fileMeta, setFileMeta] = useState<{ name: string; mimeType: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    onLoadingChange(true);
+    onError(null);
+    (async () => {
+      try {
+        const { files } = await filesApi.all();
+        const found = files.find((f) => f.id === source.refId);
+        if (cancelled) return;
+        if (!found) { onError("File not found"); onLoadingChange(false); return; }
+        setFileMeta({ name: found.name, mimeType: found.mimeType });
+        onLoadingChange(false);
+      } catch (e) {
+        if (!cancelled) onError(e instanceof Error ? e.message : "Failed to load file");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [source.refId, onLoadingChange, onError]);
+
+  if (!fileMeta) return null;
+  if (isPptxFile(fileMeta)) {
+    return (
+      <PptxViewer
+        fileId={source.refId}
+        paneId={paneId}
+        pendingSlide={pending?.scrollToSlide}
+        pendingText={pending?.text}
+        onPendingApplied={onPendingApplied}
+      />
+    );
+  }
+  return (
+    <FileViewer
+      paneId={paneId}
+      source={source}
+      pending={pending}
+      onPendingApplied={onPendingApplied}
+      onLoadingChange={onLoadingChange}
+      onError={onError}
+      isDark={isDark}
+    />
+  );
+}
+
 // ----- PDF / image viewer -----
 
-function ViewerPane({ paneId, source, pending, onPendingApplied, onLoadingChange, onError }: ContentProps) {
+function FileViewer({ paneId, source, pending, onPendingApplied, onLoadingChange, onError }: ContentProps) {
   const commands = useShowControl((s) => s.commands);
   const reportResult = useShowControl((s) => s.reportResult);
   const [fileMeta, setFileMeta] = useState<{ name: string; mimeType: string } | null>(null);

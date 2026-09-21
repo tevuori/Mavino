@@ -44,6 +44,12 @@ function isPdfFile(name: string, mime: string): boolean {
   return ext === "pdf";
 }
 
+function isPptxFile(name: string, mime: string): boolean {
+  if (mime === "application/vnd.openxmlformats-officedocument.presentationml.presentation") return true;
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  return ext === "pptx";
+}
+
 function isImageFile(mime: string): boolean {
   return mime.startsWith("image/");
 }
@@ -57,7 +63,7 @@ function appForSource(
   if (kind === "url" ) return "browser";
   if (kind === "file" && file) {
     if (isTextFile(file.name, file.mimeType)) return "editor";
-    if (isPdfFile(file.name, file.mimeType) || isImageFile(file.mimeType)) return "viewer";
+    if (isPdfFile(file.name, file.mimeType) || isPptxFile(file.name, file.mimeType) || isImageFile(file.mimeType)) return "viewer";
     return "viewer";
   }
   return "viewer";
@@ -89,6 +95,7 @@ export const teacherTools: ToolDef[] = [
       "Provide a sourceId (from the session's StudySource list) OR a kind+refId (note id, file id, or URL). " +
       "highlightText scrolls to and highlights the first occurrence of that text — pass a SHORT specific phrase (max ~50 chars), not a long paragraph. " +
       "highlightLine / highlightLineEnd highlight a line range (1-based) in code/text files. " +
+      "pageNumber jumps to a PDF page; slideNumber jumps to a PPTX slide (1-based). " +
       "Call this RIGHT BEFORE the sentence that references the passage so the visual appears as you speak. " +
       "The result includes a windowId — use it for subsequent highlight_source / focus_source / close_source calls on this source.",
     clientAction: true,
@@ -100,6 +107,7 @@ export const teacherTools: ToolDef[] = [
       { name: "highlightLine", type: "number", description: "1-based line number to scroll to / start of line-range highlight" },
       { name: "highlightLineEnd", type: "number", description: "End line (inclusive) of a line-range highlight" },
       { name: "pageNumber", type: "number", description: "1-based PDF page number to scroll to (takes priority over highlightText for PDFs)" },
+      { name: "slideNumber", type: "number", description: "1-based PPTX slide number to scroll to (takes priority over highlightText for PPTX files)" },
       { name: "label", type: "string", description: "Optional human label for the source (e.g. 'ML notes')" },
     ],
     handler: async (args, { userId }) => {
@@ -163,6 +171,7 @@ export const teacherTools: ToolDef[] = [
       const highlightLine = typeof args.highlightLine === "number" ? Number(args.highlightLine) : undefined;
       const highlightLineEnd = typeof args.highlightLineEnd === "number" ? Number(args.highlightLineEnd) : undefined;
       const pageNumber = typeof args.pageNumber === "number" ? Number(args.pageNumber) : undefined;
+      const slideNumber = typeof args.slideNumber === "number" ? Number(args.slideNumber) : undefined;
 
       // Resolve the requested phrase to a verbatim span + character offsets in
       // the cached source text. The offsets let the client highlight the EXACT
@@ -209,6 +218,7 @@ export const teacherTools: ToolDef[] = [
           line: highlightLine,
           lineEnd: highlightLineEnd,
           scrollToPage: pageNumber,
+          scrollToSlide: slideNumber,
         },
         ...(highlightWarning ? { warning: highlightWarning } : {}),
       };
@@ -220,7 +230,7 @@ export const teacherTools: ToolDef[] = [
       "Highlight a passage in an already-open source window (without re-opening it). " +
       "Provide the windowId (from list_open_windows or the show_source result) and either text, or lineStart+lineEnd for a line range. " +
       "For text, pass a SHORT specific phrase (max ~50 chars) — not a long paragraph, to avoid over-highlighting. " +
-      "For PDFs, you can also pass pageNumber (1-based) to first jump to that page before highlighting.",
+      "For PDFs, pass pageNumber (1-based); for PPTX, pass slideNumber (1-based) to first jump to the right slide before highlighting.",
     clientAction: true,
     parameters: [
       { name: "windowId", type: "string", description: "Target window id", required: true },
@@ -228,6 +238,7 @@ export const teacherTools: ToolDef[] = [
       { name: "lineStart", type: "number", description: "Start line (1-based, inclusive) for a line-range highlight" },
       { name: "lineEnd", type: "number", description: "End line (1-based, inclusive) for a line-range highlight" },
       { name: "pageNumber", type: "number", description: "1-based PDF page number to jump to before highlighting" },
+      { name: "slideNumber", type: "number", description: "1-based PPTX slide number to jump to before highlighting" },
     ],
     handler: async (args) => ({
       action: "show_command",
@@ -237,19 +248,21 @@ export const teacherTools: ToolDef[] = [
       lineStart: typeof args.lineStart === "number" ? Number(args.lineStart) : undefined,
       lineEnd: typeof args.lineEnd === "number" ? Number(args.lineEnd) : undefined,
       pageNumber: typeof args.pageNumber === "number" ? Number(args.pageNumber) : undefined,
+      slideNumber: typeof args.slideNumber === "number" ? Number(args.slideNumber) : undefined,
     }),
   },
   {
     name: "scroll_source",
     description:
-      "Scroll an already-open source window to a passage, line or PDF page without highlighting. " +
-      "Provide the windowId and either text, line, or pageNumber (for PDFs).",
+      "Scroll an already-open source window to a passage, line, PDF page or PPTX slide without highlighting. " +
+      "Provide the windowId and either text, line, pageNumber (for PDFs) or slideNumber (for PPTX).",
     clientAction: true,
     parameters: [
       { name: "windowId", type: "string", description: "Target window id", required: true },
       { name: "text", type: "string", description: "Text to scroll to (first occurrence)" },
       { name: "line", type: "number", description: "1-based line number to scroll to" },
       { name: "pageNumber", type: "number", description: "1-based PDF page number to scroll to" },
+      { name: "slideNumber", type: "number", description: "1-based PPTX slide number to scroll to" },
     ],
     handler: async (args) => ({
       action: "show_command",
@@ -258,6 +271,7 @@ export const teacherTools: ToolDef[] = [
       text: args.text ? String(args.text) : undefined,
       line: typeof args.line === "number" ? Number(args.line) : undefined,
       pageNumber: typeof args.pageNumber === "number" ? Number(args.pageNumber) : undefined,
+      slideNumber: typeof args.slideNumber === "number" ? Number(args.slideNumber) : undefined,
     }),
   },
   {

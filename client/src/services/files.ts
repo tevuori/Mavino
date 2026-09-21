@@ -46,6 +46,8 @@ export const filesApi = {
   download: (id: string) => api.raw(`/api/files/${id}/download`),
   getContent: (id: string) =>
     api.get<{ content: string; name: string; mimeType: string }>(`/api/files/${id}/content`),
+  getPptx: (id: string) =>
+    api.get<{ name: string; slides: { index: number; text: string }[] }>(`/api/files/${id}/pptx`),
   saveContent: (id: string, content: string) =>
     api.put<{ file: VFile }>(`/api/files/${id}/content`, { content }),
   markOpened: (id: string) => api.post(`/api/files/${id}/opened`, {}),
@@ -112,6 +114,10 @@ export function isImageFile(file: Pick<VFile, "mimeType" | "name">): boolean {
 
 export function isPdfFile(file: Pick<VFile, "mimeType" | "name">): boolean {
   return file.mimeType === "application/pdf" || extOf(file.name) === "pdf";
+}
+
+export function isPptxFile(file: Pick<VFile, "mimeType" | "name">): boolean {
+  return file.mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" || extOf(file.name) === "pptx";
 }
 
 export function isAudioFile(file: Pick<VFile, "mimeType" | "name">): boolean {

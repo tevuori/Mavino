@@ -28,6 +28,7 @@ import type { CitationMeta } from "../apps/study/CitationMarkdown";
 import type { CitationTarget } from "../apps/study/studyMarkdown";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../services/speech";
 import { findHighlightRange } from "../apps/study/highlightRange";
+import { PptxViewer } from "../apps/shared/PptxViewer";
 import { useLanguage } from "../store/language";
 import {
   MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileLoading, MobileTextarea,
@@ -40,6 +41,12 @@ function isPdfSheet(sheet: SourceSheet): boolean {
   if (sheet.kind !== "file") return false;
   const name = sheet.name.toLowerCase();
   return name.endsWith(".pdf") || sheet.refId.toLowerCase().endsWith(".pdf");
+}
+
+function isPptxSheet(sheet: SourceSheet): boolean {
+  if (sheet.kind !== "file") return false;
+  const name = sheet.name.toLowerCase();
+  return name.endsWith(".pptx") || sheet.refId.toLowerCase().endsWith(".pptx");
 }
 
 const KIND_ICON: Record<string, typeof BookOpen> = {
@@ -61,6 +68,8 @@ interface SourceSheet {
   posEnd?: number;
   /** For PDFs: 1-based page to scroll to. */
   pageNumber?: number;
+  /** For PPTX: 1-based slide to scroll to. */
+  slideNumber?: number;
   error?: string;
 }
 
@@ -107,7 +116,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
   }, []);
 
   const openSourceSheet = useCallback((
-    entry: { windowId: string; refId: string; name: string; kind: string; highlight?: string; posStart?: number; posEnd?: number; pageNumber?: number }
+    entry: { windowId: string; refId: string; name: string; kind: string; highlight?: string; posStart?: number; posEnd?: number; pageNumber?: number; slideNumber?: number }
   ) => {
     setSheet({ ...entry, loading: true });
     void (async () => {
@@ -136,6 +145,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
         const posStart = typeof highlight?.posStart === "number" ? highlight.posStart : undefined;
         const posEnd = typeof highlight?.posEnd === "number" ? highlight.posEnd : undefined;
         const pageNumber = typeof highlight?.scrollToPage === "number" ? highlight.scrollToPage : undefined;
+        const slideNumber = typeof highlight?.scrollToSlide === "number" ? highlight.scrollToSlide : undefined;
         // Phones have no window ids — key source history by the source ref.
         const windowId = refId || name;
         setSourceHistory?.((prev) => {
@@ -149,7 +159,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
             lastHighlight: highlightText, lastPosStart: posStart, lastPosEnd: posEnd,
           }];
         });
-        openSourceSheet({ windowId, refId, name, kind, highlight: highlightText, posStart, posEnd, pageNumber });
+        openSourceSheet({ windowId, refId, name, kind, highlight: highlightText, posStart, posEnd, pageNumber, slideNumber });
         break;
       }
       case "show_command": {
@@ -159,6 +169,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
         const posStart = typeof p.posStart === "number" ? p.posStart : undefined;
         const posEnd = typeof p.posEnd === "number" ? p.posEnd : undefined;
         const pageNumber = typeof p.pageNumber === "number" ? p.pageNumber : undefined;
+        const slideNumber = typeof p.slideNumber === "number" ? p.slideNumber : undefined;
         if (kind === "clear_highlight") {
           setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, highlight: undefined, posStart: undefined, posEnd: undefined } : prev));
         } else if (kind === "highlight" && (text || (typeof posStart === "number" && typeof posEnd === "number"))) {
@@ -168,6 +179,8 @@ export default function MobileTeach({ initialSessionId = null, language: request
           );
         } else if (kind === "scroll_to" && typeof pageNumber === "number") {
           setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, pageNumber } : prev));
+        } else if (kind === "scroll_to" && typeof slideNumber === "number") {
+          setSheet((prev) => (prev && prev.windowId === windowId ? { ...prev, slideNumber } : prev));
         }
         break;
       }
@@ -685,6 +698,15 @@ export default function MobileTeach({ initialSessionId = null, language: request
                 </div>
               ) : sheet.error ? (
                 <p className="text-sm text-ink-muted">{sheet.error}</p>
+              ) : isPptxSheet(sheet) ? (
+                <div className="h-[60vh] w-full rounded-lg border border-edge bg-surface-2 overflow-hidden">
+                  <PptxViewer
+                    fileId={sheet.refId}
+                    paneId={`mobile-${sheet.windowId}`}
+                    pendingSlide={sheet.slideNumber}
+                    pendingText={sheet.highlight}
+                  />
+                </div>
               ) : isPdfSheet(sheet) ? (
                 <iframe
                   key={sheet.pageNumber ? `page-${sheet.pageNumber}` : "default"}

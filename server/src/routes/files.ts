@@ -9,6 +9,7 @@ import { mkdir, writeFile, unlink, stat, readFile, copyFile } from "node:fs/prom
 import { zipSync, strToU8 } from "fflate";
 import { getStorageStatus } from "../services/storage-quota";
 import { detectAndValidateMime } from "../services/upload-security";
+import { extractPptxSlides, type PptxSlide } from "../services/study/pptx";
 
 /**
  * Build a valid Content-Disposition header for an arbitrary filename.
@@ -69,6 +70,12 @@ export function isTextFile(name: string, mime: string): boolean {
   const base = path.basename(name).toLowerCase();
   if (base === "makefile" || base === "dockerfile" || base.startsWith(".")) return true;
   return false;
+}
+
+export function isPptxFile(name: string, mime: string): boolean {
+  if (mime === "application/vnd.openxmlformats-officedocument.presentationml.presentation") return true;
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  return ext === "pptx";
 }
 
 // ---------- Folders ----------
@@ -406,6 +413,24 @@ files.get("/:id/content", async (c) => {
     return c.json({ content: data, name: record.name, mimeType: record.mimeType });
   } catch {
     return c.json({ error: "File missing on disk" }, 410);
+  }
+});
+
+// Get PPTX slide text (for the PPTX viewer)
+files.get("/:id/pptx", async (c) => {
+  const { userId } = c.get("auth");
+  const record = await prisma.vFile.findFirst({ where: { id: c.req.param("id"), userId } });
+  if (!record) return c.json({ error: "Not found" }, 404);
+  if (!isPptxFile(record.name, record.mimeType)) {
+    return c.json({ error: "Not a PPTX file" }, 400);
+  }
+  const absPath = path.join(UPLOAD_DIR, record.storageKey);
+  try {
+    const buf = await readFile(absPath);
+    const slides = extractPptxSlides(buf);
+    return c.json({ name: record.name, slides });
+  } catch (e) {
+    return c.json({ error: e instanceof Error ? e.message : "Failed to extract slides" }, 500);
   }
 });
 

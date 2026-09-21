@@ -4,12 +4,13 @@ import {
   AlertCircle, File as FileIcon,
 } from "lucide-react";
 import {
-  filesApi, isImageFile, isPdfFile, isAudioFile, isVideoFile, formatBytes,
+  filesApi, isImageFile, isPdfFile, isPptxFile, isAudioFile, isVideoFile, formatBytes,
 } from "../../services/files";
 import { useWindows } from "../../store/windows";
 import { useShowControl, type ShowCommand } from "../../store/showControl";
 import type { WindowInstance } from "../../store/windows";
 import type { VFile } from "../../types";
+import { PptxViewer } from "../shared/PptxViewer";
 
 export default function ViewerApp({ win }: { win: WindowInstance }) {
   const fileId = win.payload?.fileId as string | undefined;
@@ -158,6 +159,11 @@ export default function ViewerApp({ win }: { win: WindowInstance }) {
 
       <div className="flex-1 overflow-hidden" data-viewer-win={win.id}>
         {isImageFile(file) && <ImageViewer file={file} command={activeShowCmd} />}
+        {isPptxFile(file) && (
+          <div className="h-full w-full" data-viewer-win={win.id}>
+            <PptxViewer fileId={file.id} paneId={win.id} />
+          </div>
+        )}
         {isPdfFile(file) && (
           <iframe
             key={pdfPage ? `page-${pdfPage}` : pdfSearch ?? "default"}

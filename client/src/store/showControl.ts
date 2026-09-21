@@ -27,6 +27,8 @@ export interface ShowCommand {
   pos?: number;
   /** scroll_to: a 1-based page number to scroll to (PDF). */
   page?: number;
+  /** scroll_to: a 1-based slide number to scroll to (PPTX). */
+  slide?: number;
   /** scroll_to / highlight: text to search for in the document (first match). */
   text?: string;
   /** highlight: start line of a line-range highlight (1-based, inclusive). */

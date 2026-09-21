@@ -9,6 +9,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import prisma from "../../db/client";
 import { fetchUrl } from "../fetcher";
+import { extractPptxText } from "./pptx";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 
@@ -64,6 +65,12 @@ function isPdfFile(name: string, mime: string): boolean {
   if (mime === "application/pdf") return true;
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
   return ext === "pdf";
+}
+
+function isPptxFile(name: string, mime: string): boolean {
+  if (mime === "application/vnd.openxmlformats-officedocument.presentationml.presentation") return true;
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  return ext === "pptx";
 }
 
 /**
@@ -132,10 +139,16 @@ export async function resolveSource(
       if (!content.trim()) {
         throw new Error(`Could not extract text from '${file.name}' (it may be a scanned/image-only PDF).`);
       }
+    } else if (isPptxFile(file.name, file.mimeType)) {
+      const { text } = extractPptxText(buf);
+      content = text;
+      if (!content.trim()) {
+        throw new Error(`Could not extract text from '${file.name}'.`);
+      }
     } else if (isTextFile(file.name, file.mimeType)) {
       content = buf.toString("utf-8");
     } else {
-      throw new Error(`File '${file.name}' is not a supported text or PDF file`);
+      throw new Error(`File '${file.name}' is not a supported text, PDF or PPTX file`);
     }
     const t = truncate(content);
     return { name: file.name, text: t.text, ref: file.id, truncated: t.truncated, kind: "file", folderId: file.folderId };
