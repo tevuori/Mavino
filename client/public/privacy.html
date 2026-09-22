@@ -56,7 +56,7 @@
 <div class="wrap">
   <span class="badge">Hosted service · mavino.net</span>
   <h1>Privacy Policy</h1>
-  <p class="meta">Mavino — Student OS · Last updated: 7 August 2026</p>
+  <p class="meta">Mavino — Student OS · Last updated: 22 September 2026</p>
 
   <div class="callout">
     <strong>Data Controller:</strong> Jakub Horák, <a href="mailto:tevuori@mavino.net">tevuori@mavino.net</a><br/>
@@ -109,6 +109,7 @@
     <li><strong>Password</strong> — stored only as a bcrypt hash (salt rounds 10). We never store or see your plaintext password.</li>
     <li><strong>Two-factor (TOTP) secret</strong> — encrypted at rest (AES-256-GCM) and used only to verify your 2FA codes.</li>
     <li><strong>Refresh tokens &amp; device labels</strong> — SHA-256 hashes of refresh tokens plus a device label derived from your browser's User-Agent, so you can review and revoke active sessions.</li>
+    <li><strong>Age group and guardian consent</strong> — whether you are 13–17 or 18+, consent status and timestamps, and an encrypted guardian email for users aged 13–17. We do not collect your date of birth.</li>
   </ul>
 
   <h3>2.2 Academic data</h3>
@@ -152,6 +153,7 @@
     <li><strong>Whiteboards, workspaces, reminders, focus sessions</strong> — your productivity content and layouts.</li>
     <li><strong>Settings &amp; preferences</strong> — theme, accent, notification preferences, AI instructions, etc.</li>
     <li><strong>Anonymous usage statistics</strong> — aggregate per-feature daily hit counts with <strong>no user ID attached</strong>, used only for the admin dashboard.</li>
+    <li><strong>AI usage accounting</strong> — provider, model, feature, token counts, estimated cost, status, and timestamps linked to your account to enforce monthly allowances. Prompts and responses are not stored in this accounting ledger.</li>
   </ul>
 
   <h2 id="legal-basis">3. Legal basis for processing</h2>
@@ -176,9 +178,9 @@
   <h3>4.1 LLM providers (AI assistant, Study Hub, lecture notes, voice cleanup)</h3>
   <p>
     When you use the Mavino assistant, Study Hub, lecture-to-notes, or voice-note cleanup, your data is
-    sent to the <strong>LLM provider you configured</strong> (or a server-wide fallback). Providers
-    include OpenAI, Anthropic, OpenRouter, DeepSeek, Groq, Mistral, Google, xAI, Meta, Cerebras, or a
-    self-hosted Ollama instance.
+    sent to the <strong>Mavino-hosted OpenAI service</strong> or, for eligible adult users who explicitly
+    select it, their own configured LLM provider. Personal providers may include OpenRouter, OpenAI,
+    Anthropic, Groq, Mistral, Google, xAI, Meta, Cerebras, or a self-hosted Ollama instance.
   </p>
   <p><strong>What is sent:</strong></p>
   <ul>
@@ -261,7 +263,7 @@
   <h3>4.11 Summary table</h3>
   <table>
     <tr><th>Recipient</th><th>Data sent</th><th>Purpose</th><th>Activated by</th></tr>
-    <tr><td>LLM provider (your choice)</td><td>Chat history, note/file content, transcripts, context</td><td>AI features</td><td>Using AI features</td></tr>
+    <tr><td>OpenAI or your selected adult BYOK provider</td><td>Chat history, note/file content, transcripts, context</td><td>AI features and safety moderation</td><td>Using AI features</td></tr>
     <tr><td>ElevenLabs</td><td>Text to synthesize, voice ID</td><td>Text-to-speech</td><td>Teach Me / podcasts</td></tr>
     <tr><td>Whisper transcription endpoint</td><td>Audio file bytes</td><td>Voice/lecture transcription</td><td>Recording voice / submitting video</td></tr>
     <tr><td>Microsoft Graph</td><td>Calendar events, OAuth tokens</td><td>Calendar sync</td><td>Connecting MS Calendar</td></tr>
@@ -384,10 +386,12 @@
 
   <h2 id="children">11. Children's data</h2>
   <p>
-    Mavino is intended for university students and adults. The service is not directed at children
-    under 16 (the age of digital consent in Czechia). We do not knowingly process the data of children
-    under 16. If you believe a child has provided us with personal data, email
-    <a href="mailto:tevuori@mavino.net">tevuori@mavino.net</a> and we will delete it.
+    Mavino accepts accounts from age 13. Users aged 13–17 must provide a parent or guardian email and
+    cannot use AI features until the guardian confirms the request. Their AI traffic uses only the
+    approved Mavino-hosted provider, receives additional moderation, and cannot use personal API keys
+    or OpenRouter. Guardian email addresses are encrypted and used only for consent administration.
+    Mavino does not accept accounts for children under 13. A guardian may revoke consent or request
+    deletion by emailing <a href="mailto:tevuori@mavino.net">tevuori@mavino.net</a>.
   </p>
 
   <h2 id="self-hosted">12. Self-hosted instances</h2>
