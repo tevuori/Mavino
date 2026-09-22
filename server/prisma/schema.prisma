@@ -16,6 +16,12 @@ model User {
   avatarColor  String   @default("#6366f1")
   role         String   @default("FREE") // "ADMIN" | "PRO" | "PAID" | "MANAGER" | "FREE" | "DEMO"
   athenaInstructions String @default("") // custom instructions injected into Athena system prompt
+  ageBand      String   @default("UNKNOWN") // "UNKNOWN" | "AGE_13_17" | "AGE_18_PLUS"
+  guardianConsentStatus String @default("NOT_REQUIRED") // "NOT_REQUIRED" | "PENDING" | "VERIFIED" | "REVOKED"
+  guardianConsentVerifiedAt DateTime?
+  termsAcceptedAt   DateTime?
+  privacyAcceptedAt DateTime?
+  aiSource     String   @default("choice_required") // "choice_required" | "hosted" | "byok"
   // 2FA (TOTP) — totpSecret stores the base32-encoded secret (encrypted at
   // rest via services/crypto.ts). totpEnabled is false until the user
   // completes the verification step (scans QR, enters a valid code).
@@ -38,6 +44,10 @@ model User {
   flashcardDecks FlashcardDeck[]
   courses     Course[]
   aiCred      AiCredential?
+  guardianConsents GuardianConsent[]
+  llmUsage          LlmUsage[]
+  llmBudgetReservations LlmBudgetReservation[]
+  llmOAuthStates    LlmOAuthState[]
   workspaces  Workspace[]
   taskWorkspaces TaskWorkspace[]
   studySessions StudySession[]
@@ -613,8 +623,87 @@ model AiCredential {
   fallbackBaseUrl   String?  // fallback base URL
   fallbackModelId   String?  // fallback model id
 
+  status          String    @default("active") // "active" | "invalid" | "revoked"
+  authType        String    @default("api_key") // "api_key" | "oauth_key" | "local"
+  externalKeyHash String?
+  lastValidatedAt DateTime?
+  lastError       String?
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model GuardianConsent {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guardianEmailEnc String
+  tokenHash        String    @unique
+  termsVersion     String
+  expiresAt        DateTime
+  sentAt           DateTime  @default(now())
+  verifiedAt       DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model LlmUsage {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source              String   // "hosted" | "byok" | "demo"
+  provider            String
+  modelId             String
+  feature             String   @default("unknown")
+  requestId           String
+  status              String   @default("completed") // "completed" | "failed" | "estimated"
+  inputTokens         Int      @default(0)
+  cachedInputTokens   Int      @default(0)
+  outputTokens        Int      @default(0)
+  reasoningTokens     Int      @default(0)
+  providerCalls       Int      @default(0)
+  toolCalls           Int      @default(0)
+  estimatedCostMicros BigInt   @default(0)
+  createdAt           DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([source, createdAt])
+  @@index([requestId])
+}
+
+model LlmBudgetReservation {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requestId    String   @unique
+  amountMicros BigInt
+  status       String   @default("active") // "active" | "settled" | "released" | "expired"
+  expiresAt    DateTime
+  settledAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, status, expiresAt])
+  @@index([expiresAt])
+}
+
+model LlmOAuthState {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider        String
+  stateHash       String   @unique
+  codeVerifierEnc String
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([userId, provider])
+  @@index([expiresAt])
 }
 
 // ===== Spotify credentials (per-user) =====
