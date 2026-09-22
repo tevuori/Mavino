@@ -20,10 +20,19 @@ async function getTransporter(): Promise<Transporter | null> {
   if (transporterInitPromise) return transporterInitPromise;
   transporterInitPromise = (async () => {
     const t = nodemailer.createTransport(url);
-    await t.verify();
+    // Bounded wait so a stalling SMTP server can't hang request handlers.
+    // (createTransport's second arg is mail defaults, not socket options.)
+    await Promise.race([
+      t.verify(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("SMTP verify timeout")), 15_000)),
+    ]);
     transporter = t;
     return t;
-  })();
+  })().catch((err) => {
+    // Allow retry on the next send instead of caching a rejected promise.
+    transporterInitPromise = null;
+    throw err;
+  });
   return transporterInitPromise;
 }
 
@@ -49,13 +58,16 @@ export async function sendEmail(opts: SendOpts): Promise<boolean> {
     return false;
   }
   try {
-    await t.sendMail({
-      from,
-      to: opts.to,
-      subject: opts.subject,
-      text: opts.text,
-      html: opts.html,
-    });
+    await Promise.race([
+      t.sendMail({
+        from,
+        to: opts.to,
+        subject: opts.subject,
+        text: opts.text,
+        html: opts.html,
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("SMTP send timeout")), 30_000)),
+    ]);
     return true;
   } catch (err) {
     console.error("[email] Failed to send:", (err as Error).message);

@@ -20,6 +20,27 @@ const MODEL_PRICES: Record<string, ModelPrice> = {
     outputMicrosPerMillion: 600_000,
     reasoningMicrosPerMillion: 600_000,
   },
+  // DeepSeek official pricing (deepseek-chat): $0.27/1M input (cache miss),
+  // $0.07/1M cached, $1.10/1M output. "deepseek-flash" is an alias some
+  // proxies use for the chat model — priced identically so hosted mode works.
+  "deepseek:deepseek-chat": {
+    inputMicrosPerMillion: 270_000,
+    cachedInputMicrosPerMillion: 70_000,
+    outputMicrosPerMillion: 1_100_000,
+    reasoningMicrosPerMillion: 1_100_000,
+  },
+  "deepseek:deepseek-flash": {
+    inputMicrosPerMillion: 270_000,
+    cachedInputMicrosPerMillion: 70_000,
+    outputMicrosPerMillion: 1_100_000,
+    reasoningMicrosPerMillion: 1_100_000,
+  },
+  "deepseek:deepseek-reasoner": {
+    inputMicrosPerMillion: 550_000,
+    cachedInputMicrosPerMillion: 140_000,
+    outputMicrosPerMillion: 2_190_000,
+    reasoningMicrosPerMillion: 2_190_000,
+  },
 };
 
 export function getModelPrice(provider: string, modelId: string): ModelPrice | null {

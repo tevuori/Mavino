@@ -650,18 +650,20 @@ auth.post(
 
     // Set the new password and clear the must-change flag.
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await prisma.$transaction([
-      prisma.user.update({
+    // Interactive $transaction (function form) — the RLS extension only
+    // intercepts this form; array-form inner ops would deadlock.
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
         where: { id: resetRecord.userId },
         data: { passwordHash, passwordMustChange: false },
-      }),
-      prisma.passwordResetToken.update({
+      });
+      await tx.passwordResetToken.update({
         where: { id: resetRecord.id },
         data: { usedAt: new Date() },
-      }),
+      });
       // Revoke all refresh tokens — force re-login on all devices.
-      prisma.refreshToken.deleteMany({ where: { userId: resetRecord.userId } }),
-    ]);
+      await tx.refreshToken.deleteMany({ where: { userId: resetRecord.userId } });
+    });
 
     return c.json({ ok: true });
   }

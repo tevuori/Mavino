@@ -57,36 +57,40 @@ export async function completeOpenRouterAuthorization(code: string, state: strin
   if (!response.ok) return null;
   const payload = await response.json() as { key?: string };
   if (!payload.key) return null;
+  const apiKey = payload.key;
   const validation = await fetch("https://openrouter.ai/api/v1/key", {
-    headers: { authorization: `Bearer ${payload.key}` },
+    headers: { authorization: `Bearer ${apiKey}` },
   });
   if (!validation.ok) return null;
-  await prisma.$transaction([
-    prisma.aiCredential.upsert({
+  // Interactive $transaction (function form) — the RLS extension only
+  // intercepts this form; array-form inner ops would each be wrapped in
+  // their own transaction and deadlock.
+  await prisma.$transaction(async (tx) => {
+    await tx.aiCredential.upsert({
       where: { userId: row.userId },
       create: {
         userId: row.userId,
-        apiKeyEnc: encryptSecret(payload.key),
+        apiKeyEnc: encryptSecret(apiKey),
         provider: "openrouter",
         modelId: "openrouter/auto",
         authType: "oauth_key",
         status: "active",
-        externalKeyHash: sha256(payload.key).toString("hex"),
+        externalKeyHash: sha256(apiKey).toString("hex"),
         lastValidatedAt: now,
       },
       update: {
-        apiKeyEnc: encryptSecret(payload.key),
+        apiKeyEnc: encryptSecret(apiKey),
         provider: "openrouter",
         baseUrl: null,
         modelId: "openrouter/auto",
         authType: "oauth_key",
         status: "active",
-        externalKeyHash: sha256(payload.key).toString("hex"),
+        externalKeyHash: sha256(apiKey).toString("hex"),
         lastValidatedAt: now,
         lastError: null,
       },
-    }),
-    prisma.user.update({ where: { id: row.userId }, data: { aiSource: "byok" } }),
-  ]);
+    });
+    await tx.user.update({ where: { id: row.userId }, data: { aiSource: "byok" } });
+  });
   return row.userId;
 }

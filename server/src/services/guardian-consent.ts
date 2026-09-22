@@ -13,12 +13,15 @@ function hashToken(token: string): string {
 export async function requestGuardianConsent(userId: string, guardianEmail: string): Promise<void> {
   const token = randomBytes(32).toString("hex");
   const now = new Date();
-  await prisma.$transaction([
-    prisma.guardianConsent.updateMany({
+  // Interactive $transaction (function form) — the RLS extension injects the
+  // user context once inside it. The array form is NOT intercepted and each
+  // inner op would be wrapped in its own transaction, deadlocking the batch.
+  await prisma.$transaction(async (tx) => {
+    await tx.guardianConsent.updateMany({
       where: { userId, verifiedAt: null, revokedAt: null },
       data: { revokedAt: now },
-    }),
-    prisma.guardianConsent.create({
+    });
+    await tx.guardianConsent.create({
       data: {
         userId,
         guardianEmailEnc: encryptSecret(guardianEmail.trim().toLowerCase()),
@@ -26,12 +29,12 @@ export async function requestGuardianConsent(userId: string, guardianEmail: stri
         termsVersion: CONSENT_TERMS_VERSION,
         expiresAt: new Date(now.getTime() + CONSENT_TTL_MS),
       },
-    }),
-    prisma.user.update({
+    });
+    await tx.user.update({
       where: { id: userId },
       data: { guardianConsentStatus: "PENDING", guardianConsentVerifiedAt: null },
-    }),
-  ]);
+    });
+  });
   const confirmUrl = `${getAppBaseUrl()}/api/auth/guardian-consent/confirm?token=${token}`;
   try {
     await sendEmail({
@@ -49,12 +52,12 @@ export async function confirmGuardianConsent(token: string): Promise<boolean> {
   const now = new Date();
   const consent = await prisma.guardianConsent.findUnique({ where: { tokenHash: hashToken(token) } });
   if (!consent || consent.verifiedAt || consent.revokedAt || consent.expiresAt <= now) return false;
-  await prisma.$transaction([
-    prisma.guardianConsent.update({ where: { id: consent.id }, data: { verifiedAt: now } }),
-    prisma.user.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.guardianConsent.update({ where: { id: consent.id }, data: { verifiedAt: now } });
+    await tx.user.update({
       where: { id: consent.userId },
       data: { guardianConsentStatus: "VERIFIED", guardianConsentVerifiedAt: now, aiSource: "hosted" },
-    }),
-  ]);
+    });
+  });
   return true;
 }
