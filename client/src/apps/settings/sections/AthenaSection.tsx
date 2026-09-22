@@ -16,6 +16,7 @@ export default function AthenaSection() {
         description="Connect an LLM provider and customize how Mavino responds."
       />
       <TierInfoCard />
+      <EligibilityCard />
       <LlmConfigCard />
       <RateLimitCard />
       <FallbackCard />
@@ -26,6 +27,74 @@ export default function AthenaSection() {
 }
 
 // ===== Tier info card (shows the user's tier + rate limits) =====
+
+function EligibilityCard() {
+  const [status, setStatus] = useState<AiKeyStatus | null>(null);
+  const [ageBand, setAgeBand] = useState<"AGE_13_17" | "AGE_18_PLUS">("AGE_18_PLUS");
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [accepted, setAccepted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try { setStatus(await aiApi.getKeyStatus()); } catch {}
+  }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  if (!status || status.ageBand !== "UNKNOWN") {
+    if (status?.ageBand === "AGE_13_17" && status.guardianConsentStatus !== "VERIFIED") {
+      return (
+        <Card className="mb-4 border-amber-500/30">
+          <p className="text-sm font-medium text-ink">Waiting for guardian consent</p>
+          <p className="mt-1 text-xs text-ink-muted">Hosted AI will become available after your parent or guardian confirms the email request.</p>
+        </Card>
+      );
+    }
+    return null;
+  }
+
+  const save = async () => {
+    setBusy(true);
+    setErr(false);
+    setMsg(null);
+    try {
+      await aiApi.setEligibility({
+        ageBand,
+        guardianEmail: ageBand === "AGE_13_17" ? guardianEmail.trim() : undefined,
+        acceptTerms: true,
+        acceptPrivacy: true,
+      });
+      await refresh();
+      setMsg("AI eligibility saved.");
+    } catch (e) {
+      setErr(true);
+      setMsg(e instanceof Error ? e.message : "Failed to save eligibility");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="mb-4">
+      <p className="text-sm font-medium text-ink">Confirm AI eligibility</p>
+      <p className="mt-1 text-xs text-ink-muted">Mavino needs your age group to apply the correct AI safety and consent rules.</p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => setAgeBand("AGE_18_PLUS")} className={`rounded-lg border p-2 text-sm ${ageBand === "AGE_18_PLUS" ? "border-accent bg-accent/10" : "border-edge"}`}>18 or older</button>
+        <button type="button" onClick={() => setAgeBand("AGE_13_17")} className={`rounded-lg border p-2 text-sm ${ageBand === "AGE_13_17" ? "border-accent bg-accent/10" : "border-edge"}`}>13–17</button>
+      </div>
+      {ageBand === "AGE_13_17" && (
+        <input type="email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} placeholder="Parent or guardian email" className={`mt-3 w-full ${inputClass}`} />
+      )}
+      <label className="mt-3 flex items-start gap-2 text-xs text-ink-muted">
+        <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-0.5" />
+        <span>I accept the Terms and Privacy Policy for hosted AI processing.</span>
+      </label>
+      <div className="mt-3"><SaveButton busy={busy} onClick={save} disabled={!accepted || ageBand === "AGE_13_17" && !guardianEmail.trim()}>Continue</SaveButton></div>
+      <MsgBox msg={msg} error={err} />
+    </Card>
+  );
+}
 
 function TierInfoCard() {
   const [status, setStatus] = useState<AiKeyStatus | null>(null);

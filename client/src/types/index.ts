@@ -10,6 +10,9 @@ export interface User {
   avatarColor: string;
   role: UserRole;
   passwordMustChange?: boolean;
+  ageBand?: "UNKNOWN" | "AGE_13_17" | "AGE_18_PLUS";
+  guardianConsentStatus?: "NOT_REQUIRED" | "PENDING" | "VERIFIED" | "REVOKED";
+  aiSource?: "choice_required" | "hosted" | "byok";
 }
 
 /** User record as returned by the admin /api/users endpoints. */

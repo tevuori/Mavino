@@ -15,6 +15,7 @@ import {
   verifyTotpPlain,
 } from "../services/totp";
 import { sendPasswordResetEmail } from "../services/email";
+import { confirmGuardianConsent, requestGuardianConsent } from "../services/guardian-consent";
 import { getDemoConfig, isDemoReady, createDemoUser } from "../services/demo";
 import { verifyTurnstileToken, getTurnstileSiteKey, isTurnstileEnabled } from "../services/turnstile";
 
@@ -33,7 +34,15 @@ const registerSchema = z.object({
   username: z.string().min(2).max(32),
   password: z.string().min(4).max(128),
   displayName: z.string().max(64).optional().default(""),
+  ageBand: z.enum(["AGE_13_17", "AGE_18_PLUS"]),
+  guardianEmail: z.string().email().max(320).optional(),
+  acceptTerms: z.literal(true),
+  acceptPrivacy: z.literal(true),
   turnstileToken: z.string().optional(),
+}).superRefine((value, ctx) => {
+  if (value.ageBand === "AGE_13_17" && !value.guardianEmail) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["guardianEmail"], message: "Guardian email is required." });
+  }
 });
 
 function publicUser(u: {
@@ -44,6 +53,9 @@ function publicUser(u: {
   avatarColor: string;
   role: string;
   passwordMustChange?: boolean;
+  ageBand?: string;
+  guardianConsentStatus?: string;
+  aiSource?: string;
 }) {
   return {
     id: u.id,
@@ -53,6 +65,9 @@ function publicUser(u: {
     avatarColor: u.avatarColor,
     role: u.role,
     passwordMustChange: u.passwordMustChange ?? false,
+    ageBand: u.ageBand ?? "UNKNOWN",
+    guardianConsentStatus: u.guardianConsentStatus ?? "NOT_REQUIRED",
+    aiSource: u.aiSource ?? "choice_required",
   };
 }
 
@@ -269,7 +284,7 @@ auth.post("/register", rateLimit({ max: 5, windowMs: 60_000 }), zValidator("json
     }
   }
 
-  const { username, password, displayName } = c.req.valid("json");
+  const { username, password, displayName, ageBand, guardianEmail } = c.req.valid("json");
   const existing = await prisma.user.findUnique({ where: { username } });
   if (existing) {
     return c.json({ error: "Username already taken" }, 409);
@@ -277,11 +292,39 @@ auth.post("/register", rateLimit({ max: 5, windowMs: 60_000 }), zValidator("json
   const passwordHash = await bcrypt.hash(password, 10);
   // Bootstrap user is ADMIN; open-registration users are FREE.
   const role = isBootstrap ? "ADMIN" : "FREE";
+  const now = new Date();
+  const isMinor = ageBand === "AGE_13_17";
   const user = await prisma.user.create({
-    data: { username, passwordHash, displayName, role },
+    data: {
+      username,
+      passwordHash,
+      displayName,
+      role,
+      ageBand,
+      guardianConsentStatus: isMinor ? "PENDING" : "NOT_REQUIRED",
+      termsAcceptedAt: now,
+      privacyAcceptedAt: now,
+      aiSource: "hosted",
+    },
   });
+  if (isMinor && guardianEmail) await requestGuardianConsent(user.id, guardianEmail);
   const token = await signToken({ sub: user.id, username: user.username });
   return c.json({ token, refreshToken: null, user: publicUser(user) });
+});
+
+auth.get("/guardian-consent/confirm", async (c) => {
+  const token = c.req.query("token") ?? "";
+  const confirmed = token.length >= 32 && await confirmGuardianConsent(token);
+  return c.html(`<!doctype html><html><body style="font-family:sans-serif;max-width:560px;margin:80px auto;padding:24px"><h1>${confirmed ? "AI access confirmed" : "Invalid or expired link"}</h1><p>${confirmed ? "The student can now use Mavino's hosted AI features. You can close this page." : "Ask the student to request a new guardian consent email."}</p></body></html>`, confirmed ? 200 : 400);
+});
+
+const guardianResendSchema = z.object({ guardianEmail: z.string().email().max(320) });
+auth.post("/guardian-consent/resend", rateLimit({ max: 3, windowMs: 60 * 60_000 }), authMiddleware, zValidator("json", guardianResendSchema), async (c) => {
+  const { userId } = c.get("auth");
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { ageBand: true } });
+  if (user?.ageBand !== "AGE_13_17") return c.json({ error: "Guardian consent is not required." }, 400);
+  await requestGuardianConsent(userId, c.req.valid("json").guardianEmail);
+  return c.json({ ok: true });
 });
 
 const refreshSchema = z.object({

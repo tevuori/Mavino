@@ -9,7 +9,16 @@ interface AuthState {
   status: "loading" | "authenticated" | "unauthenticated";
   login: (username: string, password: string, rememberMe?: boolean, turnstileToken?: string) => Promise<void>;
   loginWithTotp: (challengeToken: string, totpCode: string, rememberMe?: boolean) => Promise<void>;
-  register: (username: string, password: string, displayName?: string, turnstileToken?: string) => Promise<void>;
+  register: (data: {
+    username: string;
+    password: string;
+    displayName?: string;
+    ageBand: "AGE_13_17" | "AGE_18_PLUS";
+    guardianEmail?: string;
+    acceptTerms: true;
+    acceptPrivacy: true;
+    turnstileToken?: string;
+  }) => Promise<void>;
   tryDemo: () => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -52,11 +61,11 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ token: data.token, user: data.user, status: "authenticated" });
   },
 
-  register: async (username, password, displayName, turnstileToken?: string) => {
+  register: async (registration) => {
     // Bootstrap-only endpoint (first admin). After that it 403s.
     const data = await api.post<{ token: string; refreshToken: string | null; user: User }>(
       "/api/auth/register",
-      { username, password, displayName, turnstileToken }
+      registration
     );
     setToken(data.token);
     setRefreshToken(data.refreshToken);

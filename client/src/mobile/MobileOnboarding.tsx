@@ -11,7 +11,7 @@ import AppLogo from "../shell/AppLogo";
 import { MobileIconChip } from "./MobileUi";
 
 const GEMINI_KEYS_URL = "https://aistudio.google.com/api-keys";
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 6;
 
 export default function MobileOnboarding() {
   const [step, setStep] = useState(0);
@@ -68,14 +68,6 @@ export default function MobileOnboarding() {
     try {
       // Persist name when leaving the name step
       if (step === 1) saveName();
-      // Save key when leaving the key step
-      if (step === 3) {
-        const ok = await saveKey();
-        if (!ok) {
-          setAdvancing(false);
-          return;
-        }
-      }
       if (step >= TOTAL_STEPS - 1) {
         setHasOnboarded(true);
         return;
@@ -84,7 +76,7 @@ export default function MobileOnboarding() {
     } finally {
       if (step < TOTAL_STEPS - 1) setAdvancing(false);
     }
-  }, [advancing, step, saveName, saveKey, setHasOnboarded]);
+  }, [advancing, step, saveName, setHasOnboarded]);
 
   const back = useCallback(() => {
     if (step === 1) saveName();
@@ -121,19 +113,9 @@ export default function MobileOnboarding() {
           {step === 0 && <WelcomeStep />}
           {step === 1 && <NameStep value={name} onChange={setName} onSubmit={() => void next()} />}
           {step === 2 && <LlmIntroStep />}
-          {step === 3 && (
-            <GeminiKeyStep
-              apiKey={apiKey}
-              onKeyChange={setApiKey}
-              saving={keySaving}
-              msg={keyMsg}
-              err={keyErr}
-              onSubmit={() => void next()}
-            />
-          )}
-          {step === 4 && <NavTourStep />}
-          {step === 5 && <FeatureTourStep />}
-          {step === 6 && <CompleteStep />}
+          {step === 3 && <NavTourStep />}
+          {step === 4 && <FeatureTourStep />}
+          {step === 5 && <CompleteStep />}
         </div>
       </div>
 
@@ -269,25 +251,19 @@ function LlmIntroStep() {
     <div className="flex flex-col items-center pt-10 text-center">
       <MobileIconChip icon={<KeyRound size={24} />} size="lg" />
       <h2 className="font-display mb-2 mt-5 text-2xl font-bold text-ink">
-        Connect to an AI
+        AI is ready
       </h2>
       <p className="max-w-xs text-sm leading-6 text-ink-muted">
-        Mavino needs an LLM API key to power chat, study tools, and smart
-        features. We recommend{" "}
-        <strong className="text-ink">Google Gemini</strong> — it has a generous
-        free tier.
+        Mavino includes a monthly hosted AI allowance for chat, study tools,
+        and smart features. No API key or provider account is required.
       </p>
-      <div className="mt-5 flex max-w-xs items-start gap-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-left text-xs leading-5 text-amber-200">
-        <ShieldAlert size={16} className="mt-0.5 shrink-0" />
+      <div className="mt-5 flex max-w-xs items-start gap-2.5 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-left text-xs leading-5 text-ink-muted">
+        <ShieldAlert size={16} className="mt-0.5 shrink-0 text-accent" />
         <span>
-          For data privacy, prefer providers outside China (e.g. Google,
-          OpenAI, Anthropic). Some China-hosted models have less protective
-          data policies.
+          You can review your remaining allowance in Settings. Adults may connect
+          a personal provider later for separate limits.
         </span>
       </div>
-      <p className="mt-5 text-sm text-ink-muted">
-        On the next step, we'll help you get a free Gemini key.
-      </p>
     </div>
   );
 }

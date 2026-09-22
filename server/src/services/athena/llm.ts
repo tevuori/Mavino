@@ -206,7 +206,7 @@ async function getByokConfig(userId: string): Promise<LlmUserConfig> {
 export async function getUserConfig(userId: string): Promise<LlmUserConfig> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true, aiSource: true },
+    select: { role: true, aiSource: true, ageBand: true },
   });
 
   if (user?.role === "DEMO") {
@@ -224,6 +224,7 @@ export async function getUserConfig(userId: string): Promise<LlmUserConfig> {
   const globalConfig = await getGlobalLlmConfig();
   if (globalConfig.mode === "global") return getHostedConfig();
   if (globalConfig.mode === "hybrid") {
+    if (user?.ageBand === "AGE_13_17") return getHostedConfig();
     if (user?.aiSource === "hosted") return getHostedConfig();
     if (user?.aiSource === "byok") return getByokConfig(userId);
     return { provider: "openai", apiKey: "", modelId: "" };
@@ -311,10 +312,23 @@ export async function acquireLlmModel(
   const [cfg, globalConfig, user, credential] = await Promise.all([
     getUserConfig(userId),
     getGlobalLlmConfig(),
-    prisma.user.findUnique({ where: { id: userId }, select: { role: true, aiSource: true } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, aiSource: true, ageBand: true, guardianConsentStatus: true },
+    }),
     prisma.aiCredential.findUnique({ where: { userId }, select: { status: true } }),
   ]);
   if (!user) throw new LlmError(404, "User not found.");
+  if (globalConfig.mode === "hybrid" && user.ageBand === "UNKNOWN") {
+    throw new LlmError(403, "Confirm your age group before using AI features.");
+  }
+  if (
+    globalConfig.mode === "hybrid"
+    && user.ageBand === "AGE_13_17"
+    && user.guardianConsentStatus !== "VERIFIED"
+  ) {
+    throw new LlmError(403, "Guardian consent is required before using AI features.");
+  }
   if (!cfg.apiKey) {
     const message = globalConfig.mode === "hybrid" && user.aiSource === "choice_required"
       ? "Choose Mavino-hosted AI or your own provider in Settings → Mavino Assistant."
@@ -325,7 +339,7 @@ export async function acquireLlmModel(
   let source: LlmSource;
   if (user.role === "DEMO") source = "demo";
   else if (globalConfig.mode === "global") source = "hosted";
-  else if (globalConfig.mode === "hybrid") source = user.aiSource === "byok" ? "byok" : "hosted";
+  else if (globalConfig.mode === "hybrid") source = user.ageBand === "AGE_13_17" || user.aiSource !== "byok" ? "hosted" : "byok";
   else source = credential?.status === "active" ? "byok" : "hosted";
 
   let requestId: string = randomUUID();

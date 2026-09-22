@@ -8,6 +8,7 @@ import { isLlmConfiguredFor, normalizeModelId } from "../services/athena/llm";
 import { llmRateLimiter } from "../services/athena/rate-limiter";
 import { getGlobalLlmConfig, getRateLimitsForUser } from "../services/llm-config";
 import { getBudgetSnapshot } from "../services/llm-budget";
+import { requestGuardianConsent } from "../services/guardian-consent";
 
 const ai = new Hono();
 ai.use("*", authMiddleware);
@@ -85,12 +86,46 @@ ai.get("/key", async (c) => {
   });
 });
 
+const eligibilitySchema = z.object({
+  ageBand: z.enum(["AGE_13_17", "AGE_18_PLUS"]),
+  guardianEmail: z.string().email().max(320).optional(),
+  acceptTerms: z.literal(true),
+  acceptPrivacy: z.literal(true),
+}).superRefine((value, ctx) => {
+  if (value.ageBand === "AGE_13_17" && !value.guardianEmail) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["guardianEmail"], message: "Guardian email is required." });
+  }
+});
+
+ai.put("/eligibility", zValidator("json", eligibilitySchema), async (c) => {
+  const { userId } = c.get("auth");
+  const { ageBand, guardianEmail } = c.req.valid("json");
+  const now = new Date();
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      ageBand,
+      guardianConsentStatus: ageBand === "AGE_13_17" ? "PENDING" : "NOT_REQUIRED",
+      guardianConsentVerifiedAt: null,
+      termsAcceptedAt: now,
+      privacyAcceptedAt: now,
+      aiSource: "hosted",
+    },
+  });
+  if (ageBand === "AGE_13_17" && guardianEmail) await requestGuardianConsent(userId, guardianEmail);
+  return c.json({ ok: true, ageBand });
+});
+
 const sourceSchema = z.object({ source: z.enum(["hosted", "byok"]) });
 
 ai.put("/source", zValidator("json", sourceSchema), async (c) => {
   const { userId } = c.get("auth");
   const { source } = c.req.valid("json");
   if (source === "byok") {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { ageBand: true } });
+    if (user?.ageBand !== "AGE_18_PLUS") {
+      return c.json({ error: "Personal providers are available only to users aged 18 or older." }, 403);
+    }
     const credential = await prisma.aiCredential.findUnique({ where: { userId } });
     if (!credential || credential.status !== "active") {
       return c.json({ error: "Connect and validate your provider before selecting BYOK." }, 400);
@@ -109,6 +144,10 @@ ai.put("/source", zValidator("json", sourceSchema), async (c) => {
 ai.put("/key", zValidator("json", keySchema), async (c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { ageBand: true } });
+  if (user?.ageBand === "AGE_13_17") {
+    return c.json({ error: "Personal AI providers are available only to users aged 18 or older." }, 403);
+  }
   const enc = encryptSecret(body.apiKey.trim());
   const provider = body.provider?.trim() || "openai";
   const baseUrl = body.baseUrl?.trim() || null;

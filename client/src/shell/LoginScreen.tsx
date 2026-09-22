@@ -31,6 +31,9 @@ export default function LoginScreen() {
   const [regUsername, setRegUsername] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regDisplayName, setRegDisplayName] = useState("");
+  const [regAgeBand, setRegAgeBand] = useState<"AGE_13_17" | "AGE_18_PLUS">("AGE_18_PLUS");
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [acceptLegal, setAcceptLegal] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [registrationChecked, setRegistrationChecked] = useState(false);
 
@@ -158,7 +161,16 @@ export default function LoginScreen() {
     setError(null);
     setBusy(true);
     try {
-      await register(regUsername, regPassword, regDisplayName.trim() || undefined, turnstileToken || undefined);
+      await register({
+        username: regUsername,
+        password: regPassword,
+        displayName: regDisplayName.trim() || undefined,
+        ageBand: regAgeBand,
+        guardianEmail: regAgeBand === "AGE_13_17" ? guardianEmail.trim() : undefined,
+        acceptTerms: true,
+        acceptPrivacy: true,
+        turnstileToken: turnstileToken || undefined,
+      });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -423,6 +435,32 @@ export default function LoginScreen() {
               placeholder="Display name (optional)"
               className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
             />
+            <select
+              value={regAgeBand}
+              onChange={(e) => setRegAgeBand(e.target.value as "AGE_13_17" | "AGE_18_PLUS")}
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+            >
+              <option value="AGE_18_PLUS">I am 18 or older</option>
+              <option value="AGE_13_17">I am 13–17</option>
+            </select>
+            {regAgeBand === "AGE_13_17" && (
+              <input
+                type="email"
+                value={guardianEmail}
+                onChange={(e) => setGuardianEmail(e.target.value)}
+                placeholder="Parent or guardian email"
+                className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+              />
+            )}
+            <label className="flex items-start gap-2 text-xs text-ink-muted">
+              <input
+                type="checkbox"
+                checked={acceptLegal}
+                onChange={(e) => setAcceptLegal(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 accent-[var(--accent)]"
+              />
+              <span>I accept the <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="text-accent underline">Terms</a> and <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="text-accent underline">Privacy Policy</a>.</span>
+            </label>
 
             {error && (
               <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
@@ -432,7 +470,7 @@ export default function LoginScreen() {
 
             <button
               type="submit"
-              disabled={busy || !regUsername.trim() || !regPassword}
+              disabled={busy || !regUsername.trim() || !regPassword || !acceptLegal || regAgeBand === "AGE_13_17" && !guardianEmail.trim()}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-sm font-medium text-accent-fg transition hover:opacity-90 disabled:opacity-50"
             >
               {busy ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}

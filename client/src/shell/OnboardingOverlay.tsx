@@ -40,12 +40,6 @@ const STEPS: StepDef[] = [
   { id: "calendar", openApp: { appId: "calendar", size: { width: 820, height: 520 } } },
   { id: "more-apps", centered: true },
   { id: "llm-intro", centered: true },
-  { id: "gemini-1", centered: true, wide: true },
-  { id: "gemini-2", centered: true, wide: true },
-  { id: "gemini-3", centered: true, wide: true },
-  { id: "gemini-4", centered: true, wide: true },
-  { id: "gemini-5", centered: true, wide: true },
-  { id: "gemini-save", centered: true },
   { id: "appearance", openApp: { appId: "settings", section: "appearance", size: { width: 760, height: 560 } } },
   { id: "integrations", openApp: { appId: "settings", section: "integrations", size: { width: 760, height: 560 } } },
   { id: "shortcuts", centered: true },
@@ -474,21 +468,18 @@ function GeminiIntroStep() {
       <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/20 text-accent">
         <KeyRound size={32} />
       </div>
-      <h2 className="mb-2 text-2xl font-bold text-ink">Connect Mavino to an AI</h2>
+      <h2 className="mb-2 text-2xl font-bold text-ink">Mavino AI is ready</h2>
       <p className="mx-auto max-w-md text-sm text-ink-muted">
-        Mavino needs an LLM API key to power chat, notes, tasks, and study tools. We recommend{" "}
-        <strong className="text-ink">Google Gemini</strong> — it has a generous free tier and only
-        takes a minute to set up.
+        Your account includes a monthly hosted AI allowance for chat, notes, tasks, and study tools.
+        No API key or separate provider account is required.
       </p>
-      <div className="mx-auto mt-4 flex max-w-md items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-left text-xs text-amber-200">
-        <ShieldAlert size={16} className="mt-0.5 shrink-0" />
+      <div className="mx-auto mt-4 flex max-w-md items-start gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2.5 text-left text-xs text-ink-muted">
+        <ShieldAlert size={16} className="mt-0.5 shrink-0 text-accent" />
         <span>
-          For your data privacy, prefer providers based outside of China (e.g. Google, OpenAI,
-          Anthropic, Groq). Some China-hosted models have unclear or less protective data storage
-          and retention policies.
+          You can review your remaining allowance in Settings. Adults can optionally connect a
+          personal provider later and use its separate limits.
         </span>
       </div>
-      <p className="mt-4 text-sm text-ink-muted">We'll walk you through getting a free Gemini key, step by step.</p>
     </div>
   );
 }

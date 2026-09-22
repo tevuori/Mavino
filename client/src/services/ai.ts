@@ -48,6 +48,12 @@ export const aiApi = {
   deleteKey: () => api.delete<{ ok: boolean }>("/api/ai/key"),
   setSource: (source: "hosted" | "byok") =>
     api.put<{ ok: boolean; source: "hosted" | "byok" }>("/api/ai/source", { source }),
+  setEligibility: (data: {
+    ageBand: "AGE_13_17" | "AGE_18_PLUS";
+    guardianEmail?: string;
+    acceptTerms: true;
+    acceptPrivacy: true;
+  }) => api.put<{ ok: boolean; ageBand: string }>("/api/ai/eligibility", data),
   setRateLimit: (data: {
     rateLimitEnabled?: boolean;
     rateLimitRpd?: number;
