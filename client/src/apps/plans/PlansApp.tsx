@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { WindowInstance } from "../../store/windows";
 import { subscriptionsApi, type SubscriptionStatus, type SubscriptionPlan } from "../../services/subscriptions";
+import { aiApi, type AiKeyStatus } from "../../services/ai";
 import { useFeatures } from "../../store/features";
 import { confirmDialog } from "../../store/mobileDialog";
 import { studyFunctionsApi, type StudyFunctionDef } from "../../services/study-functions";
@@ -34,8 +35,8 @@ const PLANS: Array<{
     description: "For getting started",
     features: [
       "Notes, Tasks, Files, Whiteboard",
-      "Study Hub (limited AI)",
-      "Mavino assistant",
+      "Hosted AI included — starter monthly allowance",
+      "Study Hub, Mavino assistant",
       "Today dashboard",
       "1 GB storage",
     ],
@@ -48,12 +49,12 @@ const PLANS: Array<{
     description: "For serious students",
     features: [
       "Everything in Free",
+      "3× larger hosted AI allowance",
       "Pomodoro, Flashcards",
       "Calendar, Habits, Editor",
       "Browser, Voice Notes, Reminders",
       "Analytics, Maps",
       "10 GB storage",
-      "Higher AI rate limits",
     ],
     cta: "Upgrade to Paid",
     highlight: true,
@@ -65,9 +66,9 @@ const PLANS: Array<{
     description: "For power users",
     features: [
       "Everything in Paid",
+      "6× larger hosted AI allowance",
       "Atlas — global knowledge graph",
       "Crunch — adaptive exam planner",
-      "Pro-tier AI rate limits",
       "50 GB storage",
       "Priority new features",
       "All Study Hub functions",
@@ -78,6 +79,7 @@ const PLANS: Array<{
 
 export default function PlansApp({ win: _win }: { win: WindowInstance }) {
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
+  const [aiStatus, setAiStatus] = useState<AiKeyStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<SubscriptionPlan | "portal" | "cancel" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,13 +92,15 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
     setLoading(true);
     setError(null);
     try {
-      const [s, sf] = await Promise.all([
+      const [s, sf, ai] = await Promise.all([
         subscriptionsApi.getStatus(),
         studyFunctionsApi.getMyFunctions(),
+        aiApi.getKeyStatus().catch(() => null),
       ]);
       setStatus(s);
       setStudyFunctions(sf.functions ?? []);
       setStudyMinTiers(sf.minTiers ?? {});
+      setAiStatus(ai);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load subscription status");
     } finally {
@@ -252,6 +256,36 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Hosted AI allowance */}
+        {aiStatus && aiStatus.llmMode !== "per-user" && aiStatus.budget.limitMicros > 0 && (
+          <div className="mb-6 rounded-xl border border-edge bg-surface-2 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+                Hosted AI allowance
+              </p>
+              <span className="text-xs text-ink-muted">
+                {aiStatus.aiSource === "byok"
+                  ? "Using your own provider — allowance not consumed"
+                  : `Resets ${new Date(aiStatus.budget.resetAt).toLocaleDateString()}`}
+              </span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-3">
+              <div
+                className="h-full rounded-full bg-accent"
+                style={{
+                  width: `${Math.min(100, ((aiStatus.budget.spentMicros + aiStatus.budget.reservedMicros) / aiStatus.budget.limitMicros) * 100)}%`,
+                }}
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-ink-muted">
+              ${((aiStatus.budget.remainingMicros) / 1_000_000).toFixed(2)} of $
+              {(aiStatus.budget.limitMicros / 1_000_000).toFixed(2)} remaining this month.
+              {aiStatus.ageBand === "AGE_18_PLUS" &&
+                " Adults can also connect their own provider in Settings → Mavino Assistant."}
+            </p>
           </div>
         )}
 

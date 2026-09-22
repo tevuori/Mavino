@@ -24,6 +24,28 @@ export interface HostedBudgetConfig {
   tiers: Record<RateTier, number>;
 }
 
+export interface AdminUsageStats {
+  monthStart: string;
+  monthEnd: string;
+  global: { limitMicros: number; spentMicros: number; reservedMicros: number; remainingMicros: number };
+  totals: {
+    requests: number;
+    completed: number;
+    estimated: number;
+    failed: number;
+    inputTokens: number;
+    outputTokens: number;
+    costMicros: number;
+  };
+  byTier: Array<{ tier: RateTier; requests: number; costMicros: number }>;
+  bySource: Array<{ source: string; requests: number; costMicros: number }>;
+  byFeature: Array<{ feature: string; requests: number; costMicros: number }>;
+  byModel: Array<{ provider: string; modelId: string; requests: number; costMicros: number }>;
+  topUsers: Array<{ userId: string; username: string; tier: RateTier; requests: number; costMicros: number }>;
+  daily: Array<{ day: string; requests: number; costMicros: number }>;
+  reservations: { active: number; activeMicros: number };
+}
+
 export interface DemoConfig {
   enabled: boolean;
   hasKey: boolean;
@@ -53,6 +75,7 @@ export const adminLlmApi = {
   setHostedBudget: (data: Partial<Omit<HostedBudgetConfig, "tiers">> & {
     tiers?: Partial<Record<RateTier, number>>;
   }) => api.put<{ ok: boolean }>("/api/admin/llm/hosted-budget", data),
+  getUsage: () => api.get<AdminUsageStats>("/api/admin/llm/usage"),
   getDemoConfig: () => api.get<DemoConfig>("/api/admin/llm/demo"),
   setDemoConfig: (data: {
     enabled?: boolean;

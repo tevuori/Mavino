@@ -15,6 +15,7 @@ import {
   type LlmMode,
 } from "../services/llm-config";
 import { getDemoConfig, setDemoConfig, cleanupOldDemoUsers, type DemoConfigInput } from "../services/demo";
+import { getAdminUsageStats } from "../services/llm-budget";
 
 const adminLlm = new Hono();
 adminLlm.use("*", authMiddleware, adminMiddleware);
@@ -105,6 +106,9 @@ adminLlm.put("/hosted-budget", zValidator("json", hostedBudgetSchema), async (c)
   await setHostedBudgetConfig(c.req.valid("json"));
   return c.json({ ok: true });
 });
+
+/** GET /api/admin/llm/usage — current-month hosted/BYOK usage, cost, and budget status. */
+adminLlm.get("/usage", async (c) => c.json(await getAdminUsageStats()));
 
 // ---------- Demo mode ----------
 

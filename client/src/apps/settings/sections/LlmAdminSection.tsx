@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Sparkles, KeyRound, Gauge, Trash2, Check, AlertCircle, Play, Loader2, WalletCards } from "lucide-react";
-import { adminLlmApi, type GlobalLlmConfig, type TierRateLimitsMap, type DemoConfig, type HostedBudgetConfig } from "../../../services/admin-llm";
+import { Sparkles, KeyRound, Gauge, Trash2, Check, AlertCircle, Play, Loader2, WalletCards, BarChart3, RefreshCw } from "lucide-react";
+import { adminLlmApi, type GlobalLlmConfig, type TierRateLimitsMap, type DemoConfig, type HostedBudgetConfig, type AdminUsageStats } from "../../../services/admin-llm";
 import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass } from "../ui";
 import { confirmDialog } from "../../../store/mobileDialog";
 
@@ -14,6 +14,7 @@ export default function LlmAdminSection() {
       />
       <GlobalKeyCard />
       <HostedBudgetCard />
+      <HostedUsageCard />
       <DemoModeCard />
       <TierRateLimitsCard />
     </section>
@@ -323,6 +324,178 @@ function HostedBudgetCard() {
         {config && <span className="text-xs text-ink-muted">Per-operation reserve: ${(config.reservationMicros / 1_000_000).toFixed(3)}</span>}
       </div>
       <MsgBox msg={msg} error={err} />
+    </Card>
+  );
+}
+
+function fmtUsd(micros: number): string {
+  const dollars = micros / 1_000_000;
+  return `$${dollars >= 1 ? dollars.toFixed(2) : dollars.toFixed(4)}`;
+}
+
+function fmtTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
+function HostedUsageCard() {
+  const [stats, setStats] = useState<AdminUsageStats | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setBusy(true);
+    try {
+      setStats(await adminLlmApi.getUsage());
+      setErr(null);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load usage");
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  if (!stats && !err) return null;
+  const usedPct = stats && stats.global.limitMicros > 0
+    ? Math.min(100, ((stats.global.spentMicros + stats.global.reservedMicros) / stats.global.limitMicros) * 100)
+    : 0;
+  const maxDaily = stats ? Math.max(1, ...stats.daily.map((d) => d.costMicros)) : 1;
+
+  return (
+    <Card className="mb-4">
+      <div className="mb-3 flex items-center gap-2 text-sm">
+        <BarChart3 size={16} className="text-accent" />
+        <h3 className="font-semibold text-ink">Hosted AI usage this month</h3>
+        <button
+          onClick={refresh}
+          disabled={busy}
+          className="ml-auto flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-3 hover:text-ink"
+          title="Refresh"
+        >
+          <RefreshCw size={14} className={busy ? "animate-spin" : ""} />
+        </button>
+      </div>
+      {err && <p className="text-xs text-red-400">{err}</p>}
+      {stats && (
+        <>
+          <div className="mb-3 rounded-lg border border-edge bg-surface-2 p-3">
+            <div className="mb-1 flex items-center justify-between text-xs">
+              <span className="text-ink-muted">Global hosted budget</span>
+              <span className="text-ink">
+                {fmtUsd(stats.global.spentMicros + stats.global.reservedMicros)} / {fmtUsd(stats.global.limitMicros)}
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-surface-3">
+              <div
+                className={`h-full rounded-full ${usedPct > 90 ? "bg-red-500" : usedPct > 70 ? "bg-amber-500" : "bg-accent"}`}
+                style={{ width: `${usedPct}%` }}
+              />
+            </div>
+            <p className="mt-1 text-[11px] text-ink-muted">
+              {fmtUsd(stats.global.remainingMicros)} remaining · {stats.reservations.active} active reservation(s)
+              ({fmtUsd(stats.reservations.activeMicros)}) · resets {new Date(stats.monthEnd).toLocaleDateString()}
+            </p>
+          </div>
+
+          <div className="mb-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+            <div className="rounded-lg border border-edge bg-surface-2 p-2">
+              <p className="text-sm font-semibold text-ink">{stats.totals.requests}</p>
+              <p className="text-[10px] text-ink-muted">requests</p>
+            </div>
+            <div className="rounded-lg border border-edge bg-surface-2 p-2">
+              <p className="text-sm font-semibold text-ink">{fmtUsd(stats.totals.costMicros)}</p>
+              <p className="text-[10px] text-ink-muted">est. cost (all sources)</p>
+            </div>
+            <div className="rounded-lg border border-edge bg-surface-2 p-2">
+              <p className="text-sm font-semibold text-ink">
+                {fmtTokens(stats.totals.inputTokens)} / {fmtTokens(stats.totals.outputTokens)}
+              </p>
+              <p className="text-[10px] text-ink-muted">in / out tokens</p>
+            </div>
+            <div className="rounded-lg border border-edge bg-surface-2 p-2">
+              <p className="text-sm font-semibold text-ink">
+                {stats.totals.failed > 0 ? <span className="text-red-400">{stats.totals.failed}</span> : 0}
+              </p>
+              <p className="text-[10px] text-ink-muted">failed ({stats.totals.estimated} estimated)</p>
+            </div>
+          </div>
+
+          {stats.daily.length > 0 && (
+            <div className="mb-3 rounded-lg border border-edge bg-surface-2 p-3">
+              <p className="mb-2 text-[11px] font-medium text-ink-muted">Daily hosted spend</p>
+              <div className="flex h-16 items-end gap-1">
+                {stats.daily.slice(-30).map((d) => (
+                  <div
+                    key={d.day}
+                    className="flex-1 rounded-sm bg-accent/70"
+                    style={{ height: `${Math.max(4, (d.costMicros / maxDaily) * 100)}%` }}
+                    title={`${d.day}: ${fmtUsd(d.costMicros)} · ${d.requests} req`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-edge bg-surface-2 p-3">
+              <p className="mb-2 text-[11px] font-medium text-ink-muted">By tier (hosted)</p>
+              {stats.byTier.length === 0 && <p className="text-xs text-ink-muted">No hosted usage yet.</p>}
+              {stats.byTier.map((row) => (
+                <div key={row.tier} className="flex justify-between py-0.5 text-xs">
+                  <span className="capitalize text-ink">{row.tier}</span>
+                  <span className="text-ink-muted">{row.requests} req · {fmtUsd(row.costMicros)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border border-edge bg-surface-2 p-3">
+              <p className="mb-2 text-[11px] font-medium text-ink-muted">By source</p>
+              {stats.bySource.map((row) => (
+                <div key={row.source} className="flex justify-between py-0.5 text-xs">
+                  <span className="capitalize text-ink">{row.source}</span>
+                  <span className="text-ink-muted">{row.requests} req · {fmtUsd(row.costMicros)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border border-edge bg-surface-2 p-3">
+              <p className="mb-2 text-[11px] font-medium text-ink-muted">Top features</p>
+              {stats.byFeature.length === 0 && <p className="text-xs text-ink-muted">No usage yet.</p>}
+              {stats.byFeature.slice(0, 6).map((row) => (
+                <div key={row.feature} className="flex justify-between py-0.5 text-xs">
+                  <span className="truncate text-ink">{row.feature}</span>
+                  <span className="shrink-0 text-ink-muted">{row.requests} req · {fmtUsd(row.costMicros)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-lg border border-edge bg-surface-2 p-3">
+              <p className="mb-2 text-[11px] font-medium text-ink-muted">Top models</p>
+              {stats.byModel.length === 0 && <p className="text-xs text-ink-muted">No usage yet.</p>}
+              {stats.byModel.slice(0, 6).map((row) => (
+                <div key={`${row.provider}/${row.modelId}`} className="flex justify-between py-0.5 text-xs">
+                  <span className="truncate text-ink">{row.provider}/{row.modelId}</span>
+                  <span className="shrink-0 text-ink-muted">{row.requests} req · {fmtUsd(row.costMicros)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {stats.topUsers.length > 0 && (
+            <div className="mt-3 rounded-lg border border-edge bg-surface-2 p-3">
+              <p className="mb-2 text-[11px] font-medium text-ink-muted">Top hosted users</p>
+              {stats.topUsers.map((row) => (
+                <div key={row.userId} className="flex justify-between py-0.5 text-xs">
+                  <span className="text-ink">
+                    {row.username} <span className="text-ink-muted">({row.tier})</span>
+                  </span>
+                  <span className="text-ink-muted">{row.requests} req · {fmtUsd(row.costMicros)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </Card>
   );
 }
