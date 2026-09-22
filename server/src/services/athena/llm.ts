@@ -11,6 +11,7 @@
 //   OPENAI_BASE_URL   — base URL (optional, for OpenAI-compatible endpoints)
 //   OPENAI_MODEL      — model id (optional)
 
+import { randomUUID } from "node:crypto";
 import {
   igniteModel,
   type LlmModel,
@@ -22,6 +23,9 @@ import { decryptSecret } from "../crypto";
 import { llmRateLimiter } from "./rate-limiter";
 import { getGlobalLlmConfig, getGlobalLlmSecrets, getRateLimitsForUser } from "../llm-config";
 import { getDemoLlmSecrets } from "../demo";
+import { releaseBudgetReservation, reserveHostedBudget, type BudgetSnapshot } from "../llm-budget";
+import { getModelPrice } from "../llm-pricing";
+import { meterModel, type LlmSource } from "../llm-usage";
 
 export interface LlmUserConfig {
   /** multi-llm-ts engine id: "openai" | "deepseek" | "anthropic" | "openrouter" | "ollama" | ... */
@@ -47,6 +51,9 @@ export interface FallbackLlmConfig {
 /** Result of acquireLlmModel — includes the model to use + rate limit metadata. */
 export interface AcquiredModel {
   model: LlmModel;
+  source: LlmSource;
+  requestId: string;
+  budget: BudgetSnapshot | null;
   /** True if the primary model was rate-limited and the fallback was used. */
   usingFallback: boolean;
   /** Current rate limit status (null if rate limiting is disabled). */
@@ -157,13 +164,51 @@ function decryptSafe(enc: string): string | null {
  *
  * Returns apiKey="" if nothing is configured — callers should check isLlmConfiguredFor().
  */
+function getServerConfig(): LlmUserConfig {
+  return {
+    provider: SERVER_PROVIDER,
+    apiKey: SERVER_KEY,
+    baseURL: SERVER_BASE_URL || undefined,
+    modelId: SERVER_MODEL || (SERVER_KEY ? providerDefaultModel(SERVER_PROVIDER) : ""),
+  };
+}
+
+async function getHostedConfig(): Promise<LlmUserConfig> {
+  const secrets = await getGlobalLlmSecrets();
+  if (secrets) {
+    return {
+      provider: secrets.provider,
+      apiKey: secrets.apiKey,
+      baseURL: secrets.baseUrl,
+      modelId: secrets.modelId,
+    };
+  }
+  return getServerConfig();
+}
+
+async function getByokConfig(userId: string): Promise<LlmUserConfig> {
+  const cred = await prisma.aiCredential.findUnique({ where: { userId } });
+  if (cred?.status === "active") {
+    const apiKey = decryptSafe(cred.apiKeyEnc);
+    if (apiKey?.trim()) {
+      const provider = cred.provider?.trim() || "openai";
+      return {
+        provider,
+        apiKey: apiKey.trim(),
+        baseURL: cred.baseUrl?.trim() || undefined,
+        modelId: normalizeModelId(provider, cred.modelId?.trim() || providerDefaultModel(provider)),
+      };
+    }
+  }
+  return { provider: "openai", apiKey: "", modelId: "" };
+}
+
 export async function getUserConfig(userId: string): Promise<LlmUserConfig> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true },
+    select: { role: true, aiSource: true },
   });
 
-  // Demo users always use the admin-configured demo LLM first, if available.
   if (user?.role === "DEMO") {
     const demo = await getDemoLlmSecrets();
     if (demo) {
@@ -177,65 +222,16 @@ export async function getUserConfig(userId: string): Promise<LlmUserConfig> {
   }
 
   const globalConfig = await getGlobalLlmConfig();
-
-  // Global mode: use the admin-configured global key, ignore per-user keys.
-  if (globalConfig.mode === "global") {
-    const secrets = await getGlobalLlmSecrets();
-    if (secrets) {
-      return {
-        provider: secrets.provider,
-        apiKey: secrets.apiKey,
-        baseURL: secrets.baseUrl,
-        modelId: secrets.modelId,
-      };
-    }
-    // No global key set — fall through to env vars.
-    if (SERVER_KEY) {
-      return {
-        provider: SERVER_PROVIDER,
-        apiKey: SERVER_KEY,
-        baseURL: SERVER_BASE_URL || undefined,
-        modelId: SERVER_MODEL || providerDefaultModel(SERVER_PROVIDER),
-      };
-    }
-    return {
-      provider: SERVER_PROVIDER,
-      apiKey: "",
-      baseURL: undefined,
-      modelId: "",
-    };
+  if (globalConfig.mode === "global") return getHostedConfig();
+  if (globalConfig.mode === "hybrid") {
+    if (user?.aiSource === "hosted") return getHostedConfig();
+    if (user?.aiSource === "byok") return getByokConfig(userId);
+    return { provider: "openai", apiKey: "", modelId: "" };
   }
 
-  // Per-user mode: use the user's own key.
-  const cred = await prisma.aiCredential.findUnique({ where: { userId } });
-  if (cred) {
-    const apiKey = decryptSafe(cred.apiKeyEnc);
-    if (apiKey && apiKey.trim()) {
-      const provider = cred.provider?.trim() || "openai";
-      return {
-        provider,
-        apiKey: apiKey.trim(),
-        baseURL: cred.baseUrl?.trim() || undefined,
-        modelId: normalizeModelId(provider, cred.modelId?.trim() || SERVER_MODEL || providerDefaultModel(provider)),
-      };
-    }
-  }
-  // Server-wide env fallback (optional — may be empty)
-  if (SERVER_KEY) {
-    return {
-      provider: SERVER_PROVIDER,
-      apiKey: SERVER_KEY,
-      baseURL: SERVER_BASE_URL || undefined,
-      modelId: SERVER_MODEL || providerDefaultModel(SERVER_PROVIDER),
-    };
-  }
-  // No config at all — LLM unavailable
-  return {
-    provider: SERVER_PROVIDER,
-    apiKey: "",
-    baseURL: undefined,
-    modelId: "",
-  };
+  const byok = await getByokConfig(userId);
+  if (byok.apiKey) return byok;
+  return getServerConfig();
 }
 
 /** Returns true if at least one key source is configured. */
@@ -308,82 +304,98 @@ export async function getFallbackConfig(userId: string): Promise<FallbackLlmConf
  *
  * Use this instead of `getUserConfig + buildModel` for all LLM requests.
  */
-export async function acquireLlmModel(userId: string): Promise<AcquiredModel> {
-  const cfg = await getUserConfig(userId);
-  const globalConfig = await getGlobalLlmConfig();
+export async function acquireLlmModel(
+  userId: string,
+  context: { feature?: string; requestedMicros?: number } = {}
+): Promise<AcquiredModel> {
+  const [cfg, globalConfig, user, credential] = await Promise.all([
+    getUserConfig(userId),
+    getGlobalLlmConfig(),
+    prisma.user.findUnique({ where: { id: userId }, select: { role: true, aiSource: true } }),
+    prisma.aiCredential.findUnique({ where: { userId }, select: { status: true } }),
+  ]);
+  if (!user) throw new LlmError(404, "User not found.");
+  if (!cfg.apiKey) {
+    const message = globalConfig.mode === "hybrid" && user.aiSource === "choice_required"
+      ? "Choose Mavino-hosted AI or your own provider in Settings → Mavino Assistant."
+      : "No AI provider configured.";
+    throw new LlmError(400, message);
+  }
 
-  // Global mode: tier-based rate limits.
-  if (globalConfig.mode === "global") {
+  let source: LlmSource;
+  if (user.role === "DEMO") source = "demo";
+  else if (globalConfig.mode === "global") source = "hosted";
+  else if (globalConfig.mode === "hybrid") source = user.aiSource === "byok" ? "byok" : "hosted";
+  else source = credential?.status === "active" ? "byok" : "hosted";
+
+  let requestId: string = randomUUID();
+  let budget: BudgetSnapshot | null = null;
+  if (globalConfig.mode === "hybrid" && source === "hosted") {
+    if (!getModelPrice(cfg.provider, cfg.modelId)) {
+      throw new LlmError(500, `Hosted model ${cfg.provider}:${cfg.modelId} has no pricing configuration.`);
+    }
+    try {
+      const reservation = await reserveHostedBudget(userId, context.requestedMicros);
+      requestId = reservation.requestId;
+      budget = reservation.snapshot;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "";
+      if (code === "HOSTED_DISABLED") throw new LlmError(503, "Mavino-hosted AI is temporarily disabled.");
+      if (code === "BUDGET_EXHAUSTED") throw new LlmError(402, "Your monthly AI allowance is exhausted.");
+      if (code === "GLOBAL_BUDGET_EXHAUSTED") throw new LlmError(503, "The hosted AI monthly budget is exhausted.");
+      throw error;
+    }
+  }
+
+  const wrap = (config: LlmUserConfig, usingFallback: boolean, rateLimit: AcquiredModel["rateLimit"]): AcquiredModel => ({
+    model: meterModel(buildModel(config), {
+      userId,
+      source,
+      provider: config.provider,
+      modelId: config.modelId,
+      feature: context.feature ?? "unknown",
+      requestId,
+    }),
+    source,
+    requestId,
+    budget,
+    usingFallback,
+    rateLimit,
+  });
+
+  if (source === "hosted" || source === "demo") {
     const { tier, limits } = await getRateLimitsForUser(userId);
-
-    // Admin tier = unlimited (rpd=0, rpm=0 means no limit).
     if (limits.rpd === 0 && limits.rpm === 0) {
-      return {
-        model: buildModel(cfg),
-        usingFallback: false,
-        rateLimit: {
-          allowed: true,
-          dayCount: llmRateLimiter.stats(userId).dayCount,
-          minuteCount: llmRateLimiter.stats(userId).minuteCount,
-          dayLimit: 0,
-          minuteLimit: 0,
-        },
-      };
+      const stats = llmRateLimiter.stats(userId);
+      return wrap(cfg, false, {
+        allowed: true,
+        dayCount: stats.dayCount,
+        minuteCount: stats.minuteCount,
+        dayLimit: 0,
+        minuteLimit: 0,
+      });
     }
-
     const status = llmRateLimiter.check(userId, limits.rpd, limits.rpm);
-    if (status.allowed) {
-      llmRateLimiter.record(userId);
-      return {
-        model: buildModel(cfg),
-        usingFallback: false,
-        rateLimit: status,
-      };
+    if (!status.allowed) {
+      if (budget) await releaseBudgetReservation(requestId);
+      throw new LlmError(
+        429,
+        `Rate limit reached (${tier} tier): ${status.dayCount}/${status.dayLimit} requests today, ${status.minuteCount}/${status.minuteLimit} per minute. Try again later.`
+      );
     }
-
-    // Rate-limited — no fallback in global mode.
-    throw new LlmError(
-      429,
-      `Rate limit reached (${tier} tier): ${status.dayCount}/${status.dayLimit} requests today, ${status.minuteCount}/${status.minuteLimit} per minute. Try again later.`
-    );
-  }
-
-  // Per-user mode: use the user's own rate limit config.
-  const rateLimitCfg = await getRateLimitConfig(userId);
-
-  // No rate limiting — just return the primary model.
-  if (!rateLimitCfg || !rateLimitCfg.enabled) {
-    return {
-      model: buildModel(cfg),
-      usingFallback: false,
-      rateLimit: null,
-    };
-  }
-
-  // Check rate limits for the primary model.
-  const status = llmRateLimiter.check(userId, rateLimitCfg.rpd, rateLimitCfg.rpm);
-
-  if (status.allowed) {
-    // Primary model is available — record the request and return it.
     llmRateLimiter.record(userId);
-    return {
-      model: buildModel(cfg),
-      usingFallback: false,
-      rateLimit: status,
-    };
+    return wrap(cfg, false, status);
   }
 
-  // Primary model is rate-limited — try fallback.
+  const rateLimitCfg = await getRateLimitConfig(userId);
+  if (!rateLimitCfg?.enabled) return wrap(cfg, false, null);
+  const status = llmRateLimiter.check(userId, rateLimitCfg.rpd, rateLimitCfg.rpm);
+  if (status.allowed) {
+    llmRateLimiter.record(userId);
+    return wrap(cfg, false, status);
+  }
   const fallback = await getFallbackConfig(userId);
-  if (fallback) {
-    return {
-      model: buildModel(fallback),
-      usingFallback: true,
-      rateLimit: status,
-    };
-  }
-
-  // No fallback — reject the request.
+  if (fallback) return wrap(fallback, true, status);
   throw new LlmError(
     429,
     `Rate limit reached: ${status.dayCount}/${status.dayLimit} requests today, ${status.minuteCount}/${status.minuteLimit} per minute. Configure a fallback model in Settings → AI to continue when limits are hit.`

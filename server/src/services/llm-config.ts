@@ -10,7 +10,7 @@ import prisma from "../db/client";
 import { encryptSecret, decryptSecret } from "./crypto";
 import { getDemoConfig } from "./demo";
 
-export type LlmMode = "per-user" | "global";
+export type LlmMode = "per-user" | "global" | "hybrid";
 
 export interface GlobalLlmConfig {
   mode: LlmMode;
@@ -57,7 +57,7 @@ export async function getGlobalLlmConfig(): Promise<GlobalLlmConfig> {
     getSetting(MODELID_KEY),
   ]);
   return {
-    mode: (mode === "global" ? "global" : "per-user") as LlmMode,
+    mode: (mode === "global" || mode === "hybrid" ? mode : "per-user") as LlmMode,
     hasKey: Boolean(keyEnc),
     provider: provider ?? "openai",
     baseUrl: baseUrl ?? "",
@@ -118,6 +118,74 @@ export async function clearGlobalLlmKey(): Promise<void> {
 // ----- Rate limit tier config (global, admin-configurable) -----
 
 export type RateTier = "admin" | "pro" | "paid" | "free" | "demo";
+
+export interface HostedBudgetConfig {
+  enabled: boolean;
+  reservationMicros: number;
+  maxOperationMicros: number;
+  globalMonthlyMicros: number;
+  tiers: Record<RateTier, number>;
+}
+
+const HOSTED_ENABLED_KEY = "llm.hosted.enabled";
+const HOSTED_RESERVATION_KEY = "llm.hosted.reservationMicros";
+const HOSTED_MAX_OPERATION_KEY = "llm.hosted.maxOperationMicros";
+const HOSTED_GLOBAL_MONTHLY_KEY = "llm.hosted.globalMonthlyMicros";
+const HOSTED_TIER_PREFIX = "llm.hosted.budget.";
+
+const DEFAULT_HOSTED_BUDGETS: HostedBudgetConfig = {
+  enabled: false,
+  reservationMicros: 25_000,
+  maxOperationMicros: 250_000,
+  globalMonthlyMicros: 100_000_000,
+  tiers: {
+    admin: 3_000_000,
+    pro: 3_000_000,
+    paid: 1_500_000,
+    free: 500_000,
+    demo: 100_000,
+  },
+};
+
+export async function getHostedBudgetConfig(): Promise<HostedBudgetConfig> {
+  const tiers = Object.keys(DEFAULT_HOSTED_BUDGETS.tiers) as RateTier[];
+  const [enabled, reservation, maxOperation, globalMonthly, ...tierValues] = await Promise.all([
+    getSetting(HOSTED_ENABLED_KEY),
+    getSetting(HOSTED_RESERVATION_KEY),
+    getSetting(HOSTED_MAX_OPERATION_KEY),
+    getSetting(HOSTED_GLOBAL_MONTHLY_KEY),
+    ...tiers.map((tier) => getSetting(`${HOSTED_TIER_PREFIX}${tier}`)),
+  ]);
+  return {
+    enabled: enabled === "true",
+    reservationMicros: parseNonNegativeInt(reservation, DEFAULT_HOSTED_BUDGETS.reservationMicros),
+    maxOperationMicros: parseNonNegativeInt(maxOperation, DEFAULT_HOSTED_BUDGETS.maxOperationMicros),
+    globalMonthlyMicros: parseNonNegativeInt(globalMonthly, DEFAULT_HOSTED_BUDGETS.globalMonthlyMicros),
+    tiers: Object.fromEntries(tiers.map((tier, index) => [
+      tier,
+      parseNonNegativeInt(tierValues[index], DEFAULT_HOSTED_BUDGETS.tiers[tier]),
+    ])) as Record<RateTier, number>,
+  };
+}
+
+export async function setHostedBudgetConfig(config: Partial<Omit<HostedBudgetConfig, "tiers">> & {
+  tiers?: Partial<Record<RateTier, number>>;
+}): Promise<void> {
+  if (config.enabled !== undefined) await setSetting(HOSTED_ENABLED_KEY, String(config.enabled));
+  if (config.reservationMicros !== undefined) await setSetting(HOSTED_RESERVATION_KEY, String(config.reservationMicros));
+  if (config.maxOperationMicros !== undefined) await setSetting(HOSTED_MAX_OPERATION_KEY, String(config.maxOperationMicros));
+  if (config.globalMonthlyMicros !== undefined) await setSetting(HOSTED_GLOBAL_MONTHLY_KEY, String(config.globalMonthlyMicros));
+  if (config.tiers) {
+    await Promise.all(Object.entries(config.tiers).map(([tier, value]) =>
+      value === undefined ? Promise.resolve() : setSetting(`${HOSTED_TIER_PREFIX}${tier}`, String(value))
+    ));
+  }
+}
+
+function parseNonNegativeInt(value: string | null, fallback: number): number {
+  const parsed = value === null ? NaN : Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
 
 export interface TierRateLimits {
   rpd: number; // requests per day (0 = unlimited)

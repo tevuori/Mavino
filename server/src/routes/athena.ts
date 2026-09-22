@@ -139,16 +139,9 @@ athena.post("/chat", zValidator("json", chatSchema, (result, c) => {
   const { userId } = c.get("auth");
   const body = c.req.valid("json");
 
-  const cfg = await getUserConfig(userId);
-  if (!cfg.apiKey) {
-    return c.json(
-      { error: "No AI provider configured. Add an API key in Settings → AI." },
-      400
-    );
-  }
   let acquired;
   try {
-    acquired = await acquireLlmModel(userId);
+    acquired = await acquireLlmModel(userId, { feature: "athena.chat" });
   } catch (e) {
     if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500);
     return c.json({ error: e instanceof Error ? e.message : "LLM error" }, 500);
