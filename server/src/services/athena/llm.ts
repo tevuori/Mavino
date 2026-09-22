@@ -342,6 +342,11 @@ export async function acquireLlmModel(
   else if (globalConfig.mode === "hybrid") source = user.ageBand === "AGE_13_17" || user.aiSource !== "byok" ? "hosted" : "byok";
   else source = credential?.status === "active" ? "byok" : "hosted";
 
+  const minor = user.ageBand === "AGE_13_17";
+  if (minor && (source !== "hosted" || cfg.provider !== "openai")) {
+    throw new LlmError(503, "The approved hosted AI provider for minor accounts is unavailable.");
+  }
+
   let requestId: string = randomUUID();
   let budget: BudgetSnapshot | null = null;
   if (globalConfig.mode === "hybrid" && source === "hosted") {
@@ -369,6 +374,8 @@ export async function acquireLlmModel(
       modelId: config.modelId,
       feature: context.feature ?? "unknown",
       requestId,
+      minor,
+      safetyApiKey: minor ? config.apiKey : undefined,
     }),
     source,
     requestId,

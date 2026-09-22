@@ -258,7 +258,7 @@ export async function buildSystemPrompt(
   const [recent, summary, user, memories, tz, language] = await Promise.all([
     recentFilesContext(userId),
     workspaceSummary(userId),
-    prisma.user.findUnique({ where: { id: userId }, select: { athenaInstructions: true, displayName: true, role: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { athenaInstructions: true, displayName: true, role: true, ageBand: true } }),
     prisma.athenaMemory.findMany({
       where: { userId },
       orderBy: { updatedAt: "desc" },
@@ -377,7 +377,11 @@ export async function buildSystemPrompt(
   const now = new Date();
   const locale = language === "cs" ? "cs-CZ" : "en-US";
   const dateLine = `Current date/time: ${now.toLocaleString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short", timeZone: tz })} (ISO: ${now.toISOString()}). The user's timezone is ${tz} — interpret any wall-clock times the user mentions (e.g. "3pm", "tomorrow at 9") as being in ${tz}, and emit fireAt / dueDate timestamps as ISO 8601 with the ${tz} offset (or convert to UTC with a trailing Z). Use this as "today" when the user says "today" — do not guess the date. Calendar/task tools accept ISO 8601 timestamps (e.g. ${now.toISOString().slice(0, 10)}T00:00:00Z).`;
+  const minorSafety = user?.ageBand === "AGE_13_17"
+    ? "\nThe user is 13–17. Keep every response age-appropriate, do not facilitate age-restricted goods or activities, avoid sexual or graphic content, and encourage contacting a trusted adult when safety or wellbeing is at risk. Never ask for unnecessary personal information.\n"
+    : "";
   return `You are Mavino, the user's personal workspace assistant living inside their Mavino Student OS desktop. You can see and act on the user's workspace through tools.
+${minorSafety}
 
 LANGUAGE: ${languageInstruction(language)} This setting has priority over the language of source documents unless a tool call carries an explicit application-level language override.
 
