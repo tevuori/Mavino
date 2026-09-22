@@ -14,8 +14,9 @@ import {
   verifyTotp,
   verifyTotpPlain,
 } from "../services/totp";
-import { sendPasswordResetEmail } from "../services/email";
+import { getAppBaseUrl, sendPasswordResetEmail } from "../services/email";
 import { confirmGuardianConsent, requestGuardianConsent } from "../services/guardian-consent";
+import { completeOpenRouterAuthorization } from "../services/openrouter-oauth";
 import { getDemoConfig, isDemoReady, createDemoUser } from "../services/demo";
 import { verifyTurnstileToken, getTurnstileSiteKey, isTurnstileEnabled } from "../services/turnstile";
 
@@ -310,6 +311,24 @@ auth.post("/register", rateLimit({ max: 5, windowMs: 60_000 }), zValidator("json
   if (isMinor && guardianEmail) await requestGuardianConsent(user.id, guardianEmail);
   const token = await signToken({ sub: user.id, username: user.username });
   return c.json({ token, refreshToken: null, user: publicUser(user) });
+});
+
+auth.get("/openrouter/callback", async (c) => {
+  const code = c.req.query("code") ?? "";
+  const state = c.req.query("state") ?? "";
+  let connected = false;
+  if (code && state) {
+    try {
+      connected = Boolean(await completeOpenRouterAuthorization(code, state));
+    } catch (error) {
+      console.error("[openrouter-oauth] callback failed", error);
+    }
+  }
+  const target = new URL(getAppBaseUrl());
+  target.searchParams.set("app", "settings");
+  target.searchParams.set("section", "athena");
+  target.searchParams.set("connection", connected ? "success" : "error");
+  return c.redirect(target.toString());
 });
 
 auth.get("/guardian-consent/confirm", async (c) => {

@@ -379,6 +379,20 @@ function LlmConfigCard() {
     }
   };
 
+  const connectOpenRouter = async () => {
+    setBusy(true);
+    setErr(false);
+    setMsg(null);
+    try {
+      const { url } = await aiApi.startOpenRouter();
+      window.location.href = url;
+    } catch (e) {
+      setErr(true);
+      setMsg(e instanceof Error ? e.message : "Failed to connect OpenRouter");
+      setBusy(false);
+    }
+  };
+
   const selectSource = async (source: "hosted" | "byok") => {
     setBusy(true);
     setErr(false);
@@ -482,6 +496,16 @@ function LlmConfigCard() {
             Hosted allowance: {status.budget.limitMicros > 0 ? Math.round(status.budget.remainingMicros / status.budget.limitMicros * 100) : 0}% remaining
           </p>
         </div>
+      )}
+      {isHybrid && status?.ageBand === "AGE_18_PLUS" && (
+        <button
+          type="button"
+          onClick={() => void connectOpenRouter()}
+          disabled={busy}
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-medium text-accent hover:bg-accent/20 disabled:opacity-50"
+        >
+          <Globe size={14} /> Connect OpenRouter
+        </button>
       )}
       <div className="mb-3 grid grid-cols-2 gap-2">
         <Field label="Provider">

@@ -9,6 +9,7 @@ import { llmRateLimiter } from "../services/athena/rate-limiter";
 import { getGlobalLlmConfig, getRateLimitsForUser } from "../services/llm-config";
 import { getBudgetSnapshot } from "../services/llm-budget";
 import { requestGuardianConsent } from "../services/guardian-consent";
+import { createOpenRouterAuthorization } from "../services/openrouter-oauth";
 
 const ai = new Hono();
 ai.use("*", authMiddleware);
@@ -114,6 +115,15 @@ ai.put("/eligibility", zValidator("json", eligibilitySchema), async (c) => {
   });
   if (ageBand === "AGE_13_17" && guardianEmail) await requestGuardianConsent(userId, guardianEmail);
   return c.json({ ok: true, ageBand });
+});
+
+ai.post("/openrouter/start", async (c) => {
+  const { userId } = c.get("auth");
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { ageBand: true } });
+  if (user?.ageBand !== "AGE_18_PLUS") {
+    return c.json({ error: "OpenRouter connections are available only to users aged 18 or older." }, 403);
+  }
+  return c.json({ url: await createOpenRouterAuthorization(userId) });
 });
 
 const sourceSchema = z.object({ source: z.enum(["hosted", "byok"]) });

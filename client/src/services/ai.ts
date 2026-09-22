@@ -48,6 +48,7 @@ export const aiApi = {
   deleteKey: () => api.delete<{ ok: boolean }>("/api/ai/key"),
   setSource: (source: "hosted" | "byok") =>
     api.put<{ ok: boolean; source: "hosted" | "byok" }>("/api/ai/source", { source }),
+  startOpenRouter: () => api.post<{ url: string }>("/api/ai/openrouter/start"),
   setEligibility: (data: {
     ageBand: "AGE_13_17" | "AGE_18_PLUS";
     guardianEmail?: string;
