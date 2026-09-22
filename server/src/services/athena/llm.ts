@@ -25,7 +25,7 @@ import { getGlobalLlmConfig, getGlobalLlmSecrets, getRateLimitsForUser } from ".
 import { getDemoLlmSecrets } from "../demo";
 import { releaseBudgetReservation, reserveHostedBudget, type BudgetSnapshot } from "../llm-budget";
 import { getModelPrice } from "../llm-pricing";
-import { meterModel, type LlmSource } from "../llm-usage";
+import { meterModel, recordLlmUsage, type LlmSource, type UsageRecordResult } from "../llm-usage";
 
 export interface LlmUserConfig {
   /** multi-llm-ts engine id: "openai" | "deepseek" | "anthropic" | "openrouter" | "ollama" | ... */
@@ -291,24 +291,20 @@ export async function getFallbackConfig(userId: string): Promise<FallbackLlmConf
   };
 }
 
-/**
- * Acquire an LLM model for a request, respecting rate limits.
- *
- * In global mode:
- *   - Tier-based rate limits apply (admin = unlimited, paid = higher, free = lower).
- *   - Per-user rate limit config is ignored.
- *   - No fallback (the global key is the only key).
- *
- * In per-user mode:
- *   - The user's own rate limit config applies (if enabled).
- *   - Fallback to the user's fallback LLM if configured.
- *
- * Use this instead of `getUserConfig + buildModel` for all LLM requests.
- */
-export async function acquireLlmModel(
+interface ResolvedAcquisition {
+  cfg: LlmUserConfig;
+  source: LlmSource;
+  requestId: string;
+  budget: BudgetSnapshot | null;
+  minor: boolean;
+}
+
+/** Shared resolution for all provider access: user/age/consent checks, source
+ *  selection, hosted budget reservation. Throws LlmError on policy failures. */
+async function resolveAcquisition(
   userId: string,
-  context: { feature?: string; requestedMicros?: number } = {}
-): Promise<AcquiredModel> {
+  context: { feature?: string; requestedMicros?: number }
+): Promise<ResolvedAcquisition> {
   const [cfg, globalConfig, user, credential] = await Promise.all([
     getUserConfig(userId),
     getGlobalLlmConfig(),
@@ -365,6 +361,76 @@ export async function acquireLlmModel(
       throw error;
     }
   }
+  return { cfg, source, requestId, budget, minor };
+}
+
+interface RateLimitOutcome {
+  rateLimit: AcquiredModel["rateLimit"];
+  /** BYOK fallback config when the primary key hit the user's rate limit. */
+  fallbackConfig: FallbackLlmConfig | null;
+}
+
+/** Enforce rate limits for a resolved acquisition. Releases the hosted
+ *  reservation when the check rejects the request. */
+async function checkAcquisitionRateLimit(
+  userId: string,
+  resolved: ResolvedAcquisition
+): Promise<RateLimitOutcome> {
+  const { source, requestId, budget } = resolved;
+  if (source === "hosted" || source === "demo") {
+    const { tier, limits } = await getRateLimitsForUser(userId);
+    if (limits.rpd === 0 && limits.rpm === 0) {
+      const stats = llmRateLimiter.stats(userId);
+      return {
+        rateLimit: { allowed: true, dayCount: stats.dayCount, minuteCount: stats.minuteCount, dayLimit: 0, minuteLimit: 0 },
+        fallbackConfig: null,
+      };
+    }
+    const status = llmRateLimiter.check(userId, limits.rpd, limits.rpm);
+    if (!status.allowed) {
+      if (budget) await releaseBudgetReservation(requestId);
+      throw new LlmError(
+        429,
+        `Rate limit reached (${tier} tier): ${status.dayCount}/${status.dayLimit} requests today, ${status.minuteCount}/${status.minuteLimit} per minute. Try again later.`
+      );
+    }
+    llmRateLimiter.record(userId);
+    return { rateLimit: status, fallbackConfig: null };
+  }
+  const rateLimitCfg = await getRateLimitConfig(userId);
+  if (!rateLimitCfg?.enabled) return { rateLimit: null, fallbackConfig: null };
+  const status = llmRateLimiter.check(userId, rateLimitCfg.rpd, rateLimitCfg.rpm);
+  if (status.allowed) {
+    llmRateLimiter.record(userId);
+    return { rateLimit: status, fallbackConfig: null };
+  }
+  const fallback = await getFallbackConfig(userId);
+  if (fallback) return { rateLimit: status, fallbackConfig: fallback };
+  throw new LlmError(
+    429,
+    `Rate limit reached: ${status.dayCount}/${status.dayLimit} requests today, ${status.minuteCount}/${status.minuteLimit} per minute. Configure a fallback model in Settings → AI to continue when limits are hit.`
+  );
+}
+
+/**
+ * Acquire an LLM model for a request, respecting rate limits.
+ *
+ * In global mode:
+ *   - Tier-based rate limits apply (admin = unlimited, paid = higher, free = lower).
+ *   - Per-user rate limit config is ignored.
+ *   - No fallback (the global key is the only key).
+ *
+ * In per-user mode:
+ *   - The user's own rate limit config applies (if enabled).
+ *   - Fallback to the user's fallback LLM if configured.
+ *
+ * Use this instead of `getUserConfig + buildModel` for all LLM requests.
+ */
+export async function acquireLlmModel(
+  userId: string,
+  context: { feature?: string; requestedMicros?: number } = {}
+): Promise<AcquiredModel> {
+  const { cfg, source, requestId, budget, minor } = await resolveAcquisition(userId, context);
 
   const wrap = (config: LlmUserConfig, usingFallback: boolean, rateLimit: AcquiredModel["rateLimit"]): AcquiredModel => ({
     model: meterModel(buildModel(config), {
@@ -384,41 +450,49 @@ export async function acquireLlmModel(
     rateLimit,
   });
 
-  if (source === "hosted" || source === "demo") {
-    const { tier, limits } = await getRateLimitsForUser(userId);
-    if (limits.rpd === 0 && limits.rpm === 0) {
-      const stats = llmRateLimiter.stats(userId);
-      return wrap(cfg, false, {
-        allowed: true,
-        dayCount: stats.dayCount,
-        minuteCount: stats.minuteCount,
-        dayLimit: 0,
-        minuteLimit: 0,
-      });
-    }
-    const status = llmRateLimiter.check(userId, limits.rpd, limits.rpm);
-    if (!status.allowed) {
-      if (budget) await releaseBudgetReservation(requestId);
-      throw new LlmError(
-        429,
-        `Rate limit reached (${tier} tier): ${status.dayCount}/${status.dayLimit} requests today, ${status.minuteCount}/${status.minuteLimit} per minute. Try again later.`
-      );
-    }
-    llmRateLimiter.record(userId);
-    return wrap(cfg, false, status);
-  }
+  const outcome = await checkAcquisitionRateLimit(userId, { cfg, source, requestId, budget, minor });
+  if (outcome.fallbackConfig) return wrap(outcome.fallbackConfig, true, outcome.rateLimit);
+  return wrap(cfg, false, outcome.rateLimit);
+}
 
-  const rateLimitCfg = await getRateLimitConfig(userId);
-  if (!rateLimitCfg?.enabled) return wrap(cfg, false, null);
-  const status = llmRateLimiter.check(userId, rateLimitCfg.rpd, rateLimitCfg.rpm);
-  if (status.allowed) {
-    llmRateLimiter.record(userId);
-    return wrap(cfg, false, status);
-  }
-  const fallback = await getFallbackConfig(userId);
-  if (fallback) return wrap(fallback, true, status);
-  throw new LlmError(
-    429,
-    `Rate limit reached: ${status.dayCount}/${status.dayLimit} requests today, ${status.minuteCount}/${status.minuteLimit} per minute. Configure a fallback model in Settings → AI to continue when limits are hit.`
-  );
+/** Provider config + accounting handle for non-chat calls (Whisper
+ *  transcription, raw vision chat) that cannot go through a metered LlmModel.
+ *  Call `record()` once the direct call finishes to persist usage and settle
+ *  the hosted budget reservation. */
+export interface AcquiredProvider {
+  cfg: LlmUserConfig;
+  source: LlmSource;
+  requestId: string;
+  budget: BudgetSnapshot | null;
+  minor: boolean;
+  record(result: UsageRecordResult): Promise<void>;
+}
+
+export async function acquireMeteredProvider(
+  userId: string,
+  context: { feature?: string; requestedMicros?: number } = {}
+): Promise<AcquiredProvider> {
+  const resolved = await resolveAcquisition(userId, context);
+  const outcome = await checkAcquisitionRateLimit(userId, resolved);
+  const cfg = (outcome.fallbackConfig as LlmUserConfig | null) ?? resolved.cfg;
+  return {
+    cfg,
+    source: resolved.source,
+    requestId: resolved.requestId,
+    budget: resolved.budget,
+    minor: resolved.minor,
+    record: (result) =>
+      recordLlmUsage(
+        {
+          userId,
+          source: resolved.source,
+          provider: cfg.provider,
+          modelId: cfg.modelId,
+          feature: context.feature ?? "unknown",
+          requestId: resolved.requestId,
+          minor: resolved.minor,
+        },
+        result
+      ),
+  };
 }

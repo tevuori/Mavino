@@ -18,7 +18,8 @@ import { Hono } from "hono";
 import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
 import { appTierGate } from "../middleware/app-tier";
-import { acquireLlmModel, getUserConfig, isLlmConfiguredFor } from "../services/athena/llm";
+import { acquireLlmModel, acquireMeteredProvider, isLlmConfiguredFor } from "../services/athena/llm";
+import { estimateTranscriptionCostMicros } from "../services/llm-pricing";
 import { generateJson } from "../services/study/llm-json";
 import { canonicalPair } from "../db/links";
 import path from "node:path";
@@ -208,9 +209,17 @@ voice.post("/", async (c) => {
     },
   });
 
-  // Transcribe
-  const cfg = await getUserConfig(userId);
-  const transcript = await transcribeAudio(cfg, audioBuf, safeName, mimeType);
+  // Transcribe (metered — enforces the hosted budget + records usage)
+  let transcript: string | null = null;
+  try {
+    const acq = await acquireMeteredProvider(userId, { feature: "voice-transcribe" });
+    transcript = await transcribeAudio(acq.cfg, audioBuf, safeName, mimeType);
+    await acq.record({
+      status: transcript ? "completed" : "failed",
+      providerCalls: transcript ? 1 : 0,
+      estimatedCostMicros: transcript ? estimateTranscriptionCostMicros(audioBuf.length, mimeType) : 0,
+    });
+  } catch { /* no provider, budget exhausted, or rate limited — continue without transcript */ }
   const transcribed = Boolean(transcript);
 
   // Cleanup + title via LLM
@@ -269,8 +278,16 @@ voice.post("/transcribe/:fileId", async (c) => {
   }
   const audioBuf = await readFile(absPath);
 
-  const cfg = await getUserConfig(userId);
-  const transcript = await transcribeAudio(cfg, audioBuf, file.name, file.mimeType);
+  let transcript: string | null = null;
+  try {
+    const acq = await acquireMeteredProvider(userId, { feature: "voice-transcribe" });
+    transcript = await transcribeAudio(acq.cfg, audioBuf, file.name, file.mimeType);
+    await acq.record({
+      status: transcript ? "completed" : "failed",
+      providerCalls: transcript ? 1 : 0,
+      estimatedCostMicros: transcript ? estimateTranscriptionCostMicros(audioBuf.length, file.mimeType) : 0,
+    });
+  } catch { /* no provider, budget exhausted, or rate limited */ }
   const transcribed = Boolean(transcript);
 
   let noteTitle = "";

@@ -339,6 +339,22 @@ function LlmConfigCard() {
     void refresh();
   }, [refresh]);
 
+  // Detect the OAuth redirect hash (#openrouter=success|error) appended by the
+  // server's /auth/openrouter/callback handler.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash || !hash.startsWith("#openrouter=")) return;
+    if (hash.includes("success")) {
+      setErr(false);
+      setMsg("OpenRouter connected — your account key was stored encrypted.");
+      void refresh();
+    } else {
+      setErr(true);
+      setMsg("OpenRouter connection failed or expired — try again.");
+    }
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, [refresh]);
+
   const save = async () => {
     if (!keyInput.trim()) return;
     setBusy(true);

@@ -21,6 +21,51 @@ function estimateTokens(value: string): number {
   return Math.ceil(value.length / 4);
 }
 
+export interface UsageRecordResult {
+  status: "completed" | "estimated" | "failed";
+  usage?: LlmUsage | null;
+  providerCalls?: number;
+  toolCalls?: number;
+  estimatedCostMicros?: number;
+}
+
+/** Persist one usage row and settle (or release, on write failure) the hosted
+ *  budget reservation. Shared by metered generate() calls and direct provider
+ *  calls such as transcription. */
+export async function recordLlmUsage(
+  context: MeteredModelContext,
+  result: UsageRecordResult
+): Promise<void> {
+  const usage = result.usage ?? { prompt_tokens: 0, completion_tokens: 0 };
+  const price = getModelPrice(context.provider, context.modelId);
+  const estimatedCostMicros = result.estimatedCostMicros
+    ?? (price ? calculateUsageCostMicros(price, usage) : 0);
+  try {
+    await prisma.llmUsage.create({
+      data: {
+        userId: context.userId,
+        source: context.source,
+        provider: context.provider,
+        modelId: context.modelId,
+        feature: context.feature,
+        requestId: context.requestId,
+        status: result.status,
+        inputTokens: usage.prompt_tokens,
+        cachedInputTokens: usage.prompt_tokens_details?.cached_tokens ?? 0,
+        outputTokens: usage.completion_tokens,
+        reasoningTokens: usage.completion_tokens_details?.reasoning_tokens ?? 0,
+        providerCalls: result.providerCalls ?? 0,
+        toolCalls: result.toolCalls ?? 0,
+        estimatedCostMicros: BigInt(estimatedCostMicros),
+      },
+    });
+    if (context.source === "hosted") await settleBudgetReservation(context.requestId);
+  } catch (error) {
+    if (context.source === "hosted") await releaseBudgetReservation(context.requestId).catch(() => undefined);
+    console.error("[llm-usage] failed to persist usage", error);
+  }
+}
+
 export function meterModel(model: LlmModel, context: MeteredModelContext): LlmModel {
   const originalGenerate = model.generate.bind(model);
   model.generate = (thread: Message[], opts?: LlmCompletionOpts): AsyncIterable<LlmChunk> => {
@@ -63,32 +108,12 @@ export function meterModel(model: LlmModel, context: MeteredModelContext): LlmMo
           prompt_tokens: providerStarted ? thread.reduce((total, message) => total + estimateTokens(message.contentForModel), 0) : 0,
           completion_tokens: providerStarted ? estimateTokens(output) : 0,
         };
-        const price = getModelPrice(context.provider, context.modelId);
-        const estimatedCostMicros = price ? calculateUsageCostMicros(price, finalUsage) : 0;
-        try {
-          await prisma.llmUsage.create({
-            data: {
-              userId: context.userId,
-              source: context.source,
-              provider: context.provider,
-              modelId: context.modelId,
-              feature: context.feature,
-              requestId: context.requestId,
-              status: completed ? (usage ? "completed" : "estimated") : "failed",
-              inputTokens: finalUsage.prompt_tokens,
-              cachedInputTokens: finalUsage.prompt_tokens_details?.cached_tokens ?? 0,
-              outputTokens: finalUsage.completion_tokens,
-              reasoningTokens: finalUsage.completion_tokens_details?.reasoning_tokens ?? 0,
-              providerCalls: providerStarted ? 1 : 0,
-              toolCalls,
-              estimatedCostMicros: BigInt(estimatedCostMicros),
-            },
-          });
-          if (context.source === "hosted") await settleBudgetReservation(context.requestId);
-        } catch (error) {
-          if (context.source === "hosted") await releaseBudgetReservation(context.requestId).catch(() => undefined);
-          console.error("[llm-usage] failed to persist usage", error);
-        }
+        await recordLlmUsage(context, {
+          status: completed ? (usage ? "completed" : "estimated") : "failed",
+          usage: finalUsage,
+          providerCalls: providerStarted ? 1 : 0,
+          toolCalls,
+        });
       }
     })();
   };

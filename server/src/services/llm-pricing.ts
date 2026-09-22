@@ -38,3 +38,20 @@ export function calculateUsageCostMicros(price: ModelPrice, usage: LlmUsage): nu
       + reasoning * price.reasoningMicrosPerMillion) / 1_000_000
   );
 }
+
+/** Whisper-compatible transcription is billed per audio minute ($0.006). */
+const TRANSCRIPTION_MICROS_PER_MINUTE = 6_000;
+
+/** Estimate transcription cost from upload size for budget accounting.
+ *  Compressed audio (opus/m4a/mp3/webm) runs roughly 0.5–1 MB/min; WAV ~2 MB/min. */
+export function estimateTranscriptionCostMicros(bytes: number, mimeType: string): number {
+  const bytesPerMinute = mimeType.includes("wav") ? 2_000_000 : 800_000;
+  return Math.ceil(Math.max(0.25, bytes / bytesPerMinute) * TRANSCRIPTION_MICROS_PER_MINUTE);
+}
+
+/** Estimate the cost of one vision chat call (image input + short answer). */
+export function estimateVisionCallCostMicros(provider: string, modelId: string): number {
+  const price = getModelPrice(provider, modelId);
+  if (!price) return 0;
+  return calculateUsageCostMicros(price, { prompt_tokens: 1500, completion_tokens: 500 });
+}

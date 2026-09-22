@@ -7,7 +7,8 @@
 import path from "node:path";
 import { mkdir, rm, readdir, stat } from "node:fs/promises";
 import prisma from "../../../db/client";
-import { getUserConfig, isLlmConfiguredFor, acquireLlmModel } from "../../athena/llm";
+import { isLlmConfiguredFor, acquireLlmModel, acquireMeteredProvider, type AcquiredProvider } from "../../athena/llm";
+import { estimateVisionCallCostMicros } from "../../llm-pricing";
 import { generateText } from "../llm-json";
 import { probeVideo, extractAudio, chunkAudio, sampleFramesForHash, extractFrame, sampleCroppedFramesForHash } from "./ffmpeg";
 import { transcribeChunks, getTranscriptionConfig, fullTranscriptText, type TranscriptSegment } from "./transcribe";
@@ -71,12 +72,27 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
   const workDir = path.join(WORK_DIR, jobId);
   await mkdir(workDir, { recursive: true });
 
+  // Metered provider access for direct Whisper/vision calls — enforces the
+  // hosted monthly budget and records spend in the usage ledger. A null
+  // acquisition (no provider, exhausted budget, missing consent) degrades the
+  // pipeline to slide-only notes, matching the previous no-key behavior.
+  let metered: AcquiredProvider | null = null;
+  let whisperMinutes = 0;
+  let visionCalls = 0;
+  let succeeded = false;
+
   try {
     await updateJob(jobId, { status: "processing", stage: "audio_extract", progress: 5 });
 
     // ---- Stage 1: Probe video ----
     const probe = await probeVideo(videoPath);
     await updateJob(jobId, { durationSec: Math.round(probe.durationSec), progress: 8 });
+
+    metered = await acquireMeteredProvider(userId, {
+      feature: "lecture-pipeline",
+      requestedMicros: Math.ceil(probe.durationSec / 60) * 6_000 + 200_000,
+    }).catch(() => null);
+    const userCfg = metered?.cfg ?? { provider: "", apiKey: "", modelId: "" };
 
     // ---- Stage 2: Extract audio ----
     let segments: TranscriptSegment[] = [];
@@ -85,7 +101,6 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
       await updateJob(jobId, { stage: "transcribing", progress: 15 });
 
       // ---- Stage 3: Chunk + transcribe ----
-      const userCfg = await getUserConfig(userId);
       const transcriptionCfg = getTranscriptionConfig(userCfg);
       if (transcriptionCfg.apiKey) {
         const chunks = await chunkAudio(audioPath, workDir);
@@ -93,6 +108,7 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
           const pct = 15 + Math.round((done / total) * 25);
           updateJob(jobId, { progress: pct });
         });
+        if (segments.length > 0) whisperMinutes = probe.durationSec / 60;
       }
     }
     await updateJob(jobId, { stage: "frame_sampling", progress: 42 });
@@ -110,7 +126,7 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
       framesDir = await sampleFramesForHash(videoPath, workDir, sampleFps);
 
       // Extract a few full-res sample frames for vision LLM region detection.
-      const llmCfg = await getUserConfig(userId);
+      const llmCfg = userCfg;
       const hasVision = await supportsVision(llmCfg);
       if (hasVision) {
         const sampleTimestamps = [
@@ -124,6 +140,7 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
           await extractFrame(videoPath, sampleTimestamps[i], fp);
           samplePaths.push(fp);
         }
+        visionCalls++;
         slideRegion = await detectSlideRegion(llmCfg, samplePaths, probe.width, probe.height);
       }
 
@@ -153,7 +170,7 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
       },
     });
 
-    const llmCfg = await getUserConfig(userId);
+    const llmCfg = userCfg;
     const hasVision = await supportsVision(llmCfg);
 
     const slideContents: string[] = [];
@@ -193,6 +210,7 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
       // Extract slide content: vision LLM preferred, OCR fallback.
       let content = "";
       if (hasVision) {
+        visionCalls++;
         content = (await extractSlideContentVision(llmCfg, absPath)) ?? "";
       }
       if (!content) {
@@ -214,9 +232,13 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
     const perSlideNotes: string[] = [];
 
     if (llmConfigured && slides.length > 0) {
-      const { model } = await acquireLlmModel(userId);
+      // May throw when the hosted budget is exhausted — degrade to raw slide
+      // content instead of failing the whole job.
+      const model = await acquireLlmModel(userId, { feature: "lecture-notes" })
+        .then((acquired) => acquired.model)
+        .catch(() => null);
 
-      for (let i = 0; i < aligned.length; i++) {
+      for (let i = 0; model && i < aligned.length; i++) {
         const a = aligned[i];
         const slideContent = slideContents[i] ?? "";
         const prompt = lectureSlideNotePrompt(
@@ -241,8 +263,12 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
       }
     } else if (slides.length === 0 && segments.length > 0) {
       // No slides detected — transcript-only fallback.
-      if (llmConfigured) {
-        const { model } = await acquireLlmModel(userId);
+      const model = llmConfigured
+        ? await acquireLlmModel(userId, { feature: "lecture-notes" })
+            .then((acquired) => acquired.model)
+            .catch(() => null)
+        : null;
+      if (model) {
         const fullText = fullTranscriptText(segments);
         const prompt = lectureSlideNotePrompt(
           "",
@@ -287,7 +313,7 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
     // Generate an overall summary if we have notes.
     if (llmConfigured && perSlideNotes.length > 1) {
       try {
-        const { model } = await acquireLlmModel(userId);
+        const { model } = await acquireLlmModel(userId, { feature: "lecture-summary" });
         const summaryPrompt = lectureSummaryPrompt(
           perSlideNotes.join("\n\n---\n\n"),
           style as NoteStyle,
@@ -374,6 +400,7 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
         slideRegion: slideRegion ?? null,
       }),
     });
+    succeeded = true;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Pipeline failed";
     console.error(`[lecture-pipeline] Job ${jobId} failed:`, message);
@@ -383,6 +410,15 @@ export async function runLecturePipeline(config: PipelineConfig): Promise<void> 
       progress: 0,
     });
   } finally {
+    if (metered) {
+      await metered.record({
+        status: succeeded ? "completed" : "failed",
+        providerCalls: (whisperMinutes > 0 ? 1 : 0) + visionCalls,
+        estimatedCostMicros:
+          Math.ceil(whisperMinutes * 6_000)
+          + visionCalls * estimateVisionCallCostMicros(metered.cfg.provider, metered.cfg.modelId),
+      }).catch(() => {});
+    }
     activeJobs.delete(userId);
     // Clean up work directory (non-critical).
     rm(workDir, { recursive: true, force: true }).catch(() => {});

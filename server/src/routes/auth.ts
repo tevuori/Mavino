@@ -324,11 +324,9 @@ auth.get("/openrouter/callback", async (c) => {
       console.error("[openrouter-oauth] callback failed", error);
     }
   }
-  const target = new URL(getAppBaseUrl());
-  target.searchParams.set("app", "settings");
-  target.searchParams.set("section", "athena");
-  target.searchParams.set("connection", connected ? "success" : "error");
-  return c.redirect(target.toString());
+  // Match the Microsoft OAuth convention: land on the app root with a hash the
+  // Settings → Mavino Assistant section detects and clears.
+  return c.redirect(`${getAppBaseUrl()}/#openrouter=${connected ? "success" : "error"}`);
 });
 
 auth.get("/guardian-consent/confirm", async (c) => {

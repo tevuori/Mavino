@@ -21,9 +21,10 @@
 import type { LlmModel } from "multi-llm-ts";
 import { Prisma } from "@prisma/client";
 import prisma from "../db/client";
-import { getUserConfig } from "./athena/llm";
+import { acquireMeteredProvider, type AcquiredProvider } from "./athena/llm";
 import { generateText, generateJson } from "./study/llm-json";
 import { getTranscriptionConfig } from "./study/lecture/transcribe";
+import { estimateTranscriptionCostMicros } from "./llm-pricing";
 import { lectureSlideNotePrompt, type NoteStyle, type NoteDetail, type StudyLanguage } from "./study/prompts";
 import { logSessionSafe } from "./study/logSession";
 import { textContains, countOccurrences } from "./atlas";
@@ -208,13 +209,24 @@ export async function processChunk(
 
   // Transcribe the chunk via the Whisper-compatible endpoint (outside the
   // transaction — this is a slow network call and must not hold the row lock).
-  const userCfg = await getUserConfig(userId);
-  const cfg = getTranscriptionConfig(userCfg);
-  let newSegment: EchoTranscriptSegment | null = null;
+  // Metered acquisition enforces the hosted monthly budget and records spend.
+  let metered: AcquiredProvider | null = null;
   let transcriptionError: string | null = null;
+  try {
+    metered = await acquireMeteredProvider(userId, { feature: "echo-transcribe" });
+  } catch (err) {
+    transcriptionError = err instanceof Error ? err.message : "AI provider unavailable.";
+  }
+  const cfg = getTranscriptionConfig(metered?.cfg ?? { apiKey: "" });
+  let newSegment: EchoTranscriptSegment | null = null;
 
   if (cfg.apiKey) {
     const result = await transcribeChunkSync(cfg, audioBuf, mimeType, owned.language);
+    await metered?.record({
+      status: result && "text" in result ? "completed" : "failed",
+      providerCalls: result ? 1 : 0,
+      estimatedCostMicros: result && "text" in result ? estimateTranscriptionCostMicros(audioBuf.length, mimeType) : 0,
+    });
     if (result && "text" in result) {
       // Whisper /audio/transcriptions with response_format=json returns a
       // single text blob (no timestamps). We create one segment spanning the
