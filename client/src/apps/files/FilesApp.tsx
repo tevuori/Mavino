@@ -20,6 +20,7 @@ import { alertDialog, confirmDialog, promptDialog } from "../../store/mobileDial
 import ContextMenu, { type MenuItem } from "../../shell/ContextMenu";
 import CollapsibleSidebar from "../../wm/CollapsibleSidebar";
 import { setLinkPayload } from "../links/linkDnd";
+import LinkBadge from "../links/LinkBadge";
 import { stageUploads, type IntelligentUploadFile, type IntelligentProcessResult } from "../../services/athena";
 import IntelligentUploadDialog from "../athena/IntelligentUploadDialog";
 
@@ -64,6 +65,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [renaming, setRenaming] = useState<{ type: "file" | "folder"; id: string; value: string } | null>(null);
   const [intelligentStaged, setIntelligentStaged] = useState<IntelligentUploadFile[] | null>(null);
+  const [fileLinkSignal, setFileLinkSignal] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
@@ -512,16 +514,30 @@ export default function FilesApp(_: { win: WindowInstance }) {
     }
   }, [preview, loadStorage, loadTree]);
 
-  const deleteFolder = useCallback(async (folder: VFolder) => {
-    if (!(await confirmDialog(`Delete folder "${folder.name}" and all its contents?`, { danger: true, confirmLabel: "Delete" }))) return;
+  const deleteFolder = useCallback(async (folder: VFolder, cascadeToSynced = false) => {
+    if (!cascadeToSynced) {
+      if (!(await confirmDialog(`Delete folder "${folder.name}" and all its contents?`, { danger: true, confirmLabel: "Delete" }))) return;
+    }
     try {
-      await filesApi.deleteFolder(folder.id);
+      await filesApi.deleteFolder(folder.id, cascadeToSynced);
       setFolders((prev) => prev.filter((f) => f.id !== folder.id));
       setAllFolders((prev) => prev.filter((f) => f.id !== folder.id));
       void loadStorage();
       void loadTree();
-    } catch (e) {
+    } catch (e: any) {
+      if (e?.status === 409 && e?.data?.syncedFolderId) {
+        const { noteCount } = e.data;
+        const confirm = await confirmDialog(
+          `This folder is linked to a Notes folder with ${noteCount} note${noteCount === 1 ? "" : "s"}. Delete the linked notes folder too?`,
+          { danger: true, confirmLabel: "Delete both" }
+        );
+        if (confirm) {
+          void deleteFolder(folder, true);
+        }
+        return;
+      }
       console.error(e);
+      void alertDialog("Failed to delete folder");
     }
   }, [loadStorage, loadTree]);
 
@@ -1315,9 +1331,12 @@ export default function FilesApp(_: { win: WindowInstance }) {
           <div className="absolute inset-y-0 right-0 z-20 shrink-0 flex w-72 flex-col border-l border-edge bg-surface-2 shadow-window @5xl:static @5xl:z-auto @5xl:shadow-none">
             <div className="flex items-center justify-between border-b border-edge px-3 py-2">
               <span className="line-clamp-1 text-xs font-medium text-ink">{preview.name}</span>
-              <button onClick={() => setPreview(null)} className="text-ink-muted hover:text-ink">
-                <X size={16} />
-              </button>
+              <div className="flex items-center gap-2">
+                <LinkBadge type="file" id={preview.id} refreshSignal={fileLinkSignal} />
+                <button onClick={() => setPreview(null)} className="text-ink-muted hover:text-ink">
+                  <X size={16} />
+                </button>
+              </div>
             </div>
           <FilePreview file={preview} />
           <div className="border-t border-edge p-3 text-xs text-ink-muted">

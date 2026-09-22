@@ -5,6 +5,13 @@ import prisma from "../db/client";
 import { authMiddleware } from "../middleware/auth";
 import { cleanupOrphanLinks } from "../db/links";
 import { getAccessibleFolders, checkFolderAccess } from "../services/circle";
+import {
+  ensureSyncedVFolder,
+  syncRename,
+  syncMove,
+  getSyncedFolderStats,
+  deleteSyncedCounterpart,
+} from "../services/folderSync";
 
 const notes = new Hono();
 notes.use("*", authMiddleware);
@@ -43,6 +50,12 @@ notes.post("/folders", zValidator("json", folderSchema), async (c) => {
   const folder = await prisma.noteFolder.create({
     data: { ...body, userId, parentId: body.parentId ?? null },
   });
+  // Mirror the new folder in the Files app so the two folder trees stay aligned.
+  try {
+    await ensureSyncedVFolder(userId, folder.id);
+  } catch {
+    // Non-fatal: the note folder exists even if the sync fails.
+  }
   return c.json({ folder }, 201);
 });
 
@@ -54,12 +67,91 @@ notes.patch("/folders/:id", zValidator("json", folderSchema.partial()), async (c
     where: { id, userId },
     data: body,
   });
+  if (body.name !== undefined) {
+    try {
+      await syncRename(userId, "note", id, body.name);
+    } catch {
+      // Non-fatal: note folder rename succeeded.
+    }
+  }
   return c.json({ folder });
+});
+
+// Move a note folder under a new parent (or root) with sync to files.
+const moveFolderSchema = z.object({ parentId: z.string().nullable() });
+notes.patch("/folders/:id/move", zValidator("json", moveFolderSchema), async (c) => {
+  const { userId } = c.get("auth");
+  const id = c.req.param("id");
+  const { parentId } = c.req.valid("json");
+
+  if (parentId === id) return c.json({ error: "Cannot move folder into itself" }, 400);
+
+  // Cycle detection: parentId must not be a descendant of id.
+  if (parentId !== null) {
+    const allFolders = await prisma.noteFolder.findMany({ where: { userId } });
+    const byParent = new Map<string | null, typeof allFolders>();
+    for (const f of allFolders) {
+      const key = f.parentId ?? null;
+      if (!byParent.has(key)) byParent.set(key, []);
+      byParent.get(key)!.push(f);
+    }
+    const descendants = new Set<string>([id]);
+    const stack = [id];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      for (const child of byParent.get(cur) ?? []) {
+        if (!descendants.has(child.id)) {
+          descendants.add(child.id);
+          stack.push(child.id);
+        }
+      }
+    }
+    if (descendants.has(parentId)) {
+      return c.json({ error: "Cannot move folder into its own descendant" }, 400);
+    }
+    const target = allFolders.find((f) => f.id === parentId);
+    if (!target) return c.json({ error: "Target folder not found" }, 404);
+  }
+
+  await prisma.noteFolder.update({
+    where: { id, userId },
+    data: { parentId: parentId ?? null },
+  });
+  try {
+    await syncMove(userId, "note", id, parentId ?? null);
+  } catch {
+    // Non-fatal: note folder moved successfully.
+  }
+  return c.json({ ok: true });
 });
 
 notes.delete("/folders/:id", async (c) => {
   const { userId } = c.get("auth");
   const id = c.req.param("id");
+  const cascadeToSynced = c.req.query("cascadeToSynced") === "true";
+
+  if (!cascadeToSynced) {
+    const stats = await getSyncedFolderStats(userId, "note", id);
+    if (stats.syncedFolderId && (stats.fileCount > 0 || stats.noteCount > 0)) {
+      return c.json(
+        {
+          error: "Synced folder contains items",
+          syncedFolderId: stats.syncedFolderId,
+          noteCount: stats.noteCount,
+          fileCount: stats.fileCount,
+        },
+        409
+      );
+    }
+  }
+
+  if (cascadeToSynced) {
+    try {
+      await deleteSyncedCounterpart(userId, "note", id);
+    } catch {
+      // Counterpart may already be gone.
+    }
+  }
   await prisma.noteFolder.delete({ where: { id, userId } });
   return c.json({ ok: true });
 });

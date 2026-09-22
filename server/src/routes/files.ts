@@ -4,6 +4,13 @@ import { zValidator } from "@hono/zod-validator";
 import prisma from "../db/client";
 import { authMiddlewareWithQuery } from "../middleware/auth";
 import { cleanupOrphanLinks } from "../db/links";
+import {
+  ensureSyncedNoteFolder,
+  syncRename,
+  syncMove,
+  getSyncedFolderStats,
+  deleteSyncedCounterpart,
+} from "../services/folderSync";
 import path from "node:path";
 import { mkdir, writeFile, unlink, stat, readFile, copyFile } from "node:fs/promises";
 import { zipSync, strToU8 } from "fflate";
@@ -99,14 +106,38 @@ files.post("/folders", zValidator("json", folderSchema), async (c) => {
   const folder = await prisma.vFolder.create({
     data: { ...body, userId, parentId: body.parentId ?? null },
   });
+  // Mirror the new folder in the Notes app so the two folder trees stay aligned.
+  try {
+    await ensureSyncedNoteFolder(userId, folder.id);
+  } catch {
+    // Non-fatal: the file folder exists even if the sync fails.
+  }
   return c.json({ folder }, 201);
 });
 
 files.delete("/folders/:id", async (c) => {
   const { userId } = c.get("auth");
+  const id = c.req.param("id");
+  const cascadeToSynced = c.req.query("cascadeToSynced") === "true";
   // Cascade delete handled by Prisma relation; also wipe files on disk.
-  const folder = await prisma.vFolder.findFirst({ where: { id: c.req.param("id"), userId } });
+  const folder = await prisma.vFolder.findFirst({ where: { id, userId } });
   if (!folder) return c.json({ error: "Not found" }, 404);
+
+  if (!cascadeToSynced) {
+    const stats = await getSyncedFolderStats(userId, "vfile", id);
+    if (stats.syncedFolderId && (stats.fileCount > 0 || stats.noteCount > 0)) {
+      return c.json(
+        {
+          error: "Synced folder contains items",
+          syncedFolderId: stats.syncedFolderId,
+          noteCount: stats.noteCount,
+          fileCount: stats.fileCount,
+        },
+        409
+      );
+    }
+  }
+
   // Collect all descendant file storage keys to remove from disk.
   const allFolders = await prisma.vFolder.findMany({ where: { userId } });
   const byParent = new Map<string | null, typeof allFolders>();
@@ -129,6 +160,13 @@ files.delete("/folders/:id", async (c) => {
     where: { userId, folderId: { in: toDelete } },
     select: { storageKey: true },
   });
+  if (cascadeToSynced) {
+    try {
+      await deleteSyncedCounterpart(userId, "vfile", id);
+    } catch {
+      // Counterpart may already be gone.
+    }
+  }
   await prisma.vFolder.delete({ where: { id: folder.id, userId } });
   for (const f of descendantFiles) {
     await unlink(path.join(UPLOAD_DIR, f.storageKey)).catch(() => {});
@@ -140,12 +178,18 @@ files.delete("/folders/:id", async (c) => {
 const renameFolderSchema = z.object({ name: z.string().min(1).max(64) });
 files.patch("/folders/:id", zValidator("json", renameFolderSchema), async (c) => {
   const { userId } = c.get("auth");
+  const id = c.req.param("id");
   const { name } = c.req.valid("json");
   const folder = await prisma.vFolder.updateMany({
-    where: { id: c.req.param("id"), userId },
+    where: { id, userId },
     data: { name },
   });
   if (folder.count === 0) return c.json({ error: "Not found" }, 404);
+  try {
+    await syncRename(userId, "vfile", id, name);
+  } catch {
+    // Non-fatal: file folder rename succeeded.
+  }
   return c.json({ ok: true });
 });
 
@@ -191,6 +235,11 @@ files.patch("/folders/:id/move", zValidator("json", moveFolderSchema), async (c)
     data: { parentId: parentId ?? null },
   });
   if (res.count === 0) return c.json({ error: "Not found" }, 404);
+  try {
+    await syncMove(userId, "vfile", id, parentId ?? null);
+  } catch {
+    // Non-fatal: file folder moved successfully.
+  }
   return c.json({ ok: true });
 });
 

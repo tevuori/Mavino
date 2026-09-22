@@ -7,7 +7,10 @@ export const notesApi = {
     api.post<{ folder: NoteFolder }>("/api/notes/folders", data),
   updateFolder: (id: string, data: Partial<{ name: string; parentId: string | null }>) =>
     api.patch<{ folder: NoteFolder }>(`/api/notes/folders/${id}`, data),
-  deleteFolder: (id: string) => api.delete(`/api/notes/folders/${id}`),
+  moveFolder: (id: string, parentId: string | null) =>
+    api.patch(`/api/notes/folders/${id}/move`, { parentId }),
+  deleteFolder: (id: string, cascadeToSynced?: boolean) =>
+    api.delete(`/api/notes/folders/${id}${cascadeToSynced ? "?cascadeToSynced=true" : ""}`),
 
   list: (params?: { q?: string; folderId?: string | null }) =>
     api.get<{ notes: Note[]; sharedFolderPermission?: "read" | "write" }>(

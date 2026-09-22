@@ -9,7 +9,8 @@ export const filesApi = {
     ),
   createFolder: (data: { name: string; parentId?: string | null }) =>
     api.post<{ folder: VFolder }>("/api/files/folders", data),
-  deleteFolder: (id: string) => api.delete(`/api/files/folders/${id}`),
+  deleteFolder: (id: string, cascadeToSynced?: boolean) =>
+    api.delete(`/api/files/folders/${id}${cascadeToSynced ? "?cascadeToSynced=true" : ""}`),
   renameFolder: (id: string, name: string) =>
     api.patch(`/api/files/folders/${id}`, { name }),
   moveFolder: (id: string, parentId: string | null) =>

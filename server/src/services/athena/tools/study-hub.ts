@@ -7,6 +7,7 @@
 
 import type { ToolDef } from "./plugin";
 import prisma from "../../../db/client";
+import { canonicalPair } from "../../../db/links";
 import { acquireLlmModel, getUserConfig, isLlmConfiguredFor, modelSupportsVision } from "../llm";
 import { resolveSource, resolveAndCache, type SourceDescriptor, type SourceKind } from "../../study/source";
 import { generateJson, generateText } from "../../study/llm-json";
@@ -737,6 +738,25 @@ const rawStudyHubTools: ToolDef[] = [
       const note = await prisma.note.create({
         data: { userId, title, content: notes, tags, folderId },
       });
+
+      // Link the generated note back to the source file so it appears in both apps.
+      if (resolved.kind === "file" && resolved.ref) {
+        const pair = canonicalPair(
+          { type: "file", id: resolved.ref },
+          { type: "note", id: note.id }
+        );
+        await prisma.itemLink.upsert({
+          where: {
+            userId_srcType_srcId_dstType_dstId: {
+              userId,
+              ...pair,
+            },
+          },
+          update: {},
+          create: { userId, ...pair },
+        });
+      }
+
       await logSessionSafe(userId, "notes", title, resolved.ref, {
         noteId: note.id,
         style,

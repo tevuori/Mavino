@@ -6,6 +6,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import type { ToolDef } from "./plugin";
 import prisma from "../../../db/client";
+import { canonicalPair } from "../../../db/links";
 import { getUserConfig, acquireLlmModel, modelSupportsVision } from "../llm";
 import { fetchUrl } from "../../../services/fetcher";
 import { generateText } from "../../study/llm-json";
@@ -249,6 +250,22 @@ export const notetakeTools: ToolDef[] = [
 
       const note = await prisma.note.create({
         data: { userId, title, content: notes, tags, folderId },
+      });
+
+      // Link the generated note back to the source PDF so it appears in both apps.
+      const pair = canonicalPair(
+        { type: "file", id: file.id },
+        { type: "note", id: note.id }
+      );
+      await prisma.itemLink.upsert({
+        where: {
+          userId_srcType_srcId_dstType_dstId: {
+            userId,
+            ...pair,
+          },
+        },
+        update: {},
+        create: { userId, ...pair },
       });
 
       await logSessionSafe(userId, "notes", title, file.id, {

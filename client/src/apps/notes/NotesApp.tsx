@@ -174,6 +174,9 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
   const onNotesFromSourceCreated = async (result: NotesFromSourceResult) => {
     setShowFromPdf(false);
     setSelectedId(result.noteId);
+    // If the note was generated from a file, the server created an ItemLink;
+    // refresh the link badge so the source file appears immediately.
+    setNoteLinkSignal((n) => n + 1);
     await loadNotes();
   };
 

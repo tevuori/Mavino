@@ -32,6 +32,7 @@ model User {
   tasks       Task[]
   files       VFile[]
   folders     VFolder[]
+  folderSyncs FolderSync[]
   settings    Setting[]
   lyricsCache LyricsCache[]
   flashcardDecks FlashcardDeck[]
@@ -369,6 +370,7 @@ model NoteFolder {
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   notes    Note[]
   position Int    @default(0)
+  folderSync FolderSync?
 
   @@index([userId, parentId])
 }
@@ -448,8 +450,24 @@ model VFolder {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  folderSync FolderSync?
 
   @@index([userId, parentId])
+}
+
+// Bidirectional sync mapping between a Notes folder and a Files folder.
+// Keeps the two parallel folder trees aligned while each app keeps its
+// own IDs and app-specific metadata (position vs createdAt/updatedAt).
+model FolderSync {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  noteFolderId  String     @unique
+  noteFolder    NoteFolder @relation(fields: [noteFolderId], references: [id], onDelete: Cascade)
+  vFolderId     String     @unique
+  vFolder       VFolder    @relation(fields: [vFolderId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VFile {
