@@ -10,6 +10,8 @@ import {
   clearGlobalLlmKey,
   getTierRateLimits,
   setTierRateLimits,
+  getHostedBudgetConfig,
+  setHostedBudgetConfig,
   type LlmMode,
 } from "../services/llm-config";
 import { getDemoConfig, setDemoConfig, cleanupOldDemoUsers, type DemoConfigInput } from "../services/demo";
@@ -25,7 +27,7 @@ adminLlm.get("/", async (c) => {
   return c.json(config);
 });
 
-const modeSchema = z.object({ mode: z.enum(["per-user", "global"]) });
+const modeSchema = z.object({ mode: z.enum(["per-user", "global", "hybrid"]) });
 
 /** PUT /api/admin/llm/mode — switch between per-user and global key mode. */
 adminLlm.put("/mode", zValidator("json", modeSchema), async (c) => {
@@ -80,6 +82,27 @@ const rateLimitSchema = z.object({
 adminLlm.put("/rate-limits", zValidator("json", rateLimitSchema), async (c) => {
   const body = c.req.valid("json");
   await setTierRateLimits(body);
+  return c.json({ ok: true });
+});
+
+const hostedBudgetSchema = z.object({
+  enabled: z.boolean().optional(),
+  reservationMicros: z.number().int().min(1).max(100_000_000).optional(),
+  maxOperationMicros: z.number().int().min(1).max(1_000_000_000).optional(),
+  globalMonthlyMicros: z.number().int().min(1).max(100_000_000_000).optional(),
+  tiers: z.object({
+    admin: z.number().int().min(0).max(1_000_000_000).optional(),
+    pro: z.number().int().min(0).max(1_000_000_000).optional(),
+    paid: z.number().int().min(0).max(1_000_000_000).optional(),
+    free: z.number().int().min(0).max(1_000_000_000).optional(),
+    demo: z.number().int().min(0).max(1_000_000_000).optional(),
+  }).optional(),
+});
+
+adminLlm.get("/hosted-budget", async (c) => c.json(await getHostedBudgetConfig()));
+
+adminLlm.put("/hosted-budget", zValidator("json", hostedBudgetSchema), async (c) => {
+  await setHostedBudgetConfig(c.req.valid("json"));
   return c.json({ ok: true });
 });
 

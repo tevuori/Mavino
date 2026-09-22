@@ -16,6 +16,14 @@ export interface TierRateLimits {
 
 export type TierRateLimitsMap = Record<RateTier, TierRateLimits>;
 
+export interface HostedBudgetConfig {
+  enabled: boolean;
+  reservationMicros: number;
+  maxOperationMicros: number;
+  globalMonthlyMicros: number;
+  tiers: Record<RateTier, number>;
+}
+
 export interface DemoConfig {
   enabled: boolean;
   hasKey: boolean;
@@ -41,6 +49,10 @@ export const adminLlmApi = {
     freeRpd?: number;
     freeRpm?: number;
   }) => api.put<{ ok: boolean }>("/api/admin/llm/rate-limits", data),
+  getHostedBudget: () => api.get<HostedBudgetConfig>("/api/admin/llm/hosted-budget"),
+  setHostedBudget: (data: Partial<Omit<HostedBudgetConfig, "tiers">> & {
+    tiers?: Partial<Record<RateTier, number>>;
+  }) => api.put<{ ok: boolean }>("/api/admin/llm/hosted-budget", data),
   getDemoConfig: () => api.get<DemoConfig>("/api/admin/llm/demo"),
   setDemoConfig: (data: {
     enabled?: boolean;

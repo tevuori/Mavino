@@ -6,7 +6,8 @@ import { authMiddleware } from "../middleware/auth";
 import { encryptSecret, decryptSecret } from "../services/crypto";
 import { isLlmConfiguredFor, normalizeModelId } from "../services/athena/llm";
 import { llmRateLimiter } from "../services/athena/rate-limiter";
-import { getGlobalLlmConfig, getRateLimitsForUser, getTierRateLimits } from "../services/llm-config";
+import { getGlobalLlmConfig, getRateLimitsForUser } from "../services/llm-config";
+import { getBudgetSnapshot } from "../services/llm-budget";
 
 const ai = new Hono();
 ai.use("*", authMiddleware);
@@ -44,10 +45,18 @@ function decryptSafe(enc: string): string | null {
 /** GET /api/ai/key — reports whether a key is set (never returns the secret). */
 ai.get("/key", async (c) => {
   const { userId } = c.get("auth");
-  const cred = await prisma.aiCredential.findUnique({ where: { userId } });
+  const [cred, user, globalConfig, tierConfig, budget] = await Promise.all([
+    prisma.aiCredential.findUnique({ where: { userId } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { aiSource: true, ageBand: true, guardianConsentStatus: true },
+    }),
+    getGlobalLlmConfig(),
+    getRateLimitsForUser(userId),
+    getBudgetSnapshot(userId),
+  ]);
   const stats = llmRateLimiter.stats(userId);
-  const globalConfig = await getGlobalLlmConfig();
-  const { tier, limits } = await getRateLimitsForUser(userId);
+  const { tier, limits } = tierConfig;
   const provider = cred?.provider ?? "openai";
   return c.json({
     hasKey: Boolean(cred),
@@ -69,7 +78,31 @@ ai.get("/key", async (c) => {
     // User's tier + applicable rate limits
     tier,
     tierRateLimits: limits,
+    aiSource: user?.aiSource ?? "choice_required",
+    ageBand: user?.ageBand ?? "UNKNOWN",
+    guardianConsentStatus: user?.guardianConsentStatus ?? "NOT_REQUIRED",
+    budget,
   });
+});
+
+const sourceSchema = z.object({ source: z.enum(["hosted", "byok"]) });
+
+ai.put("/source", zValidator("json", sourceSchema), async (c) => {
+  const { userId } = c.get("auth");
+  const { source } = c.req.valid("json");
+  if (source === "byok") {
+    const credential = await prisma.aiCredential.findUnique({ where: { userId } });
+    if (!credential || credential.status !== "active") {
+      return c.json({ error: "Connect and validate your provider before selecting BYOK." }, 400);
+    }
+  } else {
+    const config = await getGlobalLlmConfig();
+    if (!config.hasKey && !process.env.OPENAI_API_KEY) {
+      return c.json({ error: "Mavino-hosted AI is not configured." }, 503);
+    }
+  }
+  await prisma.user.update({ where: { id: userId }, data: { aiSource: source } });
+  return c.json({ ok: true, source });
 });
 
 /** PUT /api/ai/key — store (or replace) the user's encrypted API key + provider config. */
@@ -83,8 +116,8 @@ ai.put("/key", zValidator("json", keySchema), async (c) => {
   const modelId = rawModelId ? normalizeModelId(provider, rawModelId) : null;
   const cred = await prisma.aiCredential.upsert({
     where: { userId },
-    create: { userId, apiKeyEnc: enc, provider, baseUrl, modelId },
-    update: { apiKeyEnc: enc, provider, baseUrl, modelId },
+    create: { userId, apiKeyEnc: enc, provider, baseUrl, modelId, status: "active" },
+    update: { apiKeyEnc: enc, provider, baseUrl, modelId, status: "active", lastError: null },
   });
   return c.json({ ok: true, provider: cred.provider });
 });
@@ -97,6 +130,7 @@ ai.delete("/key", async (c) => {
   } catch {
     // already absent
   }
+  await prisma.user.updateMany({ where: { id: userId, aiSource: "byok" }, data: { aiSource: "choice_required" } });
   llmRateLimiter.reset(userId);
   return c.json({ ok: true });
 });

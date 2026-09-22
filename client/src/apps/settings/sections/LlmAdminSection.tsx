@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Sparkles, KeyRound, Gauge, Trash2, Check, AlertCircle, Play, Loader2 } from "lucide-react";
-import { adminLlmApi, type GlobalLlmConfig, type TierRateLimitsMap, type DemoConfig } from "../../../services/admin-llm";
+import { Sparkles, KeyRound, Gauge, Trash2, Check, AlertCircle, Play, Loader2, WalletCards } from "lucide-react";
+import { adminLlmApi, type GlobalLlmConfig, type TierRateLimitsMap, type DemoConfig, type HostedBudgetConfig } from "../../../services/admin-llm";
 import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass } from "../ui";
 import { confirmDialog } from "../../../store/mobileDialog";
 
@@ -13,6 +13,7 @@ export default function LlmAdminSection() {
         description="Control whether users provide their own API keys or use a single global key. Configure rate limits for each user tier and demo mode."
       />
       <GlobalKeyCard />
+      <HostedBudgetCard />
       <DemoModeCard />
       <TierRateLimitsCard />
     </section>
@@ -21,7 +22,7 @@ export default function LlmAdminSection() {
 
 function GlobalKeyCard() {
   const [config, setConfig] = useState<GlobalLlmConfig | null>(null);
-  const [mode, setMode] = useState<"per-user" | "global">("per-user");
+  const [mode, setMode] = useState<"per-user" | "global" | "hybrid">("per-user");
   const [keyInput, setKeyInput] = useState("");
   const [provider, setProvider] = useState("openai");
   const [baseUrl, setBaseUrl] = useState("");
@@ -50,7 +51,7 @@ function GlobalKeyCard() {
     try {
       await adminLlmApi.setMode(mode);
       await refresh();
-      setMsg(`Mode set to ${mode === "global" ? "global key" : "per-user keys"}.`);
+      setMsg(`Mode set to ${mode === "global" ? "global key" : mode === "hybrid" ? "hybrid hosted/BYOK" : "per-user keys"}.`);
     } catch (e) {
       setErr(true);
       setMsg(e instanceof Error ? e.message : "Failed to update mode");
@@ -106,8 +107,8 @@ function GlobalKeyCard() {
         <h3 className="font-semibold text-ink">Global LLM Key</h3>
         {config && (
           <StatusPill
-            on={config.mode === "global"}
-            onLabel={config.mode === "global" ? "Global mode" : "Per-user mode"}
+            on={config.mode !== "per-user"}
+            onLabel={config.mode === "global" ? "Global mode" : config.mode === "hybrid" ? "Hybrid mode" : "Per-user mode"}
             offLabel="Per-user mode"
           />
         )}
@@ -139,6 +140,17 @@ function GlobalKeyCard() {
             <p className="font-medium">Global key</p>
             <p className="mt-0.5 text-xs text-ink-muted">One admin-configured key for all users. No user setup needed.</p>
           </button>
+          <button
+            onClick={() => setMode("hybrid")}
+            className={`flex-1 rounded-lg border p-3 text-left text-sm transition ${
+              mode === "hybrid"
+                ? "border-accent bg-accent/10 text-ink"
+                : "border-edge bg-surface text-ink-muted hover:border-ink-muted"
+            }`}
+          >
+            <p className="font-medium">Hybrid</p>
+            <p className="mt-0.5 text-xs text-ink-muted">Hosted allowance with an explicit BYOK option.</p>
+          </button>
         </div>
         <div className="mt-2 flex justify-end">
           <SaveButton busy={busy} onClick={saveMode} disabled={config?.mode === mode}>
@@ -148,7 +160,7 @@ function GlobalKeyCard() {
       </div>
 
       {/* Global key config (only relevant in global mode) */}
-      {mode === "global" && (
+      {mode !== "per-user" && (
         <>
           <div className="mb-3 flex items-center gap-2 text-xs">
             {config?.hasKey ? (
@@ -217,10 +229,99 @@ function GlobalKeyCard() {
             )}
           </div>
           <p className="mt-3 text-xs text-ink-muted">
-            The key is encrypted (AES-256-GCM) and stored on the server. In global mode, per-user keys are ignored.
+            The key is encrypted (AES-256-GCM) and stored on the server. Hybrid mode uses it only for users who select hosted AI.
           </p>
         </>
       )}
+      <MsgBox msg={msg} error={err} />
+    </Card>
+  );
+}
+
+function HostedBudgetCard() {
+  const [config, setConfig] = useState<HostedBudgetConfig | null>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [globalMonthly, setGlobalMonthly] = useState(100);
+  const [free, setFree] = useState(0.5);
+  const [paid, setPaid] = useState(1.5);
+  const [pro, setPro] = useState(3);
+  const [admin, setAdmin] = useState(3);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const value = await adminLlmApi.getHostedBudget();
+      setConfig(value);
+      setEnabled(value.enabled);
+      setGlobalMonthly(value.globalMonthlyMicros / 1_000_000);
+      setFree(value.tiers.free / 1_000_000);
+      setPaid(value.tiers.paid / 1_000_000);
+      setPro(value.tiers.pro / 1_000_000);
+      setAdmin(value.tiers.admin / 1_000_000);
+    } catch {}
+  }, []);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const save = async () => {
+    setBusy(true);
+    setErr(false);
+    setMsg(null);
+    try {
+      await adminLlmApi.setHostedBudget({
+        enabled,
+        globalMonthlyMicros: Math.round(globalMonthly * 1_000_000),
+        tiers: {
+          free: Math.round(free * 1_000_000),
+          paid: Math.round(paid * 1_000_000),
+          pro: Math.round(pro * 1_000_000),
+          admin: Math.round(admin * 1_000_000),
+        },
+      });
+      await refresh();
+      setMsg("Hosted AI budgets saved.");
+    } catch (e) {
+      setErr(true);
+      setMsg(e instanceof Error ? e.message : "Failed to save hosted budgets");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const fields = [
+    ["Free / month", free, setFree],
+    ["Paid / month", paid, setPaid],
+    ["Pro / month", pro, setPro],
+    ["Admin / month", admin, setAdmin],
+  ] as const;
+
+  return (
+    <Card className="mb-4">
+      <div className="mb-3 flex items-center gap-2 text-sm">
+        <WalletCards size={16} className="text-accent" />
+        <h3 className="font-semibold text-ink">Hosted AI budgets</h3>
+        <StatusPill on={enabled} onLabel="Enabled" offLabel="Disabled" />
+      </div>
+      <label className="mb-3 flex items-center gap-2 text-sm text-ink">
+        <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+        Allow hosted AI usage
+      </label>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {fields.map(([label, value, setter]) => (
+          <Field key={label} label={`${label} (USD)`}>
+            <input type="number" min={0} step={0.1} value={value} onChange={(e) => setter(Number(e.target.value))} className={inputClass} />
+          </Field>
+        ))}
+        <Field label="Global / month (USD)">
+          <input type="number" min={0.01} step={1} value={globalMonthly} onChange={(e) => setGlobalMonthly(Number(e.target.value))} className={inputClass} />
+        </Field>
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <SaveButton busy={busy} onClick={save}>Save hosted budgets</SaveButton>
+        {config && <span className="text-xs text-ink-muted">Per-operation reserve: ${(config.reservationMicros / 1_000_000).toFixed(3)}</span>}
+      </div>
       <MsgBox msg={msg} error={err} />
     </Card>
   );

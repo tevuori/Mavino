@@ -54,6 +54,7 @@ function TierInfoCard() {
   const TierIcon = tierIcon[status.tier];
   const limits = status.tierRateLimits;
   const isGlobal = status.llmMode === "global";
+  const isHostedMode = isGlobal || status.llmMode === "hybrid" && status.aiSource === "hosted";
 
   return (
     <Card className="mb-4">
@@ -70,13 +71,13 @@ function TierInfoCard() {
           <div>
             <p className="text-sm font-medium text-ink">{tierLabel[status.tier]} tier</p>
             <p className="text-xs text-ink-muted">
-              {isGlobal ? "Global key mode — no personal key needed" : "Per-user key mode"}
+              {isHostedMode ? "Mavino-hosted AI" : status.llmMode === "hybrid" ? "Your AI provider" : "Per-user key mode"}
             </p>
           </div>
         </div>
         <StatusPill on={status.configured} onLabel="AI ready" offLabel="Not configured" />
       </div>
-      {isGlobal && (
+      {isHostedMode && (
         <div className="mt-3 flex gap-4 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-xs text-ink-muted">
           <span>
             Rate limits:{" "}
@@ -309,8 +310,25 @@ function LlmConfigCard() {
     }
   };
 
+  const selectSource = async (source: "hosted" | "byok") => {
+    setBusy(true);
+    setErr(false);
+    setMsg(null);
+    try {
+      await aiApi.setSource(source);
+      await refresh();
+      setMsg(source === "hosted" ? "Mavino-hosted AI selected." : "Your provider selected.");
+    } catch (e) {
+      setErr(true);
+      setMsg(e instanceof Error ? e.message : "Failed to change AI source");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const hasKey = status?.hasKey ?? false;
   const isGlobal = status?.llmMode === "global";
+  const isHybrid = status?.llmMode === "hybrid";
 
   // Demo accounts always use the admin demo key and cannot set a personal one.
   if (isDemo) {
@@ -353,11 +371,49 @@ function LlmConfigCard() {
   return (
     <Card className="mb-4">
       <div className="mb-3 flex items-center gap-2 text-sm">
-        <StatusPill on={hasKey} onLabel="Key set" offLabel="No key set" />
-        {!hasKey && (
+        <StatusPill
+          on={isHybrid ? status?.aiSource !== "choice_required" : hasKey}
+          onLabel={isHybrid ? status?.aiSource === "hosted" ? "Hosted AI" : "My provider" : "Key set"}
+          offLabel={isHybrid ? "Choose AI source" : "No key set"}
+        />
+        {!hasKey && !isHybrid && (
           <span className="text-xs text-ink-muted">Mavino AI requires a key to function</span>
         )}
       </div>
+      {isHybrid && status && (
+        <div className="mb-4 rounded-lg border border-edge bg-surface-2 p-3">
+          <p className="mb-2 text-xs font-medium text-ink">AI source</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void selectSource("hosted")}
+              className={`rounded-lg border p-3 text-left text-sm ${status.aiSource === "hosted" ? "border-accent bg-accent/10" : "border-edge"}`}
+            >
+              <span className="font-medium text-ink">Hosted by Mavino</span>
+              <span className="mt-1 block text-xs text-ink-muted">No API key. Uses your monthly allowance.</span>
+            </button>
+            <button
+              type="button"
+              disabled={busy || !hasKey}
+              onClick={() => void selectSource("byok")}
+              className={`rounded-lg border p-3 text-left text-sm ${status.aiSource === "byok" ? "border-accent bg-accent/10" : "border-edge"} disabled:opacity-50`}
+            >
+              <span className="font-medium text-ink">My provider</span>
+              <span className="mt-1 block text-xs text-ink-muted">Uses your stored key and provider limits.</span>
+            </button>
+          </div>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-3">
+            <div
+              className="h-full rounded-full bg-accent"
+              style={{ width: `${status.budget.limitMicros > 0 ? Math.max(0, Math.min(100, status.budget.remainingMicros / status.budget.limitMicros * 100)) : 0}%` }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-ink-muted">
+            Hosted allowance: {status.budget.limitMicros > 0 ? Math.round(status.budget.remainingMicros / status.budget.limitMicros * 100) : 0}% remaining
+          </p>
+        </div>
+      )}
       <div className="mb-3 grid grid-cols-2 gap-2">
         <Field label="Provider">
           <select
@@ -467,7 +523,7 @@ function RateLimitCard() {
 
   const hasKey = status?.hasKey ?? false;
   const usage = status?.rateLimitUsage;
-  const isGlobal = status?.llmMode === "global";
+  const isGlobal = status?.llmMode === "global" || status?.llmMode === "hybrid" && status.aiSource === "hosted";
 
   // In global mode, per-user rate limits are managed by the admin via tier config.
   if (isGlobal) return null;
@@ -583,7 +639,7 @@ function FallbackCard() {
 
   const hasKey = status?.hasKey ?? false;
   const hasFallback = status?.hasFallback ?? false;
-  const isGlobal = status?.llmMode === "global";
+  const isGlobal = status?.llmMode === "global" || status?.llmMode === "hybrid" && status.aiSource === "hosted";
 
   // In global mode, fallback is not used (the global key is the only key).
   if (isGlobal) return null;

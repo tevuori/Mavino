@@ -1,6 +1,6 @@
 import { api } from "./api";
 
-export type LlmMode = "per-user" | "global";
+export type LlmMode = "per-user" | "global" | "hybrid";
 export type RateTier = "admin" | "pro" | "paid" | "free" | "demo";
 
 export interface TierRateLimits {
@@ -28,6 +28,17 @@ export interface AiKeyStatus {
   // User's tier + applicable rate limits
   tier: RateTier;
   tierRateLimits: TierRateLimits;
+  aiSource: "choice_required" | "hosted" | "byok";
+  ageBand: "UNKNOWN" | "AGE_13_17" | "AGE_18_PLUS";
+  guardianConsentStatus: "NOT_REQUIRED" | "PENDING" | "VERIFIED" | "REVOKED";
+  budget: {
+    tier: RateTier;
+    limitMicros: number;
+    spentMicros: number;
+    reservedMicros: number;
+    remainingMicros: number;
+    resetAt: string;
+  };
 }
 
 export const aiApi = {
@@ -35,6 +46,8 @@ export const aiApi = {
   setKey: (apiKey: string, provider?: string, baseUrl?: string, modelId?: string) =>
     api.put<{ ok: boolean; provider: string }>("/api/ai/key", { apiKey, provider, baseUrl, modelId }),
   deleteKey: () => api.delete<{ ok: boolean }>("/api/ai/key"),
+  setSource: (source: "hosted" | "byok") =>
+    api.put<{ ok: boolean; source: "hosted" | "byok" }>("/api/ai/source", { source }),
   setRateLimit: (data: {
     rateLimitEnabled?: boolean;
     rateLimitRpd?: number;
