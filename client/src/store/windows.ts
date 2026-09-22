@@ -306,7 +306,6 @@ export const useWindows = create<WindowsState>((set, get) => ({
         get().switchWorkspace(existing.workspaceId);
       }
       get().focus(existing.id);
-      if (existing.minimized) get().minimize(existing.id);
       return existing.id;
     }
     // App availability guard: refuse to open apps the user can't access
