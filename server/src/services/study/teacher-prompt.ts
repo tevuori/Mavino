@@ -266,6 +266,44 @@ function bullets(items: string[], empty = "  (none)"): string {
   return items.length ? items.map((i) => `  - ${i}`).join("\n") : empty;
 }
 
+// ----- missing-check detection -----
+// The tutor sometimes announces a comprehension check in prose ("Teď si to
+// ověřím:", "Let me check your understanding…") but the check_comprehension
+// tool call never reaches the provider or is dropped — the student then sees
+// the announcement but no card. The stream route uses this detector to trigger
+// a repair pass that forces the tool call.
+
+/** Phrases that explicitly announce an upcoming check/card (cs + en). */
+const CHECK_ANNOUNCE_RE =
+  /(ověř\w{0,15}|prověř\w{0,15}|ověřovací|interaktivní kart|kontrolní otázk|otázk\w*[^.\n]{0,40}na cestě|comprehension check|let me check|let'?s check|quick check|check your understanding|let'?s verify|interactive (?:card|question)|question for you)/i;
+
+/** A trailing question mark (optionally followed by whitespace/emoji). */
+const QUESTION_END_RE = /\?[\s\p{Extended_Pictographic}]*$/u;
+
+/** An explicit "write me your answer" solicitation near the end of the reply. */
+const ANSWER_SOLICIT_RE =
+  /(napiš\w* mi|odpověz|pošli\w* (?:mi )?odpověď|write (?:me )?your answer|answer in your own words|tell me what you|your turn)[\s\S]{0,60}$/iu;
+
+/**
+ * Returns true when the assistant's reply looks like it promised a
+ * comprehension check that the check_comprehension tool call never delivered:
+ * either it explicitly announced a check/card, or (non-socratic styles only)
+ * it ended by eliciting an answer from the student.
+ */
+export function announcedUndeliveredCheck(text: string, teachingStyle?: TeachingStyle): boolean {
+  if (!text.trim()) return false;
+  const tail = text.slice(-500);
+  if (CHECK_ANNOUNCE_RE.test(tail)) return true;
+  // In socratic mode asking questions in plain text IS the teaching style —
+  // only explicit card announcements count there.
+  if (teachingStyle === "socratic") return false;
+  // Require a substantive turn so a short conversational reply ending in "?"
+  // (e.g. "Want to continue?") does not trigger a forced check.
+  if (text.length < 200) return false;
+  const end = tail.slice(-200);
+  return QUESTION_END_RE.test(end) || ANSWER_SOLICIT_RE.test(end);
+}
+
 const STYLE_INSTRUCTIONS: Record<TeachingStyle, string> = {
   explain:
     "TEACHING MODE — EXPLAIN (default):\n" +
@@ -284,7 +322,9 @@ export function teacherSystemPrompt(
   history: SourceHistoryEntry[],
   state: TeacherSessionState,
   lang?: StudyLanguage,
-  visionCapable = false
+  visionCapable = false,
+  /** Full turns elapsed since the last comprehension check (0 = just asked). */
+  turnsSinceCheck = 0
 ): string {
   const imageAware = state.imageAware !== false;
   const sourceImages = imageAware ? (state.sourceImages ?? []) : [];
@@ -433,10 +473,11 @@ LESSON FLOW:
 
 COMPREHENSION CHECKS:
 - After explaining a key concept, call check_comprehension with ONE short question and the expectedConcept it tests. The answer is graded automatically and comes back to you with the verdict.
+- CRITICAL: If your reply says you will check or verify understanding ("Let me check…", "Teď si to ověřím…", "here's a question", "otázka na cestě"), the check_comprehension tool call MUST be part of that SAME response. The student only ever sees the question card when the tool is called — announcing a check in text without the tool call delivers NOTHING.
 - CRITICAL: Ask AT MOST ONE comprehension check per turn. After calling check_comprehension, STOP generating and wait for the student to answer. Do NOT call check_comprehension again in the same turn, and do NOT call mark_concept_covered for a concept until its check has been answered.
 - Prefer an open question; pass 2-4 options only when a multiple-choice question genuinely tests understanding.
 - Never ask a check about a concept you have not taught yet in this session.
-- When a check comes back as failed, re-explain that concept differently (simpler wording, another analogy, another source) BEFORE moving on, and address the misconception explicitly.
+- When a check comes back as failed, re-explain that concept differently (simpler wording, another analogy, another source) BEFORE moving on, and address the misconception explicitly.${!state.lessonCompletedAt && turnsSinceCheck >= 2 ? `\n- CHECK DUE: ${turnsSinceCheck} turns have passed without a comprehension check. If you teach a concept this turn, end the turn with a check_comprehension call — do not just announce it in text.` : ""}
 
 CITATION AND FORMATTING RULES:
 - Every factual statement drawn from a source MUST be followed by an inline [n] citation matching the SOURCE labels below.

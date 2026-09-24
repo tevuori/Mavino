@@ -24,6 +24,7 @@ import {
 } from "../services/athena/tools";
 import {
   teacherSystemPrompt,
+  announcedUndeliveredCheck,
   applyAssessmentToState,
   inferAdaptiveLevel,
   weakConceptsFallback,
@@ -644,9 +645,30 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
   const cfg = await getUserConfig(userId);
   const { model } = await acquireLlmModel(userId);
   const visionCapable = modelSupportsVision(cfg.provider, cfg.modelId);
-  const systemPrompt = teacherSystemPrompt(sources, history, state, body.language as StudyLanguage, visionCapable);
 
   const history2 = parseMessages(row.messages);
+  // Full turns elapsed since the last comprehension check — used to inject a
+  // "check is due" reminder once the tutor has lectured for a while without
+  // verifying understanding.
+  const lastCheckIdx = [...(state.comprehensionLog ?? [])]
+    .reverse()
+    .find((e) => typeof e.messageIndex === "number")?.messageIndex;
+  const turnsSinceCheck =
+    typeof lastCheckIdx === "number"
+      ? Math.max(0, Math.floor((history2.length - 1 - lastCheckIdx) / 2))
+      : Math.max(
+          0,
+          history2.filter((m) => m.role === "assistant").length -
+            (state.comprehensionLog?.length ?? 0)
+        );
+  const systemPrompt = teacherSystemPrompt(
+    sources,
+    history,
+    state,
+    body.language as StudyLanguage,
+    visionCapable,
+    turnsSinceCheck
+  );
   const thread: Message[] = [new Message("system", systemPrompt)];
   for (const m of history2) {
     const content = m.role === "assistant" ? m.content.replace(/\n*##\s*Sources[\s\S]*$/i, "").trim() : m.content;
@@ -747,6 +769,39 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
     let full = "";
     let errored = false;
     const toolEvents: { id: string; name: string; state: string }[] = [];
+
+    // Forward one tool chunk as SSE `tool` (+ `client_action`/`data_change` for
+    // completed calls). Shared by the main turn and the check-repair pass.
+    const forwardToolChunk = async (chunk: any) => {
+      await stream.writeSSE({
+        event: "tool",
+        data: JSON.stringify({
+          id: chunk.id,
+          name: chunk.name,
+          state: chunk.state,
+          status: chunk.status ?? "",
+          result: chunk.state === "completed" ? chunk.call?.result : undefined,
+        }),
+      });
+      if (chunk.state === "completed") {
+        toolEvents.push({ id: chunk.id, name: chunk.name, state: chunk.state });
+        const result = chunk.call?.result as any;
+        if (DESTRUCTIVE_TOOLS.has(chunk.name) && result && !result?.error) {
+          await stream.writeSSE({ event: "data_change", data: JSON.stringify({ tool: chunk.name }) });
+        }
+        if (CLIENT_ACTION_TOOLS.has(chunk.name) && result && !result?.error) {
+          await stream.writeSSE({
+            event: "client_action",
+            data: JSON.stringify({ tool: chunk.name, payload: result }),
+          });
+          // point_at_image signals that images should be re-attached next turn.
+          if (result._reattachImages) {
+            (state as any).reattachImages = true;
+          }
+        }
+      }
+    };
+
     try {
       for await (const chunk of model.generate(thread, { tools: true, abortSignal: abort.signal })) {
         if (chunk.type === "content") {
@@ -756,33 +811,7 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
             data: JSON.stringify({ text: chunk.text ?? "", done: chunk.done }),
           });
         } else if (chunk.type === "tool") {
-          await stream.writeSSE({
-            event: "tool",
-            data: JSON.stringify({
-              id: chunk.id,
-              name: chunk.name,
-              state: chunk.state,
-              status: chunk.status ?? "",
-              result: chunk.state === "completed" ? chunk.call?.result : undefined,
-            }),
-          });
-          if (chunk.state === "completed") {
-            toolEvents.push({ id: chunk.id, name: chunk.name, state: chunk.state });
-            const result = chunk.call?.result as any;
-            if (DESTRUCTIVE_TOOLS.has(chunk.name) && result && !result?.error) {
-              await stream.writeSSE({ event: "data_change", data: JSON.stringify({ tool: chunk.name }) });
-            }
-            if (CLIENT_ACTION_TOOLS.has(chunk.name) && result && !result?.error) {
-              await stream.writeSSE({
-                event: "client_action",
-                data: JSON.stringify({ tool: chunk.name, payload: result }),
-              });
-              // point_at_image signals that images should be re-attached next turn.
-              if (result._reattachImages) {
-                (state as any).reattachImages = true;
-              }
-            }
-          }
+          await forwardToolChunk(chunk);
         } else if (chunk.type === "usage") {
           await stream.writeSSE({ event: "usage", data: JSON.stringify({ usage: chunk.usage }) });
         }
@@ -794,6 +823,78 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
       console.error(`[teacher] generation error: ${msg} (status=${status}, contentLen=${full.length}, tools=${toolEvents.length})`);
       await stream.writeSSE({ event: "error", data: JSON.stringify({ error: msg, status }) });
       if (!full.trim()) return;
+    }
+
+    // ----- comprehension-check repair pass -----
+    // If the tutor announced a check in prose ("Teď si to ověřím…") or ended the
+    // turn by asking the student to answer, but the check_comprehension tool
+    // call never completed, the promised card never reached the student. Force
+    // the tool call once so the check actually arrives. Skipped when a check
+    // was already delivered, when the lesson was wrapped up (finish_lesson),
+    // or when the turn errored / was aborted.
+    if (
+      !errored &&
+      !abort.signal.aborted &&
+      !toolEvents.some((t) => t.name === "check_comprehension") &&
+      !toolEvents.some((t) => t.name === "finish_lesson") &&
+      announcedUndeliveredCheck(full, state.teachingStyle)
+    ) {
+      thread.push(new Message("assistant", full));
+      thread.push(
+        new Message(
+          "user",
+          "[system note] Your previous message announced a comprehension check (or ended by asking the student to " +
+            "answer), but the check_comprehension tool was never called — the student saw the announcement but no " +
+            "question card. Call check_comprehension NOW with the question you intended (include expectedConcept). " +
+            "Do not repeat the explanation. If you truly did not intend a comprehension check, reply with exactly: NO_CHECK"
+        )
+      );
+      console.warn(`[teacher] announced check was not delivered — running repair pass (session ${row.id})`);
+
+      // Buffer repair content instead of streaming it live: if the (unforced)
+      // model declines with the NO_CHECK sentinel, nothing reaches the client.
+      let repairText = "";
+      const runRepair = async (force: boolean) => {
+        for await (const chunk of model.generate(thread, {
+          tools: true,
+          // Named toolChoice forces check_comprehension for the first round;
+          // multi-llm-ts clears it afterwards so the loop continues normally.
+          ...(force ? { toolChoice: { type: "tool" as const, name: "check_comprehension" } } : {}),
+          abortSignal: abort.signal,
+        })) {
+          if (chunk.type === "content") repairText += chunk.text ?? "";
+          else if (chunk.type === "tool") await forwardToolChunk(chunk);
+          else if (chunk.type === "usage") {
+            await stream.writeSSE({ event: "usage", data: JSON.stringify({ usage: chunk.usage }) });
+          }
+        }
+      };
+      try {
+        await runRepair(true);
+      } catch (e) {
+        // Provider may not support forced tool_choice — fall back to a plain
+        // nudged generation (the NO_CHECK sentinel gives the model an out).
+        if (!abort.signal.aborted) {
+          console.warn(`[teacher] forced check repair failed, retrying unforced: ${e instanceof Error ? e.message : e}`);
+          try {
+            await runRepair(false);
+          } catch (e2) {
+            console.warn(`[teacher] check repair failed: ${e2 instanceof Error ? e2.message : e2}`);
+          }
+        }
+      }
+      const extra = repairText.trim();
+      if (extra && !/^no_?check\b/i.test(extra)) {
+        const sep = full.endsWith("\n") || !full ? "" : "\n";
+        full += sep + repairText;
+        await stream.writeSSE({
+          event: "content",
+          data: JSON.stringify({ text: sep + repairText, done: true }),
+        });
+      }
+      if (!toolEvents.some((t) => t.name === "check_comprehension")) {
+        console.warn(`[teacher] check repair did not produce check_comprehension (session ${row.id})`);
+      }
     }
 
     console.log(`[teacher] stream done: contentLen=${full.length}, tools=${toolEvents.length}, errored=${errored}`);
