@@ -340,6 +340,7 @@ export interface IntelligentUploadPlan {
 }
 
 export interface IntelligentProcessActions {
+  targetFolderId?: string | null;
   createFolder: boolean;
   folderName?: string | null;
   createStructure: boolean;

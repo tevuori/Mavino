@@ -716,6 +716,7 @@ const processUploadsSchema = z.object({
     })
   ),
   actions: z.object({
+    targetFolderId: z.string().nullable().optional(),
     createFolder: z.boolean().default(false),
     folderName: z.string().nullable().optional(),
     createStructure: z.boolean().default(false),

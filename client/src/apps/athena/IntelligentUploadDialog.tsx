@@ -19,6 +19,7 @@ import { useLanguage, type LanguagePreference } from "../../store/language";
 
 interface Props {
   staged: IntelligentUploadFile[];
+  targetFolderId?: string | null;
   onClose: () => void;
   onResult: (result: IntelligentProcessResult) => void;
 }
@@ -51,12 +52,13 @@ const TEACH_LEVELS: { value: NonNullable<IntelligentProcessActions["teach"]>["le
 
 const IMAGE_NOTES_KEY = "image-aware-notes";
 
-export default function IntelligentUploadDialog({ staged, onClose, onResult }: Props) {
+export default function IntelligentUploadDialog({ staged, targetFolderId = null, onClose, onResult }: Props) {
   const globalLanguage = useLanguage((state) => state.language);
   const languagePreference = useLanguage((state) => state.overrides["intelligent-upload"]);
   const setLanguageOverride = useLanguage((state) => state.setOverride);
   const language: StudyLanguage = languagePreference === "global" ? globalLanguage : languagePreference;
   const [actions, setActions] = useState<IntelligentProcessActions>({
+    targetFolderId,
     createFolder: false,
     folderName: null,
     createStructure: false,
@@ -64,7 +66,7 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
     notes: null,
     flashcards: null,
     teach: null,
-    workspace: { name: "Study materials" },
+    workspace: null,
   });
   const [planReasoning, setPlanReasoning] = useState<string | null>(null);
   const [suggesting, setSuggesting] = useState(false);
@@ -94,6 +96,7 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
       );
       setPlanReasoning(plan.reasoning || null);
       setActions({
+        targetFolderId,
         createFolder: plan.createFolder,
         folderName: plan.folderName,
         createStructure: plan.createStructure,
@@ -198,7 +201,8 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
     }));
   };
 
-  const canProcess = staged.length > 0 && (actions.createFolder || actions.createStructure || actions.notes || actions.flashcards || actions.teach || actions.workspace);
+  const canProcess = staged.length > 0;
+  const hasEnhancements = Boolean(actions.createFolder || actions.createStructure || actions.notes || actions.flashcards || actions.teach || actions.workspace);
 
   return (
     <div
@@ -474,8 +478,8 @@ export default function IntelligentUploadDialog({ staged, onClose, onResult }: P
                 disabled={!canProcess || processing || suggesting}
                 className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:opacity-90 disabled:opacity-40"
               >
-                {processing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                {processing ? "Processing…" : "Process files"}
+                {processing ? <Loader2 size={13} className="animate-spin" /> : hasEnhancements ? <Sparkles size={13} /> : <FileText size={13} />}
+                {processing ? "Uploading…" : hasEnhancements ? "Process files" : "Upload files"}
               </button>
             </div>
           </div>

@@ -30,7 +30,13 @@ const SUPPORTED_EXT = new Set([
   "xml", "svg", "csv", "yaml", "yml", "log", "diff", "patch",
 ]);
 
-const MAX_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_FILE_BYTES = 100 * 1024 * 1024;
+const BLOCKED_UPLOAD_EXT = new Set([
+  "exe", "bat", "cmd", "com", "scr", "msi", "sh", "ps1", "psm1",
+  "jar", "war", "dll", "so", "dylib", "sys", "drv", "ocx",
+  "vbs", "vba", "vb", "wsf", "wsh", "hta", "cpl",
+  "apk", "deb", "rpm", "dmg", "pkg",
+]);
 const MAX_PREVIEW_CHARS = 2000;
 const MAX_SOURCE_CHARS = 30_000;
 const MAX_COMBINED_CHARS = 40_000;
@@ -116,6 +122,7 @@ export interface ProcessRequestFile {
 }
 
 export interface ProcessActions {
+  targetFolderId?: string | null;
   createFolder: boolean;
   folderName?: string | null;
   createStructure: boolean;
@@ -204,7 +211,7 @@ export async function stageFiles(userId: string, files: File[]): Promise<StagedF
       throw new LlmError(413, `${file.name} is too large (max ${MAX_FILE_BYTES / 1024 / 1024} MB).`);
     }
     const ext = extOf(file.name);
-    if (ext && !SUPPORTED_EXT.has(ext)) {
+    if (ext && BLOCKED_UPLOAD_EXT.has(ext)) {
       throw new LlmError(415, `${file.name} has unsupported type ".${ext}".`);
     }
     const buf = Buffer.from(await file.arrayBuffer());
@@ -361,15 +368,20 @@ export async function processUploads(
   }
 
   // Decide base folder.
-  let baseFolderId: string | null = null;
+  let baseFolderId = actions.targetFolderId ?? null;
+  if (baseFolderId) {
+    const targetFolder = await prisma.vFolder.findFirst({ where: { id: baseFolderId, userId }, select: { id: true } });
+    if (!targetFolder) throw new LlmError(404, "Target folder not found.");
+  }
   const createdFolders: { id: string; name: string; parentId: string | null }[] = [];
   if (actions.createFolder) {
     const folderName = (actions.folderName || "New study materials").trim().slice(0, 64);
+    const parentId = baseFolderId;
     const folder = await prisma.vFolder.create({
-      data: { name: folderName, parentId: null, userId },
+      data: { name: folderName, parentId, userId },
     });
     baseFolderId = folder.id;
-    createdFolders.push({ id: folder.id, name: folder.name, parentId: null });
+    createdFolders.push({ id: folder.id, name: folder.name, parentId });
   }
 
   // Save all staged files to permanent VFile records.
@@ -516,7 +528,7 @@ export async function processUploads(
   }
 
   let workspaceResult: { id: string; name: string; sourceIds: string[] } | null = null;
-  if (actions.workspace !== null && sources.length > 0) {
+  if (actions.workspace && sources.length > 0) {
     const defaultName = actions.createFolder && actions.folderName
       ? actions.folderName
       : `Study materials (${new Date().toLocaleDateString()})`;

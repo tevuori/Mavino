@@ -65,6 +65,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [renaming, setRenaming] = useState<{ type: "file" | "folder"; id: string; value: string } | null>(null);
   const [intelligentStaged, setIntelligentStaged] = useState<IntelligentUploadFile[] | null>(null);
+  const [intelligentTargetFolder, setIntelligentTargetFolder] = useState<string | null>(null);
   const [fileLinkSignal, setFileLinkSignal] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -423,6 +424,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       setUploading(true);
       try {
         const { staged } = await stageUploads(files);
+        setIntelligentTargetFolder(folderId === undefined ? currentFolder : folderId);
         setIntelligentStaged(staged);
       } catch (err) {
         console.error(err);
@@ -1385,6 +1387,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
       {intelligentStaged && (
         <IntelligentUploadDialog
           staged={intelligentStaged}
+          targetFolderId={intelligentTargetFolder}
           onClose={() => setIntelligentStaged(null)}
           onResult={handleIntelligentResult}
         />
