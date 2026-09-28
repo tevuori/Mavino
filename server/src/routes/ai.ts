@@ -44,6 +44,32 @@ function decryptSafe(enc: string): string | null {
   }
 }
 
+export interface ClearCredentialDeps {
+  prisma: {
+    aiCredential: {
+      delete(args: { where: { userId: string } }): Promise<unknown>;
+    };
+  };
+  llmRateLimiter: {
+    reset(userId: string): void;
+  };
+}
+
+/** Remove the user's stored AiCredential row and reset per-user rate-limit state.
+ *  Used when the user explicitly switches to hosted AI or downgrades to a minor age band.
+ */
+export async function clearUserAiCredential(
+  userId: string,
+  deps: ClearCredentialDeps = { prisma, llmRateLimiter }
+): Promise<void> {
+  try {
+    await deps.prisma.aiCredential.delete({ where: { userId } });
+  } catch {
+    // already absent — safe to ignore
+  }
+  deps.llmRateLimiter.reset(userId);
+}
+
 /** GET /api/ai/key — reports whether a key is set (never returns the secret). */
 ai.get("/key", async (c) => {
   const { userId } = c.get("auth");
@@ -72,7 +98,10 @@ ai.get("/key", async (c) => {
     hasFallback: Boolean(cred?.fallbackApiKeyEnc),
     fallbackProvider: cred?.fallbackProvider ?? "",
     fallbackBaseUrl: cred?.fallbackBaseUrl ?? "",
-    fallbackModelId: normalizeModelId(cred?.fallbackProvider ?? "openai", cred?.fallbackModelId ?? ""),
+    fallbackModelId: normalizeModelId(
+      cred?.fallbackProvider ?? "openai",
+      cred?.fallbackModelId ?? ""
+    ),
     rateLimitUsage: stats,
     // Global mode info
     llmMode: globalConfig.mode,
@@ -87,21 +116,33 @@ ai.get("/key", async (c) => {
   });
 });
 
-const eligibilitySchema = z.object({
-  ageBand: z.enum(["AGE_13_17", "AGE_18_PLUS"]),
-  guardianEmail: z.string().email().max(320).optional(),
-  acceptTerms: z.literal(true),
-  acceptPrivacy: z.literal(true),
-}).superRefine((value, ctx) => {
-  if (value.ageBand === "AGE_13_17" && !value.guardianEmail) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["guardianEmail"], message: "Guardian email is required." });
-  }
-});
+const eligibilitySchema = z
+  .object({
+    ageBand: z.enum(["AGE_13_17", "AGE_18_PLUS"]),
+    guardianEmail: z.string().email().max(320).optional(),
+    acceptTerms: z.literal(true),
+    acceptPrivacy: z.literal(true),
+  })
+  .superRefine((value, ctx) => {
+    if (value.ageBand === "AGE_13_17" && !value.guardianEmail) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["guardianEmail"],
+        message: "Guardian email is required.",
+      });
+    }
+  });
 
 ai.put("/eligibility", zValidator("json", eligibilitySchema), async (c) => {
   const { userId } = c.get("auth");
   const { ageBand, guardianEmail } = c.req.valid("json");
   const now = new Date();
+
+  // Minors are not allowed to use personal providers; clear any stored BYOK data.
+  if (ageBand === "AGE_13_17") {
+    await clearUserAiCredential(userId);
+  }
+
   await prisma.user.update({
     where: { id: userId },
     data: {
@@ -121,7 +162,10 @@ ai.post("/openrouter/start", async (c) => {
   const { userId } = c.get("auth");
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { ageBand: true } });
   if (user?.ageBand !== "AGE_18_PLUS") {
-    return c.json({ error: "OpenRouter connections are available only to users aged 18 or older." }, 403);
+    return c.json(
+      { error: "OpenRouter connections are available only to users aged 18 or older." },
+      403
+    );
   }
   return c.json({ url: await createOpenRouterAuthorization(userId) });
 });
@@ -134,7 +178,10 @@ ai.put("/source", zValidator("json", sourceSchema), async (c) => {
   if (source === "byok") {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { ageBand: true } });
     if (user?.ageBand !== "AGE_18_PLUS") {
-      return c.json({ error: "Personal providers are available only to users aged 18 or older." }, 403);
+      return c.json(
+        { error: "Personal providers are available only to users aged 18 or older." },
+        403
+      );
     }
     const credential = await prisma.aiCredential.findUnique({ where: { userId } });
     if (!credential || credential.status !== "active") {
@@ -145,6 +192,8 @@ ai.put("/source", zValidator("json", sourceSchema), async (c) => {
     if (!config.hasKey && !process.env.OPENAI_API_KEY) {
       return c.json({ error: "Mavino-hosted AI is not configured." }, 503);
     }
+    // Switching to hosted AI drops any stored BYOK credentials/fallback/rate-limit settings.
+    await clearUserAiCredential(userId);
   }
   await prisma.user.update({ where: { id: userId }, data: { aiSource: source } });
   return c.json({ ok: true, source });
@@ -156,7 +205,10 @@ ai.put("/key", zValidator("json", keySchema), async (c) => {
   const body = c.req.valid("json");
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { ageBand: true } });
   if (user?.ageBand === "AGE_13_17") {
-    return c.json({ error: "Personal AI providers are available only to users aged 18 or older." }, 403);
+    return c.json(
+      { error: "Personal AI providers are available only to users aged 18 or older." },
+      403
+    );
   }
   const enc = encryptSecret(body.apiKey.trim());
   const provider = body.provider?.trim() || "openai";
@@ -174,13 +226,11 @@ ai.put("/key", zValidator("json", keySchema), async (c) => {
 /** DELETE /api/ai/key — remove the user's stored key. */
 ai.delete("/key", async (c) => {
   const { userId } = c.get("auth");
-  try {
-    await prisma.aiCredential.delete({ where: { userId } });
-  } catch {
-    // already absent
-  }
-  await prisma.user.updateMany({ where: { id: userId, aiSource: "byok" }, data: { aiSource: "choice_required" } });
-  llmRateLimiter.reset(userId);
+  await clearUserAiCredential(userId);
+  await prisma.user.updateMany({
+    where: { id: userId, aiSource: "byok" },
+    data: { aiSource: "choice_required" },
+  });
   return c.json({ ok: true });
 });
 
@@ -222,7 +272,8 @@ ai.put("/fallback", zValidator("json", fallbackSchema), async (c) => {
     data.fallbackBaseUrl = body.fallbackBaseUrl.trim() || null;
   }
   if (body.fallbackModelId !== undefined) {
-    const fallbackProvider = (data.fallbackProvider as string | null | undefined) ?? cred?.fallbackProvider ?? "openai";
+    const fallbackProvider =
+      (data.fallbackProvider as string | null | undefined) ?? cred?.fallbackProvider ?? "openai";
     const rawFallbackModelId = body.fallbackModelId.trim() || null;
     data.fallbackModelId = rawFallbackModelId
       ? normalizeModelId(fallbackProvider, rawFallbackModelId)
