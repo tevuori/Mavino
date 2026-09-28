@@ -91,6 +91,22 @@ function sha256(buffer: Uint8Array): string {
   return hash.digest("hex");
 }
 
+/** pdfjs occasionally spins forever on pathological PDFs — bound every call. */
+const PDF_OP_TIMEOUT_MS = 45_000;
+
+function withPdfTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${PDF_OP_TIMEOUT_MS / 1000}s`)),
+      PDF_OP_TIMEOUT_MS
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 /**
  * Extract embedded raster images from a PDF buffer using the existing
  * pdf-parse dependency. Returns images sorted by descending area, with
@@ -106,11 +122,14 @@ export async function extractPdfImages(
 
   let imageResult;
   try {
-    imageResult = await parser.getImage({
-      imageThreshold: minDimension,
-      imageDataUrl: true,
-      imageBuffer: true,
-    });
+    imageResult = await withPdfTimeout(
+      parser.getImage({
+        imageThreshold: minDimension,
+        imageDataUrl: true,
+        imageBuffer: true,
+      }),
+      "PDF image extraction"
+    );
   } finally {
     await parser.destroy();
   }
@@ -171,11 +190,14 @@ export async function renderPdfPages(
   const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
-    const result = await parser.getScreenshot({
-      desiredWidth,
-      imageDataUrl: false,
-      imageBuffer: true,
-    });
+    const result = await withPdfTimeout(
+      parser.getScreenshot({
+        desiredWidth,
+        imageDataUrl: false,
+        imageBuffer: true,
+      }),
+      "PDF page rendering"
+    );
     return result.pages.map((page) => ({
       pageNumber: page.pageNumber,
       width: page.width,
@@ -207,7 +229,10 @@ export async function saveExtractedImages(
     throw new Error(quota.message);
   }
 
-  const baseSafe = path.basename(sourceName).replace(/\.pdf$/i, "").replace(/[^\w.\- ]+/g, "_");
+  const baseSafe = path
+    .basename(sourceName)
+    .replace(/\.pdf$/i, "")
+    .replace(/[^\w.\- ]+/g, "_");
   const dir = path.join(UPLOAD_DIR, userId);
   await mkdir(dir, { recursive: true });
 
@@ -242,4 +267,3 @@ export async function saveExtractedImages(
 
   return saved;
 }
-
