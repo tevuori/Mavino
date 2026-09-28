@@ -54,57 +54,29 @@ function authHeaders(token: string): Record<string, string> {
   return h;
 }
 
-/**
- * Sanitize a value for use as an HTTP header. Bun's `fetch` (and the HTTP spec)
- * require header values to be Latin-1 (ISO-8859-1) encodable — any code point
- * outside 0x00–0xFF throws `Header '<name>' has invalid value: '<value>'`
- * before the request is even sent. ntfy titles/tags frequently contain emoji
- * or other Unicode (e.g. "📞 Call Szurmanova"), which would permanently brick
- * the publish and, for one-shot reminders, loop forever. We strip non-Latin-1
- * characters and trim whitespace so the header is always sendable.
- */
-function sanitizeHeader(value: string): string {
-  let out = "";
-  for (const ch of value) {
-    const cp = ch.codePointAt(0) ?? 0;
-    if (cp <= 0xff) out += ch;
-  }
-  return out.trim();
-}
-
 /** Publish a message to a topic. Throws on non-2xx. */
 export async function publish(
   cfg: NtfyUsableConfig,
   opts: NtfyPublishOptions
 ): Promise<void> {
-  const url = `${cfg.serverUrl}/${encodeURIComponent(opts.topic)}`;
-  const headers: Record<string, string> = {
-    ...authHeaders(cfg.token),
+  const priority = opts.priority ?? cfg.defaultPriority;
+  const payload: Record<string, string | number | boolean> = {
+    topic: opts.topic,
+    message: opts.body,
+    markdown: opts.markdown !== false,
   };
-  if (opts.title) {
-    const t = sanitizeHeader(opts.title);
-    if (t) headers["Title"] = t;
-  }
-  const prio = opts.priority ?? cfg.defaultPriority;
-  if (prio) headers["Priority"] = String(prio);
-  if (opts.tags) {
-    const tg = sanitizeHeader(opts.tags);
-    if (tg) headers["Tags"] = tg;
-  }
-  if (opts.clickUrl) {
-    const c = sanitizeHeader(opts.clickUrl);
-    if (c) headers["Click"] = c;
-  }
-  // Enable Markdown rendering by default — ntfy otherwise shows raw **bold**,
-  // # headings, etc. as literal text. Plain-text bodies are unaffected.
-  if (opts.markdown !== false) {
-    headers["Markdown"] = "yes";
-  }
+  if (opts.title) payload.title = opts.title;
+  if (priority) payload.priority = priority;
+  if (opts.tags) payload.tags = opts.tags;
+  if (opts.clickUrl) payload.click = opts.clickUrl;
 
-  const res = await fetch(url, {
+  const res = await fetch(cfg.serverUrl, {
     method: "POST",
-    headers,
-    body: opts.body,
+    headers: {
+      ...authHeaders(cfg.token),
+      "Content-Type": "application/json; charset=utf-8",
+    },
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
