@@ -8,7 +8,16 @@ import { useWindows, type AppId } from "../store/windows";
 
 export default function SystemTray() {
   const { volume, setVolume, doNotDisturb, setDoNotDisturb, notificationsEnabled } = useSettings();
-  const { persistent, ephemeral, unreadCount, markRead, markEphemeralRead, dismiss, dismissEphemeral, markAllRead } = useNotifications();
+  const {
+    persistent,
+    ephemeral,
+    unreadCount,
+    markRead,
+    markEphemeralRead,
+    dismiss,
+    dismissEphemeral,
+    markAllRead,
+  } = useNotifications();
   const { open: openWindow } = useWindows();
   const [now, setNow] = useState(new Date());
   const [showVolume, setShowVolume] = useState(false);
@@ -53,6 +62,7 @@ export default function SystemTray() {
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const handleClick = (item: (typeof allItems)[number]) => {
+    setShowNotifs(false);
     if (item.kind === "persistent") {
       markRead(item.id);
       // Open the linked app if specified.
@@ -92,10 +102,16 @@ export default function SystemTray() {
       >
         {volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
       </button>
-      <div className="hidden h-7 w-7 items-center justify-center text-ink-muted sm:flex" title="Network">
+      <div
+        className="hidden h-7 w-7 items-center justify-center text-ink-muted sm:flex"
+        title="Network"
+      >
         <Wifi size={15} />
       </div>
-      <div className="hidden h-7 w-7 items-center justify-center text-ink-muted sm:flex" title="Battery">
+      <div
+        className="hidden h-7 w-7 items-center justify-center text-ink-muted sm:flex"
+        title="Battery"
+      >
         <BatteryFull size={15} />
       </div>
 
@@ -171,7 +187,10 @@ export default function SystemTray() {
                   >
                     <CheckCheck size={11} /> Mark all read
                   </button>
-                  <button onClick={() => setShowNotifs(false)} className="text-ink-muted hover:text-ink">
+                  <button
+                    onClick={() => setShowNotifs(false)}
+                    className="text-ink-muted hover:text-ink"
+                  >
                     <X size={12} />
                   </button>
                 </div>
@@ -182,7 +201,10 @@ export default function SystemTray() {
                 <p className="py-6 text-center text-xs text-ink-muted">No notifications</p>
               ) : (
                 allItems.map((n) => {
-                  const Icon = (Lucide as unknown as Record<string, React.ComponentType<{ size?: number }>>)[n.icon] ?? Bell;
+                  const Icon =
+                    (Lucide as unknown as Record<string, React.ComponentType<{ size?: number }>>)[
+                      n.icon
+                    ] ?? Bell;
                   return (
                     <div
                       key={n.id}
@@ -196,7 +218,9 @@ export default function SystemTray() {
                           <Icon size={14} />
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-medium text-ink">{n.title}</p>
-                            {n.body && <p className="mt-0.5 text-[11px] text-ink-muted">{n.body}</p>}
+                            {n.body && (
+                              <p className="mt-0.5 text-[11px] text-ink-muted">{n.body}</p>
+                            )}
                             <p className="mt-1 text-[10px] text-ink-muted/70">{n.app}</p>
                           </div>
                         </div>
@@ -258,10 +282,10 @@ function Popover({
     const keyHandler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    document.addEventListener("pointerdown", handler);
+    document.addEventListener("pointerdown", handler, true);
     document.addEventListener("keydown", keyHandler);
     return () => {
-      document.removeEventListener("pointerdown", handler);
+      document.removeEventListener("pointerdown", handler, true);
       document.removeEventListener("keydown", keyHandler);
     };
   }, [onClose]);
@@ -321,8 +345,8 @@ function MiniCalendar({ date }: { date: Date }) {
               d === today
                 ? "bg-accent font-semibold text-accent-fg"
                 : d
-                ? "text-ink hover:bg-surface-3"
-                : ""
+                  ? "text-ink hover:bg-surface-3"
+                  : ""
             }`}
           >
             {d ?? ""}
