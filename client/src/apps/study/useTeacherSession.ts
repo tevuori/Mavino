@@ -329,7 +329,11 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     setTeachState(next);
     if (!sessionId) return;
     try {
-      await teacherApi.patch(sessionId, { state: next });
+      // Always send the LIVE source history — teachState only captures the
+      // snapshot from when the session loaded, so shipping it would let a
+      // mid-session settings PATCH clobber newer persisted entries (the
+      // server's merge lets incoming.sourceHistory win outright).
+      await teacherApi.patch(sessionId, { state: { ...next, sourceHistory: sourceHistoryRef.current } });
     } catch {
       // Non-fatal: the next turn sends the state along anyway.
     }

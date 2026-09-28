@@ -26,7 +26,7 @@ export interface TeacherSourceHistoryEntry {
   lastPage?: number;
   lastSlide?: number;
   /** App used to render this source in the source pane (so it can be restored on re-enter). */
-  appId?: "notes" | "editor" | "viewer" | "browser";
+  appId?: "notes" | "editor" | "viewer" | "browser" | "paste";
   /** Payload the pane needs to reopen this source (noteId / fileId / url). */
   openPayload?: Record<string, unknown>;
 }

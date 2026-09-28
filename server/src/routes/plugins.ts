@@ -48,6 +48,16 @@ plugins.get("/", marketplaceGate, async (c) => {
   return c.json({ plugins: catalog });
 });
 
+// ----- installed plugins (for the client registry) -----
+// Registered before /:pluginKey so "installed" isn't treated as a plugin key.
+
+/** GET /api/plugins/installed — the current user's installed+enabled plugins. */
+plugins.get("/installed", marketplaceGate, async (c) => {
+  const { userId } = c.get("auth");
+  const installed = await getInstalledPlugins(userId);
+  return c.json({ plugins: installed });
+});
+
 /** GET /api/plugins/:pluginKey — single plugin detail. */
 plugins.get("/:pluginKey", marketplaceGate, async (c) => {
   const { userId } = c.get("auth");
@@ -55,15 +65,6 @@ plugins.get("/:pluginKey", marketplaceGate, async (c) => {
   const detail = await getPublishedPlugin(pluginKey, userId);
   if (!detail) return c.json({ error: "Plugin not found" }, 404);
   return c.json(detail);
-});
-
-// ----- installed plugins (for the client registry) -----
-
-/** GET /api/plugins/installed — the current user's installed+enabled plugins. */
-plugins.get("/installed", marketplaceGate, async (c) => {
-  const { userId } = c.get("auth");
-  const installed = await getInstalledPlugins(userId);
-  return c.json({ plugins: installed });
 });
 
 // ----- install / uninstall / toggle -----

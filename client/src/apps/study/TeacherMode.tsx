@@ -88,6 +88,8 @@ function inferSourceApp(kind: string, refId: string, name = ""): { appId: PaneSo
     }
     case "url":
       return { appId: "browser", openPayload: { url: refId } };
+    case "paste":
+      return { appId: "paste", openPayload: {} };
     default:
       return { appId: "viewer", openPayload: {} };
   }

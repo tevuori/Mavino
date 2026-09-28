@@ -59,9 +59,10 @@ function isImageFile(mime: string): boolean {
 function appForSource(
   kind: SourceKind,
   file?: { name: string; mimeType: string } | null
-): "notes" | "editor" | "viewer" | "browser" {
+): "notes" | "editor" | "viewer" | "browser" | "paste" {
   if (kind === "note") return "notes";
   if (kind === "url" ) return "browser";
+  if (kind === "paste") return "paste";
   if (kind === "file" && file) {
     if (isTextFile(file.name, file.mimeType)) return "editor";
     if (isPdfFile(file.name, file.mimeType) || isPptxFile(file.name, file.mimeType) || isImageFile(file.mimeType)) return "viewer";
@@ -74,11 +75,15 @@ function appForSource(
 function payloadForSource(
   kind: SourceKind,
   refId: string,
-  file?: { name: string; mimeType: string } | null
+  file?: { name: string; mimeType: string } | null,
+  textCache?: string
 ): Record<string, unknown> {
   if (kind === "note") return { noteId: refId };
   if (kind === "file") return { fileId: refId };
   if (kind === "url" ) return { url: refId };
+  // Paste sources have no backing entity — the client pane renders the cached
+  // text directly from this payload (with a studySourcesApi fallback).
+  if (kind === "paste") return { text: textCache ?? "" };
   return {};
 }
 
@@ -102,7 +107,7 @@ export const teacherTools: ToolDef[] = [
     clientAction: true,
     parameters: [
       { name: "sourceId", type: "string", description: "StudySource id from the session source list" },
-      { name: "kind", type: "string", description: "Source kind (use if no sourceId)", enum: ["note", "file", "url"] },
+      { name: "kind", type: "string", description: "Source kind (use if no sourceId)", enum: ["note", "file", "url", "paste"] },
       { name: "refId", type: "string", description: "Note id, file id, or URL (use if no sourceId)" },
       { name: "highlightText", type: "string", description: "Text to scroll to and highlight (first occurrence)" },
       { name: "highlightLine", type: "number", description: "1-based line number to scroll to / start of line-range highlight" },
@@ -148,6 +153,17 @@ export const teacherTools: ToolDef[] = [
         refId = String(args.refId ?? "");
         if (!refId) return { error: "refId is required when sourceId is not given." };
       }
+      // Paste sources can't be re-resolved (the text only lives in the
+      // StudySource row's textCache) — look it up for the name + payload text.
+      let pasteRow: { name: string; textCache: string } | null = null;
+      if (kind === "paste") {
+        pasteRow = await prisma.studySource.findFirst({
+          where: { userId, kind: "paste", refId },
+          select: { name: true, textCache: true },
+        });
+        if (!name && pasteRow) name = pasteRow.name;
+      }
+
       // Resolve to get a display name + verify access (for kind+refId path).
       if (!name) {
         try {
@@ -163,7 +179,7 @@ export const teacherTools: ToolDef[] = [
       }
 
       const appId = appForSource(kind, file);
-      const openPayload = payloadForSource(kind, refId, file);
+      const openPayload = payloadForSource(kind, refId, file, pasteRow?.textCache);
       // The client uses sourceRef (or name as fallback) as the window id for
       // this source. Echo it back so the LLM can target highlight_source /
       // focus_source / close_source at the correct window in the same turn.

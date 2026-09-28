@@ -17,6 +17,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { BookOpen, Loader2, X, AlertTriangle, ExternalLink } from "lucide-react";
 import { notesApi } from "../../services/notes";
 import { filesApi, isPdfFile, isPptxFile, isImageFile } from "../../services/files";
+import { studySourcesApi } from "../../services/study-sources";
 import { browserApi } from "../../services/browser";
 import { useSettings } from "../../store/settings";
 import { useShowControl, type ShowCommand } from "../../store/showControl";
@@ -25,13 +26,14 @@ import { languageForFile } from "../editor/languages";
 import { PptxViewer } from "../shared/PptxViewer";
 import { PdfJsViewer } from "../shared/PdfJsViewer";
 import { positiveInteger } from "./sourceNavigation";
+import { findHighlightRange } from "./highlightRange";
 
 /** The source currently shown in the pane. */
 export interface PaneSource {
   /** Per-source window id (matches the sourceHistory entry) so the LLM can
    *  target focus_source / close_source at a specific source. */
   windowId: string;
-  appId: "notes" | "editor" | "viewer" | "browser";
+  appId: "notes" | "editor" | "viewer" | "browser" | "paste";
   refId: string;
   name: string;
   kind: string;
@@ -63,6 +65,15 @@ export default function TeachSourcePane({ paneId, source, pending, onPendingAppl
   const isDark = useSettings((s) => s.theme === "dark");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset load state when the pane's source changes. This MUST live here, not
+  // inside SourceContent — SourceContent is only rendered when `error` is
+  // null, so a reset effect inside it can never run once an error is set and
+  // the pane would stay dead forever after the first failed source.
+  useEffect(() => {
+    setError(null);
+    setLoading(Boolean(source));
+  }, [source?.refId, source?.appId, source]);
 
   return (
     <div className="flex h-full w-full min-w-0 flex-col border-l border-edge bg-surface-2">
@@ -131,15 +142,12 @@ interface ContentProps {
 }
 
 function SourceContent(props: ContentProps) {
-  const { source, pending, onPendingApplied, onLoadingChange, onError } = props;
+  const { source } = props;
   const { appId } = source;
 
-  // Reset state when the source changes.
-  useEffect(() => {
-    onLoadingChange(true);
-    onError(null);
-  }, [source.refId, source.appId, onLoadingChange, onError]);
-
+  if (appId === "paste" || source.kind === "paste") {
+    return <PastePane {...props} />;
+  }
   if (appId === "notes" || appId === "editor") {
     return <CodemirrorPane {...props} />;
   }
@@ -150,6 +158,99 @@ function SourceContent(props: ContentProps) {
     return <BrowserPane {...props} />;
   }
   return null;
+}
+
+// ----- paste sources: cached plain text + offset/text highlight -----
+// Paste sources have no backing note/file — the text comes from the
+// StudySource textCache (carried in openPayload by show_source, or fetched
+// here by refId as a fallback for citation clicks).
+
+function PastePane({ paneId, source, pending, onPendingApplied, onLoadingChange, onError }: ContentProps) {
+  const commands = useShowControl((s) => s.commands);
+  const reportResult = useShowControl((s) => s.reportResult);
+  const [text, setText] = useState<string | null>(null);
+  const [range, setRange] = useState<{ from: number; to: number } | null>(null);
+  const lastSeq = useRef(0);
+  const appliedPendingKeyRef = useRef<string | null>(null);
+  const markRef = useRef<HTMLElement>(null);
+
+  // Resolve the paste text: server-provided payload first, library lookup as
+  // fallback (e.g. citation clicks have no payload text).
+  useEffect(() => {
+    let cancelled = false;
+    onLoadingChange(true);
+    setText(null);
+    setRange(null);
+    appliedPendingKeyRef.current = null;
+    const embedded = typeof source.openPayload?.text === "string" ? (source.openPayload.text as string) : undefined;
+    (async () => {
+      try {
+        let resolved = embedded;
+        if (resolved === undefined) {
+          const { sources } = await studySourcesApi.list();
+          const match = sources.find((s) => s.refId === source.refId || s.id === source.refId);
+          if (match) {
+            resolved = match.textCache ?? (await studySourcesApi.get(match.id)).textCache;
+          }
+        }
+        if (cancelled) return;
+        if (resolved === undefined) {
+          onError("Source text is unavailable.");
+        } else {
+          setText(resolved);
+        }
+        onLoadingChange(false);
+      } catch (e) {
+        if (!cancelled) {
+          onError(e instanceof Error ? e.message : "Failed to load source");
+          onLoadingChange(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [source.refId, onLoadingChange, onError]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Apply a pending highlight once the text has loaded.
+  useEffect(() => {
+    if (text === null || !pending) return;
+    const key = JSON.stringify(pending);
+    if (appliedPendingKeyRef.current === key) return;
+    appliedPendingKeyRef.current = key;
+    setRange(findHighlightRange(text, { posStart: pending.posStart, posEnd: pending.posEnd, text: pending.text }));
+    onPendingApplied();
+  }, [text, pending, onPendingApplied]);
+
+  // Live show-control commands (highlight / scroll_to / clear_highlight).
+  const cmd = commands[paneId];
+  useEffect(() => {
+    if (!cmd || cmd.seq === lastSeq.current || text === null) return;
+    lastSeq.current = cmd.seq;
+    if (cmd.kind === "highlight" || cmd.kind === "scroll_to") {
+      const r = findHighlightRange(text, { posStart: cmd.posStart, posEnd: cmd.posEnd, text: cmd.text });
+      setRange(r);
+      reportResult(paneId, cmd.seq, cmd.kind, Boolean(r), r ? undefined : "no-match");
+    } else if (cmd.kind === "clear_highlight") {
+      setRange(null);
+      reportResult(paneId, cmd.seq, cmd.kind, true);
+    }
+  }, [cmd, text, paneId, reportResult]);
+
+  useEffect(() => {
+    markRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [range?.from, range?.to]);
+
+  if (text === null) return null;
+  const shown = range && text;
+  if (!shown) {
+    return <pre className="h-full w-full overflow-y-auto whitespace-pre-wrap break-words p-3 font-sans text-sm leading-6 text-ink">{text}</pre>;
+  }
+  return (
+    <pre className="h-full w-full overflow-y-auto whitespace-pre-wrap break-words p-3 font-sans text-sm leading-6 text-ink">
+      {text.slice(0, range.from)}
+      <mark ref={markRef} className="rounded bg-amber-400/30 text-amber-100">{text.slice(range.from, range.to)}</mark>
+      {text.slice(range.to)}
+    </pre>
+  );
 }
 
 // ----- notes / text files: read-only CodeMirror -----

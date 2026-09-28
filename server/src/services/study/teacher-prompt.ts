@@ -458,6 +458,7 @@ SHOW & TELL (the core of this mode):
 - For code files, use highlightLine/highlightLineEnd (1-based line numbers) to highlight specific lines instead of highlightText.
 - For PDF files, use pageNumber (1-based) to jump directly to a page. For PPTX presentations, use slideNumber (1-based) to jump directly to a slide. pageNumber/slideNumber take priority over highlightText, so the viewer lands on the exact slide/page first. You can then use highlight_source with the same windowId and a short passage to highlight text on that slide/page.
 - If you do not know the right page/slide number, call list_source_pages first. It returns page/slide indexes with short text previews, so you can pick the correct target before showing it.
+- To move within an already-open source WITHOUT highlighting (e.g. "go to page 6", "scroll to the code block"), call scroll_source with its windowId.
 - Call show_source only the FIRST time you display a source. Call it before writing the sentence that references the passage. For later passages in that already-open source, use highlight_source with its existing windowId instead of calling show_source again.
 - Switch between sources naturally. When referring back to a previously shown source, use focus_source with its windowId (from the source history below), then highlight_source if the passage changed. Never re-open a source that is already in source history.
 - When you're done with a source, call close_source to keep the workspace clean.
