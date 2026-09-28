@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import * as Lucide from "lucide-react";
 import { Bell, Volume2, VolumeX, Wifi, BatteryFull, BellOff, CheckCheck, X } from "lucide-react";
@@ -81,7 +81,12 @@ export default function SystemTray() {
     <div className="relative flex items-center gap-1 pl-2">
       {/* Tray widgets */}
       <button
-        onClick={() => setShowVolume((v) => !v)}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          setShowNotifs(false);
+          setShowCalendar(false);
+          setShowVolume((v) => !v);
+        }}
         className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-surface-3 hover:text-ink"
         title="Volume"
       >
@@ -96,7 +101,12 @@ export default function SystemTray() {
 
       {/* Notifications bell */}
       <button
-        onClick={() => setShowNotifs((v) => !v)}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          setShowVolume(false);
+          setShowCalendar(false);
+          setShowNotifs((v) => !v);
+        }}
         className="relative flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-surface-3 hover:text-ink"
         title="Notifications"
       >
@@ -110,7 +120,12 @@ export default function SystemTray() {
 
       {/* Clock */}
       <button
-        onClick={() => setShowCalendar((v) => !v)}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          setShowVolume(false);
+          setShowNotifs(false);
+          setShowCalendar((v) => !v);
+        }}
         className="flex flex-col items-end rounded px-2 py-0.5 text-right leading-tight hover:bg-surface-3"
       >
         <span className="text-xs font-medium text-ink">{time}</span>
@@ -231,19 +246,37 @@ function Popover({
   onClose: () => void;
   className?: string;
 }) {
+  // The taskbar's backdrop-blur creates a containing block for fixed-position
+  // descendants, so a `fixed inset-0` backdrop would only cover the taskbar.
+  // Close on a real document-level outside click instead.
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("pointerdown", handler);
+    document.addEventListener("keydown", keyHandler);
+    return () => {
+      document.removeEventListener("pointerdown", handler);
+      document.removeEventListener("keydown", keyHandler);
+    };
+  }, [onClose]);
+
   return (
-    <>
-      <div className="fixed inset-0 z-[10500]" onClick={onClose} />
-      <motion.div
-        initial={{ y: 8, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 8, opacity: 0 }}
-        transition={{ duration: 0.12 }}
-        className={`absolute z-[10501] rounded-xl border border-edge bg-surface-2 p-3 shadow-window ${className}`}
-      >
-        {children}
-      </motion.div>
-    </>
+    <motion.div
+      ref={ref}
+      initial={{ y: 8, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 8, opacity: 0 }}
+      transition={{ duration: 0.12 }}
+      className={`absolute z-[10501] rounded-xl border border-edge bg-surface-2 p-3 shadow-window ${className}`}
+    >
+      {children}
+    </motion.div>
   );
 }
 
