@@ -343,6 +343,29 @@ export default function HighlightableMarkdown({
     return () => document.removeEventListener("selectionchange", handleSelectionChange);
   }, [enabled, handleSelectionChange]);
 
+  // Close the selection toolbar when the user clicks outside it or presses Escape.
+  useEffect(() => {
+    if (!toolbar) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest("[data-hl-toolbar]")) return;
+      window.getSelection()?.removeAllRanges();
+      dismissToolbar();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        window.getSelection()?.removeAllRanges();
+        dismissToolbar();
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [toolbar, dismissToolbar]);
+
   // ----- create / update / delete -----
 
   const doCreate = useCallback(
@@ -407,6 +430,7 @@ export default function HighlightableMarkdown({
         isPhone ? (
           <div className="fixed inset-0 z-50 flex items-end" onClick={dismissToolbar}>
             <div
+              data-hl-toolbar
               className="w-full rounded-t-xl border border-edge bg-surface p-3 shadow-window"
               onClick={(e) => e.stopPropagation()}
             >
@@ -443,6 +467,7 @@ export default function HighlightableMarkdown({
           </div>
         ) : (
           <div
+            data-hl-toolbar
             className="fixed z-50 flex flex-col gap-1.5 rounded-lg border border-edge bg-surface p-2 shadow-window"
             style={{
               left: Math.min(
@@ -471,6 +496,16 @@ export default function HighlightableMarkdown({
                 title="Add annotation"
               >
                 <MessageSquarePlus size={11} /> Note
+              </button>
+              <button
+                onClick={() => {
+                  window.getSelection()?.removeAllRanges();
+                  dismissToolbar();
+                }}
+                className="ml-1 rounded p-1 text-ink-muted hover:text-ink"
+                title="Close"
+              >
+                <X size={14} />
               </button>
             </div>
             {annotateMode && (
