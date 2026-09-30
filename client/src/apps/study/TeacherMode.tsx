@@ -210,9 +210,16 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     openPayload: args.openPayload,
   }), []);
 
-  /** Switch the pane to a source and apply a highlight once it loads. */
+  /** Switch the pane to a source and apply a highlight once it loads.
+   *  If the target source is already displayed, keep the existing PaneSource
+   *  object so the pane doesn't reset its loading state and re-selected
+   *  citations don't trap the user under a permanent spinner. */
   const switchPane = useCallback((src: PaneSource, highlight: PaneHighlight | null) => {
-    setPaneSource(src);
+    setPaneSource((prev) =>
+      prev && prev.windowId === src.windowId && prev.refId === src.refId && prev.appId === src.appId
+        ? prev
+        : src
+    );
     setPanePending(highlight);
   }, []);
 

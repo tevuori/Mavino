@@ -70,10 +70,20 @@ export default function TeachSourcePane({ paneId, source, pending, onPendingAppl
   // inside SourceContent — SourceContent is only rendered when `error` is
   // null, so a reset effect inside it can never run once an error is set and
   // the pane would stay dead forever after the first failed source.
+  // Guard against object-identity changes: only reset when refId or appId
+  // actually changes, otherwise a re-selected citation on the already-open
+  // source leaves the spinner stuck with no fetch to clear it.
+  const prevRefId = useRef<string | undefined>();
+  const prevAppId = useRef<string | undefined>();
   useEffect(() => {
+    const refId = source?.refId;
+    const appId = source?.appId;
+    if (refId === prevRefId.current && appId === prevAppId.current) return;
+    prevRefId.current = refId;
+    prevAppId.current = appId;
     setError(null);
     setLoading(Boolean(source));
-  }, [source?.refId, source?.appId, source]);
+  }, [source?.refId, source?.appId]);
 
   return (
     <div className="flex h-full w-full min-w-0 flex-col border-l border-edge bg-surface-2">
