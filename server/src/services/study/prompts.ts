@@ -123,9 +123,9 @@ export function quizGeneratePrompt(
     : types.includes("short")
     ? "only short-answer (short) questions"
     : "a mix of multiple-choice (mcq) and short-answer (short) questions";
-  return `Generate ${count} quiz questions from the study material below. Use ${typeInstr}. For mcq questions, provide 4 options and the correct answer (the exact text of the correct option). For short questions, provide the model answer. Each question must have a unique sequential id starting at 1.
+  return `Generate ${count} quiz questions from the study material below. Use ${typeInstr}. For each mcq question, provide 4 substantive answer options and set "answer" to the exact text of the correct option. Do not use placeholder labels like "a", "b", "c", "d" as option text — options must be the real answer choices. Vary the position of the correct option from question to question (do not always make it the first option). For short questions, provide the model answer. Each question must have a unique sequential id starting at 1.
 
-Return JSON: { "questions": [ { "id": 1, "type": "mcq", "prompt": "...", "options": ["a","b","c","d"], "answer": "b" }, { "id": 2, "type": "short", "prompt": "...", "answer": "..." } ] }
+Return JSON: { "questions": [ { "id": 1, "type": "mcq", "prompt": "What is the capital of France?", "options": ["Berlin", "Madrid", "Paris", "Rome"], "answer": "Paris" }, { "id": 2, "type": "short", "prompt": "...", "answer": "..." } ] }
 
 Study material:
 """
@@ -669,9 +669,9 @@ export function quizFromGraphPrompt(
     : types.includes("short")
     ? "only short-answer (short) questions"
     : "a mix of multiple-choice (mcq) and short-answer (short) questions";
-  return `Generate ${count} quiz questions from the knowledge graph below (already extracted from the study material). Use ${typeInstr}. For mcq questions, provide 4 options and the correct answer (exact text of the correct option). For short questions, provide the model answer. Each question needs a unique sequential id starting at 1.
+  return `Generate ${count} quiz questions from the knowledge graph below (already extracted from the study material). Use ${typeInstr}. For each mcq question, provide 4 substantive answer options and set "answer" to the exact text of the correct option. Do not use placeholder labels like "a", "b", "c", "d" as option text — options must be the real answer choices. Vary the position of the correct option from question to question (do not always make it the first option). For short questions, provide the model answer. Each question needs a unique sequential id starting at 1.
 
-Return JSON: { "questions": [ { "id": 1, "type": "mcq", "prompt": "...", "options": ["a","b","c","d"], "answer": "b" }, { "id": 2, "type": "short", "prompt": "...", "answer": "..." } ] }
+Return JSON: { "questions": [ { "id": 1, "type": "mcq", "prompt": "...", "options": ["Berlin", "Madrid", "Paris", "Rome"], "answer": "Paris" }, { "id": 2, "type": "short", "prompt": "...", "answer": "..." } ] }
 
 ${graphBlock(graph)}${langInstr(lang)}`;
 }

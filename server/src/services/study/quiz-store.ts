@@ -26,6 +26,15 @@ export interface StoredQuiz {
   createdAt: number;
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 const store = new Map<string, StoredQuiz>();
 
 // Periodic cleanup of expired entries.
@@ -50,7 +59,11 @@ export function createQuiz(
     sourceName,
     sourceRef,
     sourceText,
-    questions,
+    questions: questions.map((q) =>
+      q.type === "mcq" && q.options && q.options.length > 1
+        ? { ...q, options: shuffle(q.options) }
+        : q
+    ),
     createdAt: Date.now(),
   };
   store.set(id, quiz);
