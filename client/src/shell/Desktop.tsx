@@ -110,7 +110,7 @@ export default function Desktop() {
     >
       {/* Desktop icons — fixed-height cells so 2-line names don't break the grid */}
       <div
-        className="absolute left-3 top-3 grid grid-flow-col grid-rows-[repeat(auto-fill,88px)] gap-1"
+        className="absolute left-3 top-3 grid w-fit grid-flow-col grid-rows-[repeat(auto-fill,88px)] justify-start gap-1"
         style={{ height: "calc(100% - 24px)" }}
       >
         {apps

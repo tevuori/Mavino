@@ -71,6 +71,7 @@ const appNames: Partial<Record<AppId, [string, string]>> = {
   files: ["Files", "Soubory"],
   whiteboard: ["Whiteboard", "Tabule"],
   study: ["Study Hub", "Studijní centrum"],
+  teach: ["Teach Me", "Výuka"],
   athena: ["Mavino", "Mavino"],
   today: ["Today", "Dnes"],
   settings: ["Settings", "Nastavení"],
