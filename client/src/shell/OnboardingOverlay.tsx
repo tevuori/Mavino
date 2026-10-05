@@ -67,7 +67,7 @@ export default function OnboardingOverlay() {
   const [stepIdx, setStepIdx] = useState(0);
   const openWindow = useWindows((s) => s.open);
   const closeWindow = useWindows((s) => s.close);
-  const setHasOnboarded = useSettings((s) => s.setHasOnboarded);
+  const setOnboarded = useSettings((s) => s.setOnboarded);
   const user = useAuth((s) => s.user);
   const updateProfile = useAuth((s) => s.updateProfile);
   // "Student" is the legacy seeded placeholder — start from an empty field.
@@ -151,15 +151,15 @@ export default function OnboardingOverlay() {
       }
       if (isLast) {
         willUnmount = true;
-        setHasOnboarded(true);
+        if (user) setOnboarded(user.id, true);
         return;
       }
       setStepIdx((i) => Math.min(i + 1, STEPS.length - 1));
     } finally {
-      // setHasOnboarded unmounts this overlay, so don't update its state after that.
+      // setOnboarded unmounts this overlay, so don't update its state after that.
       if (!willUnmount) setAdvancing(false);
     }
-  }, [advancing, isLast, saveName, setHasOnboarded, step.id]);
+  }, [advancing, isLast, saveName, setOnboarded, step.id, user]);
 
   const back = useCallback(() => {
     saveName();
@@ -168,8 +168,8 @@ export default function OnboardingOverlay() {
 
   const skip = useCallback(() => {
     saveName();
-    setHasOnboarded(true);
-  }, [saveName, setHasOnboarded]);
+    if (user) setOnboarded(user.id, true);
+  }, [saveName, setOnboarded, user]);
 
   return (
     <AnimatePresence mode="wait">

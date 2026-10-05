@@ -42,8 +42,10 @@ interface SettingsState {
   athenaQuickSize: AthenaQuickSize | null;
   /** Auto-enter Spotify fullscreen chill mode after 10 min of inactivity while music plays. */
   autoChillOnIdle: boolean;
-  /** Whether the user has completed the first-run onboarding tour. */
-  hasOnboarded: boolean;
+  /** IDs of users who completed the first-run onboarding tour on this browser.
+   *  Tracked per account (not globally) so a new account on a shared browser
+   *  still gets the tour. */
+  onboardedUserIds: string[];
   /** User-configurable keyboard shortcuts. */
   shortcuts: Record<ShortcutAction, Shortcut>;
   /** App IDs pinned to the taskbar. */
@@ -58,7 +60,7 @@ interface SettingsState {
   setAthenaRollEdge: (e: AthenaRollEdge) => void;
   setAthenaQuickSize: (s: AthenaQuickSize) => void;
   setAutoChillOnIdle: (b: boolean) => void;
-  setHasOnboarded: (b: boolean) => void;
+  setOnboarded: (userId: string, done: boolean) => void;
   setShortcut: (action: ShortcutAction, shortcut: Shortcut) => void;
   resetShortcuts: () => void;
   setDockFavorites: (favorites: AppId[]) => void;
@@ -77,7 +79,7 @@ interface PersistedSettings {
   athenaRollEdge: AthenaRollEdge;
   athenaQuickSize: AthenaQuickSize | null;
   autoChillOnIdle: boolean;
-  hasOnboarded: boolean;
+  onboardedUserIds: string[];
   shortcuts: Record<ShortcutAction, Shortcut>;
   dockFavorites: AppId[];
 }
@@ -115,7 +117,7 @@ const defaults: PersistedSettings = {
   athenaRollEdge: "bottom",
   athenaQuickSize: null,
   autoChillOnIdle: false,
-  hasOnboarded: false,
+  onboardedUserIds: [],
   shortcuts: { ...DEFAULT_SHORTCUTS },
   dockFavorites: [...DEFAULT_DOCK_FAVORITES] as AppId[],
 };
@@ -128,6 +130,11 @@ if (!loaded.shortcuts || Object.keys(loaded.shortcuts).length === 0) {
 if (!loaded.dockFavorites || loaded.dockFavorites.length === 0) {
   loaded.dockFavorites = [...DEFAULT_DOCK_FAVORITES] as AppId[];
 }
+if (!Array.isArray(loaded.onboardedUserIds)) {
+  loaded.onboardedUserIds = [];
+}
+// Drop the legacy browser-global flag so it stops round-tripping into persist().
+delete (loaded as Partial<Record<string, unknown>>).hasOnboarded;
 
 /** Apply theme + accent to <html> as CSS vars / classes. */
 export function applySettings(s: PersistedSettings) {
@@ -185,9 +192,13 @@ export const useSettings = create<SettingsState>((set, get) => ({
     set({ autoChillOnIdle });
     persist({ ...get(), autoChillOnIdle } as PersistedSettings);
   },
-  setHasOnboarded: (hasOnboarded) => {
-    set({ hasOnboarded });
-    persist({ ...get(), hasOnboarded } as PersistedSettings);
+  setOnboarded: (userId, done) => {
+    const cur = get().onboardedUserIds;
+    const onboardedUserIds = done
+      ? cur.includes(userId) ? cur : [...cur, userId]
+      : cur.filter((id) => id !== userId);
+    set({ onboardedUserIds });
+    persist({ ...get(), onboardedUserIds } as PersistedSettings);
   },
   setShortcut: (action, shortcut) => {
     const shortcuts = { ...get().shortcuts, [action]: shortcut };
@@ -204,3 +215,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persist({ ...get(), dockFavorites } as PersistedSettings);
   },
 }));
+
+/** Whether the given user has completed the first-run onboarding tour on this browser. */
+export function useHasOnboarded(userId: string | undefined): boolean {
+  return useSettings((s) => (userId ? s.onboardedUserIds.includes(userId) : false));
+}

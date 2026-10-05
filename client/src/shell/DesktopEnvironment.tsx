@@ -14,7 +14,7 @@ import AthenaQuickPanel from "./AthenaQuickPanel";
 import OnboardingOverlay from "./OnboardingOverlay";
 import { useWindows } from "../store/windows";
 import { useAthenaQuick } from "../store/athenaQuick";
-import { useSettings } from "../store/settings";
+import { useHasOnboarded } from "../store/settings";
 import { useAuth } from "../store/auth";
 import { useShortcut } from "../store/shortcuts";
 import { useEffect, useState } from "react";
@@ -24,16 +24,15 @@ export default function DesktopEnvironment() {
   const switchRelative = useWindows((s) => s.switchRelative);
   const moveFocusedRelative = useWindows((s) => s.moveFocusedRelative);
   const toggleAthenaQuick = useAthenaQuick((s) => s.toggle);
-  const hasOnboarded = useSettings((s) => s.hasOnboarded);
-  const setHasOnboarded = useSettings((s) => s.setHasOnboarded);
   const { user, logout } = useAuth();
+  const hasOnboarded = useHasOnboarded(user?.id);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const isDemo = user?.role === "DEMO";
 
-  // Demo bootstrap: skip onboarding and auto-open Study Hub once after login.
+  // Demo bootstrap: skip onboarding (demo users never see it) and auto-open
+  // Study Hub once after login.
   useEffect(() => {
     if (!isDemo) return;
-    setHasOnboarded(true);
     if (sessionStorage.getItem("demo-just-logged-in") === "1") {
       sessionStorage.removeItem("demo-just-logged-in");
       open({
@@ -43,7 +42,7 @@ export default function DesktopEnvironment() {
         payload: { mode: "home" },
       });
     }
-  }, [isDemo, setHasOnboarded, open]);
+  }, [isDemo, open]);
 
   // Configurable keyboard shortcuts (via useShortcut hook)
   useShortcut("toggleAthenaQuickPanel", () => toggleAthenaQuick());

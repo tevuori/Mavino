@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Info, RefreshCw, Loader2, Heart, Sparkles, DownloadCloud, CheckCircle2, Server, Save } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useSettings } from "../../../store/settings";
+import { useAuth } from "../../../store/auth";
 import { SectionHeader, Card, StatusPill } from "../ui";
 import { confirmDialog } from "../../../store/mobileDialog";
 import { isAutoUpdateAvailable, checkForUpdate, getInstalledVersion } from "../../../services/updater";
@@ -15,8 +16,9 @@ interface HealthInfo {
 }
 
 export default function AboutSection() {
-  const { setTheme, setAccent, setWallpaper, setAnimatedBg, setVolume, setNotificationsEnabled, setDoNotDisturb, setHasOnboarded } =
+  const { setTheme, setAccent, setWallpaper, setAnimatedBg, setVolume, setNotificationsEnabled, setDoNotDisturb, setOnboarded } =
     useSettings();
+  const user = useAuth((s) => s.user);
   const promptUpdate = useUpdater((s) => s.promptUpdate);
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [resetting, setResetting] = useState(false);
@@ -186,7 +188,7 @@ export default function AboutSection() {
           New to Mavino? Replay the guided tour to learn about all the apps and features.
         </p>
         <button
-          onClick={() => setHasOnboarded(false)}
+          onClick={() => { if (user) setOnboarded(user.id, false); }}
           className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink hover:bg-surface-3"
         >
           <Sparkles size={14} /> Replay tour

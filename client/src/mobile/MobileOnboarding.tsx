@@ -16,7 +16,7 @@ const TOTAL_STEPS = 6;
 export default function MobileOnboarding() {
   const [step, setStep] = useState(0);
   const { user, updateProfile } = useAuth();
-  const setHasOnboarded = useSettings((s) => s.setHasOnboarded);
+  const setOnboarded = useSettings((s) => s.setOnboarded);
 
   const currentName = user?.displayName ?? "";
   const [name, setName] = useState(
@@ -69,14 +69,14 @@ export default function MobileOnboarding() {
       // Persist name when leaving the name step
       if (step === 1) saveName();
       if (step >= TOTAL_STEPS - 1) {
-        setHasOnboarded(true);
+        if (user) setOnboarded(user.id, true);
         return;
       }
       setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
     } finally {
       if (step < TOTAL_STEPS - 1) setAdvancing(false);
     }
-  }, [advancing, step, saveName, setHasOnboarded]);
+  }, [advancing, step, saveName, setOnboarded, user]);
 
   const back = useCallback(() => {
     if (step === 1) saveName();
@@ -85,8 +85,8 @@ export default function MobileOnboarding() {
 
   const skip = useCallback(() => {
     saveName();
-    setHasOnboarded(true);
-  }, [saveName, setHasOnboarded]);
+    if (user) setOnboarded(user.id, true);
+  }, [saveName, setOnboarded, user]);
 
   return (
     <div className="fixed inset-0 z-[18000] flex flex-col bg-surface">

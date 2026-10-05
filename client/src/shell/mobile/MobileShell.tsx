@@ -9,7 +9,7 @@ import MobileToolPage, { type MobileToolPayload } from "../../mobile/MobileToolP
 import MobileOnboarding from "../../mobile/MobileOnboarding";
 import { MobileDialogRenderer, MobileToastRenderer } from "../../mobile/MobileUi";
 import { useAuth } from "../../store/auth";
-import { useSettings } from "../../store/settings";
+import { useHasOnboarded } from "../../store/settings";
 import AppLogo from "../AppLogo";
 
 export type MobileRoute = "home" | "tasks" | "calendar" | "athena" | "more";
@@ -28,20 +28,19 @@ export default function MobileShell() {
   const [tool, setTool] = useState<MobileTool | null>(null);
   const [toolPayload, setToolPayload] = useState<MobileToolPayload | null>(null);
   const { user, logout } = useAuth();
-  const hasOnboarded = useSettings((s) => s.hasOnboarded);
-  const setHasOnboarded = useSettings((s) => s.setHasOnboarded);
+  const hasOnboarded = useHasOnboarded(user?.id);
   const isDemo = user?.role === "DEMO";
 
-  // Demo bootstrap: skip onboarding and auto-open Study tool once after login.
+  // Demo bootstrap: skip onboarding (demo users never see it) and auto-open
+  // Study tool once after login.
   useEffect(() => {
     if (!isDemo) return;
-    setHasOnboarded(true);
     if (sessionStorage.getItem("demo-just-logged-in") === "1") {
       sessionStorage.removeItem("demo-just-logged-in");
       setRoute("home");
       setTool("study");
     }
-  }, [isDemo, setHasOnboarded, setRoute, setTool]);
+  }, [isDemo, setRoute, setTool]);
 
   // Switching to any primary tab (or the More launcher) closes an open tool
   // so the tool page is replaced by the destination, not stacked under it.
