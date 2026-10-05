@@ -12,6 +12,7 @@ import { studyHighlightsApi, type HighlightColor, type HighlightScope } from "..
 import { HIGHLIGHT_COLORS, COLOR_LABEL } from "./highlightUtils";
 import { ActionButton, ErrorBanner, Loading, SuccessBanner } from "./ui";
 import { useWindows } from "../../store/windows";
+import { teachLaunchInput } from "../teach/launch";
 
 const COLOR_SWATCH_BG: Record<HighlightColor, string> = {
   yellow: "#facc15",
@@ -46,7 +47,7 @@ function useReopenHighlight() {
       openWindow({ appId: "study", title: "Study Hub", icon: "GraduationCap", payload: { mode: "chat", chatId } });
     } else if (scope === "teacher") {
       const sessionId = scopeId.split("#")[0];
-      openWindow({ appId: "study", title: "Study Hub", icon: "GraduationCap", payload: { mode: "teach", sessionId } });
+      openWindow(teachLaunchInput(sessionId));
     } else if (scope === "podcast") {
       openWindow({ appId: "study", title: "Study Hub", icon: "GraduationCap", payload: { mode: "podcast", podcastId: scopeId } });
     } else {

@@ -71,8 +71,8 @@ const TOOL_TO_APPS: Record<string, string[]> = {
   delete_study_chat: ["study"],
   generate_podcast: ["study", "notes"],
   delete_podcast: ["study"],
-  start_teacher_session: ["study"],
-  delete_teacher_session: ["study"],
+  start_teacher_session: ["study", "teach"],
+  delete_teacher_session: ["study", "teach"],
   take_notes_from_source: ["notes", "analytics"],
 
   // --- Ntfy ---

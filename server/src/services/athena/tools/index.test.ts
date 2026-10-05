@@ -52,10 +52,15 @@ describe("tool scoping", () => {
     expect(withBrowser.some((t) => t.name === "get_browser_content")).toBe(true);
   });
 
-  it("keeps study-hub session tools scoped to an open Study Hub window", async () => {
+  it("gives Teach Me a deliberate subset of shared study tools", async () => {
     const withStudy = await toolsForAssistant("user-paid", "PAID", [makeWindow("study")]);
+    const withTeach = await toolsForAssistant("user-paid", "PAID", [makeWindow("teach")]);
     expect(withStudy.some((t) => t.name === "start_teacher_session")).toBe(true);
     expect(withStudy.some((t) => t.name === "generate_podcast")).toBe(true);
+    expect(withTeach.some((t) => t.name === "start_teacher_session")).toBe(true);
+    expect(withTeach.some((t) => t.name === "list_study_sources")).toBe(true);
+    expect(withTeach.some((t) => t.name === "generate_podcast")).toBe(false);
+    expect(withTeach.some((t) => t.name === "start_study_chat")).toBe(false);
   });
 
   it("does not expose Teach Me action tools to the main assistant", async () => {

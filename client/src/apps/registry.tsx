@@ -45,6 +45,7 @@ const EditorApp = lazyImport(() => import("./editor/EditorApp"));
 const ViewerApp = lazyImport(() => import("./viewer/ViewerApp"));
 const AthenaApp = lazyImport(() => import("./athena/AthenaApp"));
 const StudyApp = lazyImport(() => import("./study/StudyApp"));
+const TeachApp = lazyImport(() => import("./teach/TeachApp"));
 const TodayApp = lazyImport(() => import("./today/TodayApp"));
 const CalendarApp = lazyImport(() => import("./calendar/CalendarApp"));
 const HabitsApp = lazyImport(() => import("./habits/HabitsApp"));
@@ -126,6 +127,14 @@ export const APPS: AppDefinition[] = [
     name: "Study Hub",
     icon: "GraduationCap",
     component: StudyApp,
+    pinnedToDesktop: true,
+    minTier: "free",
+  },
+  {
+    id: "teach",
+    name: "Teach Me",
+    icon: "Presentation",
+    component: TeachApp,
     pinnedToDesktop: true,
     minTier: "free",
   },

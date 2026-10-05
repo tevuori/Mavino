@@ -13,6 +13,7 @@ import { Loading, ErrorBanner } from "./ui";
 import WorkspaceEditor from "./WorkspaceEditor";
 import { useWindows } from "../../store/windows";
 import { useStudyFunctions, type MinTier } from "./useStudyFunctions";
+import { teachLaunchInput } from "../teach/launch";
 
 interface DeckRow { id: string; name: string; color: string; _count: { cards: number }; }
 
@@ -263,8 +264,11 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
             return (
               <button
                 key={qa.mode}
-                onClick={() => onPickMode(qa.mode)}
-                className={`flex items-center gap-2.5 rounded-lg border p-3 text-left transition ${
+                disabled={!enabled && qa.mode === "teach"}
+                onClick={() => qa.mode === "teach"
+                  ? openWindow(teachLaunchInput())
+                  : onPickMode(qa.mode)}
+                className={`flex items-center gap-2.5 rounded-lg border p-3 text-left transition disabled:cursor-not-allowed ${
                   enabled
                     ? "border-edge bg-surface-2 hover:border-accent/40 hover:bg-surface-3"
                     : "border-edge bg-surface-2/50 hover:bg-surface-3/50"

@@ -20,13 +20,16 @@ const TIER_PRICES: Record<string, string> = {
 
 interface Props {
   fn: StudyFunctionDef;
-  minTier: Exclude<MinTier, null>;
+  minTier: MinTier;
+  /** Override the upgrade CTA (e.g. mobile opens the Plans tool instead of a desktop window). */
+  onUpgrade?: () => void;
 }
 
-export default function StudyFunctionLocked({ fn, minTier }: Props) {
+export default function StudyFunctionLocked({ fn, minTier, onUpgrade }: Props) {
   const { open } = useWindows();
-  const tierLabel = TIER_LABELS[minTier] ?? "Paid";
-  const tierPrice = TIER_PRICES[minTier] ?? "€5/mo";
+  const handleUpgrade = onUpgrade ?? (() => open({ appId: "plans", title: "Plans", icon: "CreditCard" }));
+  const tierLabel = minTier ? TIER_LABELS[minTier] ?? "Paid" : null;
+  const tierPrice = minTier ? TIER_PRICES[minTier] ?? "€5/mo" : null;
 
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-16 text-center">
@@ -40,23 +43,31 @@ export default function StudyFunctionLocked({ fn, minTier }: Props) {
       </div>
 
       <div className="rounded-xl border border-edge bg-surface-2 px-5 py-4">
-        <p className="text-sm text-ink">
-          <span className="font-medium">{fn.label}</span> is available in the{" "}
-          <span className="font-semibold text-accent">{tierLabel}</span> plan ({tierPrice}).
-        </p>
-        <p className="mt-1 text-xs text-ink-muted">
-          Upgrade to unlock this and all other {tierLabel}-tier Study Hub features.
-        </p>
+        {tierLabel ? (
+          <>
+            <p className="text-sm text-ink">
+              <span className="font-medium">{fn.label}</span> is available in the{" "}
+              <span className="font-semibold text-accent">{tierLabel}</span> plan ({tierPrice}).
+            </p>
+            <p className="mt-1 text-xs text-ink-muted">
+              Upgrade to unlock this and all other {tierLabel}-tier Study Hub features.
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-ink">This feature is currently unavailable for all subscription plans.</p>
+        )}
       </div>
 
-      <button
-        onClick={() => open({ appId: "plans", title: "Plans", icon: "CreditCard" })}
-        className="flex items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-fg transition hover:bg-accent/90"
-      >
-        <Sparkles size={16} />
-        Upgrade to {tierLabel}
-        <ArrowRight size={14} />
-      </button>
+      {tierLabel && (
+        <button
+          onClick={handleUpgrade}
+          className="flex items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-fg transition hover:bg-accent/90"
+        >
+          <Sparkles size={16} />
+          Upgrade to {tierLabel}
+          <ArrowRight size={14} />
+        </button>
+      )}
     </div>
   );
 }

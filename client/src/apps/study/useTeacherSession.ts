@@ -27,6 +27,7 @@ import {
   type PaceFeedback,
 } from "../../services/teacher";
 import { studySourcesApi, type StudySource } from "../../services/study-sources";
+import { useDataRefreshVersion } from "../../store/dataRefresh";
 import type { AthenaClientAction, AthenaToolEvent, AthenaWindowState } from "../../services/athena";
 
 /** A comprehension check rendered as a card, with its graded outcome. */
@@ -169,6 +170,16 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
   }, []);
 
   useEffect(() => { void refreshLists(); }, [refreshLists]);
+
+  // Reload the session/source lists when Athena mutates teacher data
+  // (start_teacher_session / delete_teacher_session bump "teach").
+  const refreshVersion = useDataRefreshVersion("teach");
+  const lastRefreshRef = useRef(refreshVersion);
+  useEffect(() => {
+    if (refreshVersion === lastRefreshRef.current) return;
+    lastRefreshRef.current = refreshVersion;
+    void refreshLists();
+  }, [refreshVersion, refreshLists]);
 
   const applySession = useCallback((loaded: TeacherSession) => {
     setSession(loaded);

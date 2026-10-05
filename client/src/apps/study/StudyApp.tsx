@@ -16,7 +16,6 @@ import {
   MessageSquare,
   Mic,
   Languages,
-  Presentation,
   Video,
   Highlighter,
   Network,
@@ -36,7 +35,6 @@ import RecentActivity from "./RecentActivity";
 import StudyHome from "./StudyHome";
 import SourceChat from "./SourceChat";
 import Podcast from "./Podcast";
-import TeacherMode from "./TeacherMode";
 import LectureNotes from "./LectureNotes";
 import Highlights from "./Highlights";
 import KnowledgeGraph from "./KnowledgeGraph";
@@ -45,7 +43,6 @@ import StudyFunctionLocked from "./StudyFunctionLocked";
 type Mode =
   | "home"
   | "chat"
-  | "teach"
   | "podcast"
   | "graph"
   | "lecture"
@@ -61,7 +58,6 @@ type Mode =
 const MODES: { id: Mode; label: string; icon: typeof Brain; desc: string }[] = [
   { id: "home", label: "Home", icon: Home, desc: "Overview & quick actions" },
   { id: "chat", label: "Ask (grounded)", icon: MessageSquare, desc: "Source-grounded Q&A with citations" },
-  { id: "teach", label: "Teach Me", icon: Presentation, desc: "Interactive live tutoring with sources" },
   { id: "podcast", label: "Podcast", icon: Mic, desc: "Audio overview from your sources" },
   { id: "graph", label: "Knowledge Graph", icon: Network, desc: "Concepts & relationships extracted once, reused everywhere" },
   { id: "lecture", label: "Lecture → Notes", icon: Video, desc: "Generate notes from a lecture video" },
@@ -77,7 +73,6 @@ const MODES: { id: Mode; label: string; icon: typeof Brain; desc: string }[] = [
 
 const FUNCTION_MODE_IDS = new Set<Mode>([
   "chat",
-  "teach",
   "podcast",
   "graph",
   "lecture",
@@ -98,11 +93,9 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
   const [lockedMode, setLockedMode] = useState<Mode | null>(null);
   const globalLanguage = useLanguage((state) => state.language);
   const languagePreference = useLanguage((state) => state.overrides.study);
-  const teachPreference = useLanguage((state) => state.overrides.teach);
   const lecturePreference = useLanguage((state) => state.overrides.lecture);
   const setLanguageOverride = useLanguage((state) => state.setOverride);
   const language: StudyLanguage = languagePreference === "global" ? globalLanguage : languagePreference;
-  const teachLanguage: StudyLanguage = teachPreference === "global" ? globalLanguage : teachPreference;
   const lectureLanguage: StudyLanguage = lecturePreference === "global" ? globalLanguage : lecturePreference;
   const [initialSource, setInitialSource] = useState<SourceDescriptor | null>(null);
   const [appendDeck, setAppendDeck] = useState<{ id: string; name: string } | null>(null);
@@ -110,7 +103,6 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
   const [initialChatId, setInitialChatId] = useState<string | null>(null);
   const [initialPodcastId, setInitialPodcastId] = useState<string | null>(null);
   const [initialWorkspaceId, setInitialWorkspaceId] = useState<string | null>(null);
-  const [initialSessionId, setInitialSessionId] = useState<string | null>(null);
   const [initialGraphId, setInitialGraphId] = useState<string | null>(null);
   const { enabled, functions, minTiers, loading } = useStudyFunctions();
 
@@ -175,10 +167,6 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
     if (typeof p.workspaceId === "string" && requestedWorkspaceMode) {
       setInitialWorkspaceId(p.workspaceId);
       setMode(requestedWorkspaceMode);
-    }
-    if (typeof p.sessionId === "string" && isModeEnabled("teach")) {
-      setInitialSessionId(p.sessionId);
-      setMode("teach");
     }
     // Deep link to a knowledge graph (from build_concept_graph / the Knowledge
     // Graph app's action bar). If combined with mode, seeds that mode from
@@ -272,10 +260,6 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
         ) : activeMode === "chat" ? (
           <div className="h-full">
             <SourceChat initialChatId={initialChatId} initialWorkspaceId={initialWorkspaceId} language={language} />
-          </div>
-        ) : activeMode === "teach" ? (
-          <div className="h-full">
-            <TeacherMode initialSessionId={initialSessionId} language={teachLanguage} />
           </div>
         ) : activeMode === "graph" ? (
           <div className="h-full">

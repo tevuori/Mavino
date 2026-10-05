@@ -22,7 +22,7 @@ export type MobileTool =
 const TOOL_TO_APP_ID: Record<MobileTool, AppId> = {
   notes: "notes",
   study: "study",
-  teach: "study",
+  teach: "teach",
   flashcards: "flashcards",
   focus: "pomodoro",
   files: "files",

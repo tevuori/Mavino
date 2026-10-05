@@ -9,6 +9,8 @@ import { resolveDefaultTaskWorkspace } from "./tasks";
 import { getUserConfig, buildModel, acquireLlmModel } from "../llm";
 import { resolveSource } from "../../study/source";
 import { generateJson, generateText } from "../../study/llm-json";
+import { getAppAccessFor } from "../../features";
+import { isStudyFunctionEnabled } from "../../study-functions";
 import {
   flashcardsPrompt,
   flashcardsSchemaHint,
@@ -240,24 +242,34 @@ const rawStudyTools: ToolDef[] = [
   {
     name: "open_study_hub",
     description:
-      "Open the AI Study Hub app on the user's desktop. Optionally preselect a mode (home, chat, teach, podcast, graph, flashcards, summarize, quiz, explain, study_guide, syllabus, recent) and a source. Can also deep-link to a specific chat, podcast, workspace, teacher session, or knowledge graph (from build_concept_graph) by id.",
+      "Open the AI Study Hub app on the user's desktop. Optionally preselect a mode (home, chat, podcast, graph, flashcards, summarize, quiz, explain, study_guide, syllabus, recent) and a source. Can also deep-link to a specific chat, podcast, workspace, or knowledge graph (from build_concept_graph) by id. Teach Me is a separate app — use start_teacher_session (which opens it) or pass sessionId for a legacy redirect.",
     clientAction: true,
     parameters: [
       {
         name: "mode",
         type: "string",
         description: "Preselect a Study Hub mode",
-        enum: ["home", "chat", "teach", "podcast", "graph", "flashcards", "summarize", "quiz", "explain", "study_guide", "syllabus", "recent"],
+        enum: ["home", "chat", "podcast", "graph", "flashcards", "summarize", "quiz", "explain", "study_guide", "syllabus", "recent"],
       },
       { name: "sourceKind", type: "string", description: "Preselect source kind", enum: ["note", "file", "paste", "url"] },
       { name: "sourceId", type: "string", description: "Preselected note id or file id" },
       { name: "chatId", type: "string", description: "Deep-link to a specific Study Chat (from start_study_chat or list_study_chats)" },
       { name: "podcastId", type: "string", description: "Deep-link to a specific podcast (from generate_podcast or list_podcasts)" },
       { name: "workspaceId", type: "string", description: "Deep-link to a learning workspace (from list_learning_workspaces)" },
-      { name: "sessionId", type: "string", description: "Deep-link to a Teach Me session (from start_teacher_session or list_teacher_sessions)" },
+      { name: "sessionId", type: "string", description: "Legacy deep-link to a Teach Me session (from start_teacher_session or list_teacher_sessions) — opens the Teach Me app" },
       { name: "graphId", type: "string", description: "Deep-link to a knowledge graph (from build_concept_graph) — opens graph mode, or seeds flashcards/summarize/quiz/explain/study_guide mode from it when combined with mode" },
     ],
-    handler: async (args) => {
+    handler: async (args, { userId }) => {
+      if (args.mode === "teach" || args.sessionId) {
+        const [appAccess, functionEnabled] = await Promise.all([
+          getAppAccessFor(userId, "teach"),
+          isStudyFunctionEnabled(userId, "teach"),
+        ]);
+        if (appAccess !== "full" || !functionEnabled) return { error: "Teach Me is not available for this account." };
+        const out: Record<string, any> = { action: "open_teach" };
+        if (args.sessionId) out.sessionId = args.sessionId;
+        return out;
+      }
       const out: Record<string, any> = { action: "open_study_hub" };
       if (args.mode) out.mode = args.mode;
       if (args.sourceKind) out.sourceKind = args.sourceKind;

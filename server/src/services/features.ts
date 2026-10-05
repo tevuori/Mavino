@@ -29,6 +29,7 @@ const DEFAULT_APP_TIERS: Record<string, AppTier> = {
   files: "free",
   whiteboard: "free",
   study: "free",
+  teach: "free",
   athena: "free",
   today: "free",
   settings: "free",
@@ -62,7 +63,7 @@ const DEFAULT_APP_TIERS: Record<string, AppTier> = {
 
 /** Full catalog of app ids the admin can toggle. */
 export const ALL_APP_IDS: string[] = [
-  "notes", "tasks", "files", "whiteboard", "study", "athena", "today", "settings", "plans",
+  "notes", "tasks", "files", "whiteboard", "study", "teach", "athena", "today", "settings", "plans",
   "pomodoro", "flashcards", "grades", "editor", "viewer", "calendar", "habits",
   "ntfy", "voice", "browser", "reminders", "analytics", "maps", "marketplace",
   "atlas",

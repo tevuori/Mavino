@@ -6,6 +6,7 @@ import MobileHabits from "./MobileHabits";
 import MobileReminders from "./MobileReminders";
 import MobileStudy from "./MobileStudy";
 import MobileTeach from "./MobileTeach";
+import TeachAccessBoundary from "../apps/teach/TeachAccessBoundary";
 import MobileFocus from "./MobileFocus";
 import MobileFiles from "./MobileFiles";
 import MobileVoice from "./MobileVoice";
@@ -50,7 +51,11 @@ const SCREENS: Partial<Record<MobileTool, (props: { onClose: () => void; onOpenT
   habits: (props) => <MobileHabits {...props} />,
   reminders: (props) => <MobileReminders {...props} />,
   study: (props) => <MobileStudy {...props} />,
-  teach: (props) => <MobileTeach {...props} />,
+  teach: (props) => (
+    <TeachAccessBoundary onUpgrade={() => props.onOpenTool("plans")}>
+      <MobileTeach {...props} />
+    </TeachAccessBoundary>
+  ),
   focus: (props) => <MobileFocus {...props} />,
   files: (props) => <MobileFiles {...props} />,
   voice: (props) => <MobileVoice {...props} />,

@@ -56,6 +56,7 @@ const APP_SCOPES: Record<string, string> = {
   scribe: "app:scribe",
   circle: "app:circle",
   study: "app:study",
+  teach: "app:teach",
   terminal: "app:terminal",
 };
 
@@ -69,6 +70,26 @@ function tag(tools: ToolDef[], scopes: string[]): ToolDef[] {
     ...t,
     scopes: [...new Set([...(t.scopes ?? []), ...scopes])],
   }));
+}
+
+const TEACH_APP_TOOL_NAMES = new Set([
+  "list_study_sources",
+  "create_study_source",
+  "delete_study_source",
+  "list_learning_workspaces",
+  "create_learning_workspace",
+  "delete_learning_workspace",
+  "start_teacher_session",
+  "list_teacher_sessions",
+  "delete_teacher_session",
+]);
+
+function scopedStudyHubTools(): ToolDef[] {
+  return tag(studyHubTools, ["app:study"]).map((tool) =>
+    TEACH_APP_TOOL_NAMES.has(tool.name)
+      ? { ...tool, scopes: [...new Set([...(tool.scopes ?? []), "app:teach"])] }
+      : tool
+  );
 }
 
 /** All Athena tools, in registration order, with per-context scope tags. */
@@ -96,7 +117,7 @@ export const ALL_TOOLS: ToolDef[] = [
   ...tag(studyGraphTools, ["core"]),
   ...tag(flashcardsTools, ["core"]),
   ...tag(notetakeTools, ["core"]),
-  ...tag(studyHubTools, ["app:study"]),
+  ...scopedStudyHubTools(),
   // Paid-tier daily productivity tools: always available to the assistant when
   // the user's tier permits.
   ...tag(calendarTools, ["core"]),

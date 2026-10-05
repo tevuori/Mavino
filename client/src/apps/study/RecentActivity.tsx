@@ -5,6 +5,7 @@ import { Brain, FileText, HelpCircle, Lightbulb, BookOpen, ListTodo, RefreshCw, 
 import { studyApi, type StudySession } from "../../services/study";
 import { Loading, ErrorBanner } from "./ui";
 import { useWindows } from "../../store/windows";
+import { teachLaunchInput } from "../teach/launch";
 
 const TYPE_META: Record<string, { label: string; icon: typeof Brain; color: string }> = {
   flashcards: { label: "Flashcards", icon: Brain, color: "text-indigo-400" },
@@ -59,7 +60,7 @@ export default function RecentActivity() {
     } else if (s.type === "podcast" && meta.podcastId) {
       openWindow({ appId: "study", title: "Study Hub", icon: "GraduationCap", payload: { mode: "podcast", podcastId: meta.podcastId as string } });
     } else if (s.type === "teach" && meta.sessionId) {
-      openWindow({ appId: "study", title: "Study Hub", icon: "GraduationCap", payload: { mode: "teach", sessionId: meta.sessionId as string } });
+      openWindow(teachLaunchInput(meta.sessionId as string));
     }
   };
 

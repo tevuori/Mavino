@@ -14,6 +14,7 @@ export type AppId =
   | "viewer"
   | "athena"
   | "study"
+  | "teach"
   | "today"
   | "calendar"
   | "habits"
@@ -195,6 +196,7 @@ const DEFAULT_SIZE: Partial<Record<AppId, WindowRect>> = {
   viewer: { x: 200, y: 90, width: 820, height: 620 },
   athena: { x: 200, y: 90, width: 760, height: 620 },
   study: { x: 120, y: 50, width: 1120, height: 740 },
+  teach: { x: 80, y: 36, width: 1240, height: 780 },
   today: { x: 160, y: 70, width: 880, height: 640 },
   calendar: { x: 120, y: 60, width: 1000, height: 680 },
   habits: { x: 200, y: 100, width: 820, height: 600 },

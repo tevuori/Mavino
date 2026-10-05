@@ -26,6 +26,7 @@ import { logSessionSafe } from "../../study/logSession";
 import { Message } from "multi-llm-ts";
 import { withStudyGate } from "./study-gate";
 import { getUserLanguage } from "../../language";
+import { getAppAccessFor } from "../../features";
 
 /** Helper: resolve an array of on-the-fly source descriptors into cached
  *  StudySource rows, returning their ids. Used by chat/podcast/teacher tools
@@ -500,7 +501,7 @@ const rawStudyHubTools: ToolDef[] = [
   {
     name: "start_teacher_session",
     description:
-      "Start a Teach Me (interactive live tutoring) session grounded on one or more Study Sources, and open it in the Study Hub. The teacher walks the user through the material, asks comprehension questions, and shows sources. Pass existing sourceIds and/or on-the-fly sources. Returns sessionId.",
+      "Start a Teach Me (interactive live tutoring) session grounded on one or more Study Sources, and open it in the standalone Teach Me app. The teacher walks the user through the material, asks comprehension questions, and shows sources. Pass existing sourceIds and/or on-the-fly sources. Returns sessionId.",
     destructive: true,
     clientAction: true,
     parameters: [
@@ -514,6 +515,8 @@ const rawStudyHubTools: ToolDef[] = [
       { name: "title", type: "string", description: "Optional session title" },
     ],
     handler: async (args, { userId }) => {
+      const appAccess = await getAppAccessFor(userId, "teach");
+      if (appAccess !== "full") return { error: "Teach Me is not available for this account." };
       let sourceIds = String(args.sourceIds ?? "").split(",").map((s) => s.trim()).filter(Boolean);
       if (args.sources) {
         try {
@@ -554,8 +557,7 @@ const rawStudyHubTools: ToolDef[] = [
         },
       });
       return {
-        action: "open_study_hub",
-        mode: "teach",
+        action: "open_teach",
         sessionId: session.id,
         title: session.title,
         sourceCount: sourceIds.length,

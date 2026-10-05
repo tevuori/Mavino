@@ -20,6 +20,7 @@ import { filesApi } from "../../services/files";
 import { conversationsApi, type ConversationSummary, type ConversationMessage } from "../../services/conversations";
 import { useWindows, type AppId, type WindowRect } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
+import { teachLaunchInput } from "../teach/launch";
 import type { VFolder } from "../../types";
 import { useSettings, type AthenaRollEdge } from "../../store/settings";
 import { useAthenaQuick } from "../../store/athenaQuick";
@@ -79,6 +80,7 @@ const APP_ICONS: Record<string, string> = {
   viewer: "Image",
   athena: "Sparkles",
   study: "GraduationCap",
+  teach: "Presentation",
   browser: "Globe",
   reminders: "BellRing",
   maps: "Map",
@@ -565,7 +567,15 @@ export default function AthenaApp({
         });
         break;
       }
+      case "open_teach": {
+        openWindow(teachLaunchInput(payload.sessionId));
+        break;
+      }
       case "open_study_hub": {
+        if (payload.mode === "teach") {
+          openWindow(teachLaunchInput(payload.sessionId));
+          break;
+        }
         const studyPayload: Record<string, any> = {};
         if (payload.mode) studyPayload.mode = payload.mode;
         if (payload.sourceKind) studyPayload.sourceKind = payload.sourceKind;
