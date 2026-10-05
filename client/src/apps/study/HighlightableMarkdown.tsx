@@ -28,7 +28,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import type { Components } from "react-markdown";
-import { Highlighter, Trash2, X, MessageSquarePlus } from "lucide-react";
+import { Highlighter, Trash2, X, MessageSquarePlus, HelpCircle } from "lucide-react";
 import { useHighlights } from "../../store/highlights";
 import { useFormFactor } from "../../store/formfactor";
 import {
@@ -57,6 +57,9 @@ export interface Props {
   className?: string;
   /** Disable highlighting (e.g. while content is streaming). Default true. */
   enabled?: boolean;
+  /** If provided, the selection toolbar shows an "Ask about this" button that
+   *  sends the selected text back as a follow-up question. */
+  onAskAboutSelection?: (text: string) => void;
 }
 
 interface TextNodeMap {
@@ -176,6 +179,7 @@ function wrapRange(
 
 export default function HighlightableMarkdown({
   content, scope, scopeId, sourceName, citations, onOpenCitation, className, enabled = true,
+  onAskAboutSelection,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeMarkId, setActiveMarkId] = useState<string | null>(null);
@@ -456,6 +460,18 @@ export default function HighlightableMarkdown({
                   placeholder="Annotation (optional)"
                   className="flex-1 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-xs text-ink outline-none focus:border-accent"
                 />
+                {onAskAboutSelection && (
+                  <button
+                    onClick={() => {
+                      onAskAboutSelection(toolbar.text);
+                      window.getSelection()?.removeAllRanges();
+                      dismissToolbar();
+                    }}
+                    className="flex items-center gap-1 rounded-md border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent"
+                  >
+                    <HelpCircle size={13} /> Ask
+                  </button>
+                )}
                 <button
                   onClick={() => void doCreate(pendingColor, annotateText)}
                   className="flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg"
@@ -497,6 +513,19 @@ export default function HighlightableMarkdown({
               >
                 <MessageSquarePlus size={11} /> Note
               </button>
+              {onAskAboutSelection && (
+                <button
+                  onClick={() => {
+                    onAskAboutSelection(toolbar.text);
+                    window.getSelection()?.removeAllRanges();
+                    dismissToolbar();
+                  }}
+                  className="ml-1 flex items-center gap-1 rounded-md border border-accent/30 px-2 py-1 text-[10px] text-accent transition hover:bg-accent/10"
+                  title="Ask Mavino about this"
+                >
+                  <HelpCircle size={11} /> Ask
+                </button>
+              )}
               <button
                 onClick={() => {
                   window.getSelection()?.removeAllRanges();

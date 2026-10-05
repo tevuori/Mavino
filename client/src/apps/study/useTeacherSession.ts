@@ -339,6 +339,11 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     }
   }, [sessionId]);
 
+  // Ref so the streaming action dispatcher can persist mid-turn state patches
+  // (e.g. mark_concept_covered) without capturing the callback in its closure.
+  const updateTeachStateRef = useRef(updateTeachState);
+  updateTeachStateRef.current = updateTeachState;
+
   const setPaceFeedback = useCallback((pace: PaceFeedback) => {
     void updateTeachState({ paceFeedback: pace });
   }, [updateTeachState]);
@@ -383,10 +388,10 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
       case "mark_concept_covered": {
         const concept = String(p.concept ?? "").trim();
         if (concept) {
-          setTeachState((prev) => ({
-            ...prev,
-            coveredConcepts: [...new Set([...(prev.coveredConcepts ?? []), concept])],
-          }));
+          const next = [...new Set([...(teachStateRef.current.coveredConcepts ?? []), concept])];
+          patchState({ coveredConcepts: next });
+          // Persist the covered concept immediately so the agenda survives a reload.
+          void updateTeachStateRef.current({ coveredConcepts: next });
         }
         break;
       }

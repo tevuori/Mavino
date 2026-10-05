@@ -20,7 +20,7 @@ import {
   FileText, File as FileIcon, Link2, ClipboardPaste,
   Volume2, VolumeX, Mic, MicOff, Pause, Play,
   PanelLeftClose, PanelLeftOpen, Settings2, X, AlertTriangle,
-  ArrowUp, ArrowDown, Pencil, RotateCcw,
+  ArrowUp, ArrowDown, Pencil, RotateCcw, HelpCircle,
 } from "lucide-react";
 import type { StudentLevel, TeachingStyle, TeacherSourceHistoryEntry } from "../../services/teacher";
 import { type StudySource } from "../../services/study-sources";
@@ -131,6 +131,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [showIssue, setShowIssue] = useState<string>("");
+  const [askSelection, setAskSelection] = useState<{ text: string; rect: DOMRect } | null>(null);
 
   // Side-by-side source pane (replaces floating source windows). One stable
   // paneId backs the show-control channel; the active source is swapped via
@@ -588,6 +589,34 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     setListening(false);
   }, []);
 
+  // Let the student select text in the source pane and ask Mavino about it.
+  useEffect(() => {
+    const pane = sourcePaneRef.current;
+    if (!pane) return;
+    const handler = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) { setAskSelection(null); return; }
+      const text = sel.toString().trim();
+      if (text.length < 2 || text.length > 400) { setAskSelection(null); return; }
+      const range = sel.getRangeAt(0);
+      let node: Node = range.commonAncestorContainer;
+      if (node.nodeType === Node.TEXT_NODE) node = node.parentNode ?? node;
+      if (!pane.contains(node)) { setAskSelection(null); return; }
+      if ((node as HTMLElement).closest?.("input, textarea, [data-hl-toolbar], [data-hl-popover]")) { setAskSelection(null); return; }
+      setAskSelection({ text, rect: range.getBoundingClientRect() });
+    };
+    document.addEventListener("selectionchange", handler);
+    return () => document.removeEventListener("selectionchange", handler);
+  }, []);
+
+  const submitAskSelection = useCallback(() => {
+    if (!askSelection) return;
+    const prompt = language === "cs" ? `Vysvětli mi tohle podrobněji: "${askSelection.text}"` : `Explain this in more detail: "${askSelection.text}"`;
+    send(prompt);
+    setAskSelection(null);
+    window.getSelection()?.removeAllRanges();
+  }, [askSelection, language, send]);
+
   // Auto-scroll to bottom on new content.
   useEffect(() => {
     const element = scrollRef.current;
@@ -685,6 +714,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const citationMeta = useMemo(() => attachedSources.map((source, index) => ({
     index: index + 1, name: source.name, kind: source.kind, refId: source.refId,
   })), [attachedSources]);
+
+  const askAboutSelection = useCallback((text: string) => {
+    const prompt = language === "cs" ? `Vysvětli mi tohle podrobněji: "${text}"` : `Explain this in more detail: "${text}"`;
+    send(prompt);
+  }, [language, send]);
 
   const startSession = () => {
     void startNewSession({
@@ -1008,6 +1042,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                           sourceName={session?.title ? `Teach Me: ${session.title}` : "Teach Me"}
                           citations={citationMeta}
                           onOpenCitation={openCitation}
+                          onAskAboutSelection={askAboutSelection}
                         />
                         {tts.supported && (
                           <div className={`mt-1 flex items-center gap-1.5 transition-opacity ${isSpeaking ? "" : "opacity-0 group-hover:opacity-100"}`}>
@@ -1199,7 +1234,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           Replaces floating source windows — the teacher's show_source /
           highlight_source / focus_source / close_source commands drive this
           pane via the shared show-control channel (paneId). */}
-      <div ref={sourcePaneRef} className="hidden w-[30rem] shrink-0 @4xl:flex">
+      <div ref={sourcePaneRef} className="teach-source-pane hidden w-[30rem] shrink-0 @4xl:flex">
         <TeachSourcePane
           paneId={paneId}
           source={paneSource}
@@ -1216,6 +1251,24 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           }}
         />
       </div>
+
+      {/* Ask-about-selection button for text selected inside the source pane. */}
+      {askSelection && (
+        <div
+          className="fixed z-50"
+          style={{
+            left: Math.min(Math.max(askSelection.rect.left + askSelection.rect.width / 2 - 60, 8), window.innerWidth - 130),
+            top: Math.max(askSelection.rect.top - 36, 8),
+          }}
+        >
+          <button
+            onClick={submitAskSelection}
+            className="flex items-center gap-1 rounded-md border border-accent/40 bg-surface px-2 py-1 text-[11px] font-medium text-accent shadow-window hover:bg-accent/10"
+          >
+            <HelpCircle size={12} /> Ask Mavino
+          </button>
+        </div>
+      )}
     </div>
   );
 }

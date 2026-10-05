@@ -97,10 +97,12 @@ export default function MobileTeach({ initialSessionId = null, language: request
   const [input, setInput] = useState("");
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [sheet, setSheet] = useState<SourceSheet | null>(null);
+  const [askSelection, setAskSelection] = useState<string | null>(null);
   const sheetRef = useRef<SourceSheet | null>(null);
   sheetRef.current = sheet;
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sheetContainerRef = useRef<HTMLDivElement>(null);
   const followStreamRef = useRef(true);
   const sessionRef = useRef<ReturnType<typeof useTeacherSession> | null>(null);
 
@@ -333,6 +335,26 @@ export default function MobileTeach({ initialSessionId = null, language: request
   const stopListening = useCallback(() => {
     transcriberRef.current?.stop();
     setListening(false);
+  }, []);
+
+  // Ask-about-selection inside the source bottom-sheet.
+  useEffect(() => {
+    const handler = () => {
+      const sheetEl = sheetContainerRef.current;
+      if (!sheetEl) { setAskSelection(null); return; }
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) { setAskSelection(null); return; }
+      const text = sel.toString().trim();
+      if (text.length < 2 || text.length > 400) { setAskSelection(null); return; }
+      const range = sel.getRangeAt(0);
+      let node: Node = range.commonAncestorContainer;
+      if (node.nodeType === Node.TEXT_NODE) node = node.parentNode ?? node;
+      if (!sheetEl.contains(node)) { setAskSelection(null); return; }
+      if ((node as HTMLElement).closest?.("input, textarea")) { setAskSelection(null); return; }
+      setAskSelection(text);
+    };
+    document.addEventListener("selectionchange", handler);
+    return () => document.removeEventListener("selectionchange", handler);
   }, []);
 
   // ----- misc -----
@@ -605,6 +627,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
                     scopeId={`${sessionId}:${i}`}
                     citations={citationMeta}
                     onOpenCitation={openCitation}
+                    onAskAboutSelection={(text) => send(language === "cs" ? `Vysvětli mi tohle podrobněji: "${text}"` : `Explain this in more detail: "${text}"`)}
                     enabled={false}
                   />
                   <div className="mt-1.5 flex items-center gap-2">
@@ -733,7 +756,8 @@ export default function MobileTeach({ initialSessionId = null, language: request
         <div className="fixed inset-0 z-50 flex items-end" onClick={() => setSheet(null)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
-            className="relative flex max-h-[75vh] w-full flex-col rounded-t-3xl border-t border-edge bg-[#0f1117] pb-[max(1rem,env(safe-area-inset-bottom))]"
+            ref={sheetContainerRef}
+            className="mobile-teach-source-sheet relative flex max-h-[75vh] w-full flex-col rounded-t-3xl border-t border-edge bg-[#0f1117] pb-[max(1rem,env(safe-area-inset-bottom))]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 border-b border-edge px-4 py-3">
@@ -743,6 +767,23 @@ export default function MobileTeach({ initialSessionId = null, language: request
                 <X size={18} />
               </button>
             </div>
+            {askSelection && (
+              <div className="border-b border-edge bg-accent/10 px-4 py-2">
+                <div className="mb-1.5 line-clamp-2 text-[11px] text-ink-muted">“{askSelection}”</div>
+                <button
+                  onClick={() => {
+                    const prompt = language === "cs" ? `Vysvětli mi tohle podrobněji: "${askSelection}"` : `Explain this in more detail: "${askSelection}"`;
+                    send(prompt);
+                    setAskSelection(null);
+                    window.getSelection()?.removeAllRanges();
+                    setSheet(null);
+                  }}
+                  className="flex w-full items-center justify-center gap-1 rounded-xl bg-accent py-2 text-sm font-medium text-accent-fg"
+                >
+                  <BookOpen size={14} /> {language === "cs" ? "Zeptat se Mavino" : "Ask Mavino"}
+                </button>
+              </div>
+            )}
             <div className="overflow-y-auto px-4 py-3">
               {sheet.loading ? (
                 <div className="flex items-center gap-2 text-sm text-ink-muted">
