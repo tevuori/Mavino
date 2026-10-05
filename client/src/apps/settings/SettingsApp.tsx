@@ -24,6 +24,7 @@ import {
   Keyboard,
   Activity,
   Languages,
+  Wrench,
 } from "lucide-react";
 import { useAuth } from "../../store/auth";
 import type { WindowInstance } from "../../store/windows";
@@ -52,6 +53,7 @@ import DateTimeSection from "./sections/DateTimeSection";
 import LegalSection from "./sections/LegalSection";
 import ShortcutsSection from "./sections/ShortcutsSection";
 import PerformanceAnalysisSection from "./sections/PerformanceAnalysisSection";
+import MaintenanceSection from "./sections/MaintenanceSection";
 import LanguageSection from "./sections/LanguageSection";
 import { useI18n, type MessageKey } from "../../i18n";
 
@@ -79,6 +81,7 @@ const SECTIONS: SectionDef[] = [
   { id: "notifications", label: "Notifications", icon: <Bell size={15} /> },
   { id: "proactive-alerts", label: "Proactive Alerts", icon: <BellRing size={15} /> },
   { id: "users", label: "Users", icon: <UsersIcon size={15} />, managerAllowed: true },
+  { id: "maintenance", label: "Maintenance", icon: <Wrench size={15} />, adminOnly: true },
   { id: "apps", label: "Apps", icon: <LayoutGrid size={15} />, adminOnly: true },
   { id: "plugins", label: "Plugins", icon: <Puzzle size={15} />, adminOnly: true },
   { id: "tiers", label: "Tiers & Plans", icon: <CreditCard size={15} />, adminOnly: true },
@@ -134,6 +137,7 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
     if (active === "notifications") return <NotificationsSection />;
     if (active === "proactive-alerts") return <ProactiveAlertsSection />;
     if (active === "users" && isAdminOrManager) return <UsersSection />;
+    if (active === "maintenance" && isAdmin) return <MaintenanceSection />;
     if (active === "apps" && isAdmin) return <AppsSection />;
     if (active === "plugins" && isAdmin) return <PluginsAdminSection />;
     if (active === "tiers" && isAdmin) return <TiersSection />;

@@ -5,6 +5,7 @@ import { usePlugins } from "./store/plugins";
 import { startNotificationPolling, stopNotificationPolling } from "./store/notifications";
 import { useFormFactor, initFormFactorListeners } from "./store/formfactor";
 import { useLanguage } from "./store/language";
+import { startMaintenancePolling, stopMaintenancePolling, useMaintenance } from "./store/maintenance";
 import { installGlobalErrorHandlers } from "./services/errorReporter";
 import { cleanupStaleServiceWorkersInDev } from "./services/sw-cleanup";
 import BootScreen from "./shell/BootScreen";
@@ -17,28 +18,36 @@ import UpdateDialog from "./shell/UpdateDialog";
 import ReloadPrompt from "./shell/ReloadPrompt";
 import PerformanceMonitorRunner from "./shell/PerformanceMonitorRunner";
 import GlobalErrorBoundary from "./shell/GlobalErrorBoundary";
+import MaintenanceScreen from "./shell/MaintenanceScreen";
 import { useI18n } from "./i18n";
 
 type Phase = "boot" | "app";
 
 export default function App() {
-  const { status, user, refresh } = useAuth();
+  const { status, user, refresh, logout } = useAuth();
+  const maintenance = useMaintenance((s) => s.status);
+  const maintenanceLoading = useMaintenance((s) => s.loading);
   const loadFeatures = useFeatures((s) => s.load);
   const loadPlugins = usePlugins((s) => s.load);
   const loadLanguage = useLanguage((s) => s.load);
   const mode = useFormFactor((s) => s.mode);
   const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("boot");
+  const [adminSignIn, setAdminSignIn] = useState(false);
 
   // On mount, check existing token + set up form-factor listeners + global error handlers
   useEffect(() => {
     refresh();
+    startMaintenancePolling();
     cleanupStaleServiceWorkersInDev();
     const cleanup = initFormFactorListeners();
     installGlobalErrorHandlers();
     // Initialize Capacitor native plugins if running inside a native shell.
     void import("./shell/mobile/capacitor").then((m) => m.initCapacitor());
-    return cleanup;
+    return () => {
+      cleanup();
+      stopMaintenancePolling();
+    };
   }, [refresh]);
 
   // Load feature flags (subscription tier, disabled apps) once
@@ -59,19 +68,36 @@ export default function App() {
     return <BootScreen onDone={() => setPhase("app")} />;
   }
 
-  // Password reset flow — when the URL has a `token` query param (from a
-  // reset email), show the reset screen instead of the login screen.
-  const resetToken = new URLSearchParams(window.location.search).get("token");
-  if (resetToken && status !== "authenticated") {
-    return <ResetPasswordScreen token={resetToken} />;
-  }
-
-  if (status === "loading") {
+  if (status === "loading" || maintenanceLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-slate-950 text-slate-400">
         {t("loading")}
       </div>
     );
+  }
+
+  if (
+    maintenance?.active &&
+    user?.role !== "ADMIN" &&
+    !(status === "unauthenticated" && adminSignIn)
+  ) {
+    return (
+      <MaintenanceScreen
+        status={maintenance}
+        authenticated={status === "authenticated"}
+        onAdminSignIn={() => {
+          if (status === "authenticated") void logout();
+          setAdminSignIn(true);
+        }}
+      />
+    );
+  }
+
+  // Password reset flow — when the URL has a `token` query param (from a
+  // reset email), show the reset screen instead of the login screen.
+  const resetToken = new URLSearchParams(window.location.search).get("token");
+  if (resetToken && status !== "authenticated") {
+    return <ResetPasswordScreen token={resetToken} />;
   }
 
   if (status !== "authenticated") {

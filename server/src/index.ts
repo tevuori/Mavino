@@ -58,6 +58,8 @@ import adminErrors from "./routes/admin-errors";
 import adminLlm from "./routes/admin-llm";
 import adminStorage from "./routes/admin-storage";
 import studyFunctions from "./routes/study-functions";
+import maintenance from "./routes/maintenance";
+import { maintenanceMiddleware } from "./middleware/maintenance";
 import { analyticsMiddleware, startAnalyticsFlusher } from "./services/analytics";
 import { logError } from "./services/error-log";
 import { startScheduler, stopScheduler } from "./services/ntfy/scheduler";
@@ -150,6 +152,7 @@ app.use(
     credentials: true,
   })
 );
+app.use("*", maintenanceMiddleware);
 // Anonymous per-feature usage counter (in-memory, flushed every 30s).
 // Runs after CORS so only allowed-origin requests are counted. Skips
 // OPTIONS preflight and auth/analytics routes itself.
@@ -206,6 +209,7 @@ app.route("/api/reminders", reminders);
 app.route("/api/analytics", analytics);
 app.route("/api/focus", focus);
 app.route("/api/settings", settings);
+app.route("/api/maintenance", maintenance);
 app.route("/api/features", features);
 app.route("/api/subscriptions", subscriptions);
 app.route("/api/plugins", plugins);
