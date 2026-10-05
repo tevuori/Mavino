@@ -34,6 +34,7 @@ const STEPS: StepDef[] = [
   { id: "welcome", centered: true },
   { id: "name", centered: true },
   { id: "desktop", centered: true },
+  { id: "files", openApp: { appId: "files", size: { width: 820, height: 520 } } },
   { id: "notes", openApp: { appId: "notes", size: { width: 720, height: 480 } } },
   { id: "tasks", openApp: { appId: "tasks", size: { width: 760, height: 460 } } },
   { id: "athena", openApp: { appId: "athena", size: { width: 680, height: 520 } } },
@@ -220,6 +221,13 @@ function StepContent({ stepId, name, onNameChange, onSubmitName, geminiSaveRef }
       return <NameStep value={name ?? ""} onChange={onNameChange ?? (() => {})} onSubmit={onSubmitName ?? (() => {})} />;
     case "desktop":
       return <DesktopStep />;
+    case "files":
+      return <TourStep
+        icon={<Folder size={20} />}
+        title="Add Your Files"
+        description="Keep your study materials in Mavino so they are ready to open, organize, and use across your apps. Upload documents, PDFs, images, audio, and more from the Files app."
+        tips={["Click Upload and choose one or more files", "Drag and drop files directly into the file area", "Open or create a folder first to upload files into it"]}
+      />;
     case "notes":
       return <TourStep
         icon={<StickyNote size={20} />}
