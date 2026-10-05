@@ -96,7 +96,7 @@ export default function MobileShell() {
   }
 
   return (
-    <main className="mobile-shell relative flex h-full w-full overflow-hidden bg-surface text-ink" aria-label="Mavino mobile">
+    <main className="mobile-shell relative flex h-full w-full overflow-clip bg-surface text-ink" aria-label="Mavino mobile">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgb(var(--brand-violet)/.16),transparent_34%),radial-gradient(circle_at_100%_18%,rgb(var(--brand-cyan)/.10),transparent_28%)]" />
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         {isDemo && (

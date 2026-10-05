@@ -81,7 +81,9 @@ body,
 #root {
   height: 100%;
   margin: 0;
-  overflow: hidden;
+  /* clip (not hidden): hidden is still programmatically scrollable, so a
+     descendant scrollIntoView could shift the entire shell. */
+  overflow: clip;
 }
 
 

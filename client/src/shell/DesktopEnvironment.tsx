@@ -79,7 +79,7 @@ export default function DesktopEnvironment() {
   useShortcut("moveWindowNextWorkspace", () => moveFocusedRelative(1));
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden">
+    <div className="flex h-full w-full flex-col overflow-clip">
       {isDemo && (
         <div className="z-10 flex shrink-0 items-center justify-center gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-200 backdrop-blur-sm">
           <span>Demo mode — your work is temporary and will expire soon.</span>
@@ -91,7 +91,7 @@ export default function DesktopEnvironment() {
           </button>
         </div>
       )}
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-clip">
         <Wallpaper />
         <div className="fixed right-4 top-4 z-[5] flex flex-col items-end gap-3">
           <TipsWidget />
