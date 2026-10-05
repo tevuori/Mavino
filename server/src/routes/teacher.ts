@@ -647,6 +647,18 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
   const visionCapable = modelSupportsVision(cfg.provider, cfg.modelId);
 
   const history2 = parseMessages(row.messages);
+  // Cap the message history actually sent to the LLM. Long conversations cause
+  // prompt drift: the system prompt instructions about comprehension checks get
+  // buried. We keep the first user message (session topic) plus the tail so the
+  // tutor still has recent context, while the full history remains persisted.
+  const MAX_HISTORY_MESSAGES = 14;
+  const llmHistory = (() => {
+    if (history2.length <= MAX_HISTORY_MESSAGES) return history2;
+    const firstUserIdx = history2.findIndex((m) => m.role === "user");
+    const head =
+      firstUserIdx >= 0 ? history2.slice(firstUserIdx, firstUserIdx + 1) : [history2[0]];
+    return [...head, ...history2.slice(-(MAX_HISTORY_MESSAGES - head.length))];
+  })();
   // Full turns elapsed since the last comprehension check — used to inject a
   // "check is due" reminder once the tutor has lectured for a while without
   // verifying understanding.
@@ -661,7 +673,7 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
           history2.filter((m) => m.role === "assistant").length -
             (state.comprehensionLog?.length ?? 0)
         );
-  const systemPrompt = teacherSystemPrompt(
+  let systemPrompt = teacherSystemPrompt(
     sources,
     history,
     state,
@@ -669,8 +681,17 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
     visionCapable,
     turnsSinceCheck
   );
+  // Re-state the comprehension-check rule at the very end of the system prompt
+  // so it is not buried by the long source/mastery blocks and conversation history.
+  if (!state.lessonCompletedAt && turnsSinceCheck >= 2) {
+    systemPrompt +=
+      `\n\n⏰ IMMEDIATE REMINDER: ${turnsSinceCheck} turns have passed without a ` +
+      "comprehension check. If you introduce or review any concept this turn, " +
+      "you MUST end this turn with exactly one check_comprehension tool call. " +
+      "Do not just announce it in text — the student only sees the question card when the tool is called.";
+  }
   const thread: Message[] = [new Message("system", systemPrompt)];
-  for (const m of history2) {
+  for (const m of llmHistory) {
     const content = m.role === "assistant" ? m.content.replace(/\n*##\s*Sources[\s\S]*$/i, "").trim() : m.content;
     thread.push(new Message(m.role, content));
   }
@@ -832,24 +853,37 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
     // the tool call once so the check actually arrives. Skipped when a check
     // was already delivered, when the lesson was wrapped up (finish_lesson),
     // or when the turn errored / was aborted.
+    const checkOverdue = turnsSinceCheck >= 3;
     if (
       !errored &&
       !abort.signal.aborted &&
       !toolEvents.some((t) => t.name === "check_comprehension") &&
       !toolEvents.some((t) => t.name === "finish_lesson") &&
-      announcedUndeliveredCheck(full, state.teachingStyle)
+      (announcedUndeliveredCheck(full, state.teachingStyle) || checkOverdue)
     ) {
       thread.push(new Message("assistant", full));
-      thread.push(
-        new Message(
-          "user",
-          "[system note] Your previous message announced a comprehension check (or ended by asking the student to " +
-            "answer), but the check_comprehension tool was never called — the student saw the announcement but no " +
-            "question card. Call check_comprehension NOW with the question you intended (include expectedConcept). " +
-            "Do not repeat the explanation. If you truly did not intend a comprehension check, reply with exactly: NO_CHECK"
-        )
-      );
-      console.warn(`[teacher] announced check was not delivered — running repair pass (session ${row.id})`);
+      if (announcedUndeliveredCheck(full, state.teachingStyle)) {
+        thread.push(
+          new Message(
+            "user",
+            "[system note] Your previous message announced a comprehension check (or ended by asking the student to " +
+              "answer), but the check_comprehension tool was never called — the student saw the announcement but no " +
+              "question card. Call check_comprehension NOW with the question you intended (include expectedConcept). " +
+              "Do not repeat the explanation. If you truly did not intend a comprehension check, reply with exactly: NO_CHECK"
+          )
+        );
+        console.warn(`[teacher] announced check was not delivered — running repair pass (session ${row.id})`);
+      } else {
+        thread.push(
+          new Message(
+            "user",
+            `[system note] ${turnsSinceCheck} turns have passed without a comprehension check. The student needs a ` +
+              "check_comprehension call NOW to verify understanding. Ask one focused question tied to what you just taught, " +
+              "and include the expectedConcept. Do not repeat the full explanation."
+          )
+        );
+        console.warn(`[teacher] check overdue (${turnsSinceCheck} turns) — running proactive repair (session ${row.id})`);
+      }
 
       // Buffer repair content instead of streaming it live: if the (unforced)
       // model declines with the NO_CHECK sentinel, nothing reaches the client.
