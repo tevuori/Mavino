@@ -4,8 +4,7 @@ import {
   Star, Trash2, Upload, FolderInput, GraduationCap, ExternalLink,
 } from "lucide-react";
 import {
-  filesApi, formatBytes, isAudioFile, isImageFile, isPdfFile, isTextFile,
-  openTargetForFile,
+  filesApi, formatBytes, isAudioFile, isImageFile, isLatexFile, isPdfFile, isTextFile,
 } from "../services/files";
 import type { VFile, VFolder } from "../types";
 import type { MobileTool } from "./MobileLauncher";
@@ -15,6 +14,7 @@ import {
 } from "./MobileUi";
 import { useMobileDialog } from "../store/mobileDialog";
 import { useMobileToast } from "../store/mobileToast";
+import { LatexViewer } from "../apps/shared/LatexViewer";
 
 const EXT_EMOJI: Record<string, string> = {
   image: "🖼️", pdf: "📕", audio: "🎵", video: "🎬", text: "📝", archive: "🗜️", code: "💻", default: "📄",
@@ -59,6 +59,7 @@ export default function MobileFiles({
   const [previewImg, setPreviewImg] = useState<VFile | null>(null);
   const [previewText, setPreviewText] = useState<{ file: VFile; content: string } | null>(null);
   const [previewPdf, setPreviewPdf] = useState<VFile | null>(null);
+  const [previewLatex, setPreviewLatex] = useState<VFile | null>(null);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
   const { confirm } = useMobileDialog();
@@ -160,6 +161,10 @@ export default function MobileFiles({
     }
     if (isPdfFile(f)) {
       setPreviewPdf(f);
+      return;
+    }
+    if (isLatexFile(f)) {
+      setPreviewLatex(f);
       return;
     }
     if (isTextFile(f)) {
@@ -378,6 +383,23 @@ export default function MobileFiles({
           </div>
           <div className="min-h-0 flex-1 overflow-auto p-5" onClick={(e) => e.stopPropagation()}>
             <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-6 text-ink">{previewText.content}</pre>
+          </div>
+        </div>
+      )}
+
+      {previewLatex && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-surface">
+          <div className="flex shrink-0 items-center justify-between border-b border-edge px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-ink">{previewLatex.name}</p>
+              <p className="text-xs text-ink-muted">LaTeX preview</p>
+            </div>
+            <button type="button" onClick={() => setPreviewLatex(null)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink-muted">
+              <Plus size={20} className="rotate-45" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1">
+            <LatexViewer fileId={previewLatex.id} />
           </div>
         </div>
       )}

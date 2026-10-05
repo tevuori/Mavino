@@ -93,7 +93,7 @@ const TEXT_EXT = new Set([
   "env", "gitignore", "sql", "graphql", "gql", "vue", "svelte", "astro", "lua",
   "pl", "r", "dart", "scala", "clj", "ex", "exs", "erl", "hs", "ml", "nim", "v",
   "zig", "makefile", "dockerfile", "tf", "hcl", "log", "csv", "tsv", "diff",
-  "patch", "lock", "editorconfig", "prettierrc", "eslintrc",
+  "patch", "lock", "editorconfig", "prettierrc", "eslintrc", "tex", "latex",
 ]);
 
 export function isTextFile(file: Pick<VFile, "name" | "mimeType">): boolean {
@@ -137,8 +137,13 @@ export function isMarkdownFile(file: Pick<VFile, "mimeType" | "name">): boolean 
   return file.mimeType === "text/markdown" || ["md", "markdown"].includes(extOf(file.name));
 }
 
+export function isLatexFile(file: Pick<VFile, "mimeType" | "name">): boolean {
+  return ["tex", "latex"].includes(extOf(file.name)) || ["text/x-tex", "application/x-tex"].includes(file.mimeType);
+}
+
 /** Decide which app window opens a file on double-click. */
 export function openTargetForFile(file: Pick<VFile, "name" | "mimeType">): "editor" | "viewer" {
+  if (isLatexFile(file)) return "viewer";
   if (isTextFile(file)) return "editor";
   if (isImageFile(file) || isPdfFile(file) || isAudioFile(file) || isVideoFile(file)) return "viewer";
   return "viewer";

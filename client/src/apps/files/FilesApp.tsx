@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
   filesApi, formatBytes, fileIconColor, extOf,
-  isTextFile, isImageFile, isPdfFile, isAudioFile, isVideoFile,
+  isTextFile, isImageFile, isPdfFile, isAudioFile, isVideoFile, isLatexFile,
   openTargetForFile, buildFolderTree,
 } from "../../services/files";
 import type { VFile, VFolder, FolderTreeNode, StorageInfo } from "../../types";
@@ -698,7 +698,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
     }
     const items: MenuItem[] = [
       { label: "Open", icon: <FileSymlink size={14} />, onClick: () => openFile(file) },
-      ...(isImageFile(file) || isPdfFile(file) || isAudioFile(file) || isVideoFile(file) ? [{ label: "Open in Viewer", icon: <ImageIcon size={14} />, onClick: () => openWindow({ appId: "viewer", title: file.name, icon: "Eye", payload: { fileId: file.id } }) }] : []),
+      ...(isImageFile(file) || isPdfFile(file) || isAudioFile(file) || isVideoFile(file) || isLatexFile(file) ? [{ label: "Open in Viewer", icon: <ImageIcon size={14} />, onClick: () => openWindow({ appId: "viewer", title: file.name, icon: "Eye", payload: { fileId: file.id } }) }] : []),
       ...(isTextFile(file) ? [{ label: "Open in Editor", icon: <FileCode size={14} />, onClick: () => openWindow({ appId: "editor", title: file.name, icon: "Code2", payload: { fileId: file.id } }) }] : []),
       { separator: true },
       { label: "Download", icon: <Download size={14} />, onClick: () => download(file) },

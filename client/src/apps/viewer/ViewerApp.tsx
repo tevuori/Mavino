@@ -4,7 +4,7 @@ import {
   AlertCircle, File as FileIcon,
 } from "lucide-react";
 import {
-  filesApi, isImageFile, isPdfFile, isPptxFile, isAudioFile, isVideoFile, formatBytes,
+  filesApi, isImageFile, isPdfFile, isPptxFile, isAudioFile, isVideoFile, isLatexFile, formatBytes,
 } from "../../services/files";
 import { useWindows } from "../../store/windows";
 import { useShowControl, type ShowCommand } from "../../store/showControl";
@@ -12,6 +12,7 @@ import type { WindowInstance } from "../../store/windows";
 import type { VFile } from "../../types";
 import { PptxViewer } from "../shared/PptxViewer";
 import { PdfJsViewer } from "../shared/PdfJsViewer";
+import { LatexViewer } from "../shared/LatexViewer";
 
 export default function ViewerApp({ win }: { win: WindowInstance }) {
   const fileId = win.payload?.fileId as string | undefined;
@@ -176,7 +177,8 @@ export default function ViewerApp({ win }: { win: WindowInstance }) {
         )}
         {isAudioFile(file) && <AudioViewer file={file} />}
         {isVideoFile(file) && <VideoViewer file={file} />}
-        {!isImageFile(file) && !isPdfFile(file) && !isAudioFile(file) && !isVideoFile(file) && (
+        {isLatexFile(file) && <LatexViewer fileId={file.id} />}
+        {!isImageFile(file) && !isPdfFile(file) && !isAudioFile(file) && !isVideoFile(file) && !isLatexFile(file) && (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-ink-muted">
             <FileIcon size={48} className="opacity-30" />
             <p className="text-sm">No preview available for this file type</p>
