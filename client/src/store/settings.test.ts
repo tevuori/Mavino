@@ -31,19 +31,19 @@ describe("onboarding flag (per-account)", () => {
 
   it("marks only the given user as onboarded", () => {
     useSettings.getState().setOnboarded("user-a", true);
-    expect(useSettings.getState().onboardedUserIds).toContain("user-a");
-    expect(useSettings.getState().onboardedUserIds).not.toContain("user-b");
+    expect(useSettings.getState().onboardedUserIds.includes("user-a")).toBe(true);
+    expect(useSettings.getState().onboardedUserIds.includes("user-b")).toBe(false);
   });
 
   it("persists the onboarded list to localStorage", () => {
     const raw = storage.get("athena.settings");
-    expect(raw).toBeTruthy();
+    expect(raw === undefined || raw === null).toBe(false);
     const parsed = JSON.parse(raw!);
-    expect(parsed.onboardedUserIds).toContain("user-a");
+    expect((parsed.onboardedUserIds as string[]).includes("user-a")).toBe(true);
   });
 
   it("un-marks a user (Replay tour)", () => {
     useSettings.getState().setOnboarded("user-a", false);
-    expect(useSettings.getState().onboardedUserIds).not.toContain("user-a");
+    expect(useSettings.getState().onboardedUserIds.includes("user-a")).toBe(false);
   });
 });
