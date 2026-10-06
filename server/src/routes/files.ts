@@ -67,7 +67,8 @@ const TEXT_EXT = new Set([
   "yml","yaml","toml","ini","cfg","conf","env","gitignore","sql","graphql",
   "gql","vue","svelte","astro","lua","pl","r","dart","scala","clj","ex","exs",
   "erl","hs","ml","nim","v","zig","makefile","dockerfile","tf","hcl","log",
-  "csv","tsv","diff","patch","lock","editorconfig","prettierrc","eslintrc",
+  "csv","tsv","diff","patch","lock","editorconfig","prettierrc","eslintrc","tex",
+  "latex",
 ]);
 
 export function isTextFile(name: string, mime: string): boolean {
