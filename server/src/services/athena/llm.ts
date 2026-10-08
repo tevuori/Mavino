@@ -15,8 +15,11 @@ import { randomUUID } from "node:crypto";
 import {
   igniteModel,
   type LlmModel,
+  type LlmChunk,
+  type LlmCompletionOpts,
   type EngineCreateOpts,
   type ChatModel,
+  type Message,
 } from "multi-llm-ts";
 import prisma from "../../db/client";
 import { decryptSecret } from "../crypto";
@@ -262,7 +265,28 @@ export function buildModel(cfg: LlmUserConfig): LlmModel {
       caching: false,
     },
   };
-  return igniteModel(cfg.provider, chatModel, config);
+  const model = igniteModel(cfg.provider, chatModel, config);
+  return wrapCompletionOpts(model, cfg);
+}
+
+/** Models whose provider applies a non-empty default reasoning_effort on
+ *  /chat/completions, which rejects function tools unless the effort is
+ *  explicitly disabled. multi-llm-ts only sends reasoning_effort when the
+ *  ChatModel advertises reasoning capability — which we deliberately keep
+ *  false — so inject it via customOpts instead. */
+const REASONING_EFFORT_NONE_MODELS = /^gpt-6-luna/;
+
+function wrapCompletionOpts(model: LlmModel, cfg: LlmUserConfig): LlmModel {
+  if (cfg.provider !== "openai" || !REASONING_EFFORT_NONE_MODELS.test(cfg.modelId)) {
+    return model;
+  }
+  const originalGenerate = model.generate.bind(model);
+  model.generate = (thread: Message[], opts?: LlmCompletionOpts): AsyncIterable<LlmChunk> =>
+    originalGenerate(thread, {
+      ...opts,
+      customOpts: { ...opts?.customOpts, reasoning_effort: "none" },
+    });
+  return model;
 }
 
 /** Get the user's rate limit config from DB (or null if not configured). */
