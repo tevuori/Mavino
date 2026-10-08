@@ -33,6 +33,7 @@ import { useShortcut, formatShortcut } from "../store/shortcuts";
 import { useQuickCapture } from "../store/quickCapture";
 import { useSettings } from "../store/settings";
 import { renderAppIcon } from "./AppIcon";
+import { useOverlayFocus } from "../ui/overlays";
 import type { Note, Task, VFile } from "../types";
 
 interface SearchResult {
@@ -69,11 +70,11 @@ function tryCalculate(input: string): string | null {
 }
 
 function fileIcon(file: VFile): React.ReactNode {
-  if (isImageFile(file)) return <ImageIcon size={18} className="text-green-400" />;
-  if (isPdfFile(file)) return <FileText size={18} className="text-red-400" />;
-  if (isAudioFile(file)) return <MusicIcon size={18} className="text-purple-400" />;
-  if (isVideoFile(file)) return <VideoIcon size={18} className="text-pink-400" />;
-  if (isTextFile(file)) return <FileCode size={18} className="text-blue-400" />;
+  if (isImageFile(file)) return <ImageIcon size={18} className="text-success" />;
+  if (isPdfFile(file)) return <FileText size={18} className="text-danger" />;
+  if (isAudioFile(file)) return <MusicIcon size={18} className="text-accent" />;
+  if (isVideoFile(file)) return <VideoIcon size={18} className="text-danger" />;
+  if (isTextFile(file)) return <FileCode size={18} className="text-accent" />;
   return <FileText size={18} className="text-ink-muted" />;
 }
 
@@ -84,8 +85,8 @@ export default function CommandPalette() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [fileList, setFileList] = useState<VFile[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const panelRef = useOverlayFocus(open, () => setOpen(false));
   const { open: openWindow } = useWindows();
   const apps = useAccessibleApps();
 
@@ -107,20 +108,6 @@ export default function CommandPalette() {
 
   // Configurable keyboard shortcut for command palette toggle
   useShortcut("toggleCommandPalette", () => setOpen((v) => !v));
-
-  // Escape closes the palette
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  // Focus input when opened
-  useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
-  }, [open]);
 
   const results = useMemo<SearchResult[]>(() => {
     const q = query.trim().toLowerCase();
@@ -172,7 +159,7 @@ export default function CommandPalette() {
       {
         title: "New Note",
         subtitle: "Create a note",
-        icon: <StickyNote size={18} className="text-amber-400" />,
+        icon: <StickyNote size={18} className="text-warning" />,
         action: () => {
           openWindow({ appId: "notes", title: "Notes", icon: "StickyNote" });
           setOpen(false);
@@ -182,7 +169,7 @@ export default function CommandPalette() {
       {
         title: "New Task",
         subtitle: "Create a task",
-        icon: <CheckSquare size={18} className="text-green-400" />,
+        icon: <CheckSquare size={18} className="text-success" />,
         action: () => {
           openWindow({ appId: "tasks", title: "Tasks", icon: "CheckSquare" });
           setOpen(false);
@@ -192,7 +179,7 @@ export default function CommandPalette() {
       {
         title: "Start Pomodoro",
         subtitle: "Begin a focus session",
-        icon: <Timer size={18} className="text-red-400" />,
+        icon: <Timer size={18} className="text-danger" />,
         action: () => {
           openWindow({ appId: "pomodoro", title: "Pomodoro", icon: "Timer" });
           setOpen(false);
@@ -202,7 +189,7 @@ export default function CommandPalette() {
       {
         title: "Review Flashcards",
         subtitle: "Study due cards",
-        icon: <Brain size={18} className="text-purple-400" />,
+        icon: <Brain size={18} className="text-accent" />,
         action: () => {
           openWindow({ appId: "flashcards", title: "Flashcards", icon: "Brain" });
           setOpen(false);
@@ -212,7 +199,7 @@ export default function CommandPalette() {
       {
         title: "Study Hub: Summarize from clipboard",
         subtitle: "Paste text and get an AI summary",
-        icon: <GraduationCap size={18} className="text-sky-400" />,
+        icon: <GraduationCap size={18} className="text-accent" />,
         action: async () => {
           const text = await navigator.clipboard.readText().catch(() => "");
           openWindow({
@@ -230,7 +217,7 @@ export default function CommandPalette() {
       {
         title: "Study Hub: Quiz me on clipboard",
         subtitle: "Paste text and take an AI quiz",
-        icon: <GraduationCap size={18} className="text-amber-400" />,
+        icon: <GraduationCap size={18} className="text-warning" />,
         action: async () => {
           const text = await navigator.clipboard.readText().catch(() => "");
           openWindow({
@@ -248,7 +235,7 @@ export default function CommandPalette() {
       {
         title: "Study Hub: Flashcards from clipboard",
         subtitle: "Paste text and generate AI flashcards",
-        icon: <GraduationCap size={18} className="text-indigo-400" />,
+        icon: <GraduationCap size={18} className="text-accent" />,
         action: async () => {
           const text = await navigator.clipboard.readText().catch(() => "");
           openWindow({
@@ -266,7 +253,7 @@ export default function CommandPalette() {
       {
         title: "Open Calendar",
         subtitle: "View schedule",
-        icon: <Calendar size={18} className="text-indigo-400" />,
+        icon: <Calendar size={18} className="text-accent" />,
         action: () => {
           openWindow({ appId: "calendar", title: "Calendar", icon: "Calendar" });
           setOpen(false);
@@ -276,7 +263,7 @@ export default function CommandPalette() {
       {
         title: "Open Habits",
         subtitle: "Track streaks",
-        icon: <Flame size={18} className="text-orange-400" />,
+        icon: <Flame size={18} className="text-warning" />,
         action: () => {
           openWindow({ appId: "habits", title: "Habits", icon: "Flame" });
           setOpen(false);
@@ -286,7 +273,7 @@ export default function CommandPalette() {
       {
         title: "Quick Capture",
         subtitle: `Capture anything (${formatShortcut(useSettings.getState().shortcuts.toggleQuickCapture)})`,
-        icon: <Zap size={18} className="text-yellow-400" />,
+        icon: <Zap size={18} className="text-warning" />,
         action: () => {
           useQuickCapture.getState().toggle();
           setOpen(false);
@@ -316,7 +303,7 @@ export default function CommandPalette() {
             type: "note",
             title: note.title || "Untitled",
             subtitle: "Note",
-            icon: <StickyNote size={18} className="text-amber-400" />,
+            icon: <StickyNote size={18} className="text-warning" />,
             action: () => {
               openWindow({
                 appId: "notes",
@@ -337,7 +324,7 @@ export default function CommandPalette() {
             type: "task",
             title: task.title,
             subtitle: `Task · ${task.status.replace("_", " ")}`,
-            icon: <CheckSquare size={18} className="text-green-400" />,
+            icon: <CheckSquare size={18} className="text-success" />,
             action: () => {
               openWindow({ appId: "tasks", title: "Tasks", icon: "CheckSquare" });
               setOpen(false);
@@ -409,6 +396,11 @@ export default function CommandPalette() {
             onClick={() => setOpen(false)}
           />
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
+            tabIndex={-1}
             initial={{ y: -20, opacity: 0, scale: 0.97 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: -10, opacity: 0, scale: 0.98 }}
@@ -419,7 +411,7 @@ export default function CommandPalette() {
             <div className="flex items-center gap-3 border-b border-edge px-4 py-3.5">
               <Search size={20} className="text-ink-muted" />
               <input
-                ref={inputRef}
+                data-autofocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={onKeyDown}

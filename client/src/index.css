@@ -4,25 +4,25 @@
 
 /* ===== Theme tokens (CSS vars, switchable at runtime) ===== */
 :root {
-  --accent: 79 70 229;
-  --accent-hover: 67 56 202;
-  --accent-pressed: 55 48 163;
-  --accent-soft: 238 242 255;
+  --accent: 59 130 246;
+  --accent-hover: 37 99 235;
+  --accent-pressed: 29 78 216;
+  --accent-soft: 219 234 254;
   --accent-fg: 255 255 255;
 
-  --canvas: 244 246 249;
-  --surface: 255 255 255;
-  --surface-2: 248 250 252;
-  --surface-3: 238 242 247;
-  --surface-overlay: 255 255 255;
-  --surface-sunken: 241 244 248;
-  --ink: 24 32 45;
-  --ink-muted: 91 103 120;
-  --ink-tertiary: 126 138 154;
-  --ink-disabled: 160 169 181;
-  --edge: 216 222 231;
-  --edge-strong: 181 191 204;
-  --focus: 79 70 229;
+  --canvas: 245 248 249;
+  --surface: 255 255 253;
+  --surface-2: 247 250 251;
+  --surface-3: 235 241 243;
+  --surface-overlay: 255 255 253;
+  --surface-sunken: 239 245 246;
+  --ink: 24 38 48;
+  --ink-muted: 83 102 113;
+  --ink-tertiary: 119 137 146;
+  --ink-disabled: 158 171 177;
+  --edge: 211 222 226;
+  --edge-strong: 171 190 197;
+  --focus: 59 130 246;
   --success: 22 128 91;
   --success-soft: 232 247 240;
   --warning: 180 99 15;
@@ -35,23 +35,23 @@
 }
 
 .dark {
-  --accent: 129 140 248;
-  --accent-hover: 165 180 252;
-  --accent-pressed: 99 102 241;
-  --accent-soft: 36 42 75;
-  --canvas: 12 17 25;
-  --surface: 20 27 38;
-  --surface-2: 27 36 49;
-  --surface-3: 38 49 65;
-  --surface-overlay: 31 41 55;
-  --surface-sunken: 15 21 30;
-  --ink: 239 243 248;
-  --ink-muted: 166 177 192;
-  --ink-tertiary: 125 138 155;
-  --ink-disabled: 85 98 115;
-  --edge: 51 63 79;
-  --edge-strong: 79 94 113;
-  --focus: 165 180 252;
+  --accent: 96 165 250;
+  --accent-hover: 147 197 253;
+  --accent-pressed: 59 130 246;
+  --accent-soft: 30 58 88;
+  --canvas: 19 29 38;
+  --surface: 27 40 50;
+  --surface-2: 34 49 60;
+  --surface-3: 47 65 77;
+  --surface-overlay: 36 52 63;
+  --surface-sunken: 22 33 42;
+  --ink: 241 247 249;
+  --ink-muted: 183 199 207;
+  --ink-tertiary: 140 160 170;
+  --ink-disabled: 96 116 126;
+  --edge: 57 76 87;
+  --edge-strong: 88 109 120;
+  --focus: 96 165 250;
   --success: 52 184 132;
   --success-soft: 20 59 48;
   --warning: 240 172 66;
@@ -63,41 +63,30 @@
   --scrim: 0 0 0;
 }
 
-/* ===== Mobile brand identity ("Aurora" gradient) =====
+/* ===== Mobile brand identity =====
    Scoped to .mobile-shell (the MobileShell.tsx root) so it never affects the
    desktop shell or its user-customizable accent color (Settings → Appearance).
-   Stops are sampled from the actual logo artwork (assets/logo.png) so the UI
-   echoes the brand mark rather than an arbitrary palette. */
+   The values stay aligned with the default blue/teal workspace palette. */
 .mobile-shell {
-  --brand-blue: 51 85 224; /* #3355E0 */
-  --brand-violet: 109 69 251; /* #6D45FB */
-  --brand-cyan: 0 180 209; /* #00B4D1 */
-
-  /* Re-point the shared --accent token to the brand violet so existing
-     bg-accent / text-accent usage across mobile screens is on-brand without
-     touching every call site. */
-  --accent: var(--brand-violet);
+  --brand-blue: 59 130 246;
+  --brand-violet: 96 165 250;
+  --brand-cyan: 20 184 166;
 }
 
 .mobile-shell .brand-gradient {
-  background-image: linear-gradient(135deg, rgb(var(--brand-blue)) 0%, rgb(var(--brand-violet)) 55%, rgb(var(--brand-cyan)) 100%);
+  background: rgb(var(--accent));
 }
 
 .mobile-shell .brand-gradient-text {
-  background-image: linear-gradient(135deg, rgb(var(--brand-blue)) 0%, rgb(var(--brand-violet)) 55%, rgb(var(--brand-cyan)) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  background: none;
+  color: rgb(var(--accent));
 }
 
 /* Soft gradient-tinted 1px border via the two-background layering trick.
    Pair with an explicit `border border-transparent` + `rounded-*` utility. */
 .mobile-shell .brand-border-glow {
-  background-image:
-    linear-gradient(rgb(var(--surface-2)), rgb(var(--surface-2))),
-    linear-gradient(135deg, rgb(var(--brand-blue) / 0.55), rgb(var(--brand-violet) / 0.55), rgb(var(--brand-cyan) / 0.55));
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
+  background: rgb(var(--surface));
+  border-color: rgb(var(--edge));
 }
 
 @keyframes brandGradientPan {
@@ -110,8 +99,8 @@
   }
 }
 .mobile-shell .brand-gradient-animated {
-  background-size: 200% 200%;
-  animation: brandGradientPan 7s ease-in-out infinite;
+  background-size: auto;
+  animation: none;
 }
 
 html,

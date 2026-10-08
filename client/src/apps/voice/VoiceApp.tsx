@@ -172,7 +172,7 @@ export default function VoiceApp() {
             whileTap={{ scale: 0.94 }}
             className={`flex h-20 w-20 items-center justify-center rounded-full text-white shadow-lg transition disabled:opacity-40 ${
               rec.recording
-                ? "bg-red-500 hover:bg-red-600"
+                ? "bg-danger hover:bg-danger"
                 : "bg-accent hover:opacity-90"
             }`}
             title={rec.recording ? "Stop" : "Record"}
@@ -187,8 +187,8 @@ export default function VoiceApp() {
           </motion.button>
           {rec.recording && (
             <span className="absolute -right-2 -top-1 flex h-4 w-4">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex h-4 w-4 rounded-full bg-red-500" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger opacity-75" />
+              <span className="relative inline-flex h-4 w-4 rounded-full bg-danger" />
             </span>
           )}
         </div>
@@ -210,19 +210,19 @@ export default function VoiceApp() {
         </div>
 
         {!rec.supported && (
-          <p className="mt-3 text-xs text-red-400">
+          <p className="mt-3 text-xs text-danger">
             Audio recording is not supported in this browser.
           </p>
         )}
         {rec.error && (
-          <p className="mt-3 flex items-center gap-1.5 text-xs text-red-400">
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-danger">
             <AlertCircle size={13} /> {rec.error}
           </p>
         )}
         {feedback && (
           <p
             className={`mt-3 flex items-center gap-1.5 text-xs ${
-              feedback.ok ? "text-emerald-500" : "text-red-400"
+              feedback.ok ? "text-success" : "text-danger"
             }`}
           >
             {feedback.ok ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}

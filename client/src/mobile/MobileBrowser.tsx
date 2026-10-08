@@ -169,7 +169,7 @@ export default function MobileBrowser({ onClose }: { onClose?: () => void }) {
               <>
                 <p className="mb-2 text-sm font-semibold text-accent">{pageText.title}</p>
                 {pageText.error ? (
-                  <p className="text-sm text-rose-300">{pageText.error}</p>
+                  <p className="text-sm text-danger">{pageText.error}</p>
                 ) : (
                   <MobileTextarea readOnly value={pageText.content} rows={16} className="border-0 bg-transparent text-ink-muted" />
                 )}

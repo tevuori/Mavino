@@ -15,7 +15,8 @@ import {
   FileCode,
   FileType,
 } from "lucide-react";
-import { MobileCard, MobileIconChip } from "./MobileUi";
+import { MobileIconChip } from "./MobileUi";
+import { Sheet } from "../ui/overlays";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -372,7 +373,7 @@ export default function MobileAthena() {
         <MobileIconChip icon={<Sparkles size={20} />} size="md" />
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-xl font-semibold tracking-tight text-ink">Mavino</h1>
-          <p className="truncate text-xs text-ink-muted">
+          <p className="truncate text-xs text-ink-muted" aria-live="polite">
             {streaming ? "working…" : activeConvTitle && activeConvTitle !== "New Chat" ? activeConvTitle : "Your study copilot"}
           </p>
         </div>
@@ -380,7 +381,8 @@ export default function MobileAthena() {
           type="button"
           onClick={() => void startNewChat()}
           disabled={streaming}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:bg-surface-3 disabled:opacity-40"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted active:bg-surface-2 disabled:opacity-40"
+          aria-label="New chat"
           title="New chat"
         >
           <Plus size={18} />
@@ -389,7 +391,8 @@ export default function MobileAthena() {
           type="button"
           onClick={() => setHistoryOpen(true)}
           disabled={loadingConv}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:bg-surface-3 disabled:opacity-40"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted active:bg-surface-2 disabled:opacity-40"
+          aria-label="Chat history"
           title="Chat history"
         >
           <History size={18} />
@@ -399,24 +402,25 @@ export default function MobileAthena() {
       {/* Messages (scrollable) */}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto pb-3">
         {turns.length === 0 ? (
-          <MobileCard variant="feature" className="mt-6 p-5">
-            <p className="font-display font-semibold text-ink">What are you working on?</p>
+          <section className="mt-8 border-y border-edge py-6">
+            <p className="font-display text-lg font-semibold text-ink">What are you working on?</p>
             <p className="mt-2 text-sm leading-6 text-ink-muted">
-              Ask me to make a plan, clarify a concept, turn a syllabus into tasks, or help you get unstuck.
+              Make a plan, clarify a concept, turn a syllabus into tasks, or continue unfinished work.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-5 divide-y divide-edge border-t border-edge">
               {SUGGESTIONS.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
                   onClick={() => setDraft(prompt)}
-                  className="rounded-full border border-accent/30 bg-surface-2 px-3 py-2 text-xs text-accent transition active:bg-surface-3"
+                  className="flex min-h-11 w-full items-center justify-between py-3 text-left text-sm font-medium text-ink active:text-accent"
                 >
                   {prompt}
+                  <ArrowUp size={15} className="rotate-45 text-ink-tertiary" />
                 </button>
               ))}
             </div>
-          </MobileCard>
+          </section>
         ) : (
           <div className="flex flex-col gap-3">
             {turns.map((turn, i) => (
@@ -430,17 +434,17 @@ export default function MobileAthena() {
       {attachment && (
         <div className="mb-2 flex items-center gap-2 rounded-xl border border-accent/30 bg-surface-2 px-3 py-2">
           {attachment.fileType === "pdf" ? (
-            <FileType size={15} className="shrink-0 text-rose-400" />
+            <FileType size={15} className="shrink-0 text-danger" />
           ) : (
             <FileCode size={15} className="shrink-0 text-accent" />
           )}
           <span className="min-w-0 flex-1 truncate text-xs font-medium text-ink">{attachment.fileName}</span>
           <span className="shrink-0 text-[10px] text-ink-muted">{(attachment.fileSize / 1024).toFixed(1)} KB</span>
-          {attachment.truncated && <span className="shrink-0 text-[10px] text-amber-400">truncated</span>}
+          {attachment.truncated && <span className="shrink-0 text-[10px] text-warning">truncated</span>}
           <button
             type="button"
             onClick={removeAttachment}
-            className="shrink-0 rounded p-0.5 text-ink-muted active:text-rose-400"
+            className="shrink-0 rounded p-0.5 text-ink-muted active:text-danger"
             title="Remove attachment"
           >
             <X size={14} />
@@ -448,7 +452,7 @@ export default function MobileAthena() {
         </div>
       )}
       {attachError && (
-        <div className="mb-2 flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300">
+        <div className="mb-2 flex items-center gap-1.5 rounded-lg border border-danger/25 bg-danger-soft px-3 py-2 text-xs text-danger" role="alert">
           <AlertCircle size={13} /> {attachError}
         </div>
       )}
@@ -456,7 +460,7 @@ export default function MobileAthena() {
       {/* Composer */}
       <form
         onSubmit={(e) => { e.preventDefault(); send(draft); }}
-        className="mb-3 flex items-end gap-2 rounded-2xl border border-edge bg-surface-2 p-2 transition focus-within:border-accent/70 focus-within:ring-2 focus-within:ring-accent/15"
+        className="mb-3 flex items-end gap-2 rounded-xl border border-edge bg-surface p-2 transition focus-within:border-focus focus-within:ring-2 focus-within:ring-focus/20"
       >
         <button
           type="button"
@@ -504,7 +508,8 @@ export default function MobileAthena() {
           <button
             type="submit"
             disabled={!draft.trim() && !attachment}
-            className="brand-gradient flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-md shadow-accent/30 disabled:opacity-40"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-fg disabled:opacity-40"
+            aria-label="Send message"
             title="Send"
           >
             <ArrowUp size={19} />
@@ -512,66 +517,55 @@ export default function MobileAthena() {
         )}
       </form>
 
-      {/* History sheet */}
-      {historyOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-surface/95 backdrop-blur-xl">
-          <header className="flex items-center gap-3 px-5 pb-3 pt-[max(1.5rem,env(safe-area-inset-top))]">
-            <button
-              type="button"
-              onClick={() => setHistoryOpen(false)}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface-2 text-ink active:bg-surface-3"
-            >
-              <X size={21} />
-            </button>
-            <div>
-              <p className="text-sm font-medium text-accent">Previous chats</p>
-              <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">History</h1>
-            </div>
-          </header>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+      <Sheet
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        title="Conversation history"
+        description="Resume an earlier conversation or remove one you no longer need."
+      >
+          <div className="min-h-0 overflow-y-auto">
             {conversations.length === 0 ? (
               <p className="mt-10 text-center text-sm text-ink-muted">No conversations yet.</p>
             ) : (
               <div className="space-y-2">
                 {conversations.map((conv) => (
-                  <button
+                  <div
                     key={conv.id}
-                    type="button"
-                    onClick={() => void loadConversation(conv.id)}
-                    className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[.99] ${
-                      conv.id === activeConvId
-                        ? "border-accent/40 bg-accent/10"
-                        : "border-edge bg-surface-2"
-                    }`}
+                    className={`flex items-center border-b border-edge ${conv.id === activeConvId ? "bg-accent-soft" : ""}`}
                   >
-                    <MessageSquare
-                      size={18}
-                      className={`shrink-0 ${conv.status === "active" ? "text-accent" : "text-ink-muted"}`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">{conv.title}</p>
-                      <p className="text-[11px] text-ink-muted">
-                        {new Date(conv.lastMessageAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                        {" · "}
-                        {new Date(conv.lastMessageAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
-                        {conv.status === "active" && " · active"}
-                      </p>
-                    </div>
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); void deleteConversation(conv.id); }}
-                      className="shrink-0 rounded-lg p-1.5 text-ink-muted active:text-rose-400"
-                      title="Delete conversation"
+                      onClick={() => void loadConversation(conv.id)}
+                      className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 text-left"
+                    >
+                      <MessageSquare
+                        size={18}
+                        className={`shrink-0 ${conv.status === "active" ? "text-accent" : "text-ink-muted"}`}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-ink">{conv.title}</span>
+                        <span className="text-[11px] text-ink-muted">
+                          {new Date(conv.lastMessageAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                          {" · "}
+                          {new Date(conv.lastMessageAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                          {conv.status === "active" && " · active"}
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void deleteConversation(conv.id)}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted active:bg-danger-soft active:text-danger"
+                      aria-label={`Delete ${conv.title}`}
                     >
                       <Trash2 size={16} />
                     </button>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
           </div>
-        </div>
-      )}
+      </Sheet>
     </div>
   );
 }
@@ -593,8 +587,8 @@ function TurnBubble({ turn }: { turn: ChatTurn }) {
           </div>
         )}
         <div
-          className={`rounded-3xl px-4 py-3 text-sm leading-6 ${
-            isUser ? "brand-gradient text-white" : "border border-edge bg-surface-2 text-ink"
+          className={`px-4 py-3 text-sm leading-6 ${
+            isUser ? "rounded-xl bg-accent text-accent-fg" : "border-l-2 border-accent/40 text-ink"
           }`}
         >
           {turn.content ? (
@@ -616,7 +610,7 @@ function TurnBubble({ turn }: { turn: ChatTurn }) {
             </span>
           ) : null}
           {turn.error && (
-            <span className="mt-1 flex items-center gap-1.5 text-xs text-rose-400">
+            <span className="mt-1 flex items-center gap-1.5 text-xs text-danger" role="alert">
               <AlertCircle size={12} /> {turn.error}
             </span>
           )}
@@ -629,9 +623,9 @@ function TurnBubble({ turn }: { turn: ChatTurn }) {
 function ToolChip({ tool }: { tool: AthenaToolEvent }) {
   const color =
     tool.state === "completed"
-      ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+      ? "text-success border-success/25 bg-success-soft"
       : tool.state === "error"
-      ? "text-rose-400 border-rose-500/30 bg-rose-500/10"
+      ? "text-danger border-danger/25 bg-danger-soft"
       : tool.state === "canceled"
       ? "text-ink-muted border-edge bg-surface-2"
       : "text-accent border-accent/30 bg-accent/10";

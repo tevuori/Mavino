@@ -29,6 +29,8 @@ import { useMaps } from "../../store/maps";
 import { useAuth } from "../../store/auth";
 import { useDataRefresh } from "../../store/dataRefresh";
 import IntelligentUploadDialog from "./IntelligentUploadDialog";
+import { Dialog } from "../../ui/overlays";
+import { Button } from "../../ui/primitives";
 
 interface ChatTurn extends AthenaMessage {
   tools?: AthenaToolEvent[];
@@ -1364,7 +1366,7 @@ export default function AthenaApp({
                       </div>
                       <button
                         onClick={(e) => deleteConversation(conv.id, e)}
-                        className="shrink-0 rounded p-1 text-ink-muted opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                        className="shrink-0 rounded p-1 text-ink-muted opacity-0 transition hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
                         title="Delete conversation"
                       >
                         <Trash size={11} />
@@ -1424,7 +1426,8 @@ export default function AthenaApp({
               </button>
               <button
                 onClick={() => setAthenaQuickOpen(false)}
-                className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-red-500 hover:text-white"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-danger hover:text-white"
+                aria-label="Close Mavino quick panel"
                 title="Close"
               >
                 <X size={14} />
@@ -1464,21 +1467,23 @@ export default function AthenaApp({
         {turns.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
             <Sparkles size={32} className="text-accent opacity-60" />
-            <p className="text-sm text-ink">
-              Hi — I'm Mavino. I can manage your tasks, files, notes, grades, focus timer,
-              <br />
-              and even control your windows and save workspace layouts.
-            </p>
-            <div className="mt-2 flex flex-col gap-1.5">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => send(s)}
-                  className="rounded-lg border border-edge bg-surface-2 px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-3 hover:text-ink"
-                >
-                  {s}
-                </button>
-              ))}
+            <div className="max-w-md">
+              <h2 className="text-base font-semibold text-ink">What would you like to move forward?</h2>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">
+                Mavino can work with your tasks, files, notes, study material, and current workspace.
+              </p>
+              <div className="mt-5 divide-y divide-edge border-y border-edge text-left">
+                {SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => send(suggestion)}
+                    className="flex min-h-10 w-full items-center justify-between py-2.5 text-xs font-medium text-ink hover:text-accent"
+                  >
+                    {suggestion}
+                    <Send size={13} className="text-ink-tertiary" />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
@@ -1504,24 +1509,24 @@ export default function AthenaApp({
         {/* Attachment chip */}
         {attachment && (
           <div className="mx-auto mb-2 flex max-w-none @5xl:max-w-2xl items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-1.5">
-            {attachment.fileType === "pdf" ? <FileType size={14} className="shrink-0 text-red-400" /> : <FileCode size={14} className="shrink-0 text-accent" />}
+            {attachment.fileType === "pdf" ? <FileType size={14} className="shrink-0 text-danger" /> : <FileCode size={14} className="shrink-0 text-accent" />}
             <span className="truncate text-xs font-medium text-ink">{attachment.fileName}</span>
             <span className="shrink-0 text-[10px] text-ink-muted">{(attachment.fileSize / 1024).toFixed(1)} KB</span>
-            {attachment.truncated && <span className="shrink-0 text-[10px] text-amber-500">truncated</span>}
-            <button onClick={removeAttachment} className="ml-auto shrink-0 rounded p-0.5 text-ink-muted hover:bg-surface-3 hover:text-red-400" title="Remove attachment">
+            {attachment.truncated && <span className="shrink-0 text-[10px] text-warning">truncated</span>}
+            <button onClick={removeAttachment} className="ml-auto shrink-0 rounded p-0.5 text-ink-muted hover:bg-surface-3 hover:text-danger" title="Remove attachment">
               <X size={12} />
             </button>
           </div>
         )}
         {/* Attach error */}
         {attachError && (
-          <div className="mx-auto mb-2 flex max-w-none @5xl:max-w-2xl items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-1.5 text-xs text-red-400">
+          <div className="mx-auto mb-2 flex max-w-none @5xl:max-w-2xl items-center gap-1.5 rounded-lg border border-danger/25 bg-danger-soft px-3 py-1.5 text-xs text-danger" role="alert">
             <AlertCircle size={12} /> {attachError}
           </div>
         )}
         {/* Save status message */}
         {saveMsg && (
-          <div className="mx-auto mb-2 flex max-w-none @5xl:max-w-2xl items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-xs text-emerald-500">
+          <div className="mx-auto mb-2 flex max-w-none @5xl:max-w-2xl items-center gap-1.5 rounded-lg border border-success/25 bg-success-soft px-3 py-1.5 text-xs text-success" role="status">
             <Check size={12} /> {saveMsg}
           </div>
         )}
@@ -1558,7 +1563,7 @@ export default function AthenaApp({
             disabled={streaming}
             placeholder={streaming ? "Mavino is responding…" : attachment ? "Ask about the attached file…" : "Ask Mavino to do something…"}
             rows={1}
-            className="max-h-32 flex-1 resize-none rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent disabled:opacity-50"
+            className="max-h-32 flex-1 resize-none rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus disabled:opacity-50"
           />
           {streaming ? (
             <button
@@ -1681,7 +1686,7 @@ function TurnBubble({
             </span>
           ) : null}
           {turn.error && (
-            <span className="mt-1 flex items-center gap-1.5 text-xs text-red-400">
+            <span className="mt-1 flex items-center gap-1.5 text-xs text-danger">
               <AlertCircle size={12} /> {turn.error}
             </span>
           )}
@@ -1718,9 +1723,9 @@ function TurnBubble({
 function ToolChip({ tool }: { tool: AthenaToolEvent }) {
   const color =
     tool.state === "completed"
-      ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/10"
+      ? "text-success border-success bg-success-soft"
       : tool.state === "error"
-      ? "text-red-400 border-red-500/30 bg-red-500/10"
+      ? "text-danger border-danger bg-danger-soft"
       : tool.state === "canceled"
       ? "text-ink-muted border-edge bg-surface-3"
       : "text-accent border-accent/30 bg-accent/10";
@@ -1764,7 +1769,7 @@ function CodeResultBlock({ result }: { result: Record<string, any> }) {
 
   if (unavailable) {
     return (
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+      <div className="rounded-lg border border-warning bg-warning-soft px-3 py-2 text-xs text-warning">
         <AlertCircle size={12} className="mr-1 inline" />
         {stderr || "Code sandbox unavailable."}
       </div>
@@ -1780,7 +1785,7 @@ function CodeResultBlock({ result }: { result: Record<string, any> }) {
       >
         <Terminal size={11} />
         <span className="font-mono">{language}</span>
-        <span className={`ml-1 rounded px-1.5 py-0.5 text-[10px] ${ok ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
+        <span className={`ml-1 rounded px-1.5 py-0.5 text-[10px] ${ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>
           {timedOut ? "TIMEOUT" : `exit ${exitCode}`}
         </span>
         {durationMs != null && (
@@ -1796,12 +1801,12 @@ function CodeResultBlock({ result }: { result: Record<string, any> }) {
             </pre>
           )}
           {stdout && (
-            <pre className="max-h-48 overflow-auto px-3 py-2 font-mono text-[11px] text-emerald-300">
+            <pre className="max-h-48 overflow-auto px-3 py-2 font-mono text-[11px] text-success">
               {stdout.length > 5000 ? stdout.slice(0, 5000) + "\n…" : stdout}
             </pre>
           )}
           {stderr && (
-            <pre className="max-h-32 overflow-auto px-3 py-2 font-mono text-[11px] text-red-300">
+            <pre className="max-h-32 overflow-auto px-3 py-2 font-mono text-[11px] text-danger">
               {stderr.length > 5000 ? stderr.slice(0, 5000) + "\n…" : stderr}
             </pre>
           )}
@@ -1908,19 +1913,21 @@ function SaveToStorageDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onSkip}>
-      <div
-        className="w-full max-w-md overflow-hidden rounded-xl border border-edge bg-surface shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center gap-2 border-b border-edge px-4 py-3">
-          <Cloud size={16} className="text-accent" />
-          <span className="text-sm font-semibold text-ink">Save to Storage?</span>
-        </div>
-
+    <Dialog
+      open
+      onClose={onSkip}
+      title="Save to storage?"
+      description="Keep this generated file in your workspace, or discard it after the response."
+      className="max-w-md"
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onSkip}>Don't save</Button>
+          <Button size="sm" onClick={onSave} disabled={saving} loading={saving} leadingIcon={<Save size={13} />}>Save to storage</Button>
+        </>
+      }
+    >
         {/* File info */}
-        <div className="px-4 py-3">
+        <div className="py-1">
           <div className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
             <FileText size={14} className="shrink-0 text-ink-muted" />
             <span className="truncate text-sm font-medium text-ink">{fileName}</span>
@@ -1934,7 +1941,7 @@ function SaveToStorageDialog({
         </div>
 
         {/* Folder selection */}
-        <div className="px-4 pb-3">
+        <div>
           <label className="mb-1.5 block text-xs font-medium text-ink-muted">Save to folder:</label>
           <div className="max-h-40 overflow-y-auto rounded-lg border border-edge bg-surface-2">
             {/* Root option */}
@@ -1980,7 +1987,7 @@ function SaveToStorageDialog({
           {suggestion && (
             <div className="mt-2 rounded-lg border border-edge bg-surface-2 px-3 py-2">
               <div className="flex items-center gap-1.5 text-xs">
-                <Lightbulb size={12} className="text-amber-400" />
+                <Lightbulb size={12} className="text-warning" />
                 <span className="font-medium text-ink">{suggestion.folderPath}</span>
                 <span className="ml-auto rounded-full bg-surface-3 px-1.5 py-0.5 text-[10px] text-ink-muted">
                   {Math.round(suggestion.confidence * 100)}% confidence
@@ -1990,25 +1997,6 @@ function SaveToStorageDialog({
             </div>
           )}
         </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-2 border-t border-edge px-4 py-3">
-          <button
-            onClick={onSkip}
-            className="rounded-md border border-edge px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-3"
-          >
-            Don't save
-          </button>
-          <button
-            onClick={onSave}
-            disabled={saving}
-            className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-            Save to Storage
-          </button>
-        </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

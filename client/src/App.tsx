@@ -70,7 +70,7 @@ export default function App() {
 
   if (status === "loading" || maintenanceLoading) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-slate-950 text-slate-400">
+      <div className="flex h-full w-full items-center justify-center bg-canvas text-ink-muted">
         {t("loading")}
       </div>
     );

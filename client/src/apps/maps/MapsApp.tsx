@@ -840,7 +840,7 @@ export default function MapsApp({ win }: { win: WindowInstance }) {
 
           <div className="flex-1 space-y-4 overflow-y-auto p-3">
             {error && (
-              <div className="rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-2 text-xs text-red-500">
+              <div className="rounded-md border border-danger bg-danger-soft px-2.5 py-2 text-xs text-danger">
                 {error}
                 <button onClick={() => setError(null)} className="ml-1 underline">
                   dismiss
@@ -859,7 +859,7 @@ export default function MapsApp({ win }: { win: WindowInstance }) {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && doSearch()}
                   placeholder="Place name or lat,lon"
-                  className="min-w-0 flex-1 rounded-md border border-edge bg-surface px-2 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                  className="min-w-0 flex-1 rounded-md border border-edge bg-surface px-2 py-1.5 text-xs text-ink outline-none focus:border-focus"
                 />
                 <button
                   onClick={doSearch}
@@ -933,12 +933,12 @@ export default function MapsApp({ win }: { win: WindowInstance }) {
                               ? "End (place or lat,lon)"
                               : `Via ${i} (place or lat,lon)`
                           }
-                          className="min-w-0 flex-1 rounded-md border border-edge bg-surface px-2 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                          className="min-w-0 flex-1 rounded-md border border-edge bg-surface px-2 py-1.5 text-xs text-ink outline-none focus:border-focus"
                         />
                         {stops.length > 2 && (
                           <button
                             onClick={() => setStops(stops.filter((_, idx) => idx !== i))}
-                            className="shrink-0 text-ink-muted hover:text-red-500"
+                            className="shrink-0 text-ink-muted hover:text-danger"
                             title="Remove stop"
                           >
                             <X size={12} />
@@ -1061,7 +1061,7 @@ export default function MapsApp({ win }: { win: WindowInstance }) {
                           {t.type} · {fmtDistance(t.distanceM)} · {fmtDuration(t.durationS)}
                         </div>
                       </button>
-                      <button onClick={() => deleteTrip(t.id)} className="text-ink-muted hover:text-red-500">
+                      <button onClick={() => deleteTrip(t.id)} className="text-ink-muted hover:text-danger">
                         <Trash2 size={12} />
                       </button>
                     </li>

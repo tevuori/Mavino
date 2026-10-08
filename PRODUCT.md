@@ -4,7 +4,7 @@
 
 Mavino is a student workspace that turns scattered academic work into one calm, connected place to understand what matters, make progress, and return to unfinished work.
 
-It is not an operating-system imitation for its own sake. The desktop shell supports deep, parallel work; the mobile shell supports quick orientation and action. Athena connects workflows and context instead of living as a separate chatbot.
+It is not an operating-system imitation for its own sake. The desktop shell supports deep, parallel work; the mobile shell supports quick orientation and action. Mavino connects workflows and context instead of presenting its assistant as a separate product.
 
 ## Primary users
 
@@ -19,7 +19,7 @@ It is not an operating-system imitation for its own sake. The desktop shell supp
 3. Capture a task, note, source, or question quickly.
 4. Plan and complete study work.
 5. Work with notes, files, documents, and learning sources.
-6. Ask Athena to act within the current workspace and verify what it changed.
+6. Ask Mavino to act within the current workspace and verify what it changed.
 7. Organize parallel work across windows and workspaces on desktop.
 8. Review, capture, and take quick action one-handed on mobile.
 
@@ -31,15 +31,15 @@ A spatial workspace for deep and parallel work. Windows, workspaces, keyboard sh
 
 ### Mobile
 
-A sequential, touch-first companion centered on Today, quick capture, tasks, calendar, and Athena. Mobile shares identity and behavior with desktop but does not reproduce desktop window layouts.
+A sequential, touch-first companion centered on Today, quick capture, tasks, calendar, and the Mavino assistant. Mobile shares identity and behavior with desktop but does not reproduce desktop window layouts.
 
 ### PWA and native
 
 The web, PWA, and Capacitor builds are one product. Safe areas, browser and hardware back, virtual keyboards, offline/update states, and install behavior are product requirements.
 
-## Athena's role
+## Mavino assistant role
 
-Athena is a contextual collaborator that can explain, organize, create, navigate, and operate Mavino tools. It must:
+Mavino's assistant is a contextual collaborator that can explain, organize, create, navigate, and operate product tools. It must:
 
 - use the user's real workspace context,
 - distinguish suggestions from completed actions,
@@ -63,7 +63,7 @@ Athena is a contextual collaborator that can explain, organize, create, navigate
 - Use action labels such as “Create task” rather than “Continue”.
 - Avoid marketing copy inside working surfaces.
 - Avoid infantilizing students or presenting AI as infallible.
-- Use “Mavino” for the product and “Athena” only where retained as the assistant's explicit feature name; do not alternate names accidentally.
+- Use “Mavino” in all user-facing product and assistant language. “Athena” is a deprecated internal codename only.
 - Errors explain the problem and a recovery action when one exists.
 
 ## Constraints
@@ -80,5 +80,5 @@ Athena is a contextual collaborator that can explain, organize, create, navigate
 - Today, capture, task planning, and return-to-work workflows require fewer decisions.
 - Desktop users can complete window-management workflows with pointer or keyboard.
 - Mobile primary workflows are reachable and usable one-handed.
-- Athena action status and results are understandable without reading internal tool details.
+- Mavino assistant action status and results are understandable without reading internal tool details.
 - Critical workflows pass automated accessibility, keyboard, responsive, and visual regression checks.

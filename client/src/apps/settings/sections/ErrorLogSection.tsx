@@ -105,13 +105,13 @@ export default function ErrorLogSection() {
           </Card>
           <Card className="p-3">
             <p className="text-xs text-ink-muted">Unresolved</p>
-            <p className={`text-xl font-bold ${stats.unresolved > 0 ? "text-red-500" : "text-emerald-500"}`}>
+            <p className={`text-xl font-bold ${stats.unresolved > 0 ? "text-danger" : "text-success"}`}>
               {stats.unresolved}
             </p>
           </Card>
           <Card className="p-3">
             <p className="text-xs text-ink-muted">Last 24h</p>
-            <p className={`text-xl font-bold ${stats.last24h > 0 ? "text-amber-500" : "text-ink"}`}>
+            <p className={`text-xl font-bold ${stats.last24h > 0 ? "text-warning" : "text-ink"}`}>
               {stats.last24h}
             </p>
           </Card>
@@ -151,7 +151,7 @@ export default function ErrorLogSection() {
         </button>
         <button
           onClick={deleteResolved}
-          className="flex items-center gap-1.5 rounded-lg border border-edge px-2.5 py-1 text-xs text-ink-muted hover:text-red-500"
+          className="flex items-center gap-1.5 rounded-lg border border-edge px-2.5 py-1 text-xs text-ink-muted hover:text-danger"
         >
           <Trash2 size={12} /> Clear resolved
         </button>
@@ -166,7 +166,7 @@ export default function ErrorLogSection() {
         </div>
       ) : items.length === 0 ? (
         <Card className="py-8 text-center">
-          <CheckCircle size={32} className="mx-auto mb-2 text-emerald-500" />
+          <CheckCircle size={32} className="mx-auto mb-2 text-success" />
           <p className="text-sm text-ink-muted">No errors to show. All clear!</p>
         </Card>
       ) : (
@@ -183,9 +183,9 @@ export default function ErrorLogSection() {
                 >
                   <div className="mt-0.5 shrink-0">
                     {item.source === "server" ? (
-                      <Server size={14} className="text-red-500" />
+                      <Server size={14} className="text-danger" />
                     ) : (
-                      <Monitor size={14} className="text-amber-500" />
+                      <Monitor size={14} className="text-warning" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -204,7 +204,7 @@ export default function ErrorLogSection() {
                     ) : (
                       <button
                         onClick={(e) => { e.stopPropagation(); void resolve(item.id); }}
-                        className="rounded p-1 text-ink-muted hover:text-emerald-500"
+                        className="rounded p-1 text-ink-muted hover:text-success"
                         title="Mark resolved"
                       >
                         <Check size={14} />
@@ -212,7 +212,7 @@ export default function ErrorLogSection() {
                     )}
                     <button
                       onClick={(e) => { e.stopPropagation(); void remove(item.id); }}
-                      className="rounded p-1 text-ink-muted hover:text-red-500"
+                      className="rounded p-1 text-ink-muted hover:text-danger"
                       title="Delete"
                     >
                       <Trash2 size={14} />

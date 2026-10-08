@@ -49,9 +49,9 @@ function readinessStroke(pct: number): string {
 function masteryColor(m: number): string {
   if (m < 0) return "text-ink-muted";
   const pct = Math.round(m * 100);
-  if (pct >= 80) return "text-emerald-400";
-  if (pct >= 60) return "text-amber-400";
-  return "text-red-400";
+  if (pct >= 80) return "text-success";
+  if (pct >= 60) return "text-warning";
+  return "text-danger";
 }
 
 function masteryPct(m: number): string {
@@ -181,7 +181,7 @@ function ExamCard({ exam }: { exam: PulseExam }) {
           {fmtDate(exam.date)} · {exam.daysUntil}d away
         </div>
         {exam.atRiskCount > 0 && (
-          <div className="mt-1 flex items-center justify-center gap-1 text-[10px] text-red-400">
+          <div className="mt-1 flex items-center justify-center gap-1 text-[10px] text-danger">
             <TrendingDown size={10} /> {exam.atRiskCount} at-risk
           </div>
         )}
@@ -202,9 +202,9 @@ function AtRiskRow({
   onAddToCrunch: (concept: PulseConcept) => void;
 }) {
   return (
-    <div className="group flex items-center gap-3 rounded-lg border border-edge bg-surface-2 p-2.5 transition hover:border-red-500/30">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10">
-        <TrendingDown size={15} className="text-red-400" />
+    <div className="group flex items-center gap-3 rounded-lg border border-edge bg-surface-2 p-2.5 transition hover:border-danger/30">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger-soft">
+        <TrendingDown size={15} className="text-danger" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs font-medium text-ink">{concept.label}</div>
@@ -369,7 +369,7 @@ export default function PulseApp({ win: _win }: { win: WindowInstance }) {
               {stale && !building && (
                 <button
                   onClick={rebuild}
-                  className="flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300 transition hover:bg-amber-500/20"
+                  className="flex items-center gap-1 rounded-md bg-warning-soft px-2 py-1 text-[11px] text-warning transition hover:bg-warning-soft"
                 >
                   <RefreshCw size={12} /> Stale — rebuild
                 </button>
@@ -383,7 +383,7 @@ export default function PulseApp({ win: _win }: { win: WindowInstance }) {
               </button>
               <button
                 onClick={deleteForecast}
-                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-ink-muted transition hover:bg-red-500/10 hover:text-red-400"
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-ink-muted transition hover:bg-danger-soft hover:text-danger"
               >
                 <Trash2 size={13} />
               </button>
@@ -410,7 +410,7 @@ export default function PulseApp({ win: _win }: { win: WindowInstance }) {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+        <div className="flex items-center gap-2 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-xs text-danger">
           <AlertCircle size={14} /> {error}
         </div>
       )}
@@ -465,7 +465,7 @@ export default function PulseApp({ win: _win }: { win: WindowInstance }) {
 
           {/* No exams notice */}
           {data.exams.length === 0 && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
               <CalendarClock size={14} />
               <span>No upcoming exams in your Crunch plan. Set up Crunch with exam dates to get per-exam readiness forecasts.</span>
             </div>
@@ -503,20 +503,20 @@ export default function PulseApp({ win: _win }: { win: WindowInstance }) {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                <TrendingDown size={12} className="text-red-400" /> At-risk concepts
+                <TrendingDown size={12} className="text-danger" /> At-risk concepts
                 {atRiskConcepts.length > 0 && (
-                  <span className="rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-red-400">
+                  <span className="rounded-full bg-danger-soft px-1.5 py-0.5 text-[9px] font-semibold text-danger">
                     {atRiskConcepts.length}
                   </span>
                 )}
               </div>
             </div>
             {atRiskConcepts.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
-                  <Brain size={18} className="text-emerald-400" />
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-success/20 bg-success-soft p-4 text-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success-soft">
+                  <Brain size={18} className="text-success" />
                 </div>
-                <p className="text-xs font-medium text-emerald-300">No at-risk concepts</p>
+                <p className="text-xs font-medium text-success">No at-risk concepts</p>
                 <p className="max-w-xs text-[10px] text-ink-muted">
                   All your tracked concepts are predicted to stay above the mastery threshold until your nearest exam. Keep reviewing to maintain this.
                 </p>
@@ -557,8 +557,8 @@ export default function PulseApp({ win: _win }: { win: WindowInstance }) {
                       className="group flex items-center gap-2 rounded-lg border border-edge bg-surface-2 p-2 text-left transition hover:border-accent/30"
                     >
                       <span className={`flex h-6 w-8 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${
-                        concept.daysUntilForgotten <= 3 ? "bg-red-500/15 text-red-400" :
-                        concept.daysUntilForgotten <= 7 ? "bg-amber-500/15 text-amber-400" :
+                        concept.daysUntilForgotten <= 3 ? "bg-danger-soft text-danger" :
+                        concept.daysUntilForgotten <= 7 ? "bg-warning-soft text-warning" :
                         "bg-surface-3 text-ink-muted"
                       }`}>
                         {concept.daysUntilForgotten}d

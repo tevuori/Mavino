@@ -75,9 +75,8 @@ export function computeGPA(courses: Course[]): number {
 
 /** Get a color for a percentage score. */
 export function scoreColor(pct: number): string {
-  if (pct >= 90) return "text-green-400";
-  if (pct >= 80) return "text-blue-400";
-  if (pct >= 70) return "text-amber-400";
-  if (pct >= 60) return "text-orange-400";
-  return "text-red-400";
+  if (pct >= 90) return "text-success";
+  if (pct >= 80) return "text-info";
+  if (pct >= 60) return "text-warning";
+  return "text-danger";
 }

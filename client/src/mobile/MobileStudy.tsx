@@ -256,7 +256,7 @@ export default function MobileStudy({
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://example.com/article"
-            className="mb-3 w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted focus:border-accent/60"
+            className="mb-3 w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted focus:border-focus/60"
           />
         )}
         {sourceKind === "note" && (

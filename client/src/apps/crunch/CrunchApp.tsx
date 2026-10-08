@@ -62,9 +62,9 @@ function todayStr(): string {
 function masteryColor(m: number): string {
   if (m < 0) return "text-ink-muted";
   const pct = Math.round(m * 100);
-  if (pct >= 80) return "text-emerald-400";
-  if (pct >= 60) return "text-amber-400";
-  return "text-red-400";
+  if (pct >= 80) return "text-success";
+  if (pct >= 60) return "text-warning";
+  return "text-danger";
 }
 
 function masteryPct(m: number): string {
@@ -150,7 +150,7 @@ function ExamSetupForm({
       </p>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+        <div className="flex items-center gap-2 rounded-lg border border-danger bg-danger-soft px-3 py-2 text-xs text-danger">
           <AlertCircle size={14} /> {error}
         </div>
       )}
@@ -163,7 +163,7 @@ function ExamSetupForm({
               {rows.length > 1 && (
                 <button
                   onClick={() => removeRow(r.id)}
-                  className="rounded p-0.5 text-ink-muted transition hover:bg-red-500/10 hover:text-red-400"
+                  className="rounded p-0.5 text-ink-muted transition hover:bg-danger-soft hover:text-danger"
                 >
                   <Trash2 size={13} />
                 </button>
@@ -174,13 +174,13 @@ function ExamSetupForm({
                 value={r.name}
                 onChange={(e) => updateRow(r.id, "name", e.target.value)}
                 placeholder="Exam name (e.g. Calculus Final)"
-                className="col-span-2 rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-accent/50"
+                className="col-span-2 rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-focus/50"
               />
               <input
                 type="date"
                 value={r.date}
                 onChange={(e) => updateRow(r.id, "date", e.target.value)}
-                className="rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-accent/50"
+                className="rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-focus/50"
               />
               <input
                 type="number"
@@ -189,7 +189,7 @@ function ExamSetupForm({
                 min={15}
                 max={600}
                 step={15}
-                className="rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-accent/50"
+                className="rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-focus/50"
                 title="Daily study minutes (shared across all exams)"
               />
             </div>
@@ -198,7 +198,7 @@ function ExamSetupForm({
               onChange={(e) => updateRow(r.id, "syllabus", e.target.value)}
               placeholder="Syllabus — topics, chapters, or material to cover. One per line or comma-separated."
               rows={3}
-              className="mt-2 w-full resize-y rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-accent/50"
+              className="mt-2 w-full resize-y rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-focus/50"
             />
           </div>
         ))}
@@ -256,12 +256,12 @@ function TaskRow({
       onClick={() => onToggle(task.id, !task.done)}
       className={`group flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition ${
         task.done
-          ? "border-emerald-500/20 bg-emerald-500/5"
+          ? "border-success bg-success-soft"
           : "border-edge bg-surface hover:border-accent/30"
       }`}
     >
       {task.done ? (
-        <CheckCircle2 size={16} className="shrink-0 text-emerald-400" />
+        <CheckCircle2 size={16} className="shrink-0 text-success" />
       ) : (
         <Circle size={16} className="shrink-0 text-ink-muted group-hover:text-accent" />
       )}
@@ -326,7 +326,7 @@ function DayCard({
         isToday
           ? "border-accent/40 bg-accent/5"
           : allDone
-          ? "border-emerald-500/20 bg-emerald-500/[0.03]"
+          ? "border-success bg-success-soft"
           : isPast
           ? "border-edge bg-surface-2 opacity-75"
           : "border-edge bg-surface-2"
@@ -343,7 +343,7 @@ function DayCard({
             </span>
           )}
           {allDone && day.tasks.length > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] text-emerald-400">
+            <span className="flex items-center gap-0.5 text-[10px] text-success">
               <CheckCircle2 size={10} /> Done
             </span>
           )}
@@ -583,7 +583,7 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
               </button>
               <button
                 onClick={deletePlan}
-                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-ink-muted transition hover:bg-red-500/10 hover:text-red-400"
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-ink-muted transition hover:bg-danger-soft hover:text-danger"
               >
                 <Trash2 size={13} />
               </button>
@@ -594,7 +594,7 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
 
       {/* Behind alert */}
       {data && isBehind && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+        <div className="flex items-center gap-2 rounded-lg border border-warning bg-warning-soft px-3 py-2 text-xs text-warning">
           <TrendingDown size={14} />
           <span>You're {behindPct}% behind on your study plan. Catch up to stay on track for your exams.</span>
         </div>
@@ -602,7 +602,7 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
 
       {/* At-risk concept surfaced by Pulse */}
       {pulseAtRisk && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+        <div className="flex items-center gap-2 rounded-lg border border-danger bg-danger-soft px-3 py-2 text-xs text-danger">
           <TrendingDown size={14} className="shrink-0" />
           <span className="min-w-0 flex-1">
             Pulse predicts <span className="font-semibold">{pulseAtRisk.label}</span> will drop below mastery before your exam.
@@ -620,7 +620,7 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
           )}
           <button
             onClick={() => setPulseAtRisk(null)}
-            className="shrink-0 rounded-md p-0.5 text-red-300/60 transition hover:text-red-200"
+            className="shrink-0 rounded-md p-0.5 text-danger/60 transition hover:text-danger"
             aria-label="Dismiss"
           >
             <X size={13} />
@@ -646,7 +646,7 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+        <div className="flex items-center gap-2 rounded-lg border border-danger bg-danger-soft px-3 py-2 text-xs text-danger">
           <AlertCircle size={14} /> {error}
         </div>
       )}

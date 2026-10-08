@@ -240,7 +240,7 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
           </div>
         </div>
 
-        {error && <p className="px-4 py-2 text-xs text-red-400">{error}</p>}
+        {error && <p className="px-4 py-2 text-xs text-danger">{error}</p>}
 
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
@@ -279,12 +279,12 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
                 <input
                   autoFocus value={deckName} onChange={(e) => setDeckName(e.target.value)}
                   placeholder="Deck name"
-                  className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                  className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus"
                 />
                 <textarea
                   value={deckDesc} onChange={(e) => setDeckDesc(e.target.value)}
                   placeholder="Description (optional)" rows={2}
-                  className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                  className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus"
                 />
                 <div className="mb-4 flex gap-2">
                   {DECK_COLORS.map((c) => (
@@ -329,7 +329,7 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
               <div className="h-3 w-3 rounded-full" style={{ backgroundColor: selectedDeck.color }} />
               {selectedDeck.name}
               {isSharedDeck && (
-                <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-medium text-emerald-400" title={`Shared via ${selectedDeck.sharedGroupName ?? "Circle"}`}>
+                <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[9px] font-medium text-success" title={`Shared via ${selectedDeck.sharedGroupName ?? "Circle"}`}>
                   <Users size={9} /> {sharedDeckPermission === "write" ? "write" : "read"}
                 </span>
               )}
@@ -339,7 +339,7 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
             {cards.length > 0 && (
               <button
                 onClick={startReview}
-                className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-green-700"
+                className="flex items-center gap-1 rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white transition hover:brightness-95"
               >
                 <Brain size={14} /> Study
               </button>
@@ -407,14 +407,14 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                        isDue ? "bg-amber-500/20 text-amber-400" : "bg-surface-3 text-ink-muted"
+                        isDue ? "bg-warning-soft text-warning" : "bg-surface-3 text-ink-muted"
                       }`}>
                         {isDue ? "Due" : `${card.interval}d`}
                       </span>
                       {!isReadOnlyShared && (
                         <button
                           onClick={() => deleteCard(card.id)}
-                          className="text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                          className="text-ink-muted opacity-0 transition hover:text-danger group-hover:opacity-100"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -443,13 +443,13 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
                 <textarea
                   autoFocus value={cardFront} onChange={(e) => setCardFront(e.target.value)}
                   placeholder="What is...?" rows={2}
-                  className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                  className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus"
                 />
                 <label className="mb-1 block text-xs text-ink-muted">Back (answer)</label>
                 <textarea
                   value={cardBack} onChange={(e) => setCardBack(e.target.value)}
                   placeholder="The answer is..." rows={3}
-                  className="mb-4 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                  className="mb-4 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus"
                 />
                 <div className="flex justify-end gap-2">
                   <button onClick={() => setShowCardForm(false)} className="rounded-lg px-3 py-1.5 text-xs text-ink-muted hover:text-ink">Cancel</button>
@@ -552,28 +552,28 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
               >
                 <button
                   onClick={() => reviewCard(0)}
-                  className="flex flex-col items-center gap-1 rounded-xl bg-red-500/15 py-3 text-red-400 transition hover:bg-red-500/25"
+                  className="flex flex-col items-center gap-1 rounded-xl bg-danger-soft py-3 text-danger transition hover:bg-danger-soft"
                 >
                   <X size={18} />
                   <span className="text-xs font-medium">Again</span>
                 </button>
                 <button
                   onClick={() => reviewCard(1)}
-                  className="flex flex-col items-center gap-1 rounded-xl bg-orange-500/15 py-3 text-orange-400 transition hover:bg-orange-500/25"
+                  className="flex flex-col items-center gap-1 rounded-xl bg-warning-soft py-3 text-warning transition hover:bg-warning-soft"
                 >
                   <AlertCircle size={18} />
                   <span className="text-xs font-medium">Hard</span>
                 </button>
                 <button
                   onClick={() => reviewCard(2)}
-                  className="flex flex-col items-center gap-1 rounded-xl bg-blue-500/15 py-3 text-blue-400 transition hover:bg-blue-500/25"
+                  className="flex flex-col items-center gap-1 rounded-xl bg-accent-soft py-3 text-accent transition hover:bg-accent-soft"
                 >
                   <Check size={18} />
                   <span className="text-xs font-medium">Good</span>
                 </button>
                 <button
                   onClick={() => reviewCard(3)}
-                  className="flex flex-col items-center gap-1 rounded-xl bg-green-500/15 py-3 text-green-400 transition hover:bg-green-500/25"
+                  className="flex flex-col items-center gap-1 rounded-xl bg-success-soft py-3 text-success transition hover:bg-success-soft"
                 >
                   <RotateCcw size={18} />
                   <span className="text-xs font-medium">Easy</span>
@@ -586,10 +586,10 @@ export default function FlashcardsApp({ win }: { win: WindowInstance }) {
         {/* Review stats footer */}
         <div className="border-t border-edge px-4 py-2">
           <div className="flex justify-center gap-4 text-xs text-ink-muted">
-            <span className="text-red-400">Again: {reviewStats.again}</span>
-            <span className="text-orange-400">Hard: {reviewStats.hard}</span>
-            <span className="text-blue-400">Good: {reviewStats.good}</span>
-            <span className="text-green-400">Easy: {reviewStats.easy}</span>
+            <span className="text-danger">Again: {reviewStats.again}</span>
+            <span className="text-warning">Hard: {reviewStats.hard}</span>
+            <span className="text-accent">Good: {reviewStats.good}</span>
+            <span className="text-success">Easy: {reviewStats.easy}</span>
           </div>
         </div>
       </div>
@@ -624,7 +624,7 @@ function DeckCard({ deck, onOpen, onDelete }: { deck: FlashcardDeck & { _count: 
       }`}
     >
       {deck.shared && (
-        <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-medium text-emerald-400" title={`Shared via ${deck.sharedGroupName ?? "Circle"}`}>
+        <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[9px] font-medium text-success" title={`Shared via ${deck.sharedGroupName ?? "Circle"}`}>
           <Users size={9} /> {deck.sharedPermission === "write" ? "Shared · write" : "Shared · read"}
         </div>
       )}
@@ -662,7 +662,7 @@ function DeckCard({ deck, onOpen, onDelete }: { deck: FlashcardDeck & { _count: 
                 onDelete();
               }}
               title="Delete deck"
-              className="text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+              className="text-ink-muted opacity-0 transition hover:text-danger group-hover:opacity-100"
             >
               <Trash2 size={14} />
             </button>

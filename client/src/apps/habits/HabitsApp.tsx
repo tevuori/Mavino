@@ -9,6 +9,8 @@ import { habitsApi } from "../../services/habits";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
 import { alertDialog } from "../../store/mobileDialog";
 import type { Habit, HabitStats } from "../../types";
+import { Dialog } from "../../ui/overlays";
+import { Button } from "../../ui/primitives";
 
 interface PomodoroStats {
   completedFocus: number;
@@ -200,14 +202,14 @@ export default function HabitsApp() {
                       <span className="text-base">{h.icon}</span>
                       <span className="truncate text-sm font-medium text-ink">{h.name}</span>
                       {auto && !done && (
-                        <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-500" title={`Auto-completed via ${h.linkedApp}: ${auto}`}>
+                        <span className="rounded-full bg-success-soft px-1.5 py-0.5 text-[10px] font-semibold text-success" title={`Auto-completed via ${h.linkedApp}: ${auto}`}>
                           auto
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-ink-muted">
                       <span className="flex items-center gap-0.5">
-                        <Flame size={10} className="text-orange-500" />
+                        <Flame size={10} className="text-warning" />
                         {s?.currentStreak ?? 0} day streak
                       </span>
                       <span>· best {s?.longestStreak ?? 0}</span>
@@ -260,22 +262,28 @@ export default function HabitsApp() {
       )}
 
       {/* Create form */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowForm(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-xl border border-edge bg-surface p-4 shadow-xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-ink">New Habit</h3>
-              <button onClick={() => setShowForm(false)} className="rounded p-1 text-ink-muted hover:bg-surface-3"><X size={16} /></button>
-            </div>
+      <Dialog
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title="New habit"
+        description="Create a repeatable behavior you want to track."
+        className="max-w-sm"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button size="sm" onClick={createHabit}>Create</Button>
+          </>
+        }
+      >
             <div className="space-y-3">
               <div>
                 <label className="mb-1 block text-[11px] font-medium text-ink-muted">Name</label>
                 <input
-                  autoFocus
+                  data-autofocus
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && createHabit()}
-                  className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-sm text-ink outline-none focus:border-accent"
+                  className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-sm text-ink outline-none focus:border-focus"
                   placeholder="e.g. Review flashcards"
                 />
               </div>
@@ -286,6 +294,8 @@ export default function HabitsApp() {
                     <button
                       key={ic}
                       onClick={() => setIcon(ic)}
+                      aria-label={`Use icon ${ic}`}
+                      aria-pressed={icon === ic}
                       className={`flex h-8 w-8 items-center justify-center rounded-md border text-lg ${icon === ic ? "border-accent bg-surface-2" : "border-edge"}`}
                     >
                       {ic}
@@ -301,6 +311,8 @@ export default function HabitsApp() {
                       <button
                         key={c}
                         onClick={() => setColor(c)}
+                        aria-label={`Use color ${c}`}
+                        aria-pressed={color === c}
                         className={`h-6 w-6 rounded-full border-2 ${color === c ? "border-ink" : "border-transparent"}`}
                         style={{ background: c }}
                       />
@@ -312,7 +324,7 @@ export default function HabitsApp() {
                   <select
                     value={cadence}
                     onChange={(e) => setCadence(e.target.value as "daily" | "weekly")}
-                    className="rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-sm text-ink outline-none focus:border-accent"
+                    className="rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-sm text-ink outline-none focus:border-focus"
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -326,7 +338,7 @@ export default function HabitsApp() {
                   min={1}
                   value={target}
                   onChange={(e) => setTarget(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-sm text-ink outline-none focus:border-accent"
+                  className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-sm text-ink outline-none focus:border-focus"
                 />
               </div>
               <div>
@@ -337,7 +349,7 @@ export default function HabitsApp() {
                     setLinkedApp(e.target.value || null);
                     setLinkedMetric(e.target.value === "pomodoro" ? "focusSessions" : null);
                   }}
-                  className="w-full rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-sm text-ink outline-none focus:border-accent"
+                  className="w-full rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-sm text-ink outline-none focus:border-focus"
                 >
                   <option value="">None (manual)</option>
                   <option value="pomodoro">Pomodoro focus sessions</option>
@@ -346,7 +358,7 @@ export default function HabitsApp() {
                   <select
                     value={linkedMetric ?? ""}
                     onChange={(e) => setLinkedMetric(e.target.value || null)}
-                    className="mt-1.5 w-full rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-sm text-ink outline-none focus:border-accent"
+                    className="mt-1.5 w-full rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-sm text-ink outline-none focus:border-focus"
                   >
                     <option value="focusSessions">Focus sessions count</option>
                     <option value="focusMinutes">Focus minutes total</option>
@@ -354,13 +366,7 @@ export default function HabitsApp() {
                 )}
               </div>
             </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setShowForm(false)} className="rounded-md border border-edge px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-3">Cancel</button>
-              <button onClick={createHabit} className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">Create</button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Dialog>
     </div>
   );
 }
@@ -405,7 +411,7 @@ function HabitDetail({
         <div className="mb-4 grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-surface p-3">
             <div className="flex items-center gap-1 text-[11px] text-ink-muted">
-              <Flame size={11} className="text-orange-500" /> Current
+              <Flame size={11} className="text-warning" /> Current
             </div>
             <div className="text-2xl font-bold text-ink">{stat?.currentStreak ?? 0}</div>
             <div className="text-[10px] text-ink-muted">days</div>
@@ -450,8 +456,8 @@ function HabitDetail({
           onClick={onDelete}
           className={`mt-4 flex items-center gap-1 rounded-md px-2 py-1 text-xs transition ${
             confirmingDelete
-              ? "bg-red-500 text-white hover:bg-red-600"
-              : "text-red-500 hover:bg-red-500/10"
+              ? "bg-danger text-white hover:bg-danger"
+              : "text-danger hover:bg-danger-soft"
           }`}
         >
           <Trash2 size={13} /> {confirmingDelete ? "Click again to confirm" : "Delete habit"}

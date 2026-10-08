@@ -32,6 +32,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return (
     <button
       ref={ref}
+      type="button"
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={clsx(
@@ -61,6 +62,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   return (
     <button
       ref={ref}
+      type="button"
       aria-label={label}
       title={label}
       className={clsx(
@@ -74,6 +76,40 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       {...props}
     >
       {children}
+    </button>
+  );
+});
+
+export interface SwitchProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
+  checked: boolean;
+  label: string;
+}
+
+export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch(
+  { checked, label, className, ...props },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className={clsx(
+        "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+        checked ? "bg-accent" : "bg-surface-3",
+        className,
+      )}
+      {...props}
+    >
+      <span
+        aria-hidden
+        className={clsx(
+          "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+          checked ? "translate-x-[22px]" : "translate-x-0.5",
+        )}
+      />
     </button>
   );
 });

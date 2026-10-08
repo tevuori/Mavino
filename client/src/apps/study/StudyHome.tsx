@@ -30,16 +30,16 @@ function timeAgo(iso: string): string {
 }
 
 const TYPE_META: Record<string, { label: string; icon: typeof Brain; color: string }> = {
-  flashcards: { label: "Flashcards", icon: Brain, color: "text-indigo-400" },
-  summary: { label: "Summary", icon: FileText, color: "text-sky-400" },
-  explain: { label: "Explain", icon: Lightbulb, color: "text-amber-400" },
-  study_guide: { label: "Study Guide", icon: BookOpen, color: "text-emerald-400" },
-  quiz: { label: "Quiz", icon: HelpCircle, color: "text-pink-400" },
-  syllabus: { label: "Syllabus", icon: ListTodo, color: "text-orange-400" },
-  chat: { label: "Study Chat", icon: MessageSquare, color: "text-violet-400" },
-  podcast: { label: "Podcast", icon: Mic, color: "text-rose-400" },
-  teach: { label: "Teach Me", icon: Presentation, color: "text-indigo-400" },
-  lecture_notes: { label: "Lecture Notes", icon: Video, color: "text-teal-400" },
+  flashcards: { label: "Flashcards", icon: Brain, color: "text-accent" },
+  summary: { label: "Summary", icon: FileText, color: "text-accent" },
+  explain: { label: "Explain", icon: Lightbulb, color: "text-warning" },
+  study_guide: { label: "Study Guide", icon: BookOpen, color: "text-success" },
+  quiz: { label: "Quiz", icon: HelpCircle, color: "text-danger" },
+  syllabus: { label: "Syllabus", icon: ListTodo, color: "text-warning" },
+  chat: { label: "Study Chat", icon: MessageSquare, color: "text-accent" },
+  podcast: { label: "Podcast", icon: Mic, color: "text-danger" },
+  teach: { label: "Teach Me", icon: Presentation, color: "text-accent" },
+  lecture_notes: { label: "Lecture Notes", icon: Video, color: "text-success" },
 };
 
 export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts?: { workspaceId?: string }) => void }) {
@@ -98,17 +98,17 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
   const studyCount = sessions.length;
 
   const allQuickActions: { mode: string; label: string; icon: typeof Brain; color: string; desc: string }[] = [
-    { mode: "teach", label: "Teach Me", icon: Presentation, color: "text-indigo-400", desc: "Interactive live tutoring — Mavino teaches from your sources with voice" },
-    { mode: "chat", label: "Ask (grounded)", icon: MessageSquare, color: "text-violet-400", desc: "Q&A grounded in your sources, with citations" },
-    { mode: "podcast", label: "Podcast", icon: Mic, color: "text-rose-400", desc: "Audio overview from your sources" },
-    { mode: "graph", label: "Knowledge Graph", icon: Network, color: "text-cyan-400", desc: "Extract concepts & relationships once, reuse everywhere" },
-    { mode: "lecture", label: "Lecture → Notes", icon: Video, color: "text-teal-400", desc: "Generate notes from a lecture video recording" },
-    { mode: "flashcards", label: "Generate Flashcards", icon: Brain, color: "text-indigo-400", desc: "AI Q/A cards from a note or text" },
-    { mode: "summarize", label: "Summarize", icon: FileText, color: "text-sky-400", desc: "TL;DR, outline, or key points" },
-    { mode: "quiz", label: "Quiz Me", icon: HelpCircle, color: "text-pink-400", desc: "Test yourself, AI-graded" },
-    { mode: "explain", label: "Explain", icon: Lightbulb, color: "text-amber-400", desc: "Get a concept explained" },
-    { mode: "study_guide", label: "Study Guide", icon: BookOpen, color: "text-emerald-400", desc: "Consolidate notes into a cheat sheet" },
-    { mode: "syllabus", label: "Syllabus → Tasks", icon: ListTodo, color: "text-orange-400", desc: "Extract tasks from a syllabus" },
+    { mode: "teach", label: "Teach Me", icon: Presentation, color: "text-accent", desc: "Interactive live tutoring — Mavino teaches from your sources with voice" },
+    { mode: "chat", label: "Ask (grounded)", icon: MessageSquare, color: "text-accent", desc: "Q&A grounded in your sources, with citations" },
+    { mode: "podcast", label: "Podcast", icon: Mic, color: "text-danger", desc: "Audio overview from your sources" },
+    { mode: "graph", label: "Knowledge Graph", icon: Network, color: "text-accent", desc: "Extract concepts & relationships once, reuse everywhere" },
+    { mode: "lecture", label: "Lecture → Notes", icon: Video, color: "text-success", desc: "Generate notes from a lecture video recording" },
+    { mode: "flashcards", label: "Generate Flashcards", icon: Brain, color: "text-accent", desc: "AI Q/A cards from a note or text" },
+    { mode: "summarize", label: "Summarize", icon: FileText, color: "text-accent", desc: "TL;DR, outline, or key points" },
+    { mode: "quiz", label: "Quiz Me", icon: HelpCircle, color: "text-danger", desc: "Test yourself, AI-graded" },
+    { mode: "explain", label: "Explain", icon: Lightbulb, color: "text-warning", desc: "Get a concept explained" },
+    { mode: "study_guide", label: "Study Guide", icon: BookOpen, color: "text-success", desc: "Consolidate notes into a cheat sheet" },
+    { mode: "syllabus", label: "Syllabus → Tasks", icon: ListTodo, color: "text-warning", desc: "Extract tasks from a syllabus" },
   ];
 
   const quickActions = allQuickActions;
@@ -206,7 +206,7 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
                     </button>
                     <button
                       onClick={() => void deleteWorkspace(ws.id)}
-                      className="rounded p-1 text-ink-muted hover:text-red-400"
+                      className="rounded p-1 text-ink-muted hover:text-danger"
                       title="Delete workspace"
                     >
                       <Trash2 size={12} />
@@ -229,7 +229,7 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
                         >
                           <MessageSquare size={12} />
                           Ask
-                          {!chatEnabled && <Lock size={9} className="text-amber-500" />}
+                          {!chatEnabled && <Lock size={9} className="text-warning" />}
                         </button>
                         <button
                           onClick={() => podcastEnabled ? launchWorkspace(ws, "podcast") : onPickMode("podcast")}
@@ -241,7 +241,7 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
                         >
                           <Mic size={12} />
                           Podcast
-                          {!podcastEnabled && <Lock size={9} className="text-amber-500" />}
+                          {!podcastEnabled && <Lock size={9} className="text-warning" />}
                         </button>
                       </>
                     );
@@ -279,7 +279,7 @@ export default function StudyHome({ onPickMode }: { onPickMode: (m: string, opts
                   <span className="flex items-center gap-1.5 text-xs font-medium text-ink">
                     {qa.label}
                     {!enabled && minTier && (
-                      <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/15 px-1 py-px text-[9px] font-semibold uppercase text-amber-500">
+                      <span className="inline-flex items-center gap-0.5 rounded bg-warning-soft px-1 py-px text-[9px] font-semibold uppercase text-warning">
                         <Lock size={8} />
                         {minTier === "pro" ? "Pro" : "Paid"}
                       </span>

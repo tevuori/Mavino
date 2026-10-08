@@ -337,7 +337,7 @@ export default function SourceChat({ initialChatId, initialWorkspaceId, language
                   </button>
                   <button
                     onClick={() => void deleteChat(c.id)}
-                    className="shrink-0 rounded p-0.5 text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                    className="shrink-0 rounded p-0.5 text-ink-muted opacity-0 transition hover:text-danger group-hover:opacity-100"
                     title="Delete chat"
                   >
                     <Trash2 size={11} />
@@ -389,7 +389,7 @@ export default function SourceChat({ initialChatId, initialWorkspaceId, language
                       </button>
                       <button
                         onClick={() => void deleteChat(c.id)}
-                        className="shrink-0 rounded p-0.5 text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                        className="shrink-0 rounded p-0.5 text-ink-muted opacity-0 transition hover:text-danger group-hover:opacity-100"
                         title="Delete chat"
                       >
                         <Trash2 size={12} />
@@ -511,7 +511,7 @@ export default function SourceChat({ initialChatId, initialWorkspaceId, language
             }}
             placeholder={selectedSourceIds.size === 0 ? "Add sources first…" : "Ask about your sources…"}
             rows={2}
-            className="flex-1 resize-y rounded-md border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+            className="flex-1 resize-y rounded-md border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus"
           />
           {streaming ? (
             <ActionButton onClick={abort} variant="ghost">

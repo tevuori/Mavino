@@ -201,7 +201,7 @@ export default function DateTimeSection() {
 
       <Card>
         <div className="flex items-start gap-3">
-          <Check size={16} className="mt-0.5 text-emerald-500 shrink-0" />
+          <Check size={16} className="mt-0.5 text-success shrink-0" />
           <div className="text-xs text-ink-muted space-y-1.5">
             <p>
               This setting affects <b>ntfy cron jobs</b>, <b>proactive alerts</b>, and{" "}

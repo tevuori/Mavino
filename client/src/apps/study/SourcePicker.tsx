@@ -123,7 +123,7 @@ export default function SourcePicker({ value, onChange, hidePaste }: SourcePicke
               value={noteQuery}
               onChange={(e) => setNoteQuery(e.target.value)}
               placeholder="Search notes…"
-              className="w-full rounded-md border border-edge bg-surface px-7 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              className="w-full rounded-md border border-edge bg-surface px-7 py-1.5 text-xs text-ink outline-none focus:border-focus"
             />
           </div>
           <div className="max-h-48 overflow-y-auto rounded-md border border-edge bg-surface">
@@ -157,7 +157,7 @@ export default function SourcePicker({ value, onChange, hidePaste }: SourcePicke
               value={fileQuery}
               onChange={(e) => setFileQuery(e.target.value)}
               placeholder="Search text files…"
-              className="w-full rounded-md border border-edge bg-surface px-7 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              className="w-full rounded-md border border-edge bg-surface px-7 py-1.5 text-xs text-ink outline-none focus:border-focus"
             />
           </div>
           <div className="max-h-48 overflow-y-auto rounded-md border border-edge bg-surface">
@@ -189,7 +189,7 @@ export default function SourcePicker({ value, onChange, hidePaste }: SourcePicke
           onChange={(e) => setPasteText(e.target.value)}
           placeholder="Paste your study material here…"
           rows={6}
-          className="w-full resize-y rounded-md border border-edge bg-surface px-2.5 py-2 text-xs text-ink outline-none focus:border-accent"
+          className="w-full resize-y rounded-md border border-edge bg-surface px-2.5 py-2 text-xs text-ink outline-none focus:border-focus"
         />
       )}
 
@@ -201,7 +201,7 @@ export default function SourcePicker({ value, onChange, hidePaste }: SourcePicke
               value={urlText}
               onChange={(e) => setUrlText(e.target.value)}
               placeholder="https://example.com/article"
-              className="w-full rounded-md border border-edge bg-surface px-7 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              className="w-full rounded-md border border-edge bg-surface px-7 py-1.5 text-xs text-ink outline-none focus:border-focus"
             />
           </div>
           <p className="text-[10px] text-ink-muted">The page's main article text is extracted server-side (Readability).</p>

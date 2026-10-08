@@ -4,6 +4,8 @@ import { filesApi, isTextFile } from "../services/files";
 import { useMobileDialog } from "../store/mobileDialog";
 import type { VFile } from "../types";
 import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading, MobileTextarea } from "./MobileUi";
+import { Sheet } from "../ui/overlays";
+import { Button } from "../ui/primitives";
 
 export default function MobileEditor({ onClose }: { onClose?: () => void }) {
   const { confirm } = useMobileDialog();
@@ -140,7 +142,7 @@ export default function MobileEditor({ onClose }: { onClose?: () => void }) {
               <button
                 type="button"
                 onClick={() => void remove(f)}
-                className="shrink-0 rounded-xl p-2 text-ink-muted active:text-rose-400"
+                className="shrink-0 rounded-xl p-2 text-ink-muted active:text-danger"
               >
                 <Trash2 size={18} />
               </button>
@@ -151,18 +153,20 @@ export default function MobileEditor({ onClose }: { onClose?: () => void }) {
         )}
       </div>
 
-      {creating && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setCreating(false)}>
-          <div className="w-full max-w-md rounded-2xl border border-edge bg-surface p-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-3 text-lg font-semibold text-ink">New file</h2>
-            <MobileInput value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="filename.txt" className="mb-4" />
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setCreating(false)} className="rounded-xl px-4 py-2 text-sm text-ink-muted">Cancel</button>
-              <button type="button" onClick={() => void create()} className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-ink">Create</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Sheet
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="New file"
+        description="Create a plain text file in Files."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setCreating(false)}>Cancel</Button>
+            <Button onClick={() => void create()}>Create</Button>
+          </>
+        }
+      >
+        <MobileInput data-autofocus value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="filename.txt" />
+      </Sheet>
     </MobileContainer>
   );
 }

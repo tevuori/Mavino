@@ -177,7 +177,7 @@ export default function MobileSettings({ onClose }: { onClose?: () => void }) {
           {devices.map((d) => (
             <div key={d.id} className="flex items-center justify-between rounded-xl bg-surface-2 px-3 py-2">
               <span className="text-xs text-ink-muted">{d.deviceLabel}</span>
-              <button type="button" onClick={() => void revoke(d.id)} className="rounded-lg p-1 text-ink-muted active:text-rose-400">
+              <button type="button" onClick={() => void revoke(d.id)} className="rounded-lg p-1 text-ink-muted active:text-danger">
                 <Trash2 size={16} />
               </button>
             </div>
@@ -188,7 +188,7 @@ export default function MobileSettings({ onClose }: { onClose?: () => void }) {
       <button
         type="button"
         onClick={() => void logout()}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-500/15 py-3 text-sm font-semibold text-rose-300"
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-danger-soft py-3 text-sm font-semibold text-danger"
       >
         <LogOut size={18} /> Log out
       </button>
@@ -220,7 +220,7 @@ function IntegrationsSection() {
 
 function IntegrationStatus({ on, label }: { on: boolean; label: string }) {
   return (
-    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${on ? "bg-emerald-500/15 text-emerald-400" : "bg-surface-3 text-ink-muted"}`}>
+    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${on ? "bg-success-soft text-success" : "bg-surface-3 text-ink-muted"}`}>
       {label}
     </span>
   );
@@ -228,7 +228,7 @@ function IntegrationStatus({ on, label }: { on: boolean; label: string }) {
 
 function IntegrationMsg({ msg, err }: { msg: string | null; err: boolean }) {
   if (!msg) return null;
-  return <p className={`mt-2 text-xs ${err ? "text-red-400" : "text-emerald-400"}`}>{msg}</p>;
+  return <p className={`mt-2 text-xs ${err ? "text-danger" : "text-success"}`}>{msg}</p>;
 }
 
 function SpotifyIntegration() {
@@ -295,7 +295,7 @@ function SpotifyIntegration() {
         <div className="mt-3">
           {hasCreds ? (
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => void disconnect()} disabled={busy} className="flex items-center gap-1.5 rounded-xl bg-rose-500/15 px-3 py-2 text-sm text-rose-400 active:bg-rose-500/25 disabled:opacity-50">
+              <button type="button" onClick={() => void disconnect()} disabled={busy} className="flex items-center gap-1.5 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger active:bg-danger-soft disabled:opacity-50">
                 <LogOut size={14} /> Disconnect
               </button>
               {busy && <Loader2 size={14} className="animate-spin text-ink-muted" />}
@@ -414,7 +414,7 @@ function MicrosoftIntegration() {
               <button type="button" onClick={() => void sync()} disabled={busy} className="flex items-center gap-1.5 rounded-xl border border-edge px-3 py-2 text-sm text-ink active:bg-surface-3 disabled:opacity-50">
                 {busy ? <Loader2 size={14} className="animate-spin" /> : "Sync now"}
               </button>
-              <button type="button" onClick={() => void disconnect()} disabled={busy} className="flex items-center gap-1.5 rounded-xl bg-rose-500/15 px-3 py-2 text-sm text-rose-400 active:bg-rose-500/25 disabled:opacity-50">
+              <button type="button" onClick={() => void disconnect()} disabled={busy} className="flex items-center gap-1.5 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger active:bg-danger-soft disabled:opacity-50">
                 <LogOut size={14} /> Disconnect
               </button>
             </div>
@@ -536,7 +536,7 @@ function MapyIntegration() {
         <div className="mt-3">
           {configured ? (
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => void disconnect()} disabled={busy} className="flex items-center gap-1.5 rounded-xl bg-rose-500/15 px-3 py-2 text-sm text-rose-400 active:bg-rose-500/25 disabled:opacity-50">
+              <button type="button" onClick={() => void disconnect()} disabled={busy} className="flex items-center gap-1.5 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger active:bg-danger-soft disabled:opacity-50">
                 <LogOut size={14} /> Disconnect
               </button>
               {busy && <Loader2 size={14} className="animate-spin text-ink-muted" />}

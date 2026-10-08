@@ -14,7 +14,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  PenLine, Plus, Trash2, RefreshCw, Loader2, AlertCircle, X,
+  PenLine, Plus, Trash2, RefreshCw, Loader2, AlertCircle,
   ChevronLeft, Sparkles, FileText, CheckCircle2, AlertTriangle,
   Info, Award, Save, Eye, EyeOff,
 } from "lucide-react";
@@ -24,6 +24,8 @@ import {
 } from "../../services/scribe";
 import type { WindowInstance } from "../../store/windows";
 import { confirmDialog } from "../../store/mobileDialog";
+import { Dialog } from "../../ui/overlays";
+import { Alert, Button } from "../../ui/primitives";
 
 // ----- helpers -----
 
@@ -36,9 +38,9 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 };
 
 const SEVERITY_META: Record<ScribeIssue["severity"], { label: string; color: string; icon: typeof Info }> = {
-  info: { label: "Info", color: "text-blue-400", icon: Info },
-  warning: { label: "Warning", color: "text-amber-400", icon: AlertTriangle },
-  critical: { label: "Critical", color: "text-red-400", icon: AlertCircle },
+  info: { label: "Info", color: "text-info", icon: Info },
+  warning: { label: "Warning", color: "text-warning", icon: AlertTriangle },
+  critical: { label: "Critical", color: "text-danger", icon: AlertCircle },
 };
 
 // ----- main component -----
@@ -109,8 +111,8 @@ export default function ScribeApp({ win }: { win: WindowInstance }) {
   if (error && !activeDoc) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <AlertCircle className="text-red-400" size={32} />
-        <p className="text-sm text-red-400">{error}</p>
+        <AlertCircle className="text-danger" size={32} />
+        <p className="text-sm text-danger">{error}</p>
         <button
           onClick={() => { setError(null); loadDocuments(); }}
           className="rounded-lg bg-surface-3 px-3 py-1.5 text-xs hover:brightness-110"
@@ -162,9 +164,9 @@ function DocumentListView({
 }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-surface-3 px-4 py-2">
+      <div className="flex items-center justify-between border-b border-edge px-4 py-2">
         <div className="flex items-center gap-2">
-          <PenLine className="text-cyan-400" size={18} />
+          <PenLine className="text-accent" size={18} />
           <h2 className="text-sm font-semibold text-ink">Scribe</h2>
           <span className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px] text-ink-muted">
             {documents.length} doc{documents.length !== 1 ? "s" : ""}
@@ -180,7 +182,7 @@ function DocumentListView({
           </button>
           <button
             onClick={onCreate}
-            className="flex items-center gap-1 rounded-lg bg-cyan-600 px-2 py-1 text-xs text-white hover:bg-cyan-500"
+            className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1 text-xs text-white hover:bg-accent-hover"
           >
             <Plus size={14} /> New Document
           </button>
@@ -195,7 +197,7 @@ function DocumentListView({
             <p className="text-xs text-ink-muted">Create a draft and get AI feedback on structure, argument, evidence, and citations.</p>
             <button
               onClick={onCreate}
-              className="flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs text-white hover:bg-cyan-500"
+              className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover"
             >
               <Plus size={14} /> Create First Document
             </button>
@@ -205,7 +207,7 @@ function DocumentListView({
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="group cursor-pointer rounded-xl border border-surface-3 bg-surface-2 p-4 transition hover:border-cyan-500/50 hover:bg-surface-3"
+                className="group cursor-pointer rounded-xl border border-edge bg-surface-2 p-4 transition hover:border-accent/50 hover:bg-surface-3"
                 onClick={() => onOpen(doc.id)}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -223,7 +225,7 @@ function DocumentListView({
                 )}
                 <div className="mt-3 flex items-center gap-2 text-[10px]">
                   {doc.feedbackCount > 0 && (
-                    <span className="flex items-center gap-1 rounded-full bg-surface-4 px-2 py-0.5 text-ink-muted">
+                    <span className="flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-ink-muted">
                       <Sparkles size={10} /> {doc.feedbackCount} feedback
                     </span>
                   )}
@@ -315,7 +317,7 @@ function EditorView({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-surface-3 px-4 py-2">
+      <div className="flex items-center justify-between border-b border-edge px-4 py-2">
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={onBack}
@@ -330,7 +332,7 @@ function EditorView({
             className="bg-transparent text-sm font-semibold text-ink outline-none"
           />
           {saving && <Loader2 className="animate-spin text-ink-muted" size={12} />}
-          {dirty && !saving && <span className="text-[10px] text-amber-400">unsaved</span>}
+          {dirty && !saving && <span className="text-[10px] text-warning">unsaved</span>}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -342,7 +344,7 @@ function EditorView({
           </button>
           <button
             onClick={onDelete}
-            className="rounded-lg p-1.5 text-ink-muted hover:bg-red-500/10 hover:text-red-400"
+            className="rounded-lg p-1.5 text-ink-muted hover:bg-danger-soft hover:text-danger"
             title="Delete document"
           >
             <Trash2 size={14} />
@@ -351,7 +353,7 @@ function EditorView({
       </div>
 
       {/* Thesis statement */}
-      <div className="border-b border-surface-3 bg-surface-2 px-4 py-2">
+      <div className="border-b border-edge bg-surface-2 px-4 py-2">
         <input
           value={thesis}
           onChange={(e) => { setThesis(e.target.value); setDirty(true); }}
@@ -381,11 +383,11 @@ function EditorView({
         </div>
 
         {/* Right: feedback panel */}
-        <div className="w-96 shrink-0 overflow-y-auto border-l border-surface-3 bg-surface-2">
+        <div className="w-96 shrink-0 overflow-y-auto border-l border-edge bg-surface-2">
           {/* Generate feedback */}
-          <div className="border-b border-surface-3 p-4">
+          <div className="border-b border-edge p-4">
             <h3 className="mb-2 flex items-center gap-1 text-xs font-medium text-ink">
-              <Sparkles className="text-cyan-400" size={12} /> Writing Coach
+              <Sparkles className="text-accent" size={12} /> Writing Coach
             </h3>
             <div className="mb-2 flex gap-1">
               {([
@@ -398,7 +400,7 @@ function EditorView({
                   key={key}
                   onClick={() => setFeedbackType(key)}
                   className={`rounded px-2 py-0.5 text-[10px] ${
-                    feedbackType === key ? "bg-cyan-600 text-white" : "bg-surface-3 text-ink-muted hover:brightness-110"
+                    feedbackType === key ? "bg-accent text-white" : "bg-surface-3 text-ink-muted hover:brightness-110"
                   }`}
                 >
                   {label}
@@ -408,7 +410,7 @@ function EditorView({
             <button
               onClick={handleGenerate}
               disabled={generating || content.trim().length < 100}
-              className="flex w-full items-center justify-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs text-white hover:bg-cyan-500 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover disabled:opacity-50"
             >
               {generating ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={12} />}
               Get Feedback
@@ -428,7 +430,7 @@ function EditorView({
           )}
 
           {error && (
-            <div className="m-4 rounded-lg bg-red-500/10 p-3 text-xs text-red-400">{error}</div>
+            <div className="m-4 rounded-lg bg-danger-soft p-3 text-xs text-danger">{error}</div>
           )}
         </div>
       </div>
@@ -442,7 +444,7 @@ function FeedbackPanel({ feedback }: { feedback: ScribeFeedback }) {
   if (feedback.status === "building") {
     return (
       <div className="flex flex-col items-center gap-2 p-8 text-center">
-        <Loader2 className="animate-spin text-cyan-400" size={24} />
+        <Loader2 className="animate-spin text-accent" size={24} />
         <p className="text-xs text-ink-muted">Analyzing your writing...</p>
       </div>
     );
@@ -450,7 +452,7 @@ function FeedbackPanel({ feedback }: { feedback: ScribeFeedback }) {
 
   if (feedback.status === "error") {
     return (
-      <div className="m-4 rounded-lg bg-red-500/10 p-3 text-xs text-red-400">
+      <div className="m-4 rounded-lg bg-danger-soft p-3 text-xs text-danger">
         <AlertCircle size={14} className="mb-1 inline" /> {feedback.error}
       </div>
     );
@@ -462,7 +464,7 @@ function FeedbackPanel({ feedback }: { feedback: ScribeFeedback }) {
       <div className="mb-4 flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-3">
           <span className={`text-sm font-bold ${
-            feedback.score >= 80 ? "text-emerald-400" : feedback.score >= 60 ? "text-amber-400" : "text-red-400"
+            feedback.score >= 80 ? "text-success" : feedback.score >= 60 ? "text-warning" : "text-danger"
           }`}>
             {feedback.score}
           </span>
@@ -544,24 +546,28 @@ function CreateDocumentDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-surface-3 bg-surface-1 p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <PenLine className="text-cyan-400" size={16} /> New Document
-          </h3>
-          <button onClick={onCancel} className="rounded p-1 text-ink-muted hover:bg-surface-3">
-            <X size={16} />
-          </button>
-        </div>
+    <Dialog
+      open
+      onClose={onCancel}
+      title="New document"
+      description="Create a draft and define the argument Mavino should help you refine."
+      className="max-w-md"
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button size="sm" onClick={handleSubmit} disabled={loading || !title.trim()} loading={loading} leadingIcon={<Plus size={14} />}>Create</Button>
+        </>
+      }
+    >
         <div className="space-y-4">
           <div>
             <label className="mb-1 block text-xs text-ink-muted">Title</label>
             <input
+              data-autofocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. The Impact of Climate Change on Biodiversity"
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-cyan-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-focus focus:outline-none"
             />
           </div>
           <div>
@@ -569,7 +575,7 @@ function CreateDocumentDialog({
             <select
               value={docType}
               onChange={(e) => setDocType(e.target.value)}
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink focus:border-cyan-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink focus:border-focus focus:outline-none"
             >
               <option value="essay">Essay</option>
               <option value="thesis">Thesis</option>
@@ -585,25 +591,11 @@ function CreateDocumentDialog({
               onChange={(e) => setThesis(e.target.value)}
               placeholder="Your main argument or research question..."
               rows={2}
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-cyan-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-focus focus:outline-none"
             />
           </div>
-          {error && <div className="rounded-lg bg-red-500/10 p-3 text-xs text-red-400">{error}</div>}
-          <div className="flex justify-end gap-2">
-            <button onClick={onCancel} className="rounded-lg bg-surface-3 px-4 py-2 text-xs text-ink-muted hover:brightness-110">
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading || !title.trim()}
-              className="flex items-center gap-1 rounded-lg bg-cyan-600 px-4 py-2 text-xs text-white hover:bg-cyan-500 disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
-              Create
-            </button>
-          </div>
+          {error && <Alert variant="danger" className="text-xs">{error}</Alert>}
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

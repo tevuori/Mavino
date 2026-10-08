@@ -205,7 +205,7 @@ export default function MaintenanceSection() {
             <button
               onClick={start}
               disabled={busy}
-              className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-amber-400 disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-lg bg-warning px-3 py-2 text-sm font-medium text-white hover:brightness-95 disabled:opacity-40"
             >
               {busy ? <Loader2 size={14} className="animate-spin" /> : mode === "now" ? <Play size={14} /> : <Clock3 size={14} />}
               {mode === "now" ? "Start maintenance" : "Schedule maintenance"}

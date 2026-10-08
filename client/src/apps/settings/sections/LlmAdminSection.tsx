@@ -165,11 +165,11 @@ function GlobalKeyCard() {
         <>
           <div className="mb-3 flex items-center gap-2 text-xs">
             {config?.hasKey ? (
-              <span className="flex items-center gap-1 text-emerald-500">
+              <span className="flex items-center gap-1 text-success">
                 <Check size={12} /> Global key is set
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-amber-500">
+              <span className="flex items-center gap-1 text-warning">
                 <AlertCircle size={12} /> No global key set — users can't use AI
               </span>
             )}
@@ -223,7 +223,7 @@ function GlobalKeyCard() {
               <button
                 onClick={removeKey}
                 disabled={busy}
-                className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-red-500 hover:text-white disabled:opacity-40"
+                className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-danger hover:text-white disabled:opacity-40"
               >
                 <Trash2 size={14} />
               </button>
@@ -378,7 +378,7 @@ function HostedUsageCard() {
           <RefreshCw size={14} className={busy ? "animate-spin" : ""} />
         </button>
       </div>
-      {err && <p className="text-xs text-red-400">{err}</p>}
+      {err && <p className="text-xs text-danger">{err}</p>}
       {stats && (
         <>
           <div className="mb-3 rounded-lg border border-edge bg-surface-2 p-3">
@@ -390,7 +390,7 @@ function HostedUsageCard() {
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-surface-3">
               <div
-                className={`h-full rounded-full ${usedPct > 90 ? "bg-red-500" : usedPct > 70 ? "bg-amber-500" : "bg-accent"}`}
+                className={`h-full rounded-full ${usedPct > 90 ? "bg-danger" : usedPct > 70 ? "bg-warning" : "bg-accent"}`}
                 style={{ width: `${usedPct}%` }}
               />
             </div>
@@ -417,7 +417,7 @@ function HostedUsageCard() {
             </div>
             <div className="rounded-lg border border-edge bg-surface-2 p-2">
               <p className="text-sm font-semibold text-ink">
-                {stats.totals.failed > 0 ? <span className="text-red-400">{stats.totals.failed}</span> : 0}
+                {stats.totals.failed > 0 ? <span className="text-danger">{stats.totals.failed}</span> : 0}
               </p>
               <p className="text-[10px] text-ink-muted">failed ({stats.totals.estimated} estimated)</p>
             </div>

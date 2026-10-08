@@ -142,7 +142,7 @@ export default function GenerateFlashcards({ initialSource, initialGraphId, appe
             max={40}
             value={count}
             onChange={(e) => setCount(Math.max(1, Math.min(40, Number(e.target.value) || 10)))}
-            className="w-20 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-accent"
+            className="w-20 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-focus"
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
@@ -150,7 +150,7 @@ export default function GenerateFlashcards({ initialSource, initialGraphId, appe
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value as typeof mode)}
-            className="rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-accent"
+            className="rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-focus"
           >
             <option value="mixed">Mixed</option>
             <option value="concept">Concepts</option>
@@ -165,7 +165,7 @@ export default function GenerateFlashcards({ initialSource, initialGraphId, appe
             onChange={(e) => setDeckName(e.target.value)}
             placeholder={targetDeckId ? "Existing deck" : "AI Flashcards"}
             disabled={!!targetDeckId}
-            className="w-48 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-accent disabled:opacity-60"
+            className="w-48 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-focus disabled:opacity-60"
           />
         </label>
         {targetDeckId && (
@@ -222,18 +222,18 @@ export default function GenerateFlashcards({ initialSource, initialGraphId, appe
                     value={c.front}
                     onChange={(e) => updateCard(i, "front", e.target.value)}
                     placeholder="Front (question)"
-                    className="w-full rounded border border-edge bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                    className="w-full rounded border border-edge bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                   />
                   <input
                     value={c.back}
                     onChange={(e) => updateCard(i, "back", e.target.value)}
                     placeholder="Back (answer)"
-                    className="w-full rounded border border-edge bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                    className="w-full rounded border border-edge bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                   />
                 </div>
                 <button
                   onClick={() => removeCard(i)}
-                  className="mt-1 rounded p-1 text-ink-muted hover:bg-red-500/10 hover:text-red-400"
+                  className="mt-1 rounded p-1 text-ink-muted hover:bg-danger-soft hover:text-danger"
                 >
                   <Trash2 size={13} />
                 </button>

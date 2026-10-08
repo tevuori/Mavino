@@ -105,23 +105,23 @@ export default function RemindersApp() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
+    <div className="flex flex-col h-full bg-surface text-ink dark:text-ink">
       {/* Tab bar */}
-      <div className="flex items-center gap-1 px-3 pt-3 overflow-x-auto border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+      <div className="flex items-center gap-1 px-3 pt-3 overflow-x-auto border-b border-edge dark:border-edge shrink-0">
         <TabBtn icon={<Clock size={15} />} label="Pending" active={tab === "pending"} onClick={() => setTab("pending")} />
         <TabBtn icon={<Check size={15} />} label="Fired" active={tab === "fired"} onClick={() => setTab("fired")} />
         <TabBtn icon={<X size={15} />} label="Cancelled" active={tab === "cancelled"} onClick={() => setTab("cancelled")} />
         <div className="ml-auto flex items-center gap-1 pr-1 pb-2">
           <button
             onClick={() => setRefreshKey((k) => k + 1)}
-            className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="p-1.5 rounded-md text-ink-muted hover:text-ink dark:hover:text-ink-muted hover:bg-surface-2 dark:hover:bg-surface-3"
             title="Refresh"
           >
             <RefreshCw size={15} />
           </button>
           <button
             onClick={() => setTab("new")}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md bg-indigo-500 text-white hover:bg-indigo-600"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md bg-accent text-white hover:bg-accent"
           >
             <Plus size={15} /> New
           </button>
@@ -130,7 +130,7 @@ export default function RemindersApp() {
 
       <div className="flex-1 overflow-auto">
         {err && (
-          <div className="mx-4 mt-3 px-3 py-2 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 text-sm">
+          <div className="mx-4 mt-3 px-3 py-2 rounded-md bg-danger-soft text-danger dark:text-danger text-sm">
             {err}
           </div>
         )}
@@ -140,7 +140,7 @@ export default function RemindersApp() {
             onCancel={() => setTab("pending")}
           />
         ) : loading ? (
-          <div className="p-8 text-center text-sm text-zinc-400">Loading…</div>
+          <div className="p-8 text-center text-sm text-ink-muted">Loading…</div>
         ) : reminders.length === 0 ? (
           <EmptyState tab={tab} />
         ) : (
@@ -170,8 +170,8 @@ function TabBtn({ icon, label, active, onClick }: {
       onClick={onClick}
       className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-t-md border-b-2 transition-colors ${
         active
-          ? "border-indigo-500 text-indigo-600 dark:text-indigo-400 font-medium"
-          : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          ? "border-accent text-accent dark:text-accent font-medium"
+          : "border-transparent text-ink-muted hover:text-ink dark:hover:text-ink-muted"
       }`}
     >
       {icon}
@@ -187,7 +187,7 @@ function EmptyState({ tab }: { tab: Tab }) {
     : tab === "cancelled" ? "No cancelled reminders."
     : "";
   return (
-    <div className="p-10 text-center text-sm text-zinc-400">
+    <div className="p-10 text-center text-sm text-ink-muted">
       <BellRing size={32} className="mx-auto mb-2 opacity-40" />
       {msg}
     </div>
@@ -204,9 +204,9 @@ function ReminderCard({ reminder, now, showCountdown, onCancel, onDelete }: {
   const isAthena = reminder.type === "athena";
   const { text: relText, overdue } = relativeTime(reminder.fireAt, now);
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40 p-3">
+    <div className="rounded-lg border border-edge dark:border-edge bg-surface-2 dark:bg-surface-2 p-3">
       <div className="flex items-start gap-2">
-        <div className={`mt-0.5 shrink-0 ${isAthena ? "text-indigo-500" : "text-amber-500"}`}>
+        <div className={`mt-0.5 shrink-0 ${isAthena ? "text-accent" : "text-warning"}`}>
           {isAthena ? <Sparkles size={16} /> : <BellRing size={16} />}
         </div>
         <div className="flex-1 min-w-0">
@@ -216,32 +216,32 @@ function ReminderCard({ reminder, now, showCountdown, onCancel, onDelete }: {
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
               isAthena
-                ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400"
-                : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                ? "bg-accent/15 text-accent dark:text-accent"
+                : "bg-warning-soft text-warning dark:text-warning"
             }`}>
               {isAthena ? "smart" : "basic"}
             </span>
             {reminder.priority >= 4 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 font-medium">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-danger-soft text-danger dark:text-danger font-medium">
                 P{reminder.priority}
               </span>
             )}
           </div>
-          <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          <div className="mt-1 text-xs text-ink-muted dark:text-ink-muted">
             <Clock size={11} className="inline -mt-0.5 mr-1" />
             {fmtTime(reminder.fireAt)}
             {showCountdown && (
-              <span className={`ml-2 ${overdue ? "text-red-500" : "text-zinc-400"}`}>
+              <span className={`ml-2 ${overdue ? "text-danger" : "text-ink-muted"}`}>
                 · {relText}
               </span>
             )}
             {reminder.fired && reminder.firedAt && (
-              <span className="ml-2 text-green-500">· fired {fmtTime(reminder.firedAt)}</span>
+              <span className="ml-2 text-success">· fired {fmtTime(reminder.firedAt)}</span>
             )}
-            {reminder.cancelled && <span className="ml-2 text-zinc-400">· cancelled</span>}
+            {reminder.cancelled && <span className="ml-2 text-ink-muted">· cancelled</span>}
           </div>
           {(isAthena ? reminder.prompt : reminder.message) && (
-            <p className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-300 line-clamp-3 whitespace-pre-wrap">
+            <p className="mt-1.5 text-xs text-ink-muted dark:text-ink-muted line-clamp-3 whitespace-pre-wrap">
               {isAthena ? `Prompt: ${reminder.prompt}` : reminder.message}
             </p>
           )}
@@ -250,7 +250,7 @@ function ReminderCard({ reminder, now, showCountdown, onCancel, onDelete }: {
           {!reminder.fired && !reminder.cancelled && (
             <button
               onClick={onCancel}
-              className="p-1.5 rounded-md text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10"
+              className="p-1.5 rounded-md text-ink-muted hover:text-warning dark:hover:text-warning hover:bg-warning-soft"
               title="Cancel reminder"
             >
               <X size={15} />
@@ -258,7 +258,7 @@ function ReminderCard({ reminder, now, showCountdown, onCancel, onDelete }: {
           )}
           <button
             onClick={onDelete}
-            className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10"
+            className="p-1.5 rounded-md text-ink-muted hover:text-danger dark:hover:text-danger hover:bg-danger-soft"
             title="Delete reminder"
           >
             <Trash2 size={15} />
@@ -327,7 +327,7 @@ function NewReminderForm({ onCreated, onCancel }: { onCreated: () => void; onCan
     <div className="p-5 max-w-full @5xl:max-w-2xl mx-auto space-y-4">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold flex items-center gap-2"><BellRing size={18} /> New Reminder</h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-ink-muted dark:text-ink-muted">
           A one-shot reminder pushed to your phone via ntfy at the chosen time.{" "}
           <b>Basic</b> sends a fixed message; <b>Smart</b> runs a prompt through Mavino at fire time
           (so it can reference what's actually due that day). Requires ntfy to be configured.
@@ -370,13 +370,13 @@ function NewReminderForm({ onCreated, onCancel }: { onCreated: () => void; onCan
         <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. bell,alarm_clock" className="inp" />
       </Field>
 
-      {err && <div className="px-3 py-2 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 text-sm">{err}</div>}
+      {err && <div className="px-3 py-2 rounded-md bg-danger-soft text-danger dark:text-danger text-sm">{err}</div>}
 
       <div className="flex gap-2 pt-1">
         <button
           onClick={submit}
           disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-md bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-md bg-accent text-white hover:bg-accent-hover disabled:opacity-50"
         >
           {saving ? "Saving…" : "Schedule reminder"}
         </button>
@@ -394,8 +394,8 @@ function TypeBtn({ active, onClick, icon, label }: {
       onClick={onClick}
       className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border transition-colors ${
         active
-          ? "border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-          : "border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          ? "border-accent bg-accent/10 text-accent dark:text-accent"
+          : "border-edge dark:border-edge text-ink-muted hover:text-ink dark:hover:text-ink-muted"
       }`}
     >
       {icon}
@@ -407,7 +407,7 @@ function TypeBtn({ active, onClick, icon, label }: {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</span>
+      <span className="text-xs font-medium text-ink-muted dark:text-ink-muted">{label}</span>
       {children}
     </label>
   );

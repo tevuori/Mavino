@@ -99,6 +99,7 @@ export default function SystemTray() {
         }}
         className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-surface-3 hover:text-ink"
         title="Volume"
+        aria-label="Volume"
       >
         {volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
       </button>
@@ -125,10 +126,11 @@ export default function SystemTray() {
         }}
         className="relative flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-surface-3 hover:text-ink"
         title="Notifications"
+        aria-label="Notifications"
       >
         {doNotDisturb || !notificationsEnabled ? <BellOff size={15} /> : <Bell size={15} />}
         {unread > 0 && !doNotDisturb && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-danger px-1 text-[9px] font-bold text-white">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -143,6 +145,7 @@ export default function SystemTray() {
           setShowCalendar((v) => !v);
         }}
         className="flex flex-col items-end rounded px-2 py-0.5 text-right leading-tight hover:bg-surface-3"
+        aria-label="Open calendar and clock"
       >
         <span className="text-xs font-medium text-ink">{time}</span>
         <span className="text-[10px] text-ink-muted">{date}</span>

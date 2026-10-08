@@ -103,7 +103,7 @@ export default function StudyGuide({ initialGraphId, language }: { initialGraphI
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Study Guide"
-            className="w-48 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-accent"
+            className="w-48 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-focus"
           />
         </label>
         <ActionButton onClick={run} disabled={!hasSource} loading={genLoading}>

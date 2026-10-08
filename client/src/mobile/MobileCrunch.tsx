@@ -155,7 +155,7 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
           data ? (
             <button
               onClick={deletePlan}
-              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-red-300"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-danger"
             >
               <Trash2 size={20} />
             </button>
@@ -164,13 +164,13 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
 
       {generating && (
-        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
           <Sparkles size={16} className="animate-pulse" />
           Generating your study plan…
         </div>
@@ -193,7 +193,7 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase text-ink-muted">Exam {i + 1}</span>
                 {examRows.length > 1 && (
-                  <button onClick={() => setExamRows(examRows.filter((x) => x.id !== r.id))} className="text-red-300">
+                  <button onClick={() => setExamRows(examRows.filter((x) => x.id !== r.id))} className="text-danger">
                     <Trash2 size={16} />
                   </button>
                 )}
@@ -281,21 +281,21 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
               <p className="text-[11px] text-ink-muted">Topics</p>
             </div>
             <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
-              <p className={`text-2xl font-bold ${behindPct >= 20 ? "text-amber-400" : "text-ink"}`}>{behindPct}%</p>
+              <p className={`text-2xl font-bold ${behindPct >= 20 ? "text-warning" : "text-ink"}`}>{behindPct}%</p>
               <p className="text-[11px] text-ink-muted">Behind</p>
             </div>
           </div>
 
           {/* Behind alert */}
           {behindPct >= 20 && (
-            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-warning bg-warning-soft px-4 py-3 text-sm text-warning">
               <TrendingDown size={16} /> You're {behindPct}% behind. Catch up!
             </div>
           )}
 
           {/* Next exam */}
           {data.stats.nextExamName && data.stats.nextExamDays !== null && (
-            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/20 bg-accent/10 px-4 py-3">
+            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-accent/20 bg-accent/10 px-4 py-3">
               <GraduationCap size={18} className="text-accent" />
               <div>
                 <p className="text-sm font-semibold text-ink">{data.stats.nextExamName}</p>
@@ -399,10 +399,10 @@ function MobileTaskRow({
     <button
       onClick={() => onToggle(task.id, !task.done)}
       className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
-        task.done ? "border-emerald-500/20 bg-emerald-500/5" : "border-edge bg-surface-2"
+        task.done ? "border-success bg-success-soft" : "border-edge bg-surface-2"
       }`}
     >
-      {task.done ? <CheckCircle2 size={18} className="shrink-0 text-emerald-400" /> : <Circle size={18} className="shrink-0 text-ink-muted" />}
+      {task.done ? <CheckCircle2 size={18} className="shrink-0 text-success" /> : <Circle size={18} className="shrink-0 text-ink-muted" />}
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${meta.color}20`, color: meta.color }}>
         <Icon size={14} />
       </span>

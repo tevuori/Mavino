@@ -140,7 +140,7 @@ export default function ViewerApp({ win }: { win: WindowInstance }) {
   if (error || !file) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 text-ink-muted">
-        <AlertCircle size={32} className="text-red-400" />
+        <AlertCircle size={32} className="text-danger" />
         <p className="text-sm">{error ?? "No file"}</p>
       </div>
     );

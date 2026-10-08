@@ -192,7 +192,7 @@ export default function MarketplaceApp({ win: _win }: { win: WindowInstance }) {
                 {featured.length > 0 && (
                   <>
                     <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                      <Star size={12} className="text-amber-500" /> Featured
+                      <Star size={12} className="text-warning" /> Featured
                     </h3>
                     <div className="mb-5 grid grid-cols-1 gap-3 @lg:grid-cols-2 @2xl:grid-cols-3">
                       {featured.map((p) => (
@@ -287,7 +287,7 @@ function PluginCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h4 className="truncate text-sm font-semibold text-ink">{plugin.name}</h4>
-            {plugin.featured && <Star size={12} className="shrink-0 text-amber-500" />}
+            {plugin.featured && <Star size={12} className="shrink-0 text-warning" />}
           </div>
           <p className="text-xs text-ink-muted">
             by {plugin.author || "unknown"} · v{plugin.version}
@@ -306,12 +306,12 @@ function PluginCard({
           <Download size={9} /> {plugin.installCount}
         </span>
         {plugin.hasTools && (
-          <span className="flex items-center gap-0.5 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-400">
-            <Wrench size={9} /> Athena tools
+          <span className="flex items-center gap-0.5 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">
+            <Wrench size={9} /> Mavino tools
           </span>
         )}
         {tierLocked && (
-          <span className="flex items-center gap-0.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-500">
+          <span className="flex items-center gap-0.5 rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-medium text-warning">
             <Lock size={9} /> Pro
           </span>
         )}
@@ -328,7 +328,7 @@ function PluginCard({
           <button
             onClick={() => onUninstall(plugin.pluginKey)}
             disabled={busy}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-red-500/15 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-500/25 disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-danger-soft px-3 py-2 text-xs font-medium text-danger transition hover:bg-danger-soft disabled:opacity-40"
           >
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
             Uninstall

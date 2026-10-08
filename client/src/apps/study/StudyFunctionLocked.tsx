@@ -33,7 +33,7 @@ export default function StudyFunctionLocked({ fn, minTier, onUpgrade }: Props) {
 
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-16 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-500">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-warning-soft text-warning">
         <Lock size={28} />
       </div>
 

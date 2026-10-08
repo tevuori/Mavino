@@ -26,44 +26,29 @@ export default function BootScreen({ onDone }: Props) {
   }, [onDone]);
 
   return (
-    <div className="fixed inset-0 z-[20000] flex flex-col items-center justify-center bg-slate-950 text-white">
+    <div className="fixed inset-0 z-[20000] flex flex-col items-center justify-center bg-canvas text-ink">
       <motion.div
-        initial={{ scale: 0.6, opacity: 0 }}
+        initial={{ scale: 0.92, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="mb-8"
+        transition={{ duration: 0.32, ease: "easeOut" }}
+        className="mb-6 flex h-20 w-20 items-center justify-center rounded-xl border border-edge bg-surface shadow-panel"
       >
-        <div className="relative flex h-24 w-24 items-center justify-center">
-          <motion.div
-            className="absolute inset-0 rounded-2xl border-2 border-indigo-500"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-          />
-          <motion.div
-            className="absolute inset-2 rounded-xl border-2 border-purple-500"
-            animate={{ rotate: -360 }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-          />
-          <AppLogo size={56} />
-        </div>
+        <AppLogo size={52} />
       </motion.div>
       <motion.h1
-        initial={{ y: 10, opacity: 0 }}
+        initial={{ y: 6, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="mb-1 text-2xl font-semibold"
+        transition={{ delay: 0.1 }}
+        className="mb-1 text-2xl font-semibold tracking-tight"
       >
         Mavino
       </motion.h1>
-      <p className="text-sm text-slate-400">Student OS</p>
-      <p className="mb-10 text-xs text-slate-500">Made by students, for students</p>
-      <div className="h-1 w-48 overflow-hidden rounded-full bg-slate-800">
-        <motion.div
-          className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
-          style={{ width: `${progress}%` }}
-        />
+      <p className="text-sm text-ink-muted">Your student workspace</p>
+      <p className="mb-8 text-xs text-ink-tertiary">Preparing your day</p>
+      <div className="h-1 w-48 overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-label="Loading Mavino" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.floor(progress)}>
+        <motion.div className="h-full bg-accent" style={{ width: `${progress}%` }} />
       </div>
-      <p className="mt-4 text-xs text-slate-500">{Math.floor(progress)}%</p>
+      <p className="mt-3 text-xs font-medium tabular-nums text-ink-muted">{Math.floor(progress)}%</p>
     </div>
   );
 }

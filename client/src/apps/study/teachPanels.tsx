@@ -99,9 +99,9 @@ export function LessonAgenda({
                   }
                   className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${
                     strong
-                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                      ? "border-success bg-success-soft text-success"
                       : weak
-                        ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+                        ? "border-warning bg-warning-soft text-warning"
                         : isCovered
                           ? "border-accent/40 bg-accent/10 text-accent"
                           : "border-edge text-ink-muted"
@@ -154,7 +154,7 @@ export function ToolChipRow({ chips }: { chips: ToolChip[] }) {
           key={c.id}
           className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition-opacity duration-500 ${
             c.done
-              ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400 opacity-60"
+              ? "border-success bg-success-soft text-success opacity-60"
               : "border-accent/40 bg-accent/10 text-accent"
           }`}
         >
@@ -187,15 +187,15 @@ export function ComprehensionCard({
   const tone = !graded
     ? "border-accent/40 bg-accent/10"
     : assessment.passed
-      ? "border-emerald-500/40 bg-emerald-500/10"
-      : "border-amber-500/50 bg-amber-500/10";
+      ? "border-success bg-success-soft"
+      : "border-warning bg-warning-soft";
 
   return (
     <div className={fullWidth ? "w-full" : "flex justify-start"}>
       <div className={`rounded-lg border px-3 py-2.5 text-sm ${tone} ${fullWidth ? "w-full" : "max-w-[85%]"}`}>
         <div
           className={`mb-1.5 flex items-center gap-1.5 text-xs font-semibold ${
-            graded ? (assessment.passed ? "text-emerald-400" : "text-amber-400") : "text-accent"
+            graded ? (assessment.passed ? "text-success" : "text-warning") : "text-accent"
           }`}
         >
           <BookOpen size={13} />
@@ -223,7 +223,7 @@ export function ComprehensionCard({
               </div>
             )}
             {assessment?.misconception && (
-              <div className="text-[11px] text-amber-400">
+              <div className="text-[11px] text-warning">
                 Watch out: <CitationMarkdown content={assessment.misconception} className="text-[11px]" />
               </div>
             )}
@@ -253,7 +253,7 @@ export function ComprehensionCard({
               }}
               placeholder="Your answer…"
               rows={1}
-              className="flex-1 resize-none rounded-md border border-edge bg-surface px-2 py-1.5 text-xs text-ink outline-none placeholder:text-ink-muted focus:border-accent/50"
+              className="flex-1 resize-none rounded-md border border-edge bg-surface px-2 py-1.5 text-xs text-ink outline-none placeholder:text-ink-muted focus:border-focus/50"
             />
             <button
               onClick={() => answer.trim() && onAnswer(answer.trim())}
@@ -346,7 +346,7 @@ export function ExportMenu({
         </div>
       )}
       {result && (
-        <div className="absolute right-0 top-full z-30 mt-1 flex w-56 items-start gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-2 text-[11px] text-emerald-300 shadow-window">
+        <div className="absolute right-0 top-full z-30 mt-1 flex w-56 items-start gap-1.5 rounded-lg border border-success bg-success-soft px-2.5 py-2 text-[11px] text-success shadow-window">
           <Check size={11} className="mt-0.5 shrink-0" />
           <span className="flex-1">{result}</span>
           <button onClick={onDismissResult} className="shrink-0 opacity-70 hover:opacity-100">

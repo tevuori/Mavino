@@ -60,7 +60,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
               item.disabled
                 ? "cursor-not-allowed text-ink-muted/50"
                 : item.danger
-                ? "text-red-400 hover:bg-red-500/15"
+                ? "text-danger hover:bg-danger-soft"
                 : "text-ink hover:bg-surface-3"
             }`}
           >

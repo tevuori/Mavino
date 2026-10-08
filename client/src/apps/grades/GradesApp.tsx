@@ -130,13 +130,13 @@ export default function GradesApp() {
         </div>
       </div>
 
-      {error && <p className="px-4 py-2 text-xs text-red-400">{error}</p>}
+      {error && <p className="px-4 py-2 text-xs text-danger">{error}</p>}
 
       {/* GPA summary */}
       {courses.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-edge bg-surface-2 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Award size={20} className="text-amber-400" />
+            <Award size={20} className="text-warning" />
             <div>
               <p className="text-2xl font-bold text-ink">{gpa.toFixed(2)}</p>
               <p className="text-[10px] uppercase tracking-wide text-ink-muted">GPA</p>
@@ -237,7 +237,7 @@ export default function GradesApp() {
                                     </div>
                                     <button
                                       onClick={() => deleteAssignment(a.id)}
-                                      className="text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                                      className="text-ink-muted opacity-0 transition hover:text-danger group-hover:opacity-100"
                                     >
                                       <Trash2 size={14} />
                                     </button>
@@ -275,12 +275,12 @@ export default function GradesApp() {
               className="w-full max-w-sm rounded-t-2xl border border-edge bg-surface p-5 shadow-window sm:rounded-xl"
             >
               <h3 className="mb-4 text-sm font-semibold text-ink">Add Course</h3>
-              <input autoFocus value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="Course name" className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
+              <input autoFocus value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="Course name" className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus" />
               <div className="mb-3 flex gap-2">
-                <input value={courseCode} onChange={(e) => setCourseCode(e.target.value)} placeholder="Code (CS 101)" className="flex-1 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
-                <input type="number" value={courseCredits} onChange={(e) => setCourseCredits(parseInt(e.target.value) || 3)} min={1} max={12} className="w-20 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
+                <input value={courseCode} onChange={(e) => setCourseCode(e.target.value)} placeholder="Code (CS 101)" className="flex-1 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus" />
+                <input type="number" value={courseCredits} onChange={(e) => setCourseCredits(parseInt(e.target.value) || 3)} min={1} max={12} className="w-20 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus" />
               </div>
-              <input value={courseSemester} onChange={(e) => setCourseSemester(e.target.value)} placeholder="Semester (Fall 2025)" className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
+              <input value={courseSemester} onChange={(e) => setCourseSemester(e.target.value)} placeholder="Semester (Fall 2025)" className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus" />
               <div className="mb-4 flex gap-2">
                 {COURSE_COLORS.map((c) => (
                   <button key={c} onClick={() => setCourseColor(c)} className={`h-7 w-7 rounded-full transition ${courseColor === c ? "ring-2 ring-offset-2 ring-offset-surface ring-accent" : ""}`} style={{ backgroundColor: c }} />
@@ -307,13 +307,13 @@ export default function GradesApp() {
               className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-t-2xl border border-edge bg-surface p-5 shadow-window sm:rounded-xl"
             >
               <h3 className="mb-4 text-sm font-semibold text-ink">Add Assignment</h3>
-              <input autoFocus value={aName} onChange={(e) => setAName(e.target.value)} placeholder="Assignment name" className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
+              <input autoFocus value={aName} onChange={(e) => setAName(e.target.value)} placeholder="Assignment name" className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus" />
               <div className="mb-3 flex gap-2">
-                <input value={aScore} onChange={(e) => setAScore(e.target.value)} placeholder="Score" type="number" className="flex-1 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
-                <input value={aMax} onChange={(e) => setAMax(e.target.value)} placeholder="Max" type="number" className="w-20 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
+                <input value={aScore} onChange={(e) => setAScore(e.target.value)} placeholder="Score" type="number" className="flex-1 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus" />
+                <input value={aMax} onChange={(e) => setAMax(e.target.value)} placeholder="Max" type="number" className="w-20 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus" />
               </div>
               <div className="mb-3 flex gap-2">
-                <input value={aWeight} onChange={(e) => setAWeight(e.target.value)} placeholder="Weight" type="number" step="0.5" className="w-20 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
+                <input value={aWeight} onChange={(e) => setAWeight(e.target.value)} placeholder="Weight" type="number" step="0.5" className="w-20 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus" />
                 <select value={aCategory} onChange={(e) => setACategory(e.target.value)} className="flex-1 rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none">
                   {["General", "Homework", "Quiz", "Exam", "Lab", "Participation", "Project", "Extra Credit"].map((c) => <option key={c}>{c}</option>)}
                 </select>

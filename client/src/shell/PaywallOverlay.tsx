@@ -37,7 +37,7 @@ export default function PaywallOverlay({ requiredTier, highlights = [], dismissi
       <div className="mx-4 max-w-sm rounded-2xl border border-edge bg-surface p-6 shadow-window">
         {/* Lock icon */}
         <div className="mb-4 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-500">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-warning-soft text-warning">
             <Lock size={26} />
           </div>
         </div>
@@ -56,7 +56,7 @@ export default function PaywallOverlay({ requiredTier, highlights = [], dismissi
           <ul className="mb-4 space-y-1.5">
             {highlights.map((h, i) => (
               <li key={i} className="flex items-center gap-2 text-sm text-ink">
-                <Check size={14} className="shrink-0 text-emerald-500" />
+                <Check size={14} className="shrink-0 text-success" />
                 <span>{h}</span>
               </li>
             ))}

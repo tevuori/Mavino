@@ -21,6 +21,8 @@ import LinkBadge from "../links/LinkBadge";
 import { useLinkDrop } from "../links/useLinkDrop";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
 import { confirmDialog } from "../../store/mobileDialog";
+import { Dialog } from "../../ui/overlays";
+import { Button, TextField } from "../../ui/primitives";
 
 const WS_COLORS = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#8b5cf6", "#ef4444"];
 const ACTIVE_WS_KEY = "athena.activeTaskWorkspace";
@@ -345,67 +347,48 @@ export default function TasksApp(_: { win: WindowInstance }) {
         </DragOverlay>
       </DndContext>
 
-      {/* Workspace create/edit modal */}
-      <AnimatePresence>
-        {showWsForm && (
-          <div
-            className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-            onClick={() => setShowWsForm(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-xl border border-edge bg-surface p-5 shadow-window"
-            >
-              <h3 className="mb-4 text-sm font-semibold text-ink">
-                {editingWs ? "Edit Workspace" : "New Workspace"}
-              </h3>
-              <input
-                autoFocus
-                value={wsName}
-                onChange={(e) => setWsName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") saveWs(); }}
-                placeholder="Workspace name (e.g. Thesis, Side Project)"
-                className="mb-3 w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+      <Dialog
+        open={showWsForm}
+        onClose={() => setShowWsForm(false)}
+        title={editingWs ? "Edit workspace" : "New workspace"}
+        description="Workspaces keep related tasks together without changing their status."
+        className="max-w-sm"
+        footer={
+          <>
+            {editingWs && (
+              <Button variant="danger" onClick={() => deleteWs(editingWs)} className="mr-auto" leadingIcon={<Trash2 size={14} />}>
+                Delete
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => setShowWsForm(false)}>Cancel</Button>
+            <Button onClick={saveWs}>{editingWs ? "Save" : "Create"}</Button>
+          </>
+        }
+      >
+        <TextField
+          label="Workspace name"
+          value={wsName}
+          onChange={(event) => setWsName(event.target.value)}
+          onKeyDown={(event) => { if (event.key === "Enter") saveWs(); }}
+          placeholder="Thesis, Side project…"
+        />
+        <fieldset className="mt-5">
+          <legend className="mb-2 text-sm font-medium text-ink">Color</legend>
+          <div className="flex flex-wrap gap-2">
+            {WS_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => setWsColor(color)}
+                aria-label={`Use ${color} for this workspace`}
+                aria-pressed={wsColor === color}
+                className={`h-8 w-8 rounded-full border-2 border-surface transition ${wsColor === color ? "ring-2 ring-focus ring-offset-2 ring-offset-surface" : ""}`}
+                style={{ backgroundColor: color }}
               />
-              <div className="mb-4 flex gap-2">
-                {WS_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setWsColor(c)}
-                    className={`h-7 w-7 rounded-full transition ${wsColor === c ? "ring-2 ring-offset-2 ring-offset-surface ring-accent" : ""}`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-              </div>
-              <div className="flex justify-end gap-2">
-                {editingWs && (
-                  <button
-                    onClick={() => deleteWs(editingWs)}
-                    className="mr-auto flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-red-400 transition hover:bg-red-500/10"
-                  >
-                    <Trash2 size={12} /> Delete
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowWsForm(false)}
-                  className="rounded-lg px-3 py-1.5 text-xs text-ink-muted hover:text-ink"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveWs}
-                  className="rounded-lg bg-accent px-4 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
-                >
-                  {editingWs ? "Save" : "Create"}
-                </button>
-              </div>
-            </motion.div>
+            ))}
           </div>
-        )}
-      </AnimatePresence>
+        </fieldset>
+      </Dialog>
     </div>
   );
 }
@@ -630,7 +613,7 @@ function TaskCard({
               }}
               onPointerDown={(e) => e.stopPropagation()}
               placeholder="Task title..."
-              className="w-full rounded border border-edge bg-surface-2 px-1.5 py-0.5 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded border border-edge bg-surface-2 px-1.5 py-0.5 text-sm text-ink outline-none focus:border-focus"
             />
             <textarea
               value={editDescription}
@@ -642,7 +625,7 @@ function TaskCard({
               }}
               placeholder="Description (optional)"
               rows={2}
-              className="mt-1.5 w-full resize-none rounded border border-edge bg-surface-2 px-1.5 py-0.5 text-xs text-ink outline-none focus:border-accent"
+              className="mt-1.5 w-full resize-none rounded border border-edge bg-surface-2 px-1.5 py-0.5 text-xs text-ink outline-none focus:border-focus"
             />
             <div className="mt-1.5 flex gap-1.5">
               <button
@@ -734,7 +717,7 @@ function TaskCard({
               <button
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => onDelete?.(task.id)}
-                className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:text-red-400 active:bg-surface-3"
+                className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:text-danger active:bg-surface-3"
               >
                 <Trash2 size={14} />
               </button>

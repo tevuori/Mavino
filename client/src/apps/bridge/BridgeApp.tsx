@@ -23,11 +23,11 @@ import { confirmDialog } from "../../store/mobileDialog";
 // ----- helpers -----
 
 const RELATION_META: Record<string, { label: string; color: string; icon: typeof Link2 }> = {
-  prerequisite: { label: "Prerequisite", color: "text-blue-400", icon: ArrowRight },
-  shared_application: { label: "Shared Application", color: "text-emerald-400", icon: Link2 },
-  analogy: { label: "Analogy", color: "text-amber-400", icon: Lightbulb },
-  contrasts: { label: "Contrasts", color: "text-red-400", icon: Filter },
-  generalizes: { label: "Generalizes", color: "text-purple-400", icon: Network },
+  prerequisite: { label: "Prerequisite", color: "text-accent", icon: ArrowRight },
+  shared_application: { label: "Shared Application", color: "text-success", icon: Link2 },
+  analogy: { label: "Analogy", color: "text-warning", icon: Lightbulb },
+  contrasts: { label: "Contrasts", color: "text-danger", icon: Filter },
+  generalizes: { label: "Generalizes", color: "text-accent", icon: Network },
 };
 
 function relationMeta(relation: string) {
@@ -119,8 +119,8 @@ export default function BridgeApp({ win }: { win: WindowInstance }) {
   if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <AlertCircle className="text-red-400" size={32} />
-        <p className="text-sm text-red-400">{error}</p>
+        <AlertCircle className="text-danger" size={32} />
+        <p className="text-sm text-danger">{error}</p>
         <button
           onClick={() => { setError(null); loadBridges(); }}
           className="rounded-lg bg-surface-3 px-3 py-1.5 text-xs hover:brightness-110"
@@ -136,10 +136,10 @@ export default function BridgeApp({ win }: { win: WindowInstance }) {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-surface-3 px-4 py-2">
         <div className="flex items-center gap-2">
-          <Link2 className="text-purple-400" size={18} />
+          <Link2 className="text-accent" size={18} />
           <h2 className="text-sm font-semibold text-ink">Concept Bridge</h2>
           {stats && stats.unseenBridges > 0 && (
-            <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] text-purple-300">
+            <span className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px] text-accent">
               {stats.unseenBridges} new
             </span>
           )}
@@ -157,7 +157,7 @@ export default function BridgeApp({ win }: { win: WindowInstance }) {
           <button
             onClick={handleDiscover}
             disabled={discovering}
-            className="flex items-center gap-1 rounded-lg bg-purple-600 px-2 py-1 text-xs text-white hover:bg-purple-500 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1 text-xs text-white hover:bg-accent-hover disabled:opacity-50"
           >
             {discovering ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
             Discover
@@ -170,14 +170,14 @@ export default function BridgeApp({ win }: { win: WindowInstance }) {
         <div className="flex items-center gap-2 border-b border-surface-3 bg-surface-2 px-4 py-2">
           <button
             onClick={() => setFilter("all")}
-            className={`rounded-full px-2 py-0.5 text-[10px] ${filter === "all" ? "bg-purple-600 text-white" : "bg-surface-3 text-ink-muted hover:brightness-110"}`}
+            className={`rounded-full px-2 py-0.5 text-[10px] ${filter === "all" ? "bg-accent text-white" : "bg-surface-3 text-ink-muted hover:brightness-110"}`}
           >
             All ({stats.totalBridges})
           </button>
           {stats.unseenBridges > 0 && (
             <button
               onClick={() => setFilter("unseen")}
-              className={`rounded-full px-2 py-0.5 text-[10px] ${filter === "unseen" ? "bg-purple-600 text-white" : "bg-surface-3 text-ink-muted hover:brightness-110"}`}
+              className={`rounded-full px-2 py-0.5 text-[10px] ${filter === "unseen" ? "bg-accent text-white" : "bg-surface-3 text-ink-muted hover:brightness-110"}`}
             >
               Unseen ({stats.unseenBridges})
             </button>
@@ -188,7 +188,7 @@ export default function BridgeApp({ win }: { win: WindowInstance }) {
               <button
                 key={relation}
                 onClick={() => setFilter(relation)}
-                className={`rounded-full px-2 py-0.5 text-[10px] ${filter === relation ? "bg-purple-600 text-white" : "bg-surface-3 text-ink-muted hover:brightness-110"}`}
+                className={`rounded-full px-2 py-0.5 text-[10px] ${filter === relation ? "bg-accent text-white" : "bg-surface-3 text-ink-muted hover:brightness-110"}`}
               >
                 {meta.label} ({count})
               </button>
@@ -215,7 +215,7 @@ export default function BridgeApp({ win }: { win: WindowInstance }) {
                 <button
                   onClick={handleDiscover}
                   disabled={discovering}
-                  className="flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-xs text-white hover:bg-purple-500 disabled:opacity-50"
+                  className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover disabled:opacity-50"
                 >
                   {discovering ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
                   Discover Connections
@@ -232,7 +232,7 @@ export default function BridgeApp({ win }: { win: WindowInstance }) {
                 <div
                   key={bridge.id}
                   className={`group rounded-xl border bg-surface-2 p-4 transition ${
-                    bridge.seen ? "border-surface-3" : "border-purple-500/30"
+                    bridge.seen ? "border-surface-3" : "border-accent/30"
                   }`}
                 >
                   {/* Relation badge */}
@@ -242,12 +242,12 @@ export default function BridgeApp({ win }: { win: WindowInstance }) {
                         <RelationIcon size={10} /> {meta.label}
                       </span>
                       {!bridge.seen && (
-                        <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] text-purple-300">New</span>
+                        <span className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px] text-accent">New</span>
                       )}
                     </div>
                     <button
                       onClick={() => handleDelete(bridge.id)}
-                      className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                      className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
                     >
                       <Trash2 size={12} />
                     </button>

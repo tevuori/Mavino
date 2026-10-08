@@ -540,7 +540,7 @@ export default function KnowledgeGraph({ initialGraphId, language, onOpenMode }:
                   </span>
                   <button
                     onClick={() => void remove(g.id)}
-                    className="shrink-0 rounded p-1 text-ink-muted hover:bg-red-500/10 hover:text-red-400"
+                    className="shrink-0 rounded p-1 text-ink-muted hover:bg-danger-soft hover:text-danger"
                     title="Delete graph"
                   >
                     <Trash2 size={12} />

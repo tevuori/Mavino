@@ -232,7 +232,7 @@ export default function StudyApp({ win }: { win: WindowInstance }) {
                   <span className="flex items-center gap-1.5 text-xs font-medium">
                     {m.label}
                     {!enabledMode && minTier && (
-                      <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/15 px-1 py-px text-[9px] font-semibold uppercase text-amber-500">
+                      <span className="inline-flex items-center gap-0.5 rounded bg-warning-soft px-1 py-px text-[9px] font-semibold uppercase text-warning">
                         <Lock size={8} />
                         {minTier === "pro" ? "Pro" : "Paid"}
                       </span>

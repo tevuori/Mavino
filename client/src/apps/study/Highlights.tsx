@@ -175,7 +175,7 @@ export default function Highlights() {
             <select
               value={scopeFilter ?? ""}
               onChange={(e) => setScopeFilter((e.target.value || null) as HighlightScope | null)}
-              className="rounded-md border border-edge bg-surface px-1.5 py-0.5 text-[11px] text-ink outline-none focus:border-accent"
+              className="rounded-md border border-edge bg-surface px-1.5 py-0.5 text-[11px] text-ink outline-none focus:border-focus"
             >
               <option value="">All sources</option>
               {scopesPresent.map((s) => (
@@ -190,7 +190,7 @@ export default function Highlights() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search highlights…"
-            className="w-44 rounded-md border border-edge bg-surface py-1 pl-7 pr-2 text-[11px] text-ink outline-none focus:border-accent"
+            className="w-44 rounded-md border border-edge bg-surface py-1 pl-7 pr-2 text-[11px] text-ink outline-none focus:border-focus"
           />
         </div>
       </div>
@@ -214,7 +214,7 @@ export default function Highlights() {
             value={exportTitle}
             onChange={(e) => setExportTitle(e.target.value)}
             placeholder="Note title (optional)"
-            className="flex-1 rounded-md border border-edge bg-surface px-2 py-1 text-[11px] text-ink outline-none focus:border-accent"
+            className="flex-1 rounded-md border border-edge bg-surface px-2 py-1 text-[11px] text-ink outline-none focus:border-focus"
           />
           <ActionButton
             onClick={exportSelected}
@@ -277,7 +277,7 @@ export default function Highlights() {
                     }}
                     placeholder="Add an annotation…"
                     rows={1}
-                    className="w-full resize-none rounded-md border border-edge bg-surface px-2 py-1 text-[11px] text-ink-muted outline-none focus:border-accent"
+                    className="w-full resize-none rounded-md border border-edge bg-surface px-2 py-1 text-[11px] text-ink-muted outline-none focus:border-focus"
                   />
                   <div className="flex flex-wrap items-center gap-2 text-[10px] text-ink-muted">
                     <button
@@ -302,7 +302,7 @@ export default function Highlights() {
                       ))}
                       <button
                         onClick={() => void removeHighlight(h.id)}
-                        className="ml-1 rounded p-0.5 text-ink-muted hover:text-red-400"
+                        className="ml-1 rounded p-0.5 text-ink-muted hover:text-danger"
                         title="Delete highlight"
                       >
                         <Trash2 size={12} />

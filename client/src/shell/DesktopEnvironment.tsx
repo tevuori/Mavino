@@ -80,11 +80,11 @@ export default function DesktopEnvironment() {
   return (
     <div className="flex h-full w-full flex-col overflow-clip">
       {isDemo && (
-        <div className="z-10 flex shrink-0 items-center justify-center gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-200 backdrop-blur-sm">
+        <div className="z-10 flex shrink-0 items-center justify-center gap-3 border-b border-warning bg-warning-soft px-4 py-1.5 text-xs text-warning backdrop-blur-sm">
           <span>Demo mode — your work is temporary and will expire soon.</span>
           <button
             onClick={logout}
-            className="rounded-md bg-amber-500/20 px-2 py-0.5 font-medium text-amber-100 transition hover:bg-amber-500/30"
+            className="rounded-md bg-warning-soft px-2 py-0.5 font-medium text-warning transition hover:bg-warning-soft"
           >
             Sign up / Log in
           </button>

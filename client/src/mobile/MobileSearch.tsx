@@ -60,7 +60,7 @@ export default function MobileSearch({
           kind: "note",
           title: n.title || "Untitled",
           subtitle: n.content?.slice(0, 60) || "Note",
-          icon: <StickyNote size={16} className="text-amber-400" />,
+          icon: <StickyNote size={16} className="text-warning" />,
           action: () => { onOpenTool("notes"); setExpanded(false); setQuery(""); },
         });
       }
@@ -74,7 +74,7 @@ export default function MobileSearch({
           kind: "task",
           title: t.title,
           subtitle: t.status === "DONE" ? "Completed" : t.dueDate ? `Due ${new Date(t.dueDate).toLocaleDateString()}` : "Task",
-          icon: <CheckSquare size={16} className={t.status === "DONE" ? "text-emerald-400" : "text-sky-400"} />,
+          icon: <CheckSquare size={16} className={t.status === "DONE" ? "text-success" : "text-accent"} />,
           action: () => { setExpanded(false); setQuery(""); },
         });
       }
@@ -88,7 +88,7 @@ export default function MobileSearch({
           kind: "file",
           title: f.name,
           subtitle: `${(f.size / 1024).toFixed(0)} KB`,
-          icon: <FileText size={16} className="text-blue-400" />,
+          icon: <FileText size={16} className="text-accent" />,
           action: () => { onOpenTool("files"); setExpanded(false); setQuery(""); },
         });
       }

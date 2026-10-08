@@ -92,7 +92,7 @@ export default function Explain({ initialSource, initialGraphId, language }: { i
           <select
             value={depth}
             onChange={(e) => setDepth(e.target.value as typeof depth)}
-            className="rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-accent"
+            className="rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-focus"
           >
             <option value="eli5">ELI5</option>
             <option value="standard">Standard</option>

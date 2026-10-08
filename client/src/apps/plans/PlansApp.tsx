@@ -197,10 +197,10 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {error && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
             <AlertCircle size={16} className="shrink-0" />
             <span>{error}</span>
-            <button onClick={() => setError(null)} className="ml-auto text-red-400/70 hover:text-red-400">
+            <button onClick={() => setError(null)} className="ml-auto text-danger/70 hover:text-danger">
               <X size={14} />
             </button>
           </div>
@@ -215,7 +215,7 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
                 <p className="mt-0.5 text-lg font-semibold text-ink capitalize">
                   {currentPlan}
                   {isActive && (
-                    <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-normal text-emerald-500">
+                    <span className="ml-2 rounded-full bg-success-soft px-2 py-0.5 text-xs font-normal text-success">
                       Active
                     </span>
                   )}
@@ -229,7 +229,7 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
                   </span>
                 )}
                 {status.cancelAt && (
-                  <span className="flex items-center gap-1 text-xs text-amber-500">
+                  <span className="flex items-center gap-1 text-xs text-warning">
                     <Ban size={12} />
                     Cancels {new Date(status.cancelAt).toLocaleDateString()}
                   </span>
@@ -249,7 +249,7 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
                 <button
                   onClick={handleCancel}
                   disabled={actionLoading === "cancel"}
-                  className="flex items-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10"
+                  className="flex items-center gap-1.5 rounded-lg border border-danger px-3 py-1.5 text-xs text-danger hover:bg-danger-soft"
                 >
                   {actionLoading === "cancel" ? <Loader2 size={12} className="animate-spin" /> : <Ban size={12} />}
                   Cancel subscription
@@ -316,7 +316,7 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
                 <ul className="mt-4 flex-1 space-y-2">
                   {plan.features.map((f, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-ink">
-                      <Check size={14} className="mt-0.5 shrink-0 text-emerald-500" />
+                      <Check size={14} className="mt-0.5 shrink-0 text-success" />
                       <span>{f}</span>
                     </li>
                   ))}
@@ -441,21 +441,21 @@ export default function PlansApp({ win: _win }: { win: WindowInstance }) {
                         </td>
                         <td className="px-3 py-2.5 text-center">
                           {inFree ? (
-                            <Check size={14} className="mx-auto text-emerald-500" />
+                            <Check size={14} className="mx-auto text-success" />
                           ) : (
                             <Lock size={12} className="mx-auto text-ink-muted/30" />
                           )}
                         </td>
                         <td className="px-3 py-2.5 text-center">
                           {inPaid ? (
-                            <Check size={14} className="mx-auto text-emerald-500" />
+                            <Check size={14} className="mx-auto text-success" />
                           ) : (
                             <Lock size={12} className="mx-auto text-ink-muted/30" />
                           )}
                         </td>
                         <td className="px-3 py-2.5 text-center">
                           {inPro ? (
-                            <Check size={14} className="mx-auto text-emerald-500" />
+                            <Check size={14} className="mx-auto text-success" />
                           ) : (
                             <Lock size={12} className="mx-auto text-ink-muted/30" />
                           )}

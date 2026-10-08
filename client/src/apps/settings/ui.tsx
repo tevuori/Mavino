@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Loader2, Check } from "lucide-react";
+import { Check } from "lucide-react";
+import { Alert, Button, Switch } from "../../ui/primitives";
 
 /** Section heading with icon + title + description. */
 export function SectionHeader({
@@ -24,7 +25,7 @@ export function SectionHeader({
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border border-edge bg-surface-2 p-4 ${className}`}>
+    <div className={`border-t border-edge py-4 ${className}`}>
       {children}
     </div>
   );
@@ -41,7 +42,7 @@ export function Field({
 }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[11px] uppercase tracking-wide text-ink-muted">{label}</span>
+      <span className="text-xs font-medium text-ink-muted">{label}</span>
       {children}
       {hint && <span className="text-[11px] text-ink-muted">{hint}</span>}
     </label>
@@ -49,7 +50,7 @@ export function Field({
 }
 
 export const inputClass =
-  "rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent";
+  "rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-focus focus:ring-2 focus:ring-focus/20";
 
 export function ToggleRow({
   label,
@@ -63,20 +64,12 @@ export function ToggleRow({
   onClick: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-edge bg-surface-2 p-3">
+    <div className="flex min-h-14 items-center justify-between gap-4 border-b border-edge py-3">
       <div>
         <p className="text-sm font-medium text-ink">{label}</p>
-        <p className="text-xs text-ink-muted">{description}</p>
+        <p className="mt-0.5 text-xs leading-5 text-ink-muted">{description}</p>
       </div>
-      <button
-        onClick={onClick}
-        className={`relative h-6 w-11 rounded-full transition ${on ? "bg-accent" : "bg-surface-3"}`}
-      >
-        <span
-          className="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all"
-          style={{ left: on ? "1.375rem" : "0.125rem" }}
-        />
-      </button>
+      <Switch checked={on} label={label} onClick={onClick} />
     </div>
   );
 }
@@ -93,7 +86,7 @@ export function StatusPill({
   return (
     <span
       className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs ${
-        on ? "bg-emerald-500/15 text-emerald-500" : "bg-surface-3 text-ink-muted"
+        on ? "bg-success-soft text-success" : "bg-surface-3 text-ink-muted"
       }`}
     >
       {on ? <Check size={12} /> : null}
@@ -114,18 +107,13 @@ export function SaveButton({
   children?: ReactNode;
 }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={busy || disabled}
-      className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm text-accent-fg hover:opacity-90 disabled:opacity-40"
-    >
-      {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+    <Button onClick={onClick} disabled={disabled} loading={busy} leadingIcon={<Check size={14} />}>
       {children}
-    </button>
+    </Button>
   );
 }
 
 export function MsgBox({ msg, error }: { msg: string | null; error?: boolean }) {
   if (!msg) return null;
-  return <p className={`mt-2 text-xs ${error ? "text-red-500" : "text-ink-muted"}`}>{msg}</p>;
+  return <Alert variant={error ? "danger" : "success"} className="mt-2 text-xs">{msg}</Alert>;
 }

@@ -38,14 +38,14 @@ export default function ResetPasswordScreen({ token }: { token: string }) {
 
   if (done) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-slate-950 p-4">
+      <div className="flex h-full w-full items-center justify-center bg-canvas p-4">
         <div className="w-full max-w-sm rounded-2xl border border-edge bg-surface-1 p-6 shadow-xl">
           <div className="mb-6 text-center">
             <AppLogo size={56} className="mx-auto mb-3" />
             <h1 className="text-xl font-semibold text-ink">Mavino</h1>
           </div>
           <div className="flex flex-col items-center gap-3 py-4">
-            <CheckCircle2 size={40} className="text-green-400" />
+            <CheckCircle2 size={40} className="text-success" />
             <p className="text-center text-sm text-ink">
               Your password has been reset successfully.
             </p>
@@ -67,7 +67,7 @@ export default function ResetPasswordScreen({ token }: { token: string }) {
   }
 
   return (
-    <div className="flex h-full w-full items-center justify-center bg-slate-950 p-4">
+    <div className="flex h-full w-full items-center justify-center bg-canvas p-4">
       <div className="w-full max-w-sm rounded-2xl border border-edge bg-surface-1 p-6 shadow-xl">
         <div className="mb-6 text-center">
           <AppLogo size={56} className="mx-auto mb-3" />
@@ -85,7 +85,7 @@ export default function ResetPasswordScreen({ token }: { token: string }) {
             placeholder="New password"
             autoFocus
             autoComplete="new-password"
-            className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+            className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
           />
           <input
             type="password"
@@ -93,10 +93,10 @@ export default function ResetPasswordScreen({ token }: { token: string }) {
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirm new password"
             autoComplete="new-password"
-            className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+            className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
           />
           {error && (
-            <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
+            <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
           )}
           <button
             type="submit"

@@ -325,7 +325,7 @@ export default function WhiteboardApp({ win }: { win: WindowInstance }) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
+    <div className="flex flex-col h-full bg-surface">
       <Toolbar
         tool={tool}
         setTool={setTool}
@@ -348,13 +348,13 @@ export default function WhiteboardApp({ win }: { win: WindowInstance }) {
         saving={saving}
       />
       {/* Editor header: back, name, save status */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-edge dark:border-edge bg-surface">
         <button
           onClick={() => {
             if (dirty) save();
             setView("list");
           }}
-          className="p-1.5 rounded-md text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+          className="p-1.5 rounded-md text-ink-muted dark:text-ink-muted hover:bg-surface-2 dark:hover:bg-surface-3"
           title="Back to list"
         >
           <ArrowLeft size={18} />
@@ -366,14 +366,14 @@ export default function WhiteboardApp({ win }: { win: WindowInstance }) {
             setDirty(true);
           }}
           onBlur={() => boardId && renameBoard(boardId, boardName)}
-          className="flex-1 bg-transparent text-sm font-medium text-zinc-800 dark:text-zinc-100 outline-none border-b border-transparent focus:border-indigo-500"
+          className="flex-1 bg-transparent text-sm font-medium text-ink dark:text-ink outline-none border-b border-transparent focus:border-focus"
         />
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs text-ink-muted">
           {saving ? "Saving…" : dirty ? "Unsaved changes" : "Saved"}
         </span>
       </div>
       {/* Canvas */}
-      <div className="flex-1 min-h-0 overflow-hidden bg-zinc-100 dark:bg-zinc-800 p-2">
+      <div className="flex-1 min-h-0 overflow-hidden bg-surface-2 dark:bg-surface-2 p-2">
         <div className="w-full h-full rounded-lg overflow-hidden shadow-inner">
           <Canvas
             elements={elements}
@@ -390,7 +390,7 @@ export default function WhiteboardApp({ win }: { win: WindowInstance }) {
         </div>
       </div>
       {error && (
-        <div className="px-3 py-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1.5 border-t border-red-200 dark:border-red-900">
+        <div className="px-3 py-1.5 text-xs text-danger dark:text-danger flex items-center gap-1.5 border-t border-danger dark:border-danger">
           <AlertCircle size={14} /> {error}
         </div>
       )}
@@ -410,23 +410,23 @@ function BoardList({
   onRename: (id: string, name: string) => void;
 }) {
   return (
-    <div className="flex flex-col h-full bg-zinc-50 dark:bg-zinc-900">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
-        <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">Whiteboards</h2>
+    <div className="flex flex-col h-full bg-surface-2 dark:bg-surface-2">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-edge dark:border-edge">
+        <h2 className="text-base font-semibold text-ink dark:text-ink">Whiteboards</h2>
         <button
           onClick={onCreate}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-500 text-white text-sm font-medium hover:bg-indigo-600 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-white text-sm font-medium hover:bg-accent transition-colors"
         >
           <Plus size={16} /> New
         </button>
       </div>
       <div className="flex-1 overflow-auto p-4">
         {loading ? (
-          <div className="flex items-center justify-center text-zinc-400">
+          <div className="flex items-center justify-center text-ink-muted">
             <Loader2 className="animate-spin" size={20} />
           </div>
         ) : boards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-zinc-400 gap-2">
+          <div className="flex flex-col items-center justify-center h-full text-ink-muted gap-2">
             <Pencil size={32} />
             <p className="text-sm">No whiteboards yet. Click "New" to create one.</p>
           </div>
@@ -435,15 +435,15 @@ function BoardList({
             {boards.map((b) => (
               <div
                 key={b.id}
-                className="group relative rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-4 hover:shadow-md transition-shadow cursor-pointer"
+                className="group relative rounded-lg border border-edge dark:border-edge bg-white dark:bg-surface-2 p-4 hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => onOpen(b.id)}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="text-sm font-medium text-zinc-800 dark:text-zinc-100 truncate">
+                    <h3 className="text-sm font-medium text-ink dark:text-ink truncate">
                       {b.name}
                     </h3>
-                    <p className="text-xs text-zinc-400 mt-1">
+                    <p className="text-xs text-ink-muted mt-1">
                       {new Date(b.updatedAt).toLocaleString()}
                     </p>
                   </div>
@@ -455,7 +455,7 @@ function BoardList({
                       const name = await promptDialog("Rename whiteboard:", b.name);
                       if (name && name.trim()) onRename(b.id, name.trim());
                     }}
-                    className="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                    className="p-1.5 rounded-md text-ink-muted hover:bg-surface-2 dark:hover:bg-surface-3"
                     title="Rename"
                   >
                     <Pencil size={14} />
@@ -465,7 +465,7 @@ function BoardList({
                       e.stopPropagation();
                       onDelete(b.id);
                     }}
-                    className="p-1.5 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
+                    className="p-1.5 rounded-md text-danger hover:bg-danger-soft dark:hover:bg-danger-soft"
                     title="Delete"
                   >
                     <Trash2 size={14} />
@@ -476,7 +476,7 @@ function BoardList({
           </div>
         )}
         {error && (
-          <div className="mt-3 text-xs text-red-600 dark:text-red-400 flex items-center gap-1.5">
+          <div className="mt-3 text-xs text-danger dark:text-danger flex items-center gap-1.5">
             <AlertCircle size={14} /> {error}
           </div>
         )}

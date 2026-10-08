@@ -98,11 +98,11 @@ export default function MobileShell() {
     <main className="mobile-shell relative flex h-full w-full overflow-clip bg-canvas text-ink" aria-label="Mavino mobile">
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         {isDemo && (
-          <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
+          <div className="flex items-center justify-between gap-2 border-b border-warning bg-warning-soft px-4 py-2 text-xs text-warning">
             <span>Demo mode</span>
             <button
               onClick={logout}
-              className="rounded-md bg-amber-500/20 px-2 py-0.5 font-medium text-amber-100 transition hover:bg-amber-500/30"
+              className="rounded-md bg-warning-soft px-2 py-0.5 font-medium text-warning transition hover:bg-warning-soft"
             >
               Sign up / Log in
             </button>

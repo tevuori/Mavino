@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Bell, CheckCheck, Trash2, X } from "lucide-react";
+import { Bell, CheckCheck, Trash2 } from "lucide-react";
 import { useNotifications, type EphemeralNotification } from "../store/notifications";
 import type { NotificationItem } from "../types";
 import { MobileIconChip } from "./MobileUi";
+import { Sheet } from "../ui/overlays";
+import { Button } from "../ui/primitives";
 
 /**
  * A bell button with unread badge. Tapping it opens the notification sheet.
@@ -48,40 +50,16 @@ function NotificationSheet({ onClose }: { onClose: () => void }) {
   const count = unreadCount();
 
   return (
-    <div className="fixed inset-0 z-[18500] flex items-end justify-center bg-black/60" onClick={onClose}>
-      <div
-        className="max-h-[80vh] w-full max-w-md overflow-hidden rounded-t-3xl border border-edge bg-surface shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-surface-3" aria-hidden />
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pb-2 pt-3">
-          <h2 className="text-lg font-semibold text-ink">Notifications</h2>
-          <div className="flex items-center gap-2">
-            {count > 0 && (
-              <button
-                type="button"
-                onClick={() => void markAllRead()}
-                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-ink-muted active:bg-surface-3"
-                aria-label="Mark all read"
-              >
-                <CheckCheck size={14} /> Read all
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:bg-surface-3"
-              aria-label="Close"
-            >
-              <X size={16} />
-            </button>
-          </div>
+    <Sheet open onClose={onClose} title="Notifications" className="max-w-md">
+      {count > 0 && (
+        <div className="-mt-3 mb-3 flex justify-end">
+          <Button variant="ghost" size="sm" onClick={() => void markAllRead()} leadingIcon={<CheckCheck size={14} />}>
+            Read all
+          </Button>
         </div>
+      )}
 
-        {/* List */}
-        <div className="overflow-y-auto px-5 pb-[max(1rem,env(safe-area-inset-bottom))]" style={{ maxHeight: "calc(80vh - 60px)" }}>
+      <div className="overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]" style={{ maxHeight: "calc(80vh - 120px)" }}>
           {all.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10">
               <MobileIconChip icon={<Bell size={20} />} size="lg" />
@@ -105,9 +83,8 @@ function NotificationSheet({ onClose }: { onClose: () => void }) {
               ))}
             </div>
           )}
-        </div>
       </div>
-    </div>
+    </Sheet>
   );
 }
 
@@ -191,7 +168,7 @@ function NotificationRow({
             e.stopPropagation();
             onDismiss();
           }}
-          className="shrink-0 rounded-lg p-1 text-ink-muted active:text-rose-400"
+          className="shrink-0 rounded-lg p-1 text-ink-muted active:text-danger"
           aria-label="Dismiss"
         >
           <Trash2 size={14} />

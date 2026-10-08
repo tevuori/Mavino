@@ -18,7 +18,7 @@ function MasteryPct({ mastery }: { mastery: number }) {
   if (mastery < 0) return null;
   const pct = Math.round(mastery * 100);
   const Icon = pct >= 80 ? TrendingUp : pct >= 60 ? Minus : TrendingDown;
-  const color = pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-red-400";
+  const color = pct >= 80 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger";
   return <span className={`flex items-center gap-1 text-xs ${color}`}><Icon size={12} />{pct}%</span>;
 }
 
@@ -102,13 +102,13 @@ export default function MobileAtlas({ onClose, onOpenTool }: { onClose: () => vo
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
 
       {building && (
-        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
           <Sparkles size={16} className="animate-pulse" />
           Building your knowledge graph…
         </div>
@@ -150,7 +150,7 @@ export default function MobileAtlas({ onClose, onOpenTool }: { onClose: () => vo
               <p className="text-[11px] text-ink-muted">Clusters</p>
             </div>
             <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
-              <p className={`text-2xl font-bold ${data.stats.weakCount > 0 ? "text-red-400" : "text-ink"}`}>{data.stats.weakCount}</p>
+              <p className={`text-2xl font-bold ${data.stats.weakCount > 0 ? "text-danger" : "text-ink"}`}>{data.stats.weakCount}</p>
               <p className="text-[11px] text-ink-muted">Weak</p>
             </div>
           </div>
@@ -159,7 +159,7 @@ export default function MobileAtlas({ onClose, onOpenTool }: { onClose: () => vo
             <button
               onClick={() => setFilterWeak((v) => !v)}
               className={`mb-3 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
-                filterWeak ? "bg-red-500/20 text-red-300" : "bg-surface-2 text-ink-muted"
+                filterWeak ? "bg-danger-soft text-danger" : "bg-surface-2 text-ink-muted"
               }`}
             >
               <TrendingDown size={15} />
@@ -201,10 +201,10 @@ function ConceptCard({
 }) {
   const totalLinks = concept.items.notes.length + concept.items.flashcardDecks.length + concept.items.tasks.length + concept.items.courses.length;
   return (
-    <div className={`rounded-2xl border bg-surface-2 p-3.5 transition ${concept.weak ? "border-red-500/30" : "border-edge"}`}>
+    <div className={`rounded-2xl border bg-surface-2 p-3.5 transition ${concept.weak ? "border-danger" : "border-edge"}`}>
       <button onClick={onToggle} className="flex w-full items-center justify-between gap-2 text-left">
         <div className="min-w-0 flex-1">
-          <p className={`font-semibold text-ink ${concept.weak ? "text-red-300" : ""}`}>{concept.label}</p>
+          <p className={`font-semibold text-ink ${concept.weak ? "text-danger" : ""}`}>{concept.label}</p>
           <div className="mt-1 flex items-center gap-3">
             <span className="text-[11px] capitalize text-ink-muted">{concept.type}</span>
             <MasteryPct mastery={concept.mastery} />

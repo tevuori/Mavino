@@ -242,7 +242,7 @@ export default function AccountSection() {
           {devices.length > 0 && (
             <button
               onClick={revokeAll}
-              className="rounded-lg border border-edge px-2.5 py-1 text-xs text-ink-muted hover:bg-red-500 hover:text-white"
+              className="rounded-lg border border-edge px-2.5 py-1 text-xs text-ink-muted hover:bg-danger hover:text-white"
             >
               Revoke all
             </button>
@@ -271,7 +271,7 @@ export default function AccountSection() {
                 </div>
                 <button
                   onClick={() => revokeDevice(d.id)}
-                  className="rounded-md p-1.5 text-ink-muted hover:bg-red-500 hover:text-white"
+                  className="rounded-md p-1.5 text-ink-muted hover:bg-danger hover:text-white"
                   title="Revoke"
                 >
                   <Trash2 size={14} />
@@ -280,7 +280,7 @@ export default function AccountSection() {
             ))}
           </div>
         )}
-        {deviceErr && <p className="mt-2 text-xs text-red-500">{deviceErr}</p>}
+        {deviceErr && <p className="mt-2 text-xs text-danger">{deviceErr}</p>}
       </Card>
     </section>
   );

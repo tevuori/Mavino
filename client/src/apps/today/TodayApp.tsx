@@ -183,8 +183,8 @@ export default function TodayApp() {
   });
 
   return (
-    <div className="h-full overflow-y-auto bg-surface">
-      <div className="mx-auto max-w-none @5xl:max-w-3xl p-6">
+    <div className="h-full overflow-y-auto bg-canvas">
+      <div className="mx-auto max-w-none p-6 @5xl:max-w-4xl @5xl:p-8">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
@@ -209,7 +209,7 @@ export default function TodayApp() {
         </div>
 
         {/* Hero — start focus */}
-        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-edge bg-gradient-to-br from-accent/10 to-surface-2 p-4 @5xl:flex-row @5xl:items-center @5xl:justify-between">
+        <div className="mb-8 flex flex-col gap-4 rounded-xl border border-edge/70 bg-surface p-5 shadow-sm @5xl:flex-row @5xl:items-center @5xl:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent/15 text-accent">
               <Timer size={20} />
@@ -235,7 +235,6 @@ export default function TodayApp() {
           <SectionCard
             icon={<CheckSquare size={16} />}
             title="Due Tasks"
-            accent="text-amber-500"
             badge={taskCount > 0 ? taskCount : undefined}
             onOpen={() => openApp("tasks", "Tasks", "CheckSquare")}
             openLabel="Open Tasks"
@@ -253,11 +252,11 @@ export default function TodayApp() {
                     <div className="flex items-center gap-2 text-[11px]">
                       <span className="text-ink-muted">{PRIORITY_LABELS[t.priority]}</span>
                       {overdue && (
-                        <span className="flex items-center gap-0.5 text-red-500">
+                        <span className="flex items-center gap-0.5 text-danger">
                           <AlertCircle size={10} /> Overdue
                         </span>
                       )}
-                      {dueToday && <span className="text-amber-500">Due today</span>}
+                      {dueToday && <span className="text-warning">Due today</span>}
                       {t.status === "IN_PROGRESS" && (
                         <span className="rounded bg-surface-3 px-1.5 py-0.5 text-ink-muted">In progress</span>
                       )}
@@ -272,7 +271,6 @@ export default function TodayApp() {
           <SectionCard
             icon={<Brain size={16} />}
             title="Due Flashcards"
-            accent="text-violet-500"
             badge={totalDue > 0 ? totalDue : undefined}
             onOpen={() => openApp("flashcards", "Flashcards", "Brain")}
             openLabel="Review"
@@ -286,7 +284,7 @@ export default function TodayApp() {
                   style={{ background: d.deckColor || "#8b5cf6" }}
                 />
                 <p className="min-w-0 flex-1 truncate text-sm text-ink">{d.deckName}</p>
-                <span className="shrink-0 rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-semibold text-violet-500">
+                <span className="shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent">
                   {d.dueCount}
                 </span>
               </div>
@@ -300,18 +298,17 @@ export default function TodayApp() {
           <SectionCard
             icon={<Timer size={16} />}
             title="Today's Focus"
-            accent="text-rose-500"
             onOpen={() => openApp("pomodoro", "Pomodoro", "Timer")}
             openLabel="Open Timer"
             loading={loading}
             empty="No focus sessions yet today"
           >
             <div className="grid grid-cols-2 gap-3 py-1">
-              <div className="rounded-lg bg-surface-2 p-3">
+              <div className="rounded-lg bg-surface-sunken p-3">
                 <p className="text-2xl font-bold text-ink">{pomoStats.completedFocus}</p>
                 <p className="text-[11px] text-ink-muted">sessions</p>
               </div>
-              <div className="rounded-lg bg-surface-2 p-3">
+              <div className="rounded-lg bg-surface-sunken p-3">
                 <p className="text-2xl font-bold text-ink">{pomoStats.totalFocusMinutes}</p>
                 <p className="text-[11px] text-ink-muted">focus minutes</p>
               </div>
@@ -322,7 +319,6 @@ export default function TodayApp() {
           <SectionCard
             icon={<Calendar size={16} />}
             title="Today's Schedule"
-            accent="text-indigo-500"
             badge={todayEvents.length > 0 ? todayEvents.length : undefined}
             onOpen={() => openApp("calendar", "Calendar", "Calendar")}
             openLabel="Open Calendar"
@@ -367,7 +363,6 @@ export default function TodayApp() {
           <SectionCard
             icon={<Flame size={16} />}
             title="Habits"
-            accent="text-orange-500"
             badge={habits.length > 0 ? habits.length : undefined}
             onOpen={() => openApp("habits", "Habits", "Flame")}
             openLabel="Open Habits"
@@ -396,7 +391,7 @@ export default function TodayApp() {
                   <span className="text-base">{h.icon}</span>
                   <p className="min-w-0 flex-1 truncate text-sm text-ink">{h.name}</p>
                   <span className="shrink-0 text-[11px] text-ink-muted">
-                    <Flame size={10} className="mr-0.5 inline text-orange-500" />
+                    <Flame size={10} className="mr-0.5 inline text-warning" />
                     {s?.currentStreak ?? 0}
                   </span>
                 </div>
@@ -408,7 +403,6 @@ export default function TodayApp() {
           <SectionCard
             icon={<GraduationCap size={16} />}
             title="Study Hub"
-            accent="text-violet-500"
             badge={sourceCount > 0 ? sourceCount : undefined}
             onOpen={() => openApp("study", "Study Hub", "GraduationCap")}
             openLabel="Open Study Hub"
@@ -419,7 +413,7 @@ export default function TodayApp() {
               onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "chat" })}
               className="flex w-full items-center gap-2.5 py-1.5 text-left"
             >
-              <MessageSquare size={15} className="shrink-0 text-violet-400" />
+              <MessageSquare size={15} className="shrink-0 text-accent" />
               <p className="min-w-0 flex-1 truncate text-sm text-ink">Ask (grounded Q&A)</p>
               {chatCount > 0 && <span className="shrink-0 text-[11px] text-ink-muted">{chatCount}</span>}
               <ArrowRight size={12} className="shrink-0 text-ink-muted" />
@@ -428,7 +422,7 @@ export default function TodayApp() {
               onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "podcast" })}
               className="flex w-full items-center gap-2.5 py-1.5 text-left"
             >
-              <Mic size={15} className="shrink-0 text-rose-400" />
+              <Mic size={15} className="shrink-0 text-accent" />
               <p className="min-w-0 flex-1 truncate text-sm text-ink">Podcast overview</p>
               {podcastCount > 0 && <span className="shrink-0 text-[11px] text-ink-muted">{podcastCount}</span>}
               <ArrowRight size={12} className="shrink-0 text-ink-muted" />
@@ -437,7 +431,7 @@ export default function TodayApp() {
               onClick={() => openApp("study", "Study Hub", "GraduationCap", { mode: "flashcards" })}
               className="flex w-full items-center gap-2.5 py-1.5 text-left"
             >
-              <FileText size={15} className="shrink-0 text-indigo-400" />
+              <FileText size={15} className="shrink-0 text-accent" />
               <p className="min-w-0 flex-1 truncate text-sm text-ink">Generate flashcards</p>
               <ArrowRight size={12} className="shrink-0 text-ink-muted" />
             </button>
@@ -451,7 +445,7 @@ export default function TodayApp() {
 interface SectionCardProps {
   icon: React.ReactNode;
   title: string;
-  accent: string;
+  accent?: string;
   badge?: number;
   onOpen: () => void;
   openLabel: string;
@@ -479,10 +473,10 @@ function SectionCard({
   else if (children) childCount = 1;
 
   return (
-    <div className="flex flex-col rounded-xl border border-edge bg-surface-2/40 p-4">
+    <section className="flex flex-col border-t border-edge py-5">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={accent}>{icon}</span>
+          <span className={accent ?? "text-accent"}>{icon}</span>
           <h2 className="text-sm font-semibold text-ink">{title}</h2>
           {badge !== undefined && (
             <span className="rounded-full bg-surface-3 px-1.5 py-0.5 text-[10px] font-bold text-ink-muted">
@@ -521,6 +515,6 @@ function SectionCard({
           <div className="divide-y divide-edge/60">{children}</div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

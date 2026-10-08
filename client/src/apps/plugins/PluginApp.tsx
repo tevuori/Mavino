@@ -62,7 +62,7 @@ class PluginErrorBoundary extends Component<
     if (this.state.error) {
       return (
         <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-8 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15 text-red-500">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
             <span className="text-xl">!</span>
           </div>
           <h3 className="text-sm font-semibold text-ink">Plugin failed to load</h3>
@@ -87,8 +87,8 @@ class PluginErrorBoundary extends Component<
 
 function PluginLoader() {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-slate-900/50">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
+    <div className="flex h-full w-full items-center justify-center bg-surface-sunken">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
     </div>
   );
 }

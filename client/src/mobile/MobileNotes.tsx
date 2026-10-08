@@ -339,7 +339,7 @@ export default function MobileNotes({
                 <FileText size={16} /> Export PDF
               </button>
               <div className="my-1 border-t border-edge" />
-              <button type="button" onClick={deleteNote} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-rose-400 active:bg-surface-2">
+              <button type="button" onClick={deleteNote} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-danger active:bg-surface-2">
                 <Trash2 size={16} /> Delete
               </button>
             </div>
@@ -506,7 +506,7 @@ export default function MobileNotes({
             <button type="button" onClick={() => startRenameFolder(folderMenuOpen)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-ink active:bg-surface-2">
               Rename
             </button>
-            <button type="button" onClick={() => deleteFolder(folderMenuOpen)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-rose-400 active:bg-surface-2">
+            <button type="button" onClick={() => deleteFolder(folderMenuOpen)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-danger active:bg-surface-2">
               Delete
             </button>
           </div>
@@ -525,7 +525,7 @@ export default function MobileNotes({
           </>
         }
       >
-        <MobileInput value={renameValue} onChange={(e) => setRenameValue(e.target.value)} placeholder="Folder name" autoFocus />
+        <MobileInput value={renameValue} onChange={(e) => setRenameValue(e.target.value)} placeholder="Folder name" data-autofocus />
       </MobileModal>
 
       <div className="space-y-2">

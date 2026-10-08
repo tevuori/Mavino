@@ -61,8 +61,8 @@ function Btn({
       title={title}
       className={`rounded-md p-2 transition-colors ${
         active
-          ? "bg-indigo-500 text-white"
-          : "text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:bg-zinc-300 dark:active:bg-zinc-600 disabled:opacity-40 disabled:hover:bg-transparent"
+          ? "bg-accent text-white"
+          : "text-ink-muted dark:text-ink-muted hover:bg-surface-2 dark:hover:bg-surface-3 active:bg-surface-3 dark:active:bg-surface-3 disabled:opacity-40 disabled:hover:bg-transparent"
       }`}
     >
       {children}
@@ -80,7 +80,7 @@ export default function Toolbar(props: Props) {
   const filled = fill !== "none";
 
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-zinc-200 bg-white/80 px-2 py-1.5 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/80">
+    <div className="flex flex-wrap items-center gap-1 border-b border-edge bg-white/80 px-2 py-1.5 backdrop-blur dark:border-edge dark:bg-surface-2">
       {/* Tools */}
       <div className="flex shrink-0 items-center gap-0.5">
         {TOOLS.map((t) => (
@@ -100,7 +100,7 @@ export default function Toolbar(props: Props) {
             onClick={() => setColor(c)}
             title={c}
             className={`h-5 w-5 rounded-full border-2 transition-transform ${
-              color === c ? "border-indigo-500 scale-110" : "border-zinc-300 dark:border-zinc-600"
+              color === c ? "border-accent scale-110" : "border-edge dark:border-edge"
             }`}
             style={{ background: c }}
           />
@@ -197,5 +197,5 @@ export default function Toolbar(props: Props) {
 }
 
 function Divider() {
-  return <div className="w-px h-6 shrink-0 bg-zinc-200 dark:bg-zinc-700 mx-1" />;
+  return <div className="w-px h-6 shrink-0 bg-surface-2 dark:bg-surface-2 mx-1" />;
 }

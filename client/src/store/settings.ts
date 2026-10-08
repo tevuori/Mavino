@@ -98,18 +98,35 @@ function persist(s: PersistedSettings) {
 }
 
 /** Convert hex (#rrggbb) to "r g b" for CSS var. */
-function hexToRgbTriplet(hex: string): string {
-  const m = hex.replace("#", "");
-  const r = parseInt(m.slice(0, 2), 16);
-  const g = parseInt(m.slice(2, 4), 16);
-  const b = parseInt(m.slice(4, 6), 16);
-  return `${r} ${g} ${b}`;
+function hexToRgb(hex: string): [number, number, number] {
+  const value = hex.replace("#", "");
+  return [
+    parseInt(value.slice(0, 2), 16),
+    parseInt(value.slice(2, 4), 16),
+    parseInt(value.slice(4, 6), 16),
+  ];
+}
+
+function mixRgb(color: [number, number, number], target: number, amount: number): [number, number, number] {
+  return color.map((channel) => Math.round(channel + (target - channel) * amount)) as [number, number, number];
+}
+
+function rgbTriplet(color: [number, number, number]): string {
+  return color.join(" ");
+}
+
+function relativeLuminance([r, g, b]: [number, number, number]): number {
+  const channels = [r, g, b].map((channel) => {
+    const value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
 }
 
 const defaults: PersistedSettings = {
   theme: "dark",
-  accent: "#6366f1",
-  wallpaper: "aurora",
+  accent: "#3b82f6",
+  wallpaper: "ocean",
   animatedBg: "none",
   volume: 70,
   notificationsEnabled: true,
@@ -139,10 +156,18 @@ delete (loaded as Partial<Record<string, unknown>>).hasOnboarded;
 /** Apply theme + accent to <html> as CSS vars / classes. */
 export function applySettings(s: PersistedSettings) {
   const root = document.documentElement;
-  root.classList.toggle("dark", s.theme === "dark");
-  root.style.setProperty("--accent", hexToRgbTriplet(s.accent));
-  // accent-fg: white for most accents; could compute luminance but keep simple
-  root.style.setProperty("--accent-fg", "255 255 255");
+  const dark = s.theme === "dark";
+  const selected = hexToRgb(s.accent);
+  const accent = dark ? mixRgb(selected, 255, 0.35) : mixRgb(selected, 0, 0.08);
+  const hover = mixRgb(accent, dark ? 255 : 0, 0.12);
+  const pressed = mixRgb(accent, 0, dark ? 0.14 : 0.2);
+  const soft = mixRgb(accent, dark ? 20 : 255, dark ? 0.72 : 0.88);
+  root.classList.toggle("dark", dark);
+  root.style.setProperty("--accent", rgbTriplet(accent));
+  root.style.setProperty("--accent-hover", rgbTriplet(hover));
+  root.style.setProperty("--accent-pressed", rgbTriplet(pressed));
+  root.style.setProperty("--accent-soft", rgbTriplet(soft));
+  root.style.setProperty("--accent-fg", relativeLuminance(accent) > 0.2 ? "15 23 42" : "255 255 255");
 }
 
 applySettings(loaded);

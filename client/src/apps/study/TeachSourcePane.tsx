@@ -111,7 +111,7 @@ export default function TeachSourcePane({ paneId, source, pending, onPendingAppl
           </div>
         ) : error ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center text-xs text-ink-muted">
-            <AlertTriangle size={18} className="text-amber-400" />
+            <AlertTriangle size={18} className="text-warning" />
             <p>{error}</p>
           </div>
         ) : null}
@@ -257,7 +257,7 @@ function PastePane({ paneId, source, pending, onPendingApplied, onLoadingChange,
   return (
     <pre className="h-full w-full overflow-y-auto whitespace-pre-wrap break-words p-3 font-sans text-sm leading-6 text-ink">
       {text.slice(0, range.from)}
-      <mark ref={markRef} className="rounded bg-amber-400/30 text-amber-100">{text.slice(range.from, range.to)}</mark>
+      <mark ref={markRef} className="rounded bg-warning-soft text-warning">{text.slice(range.from, range.to)}</mark>
       {text.slice(range.to)}
     </pre>
   );

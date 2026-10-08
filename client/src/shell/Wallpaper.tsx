@@ -3,12 +3,12 @@ import { useSettings, type WallpaperId } from "../store/settings";
 import AnimatedBackground from "./AnimatedBackground";
 
 const GRADIENTS: Record<WallpaperId, string> = {
-  aurora: "radial-gradient(at 20% 20%, #4f46e5 0%, transparent 50%), radial-gradient(at 80% 30%, #9333ea 0%, transparent 50%), radial-gradient(at 50% 80%, #06b6d4 0%, transparent 50%), linear-gradient(135deg, #0f172a, #1e1b4b)",
+  aurora: "radial-gradient(at 16% 12%, rgb(14 165 233 / 0.34) 0%, transparent 44%), radial-gradient(at 84% 82%, rgb(245 158 11 / 0.14) 0%, transparent 38%), linear-gradient(145deg, #172734, #203844)",
   sunset: "radial-gradient(at 20% 80%, #f97316 0%, transparent 50%), radial-gradient(at 80% 20%, #ec4899 0%, transparent 50%), linear-gradient(135deg, #1e1b4b, #831843)",
   ocean: "radial-gradient(at 30% 30%, #0ea5e9 0%, transparent 50%), radial-gradient(at 70% 70%, #14b8a6 0%, transparent 50%), linear-gradient(135deg, #0c4a6e, #164e63)",
   forest: "radial-gradient(at 25% 25%, #22c55e 0%, transparent 50%), radial-gradient(at 75% 75%, #15803d 0%, transparent 50%), linear-gradient(135deg, #14532d, #052e16)",
   mesh: "linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)",
-  mono: "linear-gradient(135deg, #0f172a, #1e293b)",
+  mono: "linear-gradient(145deg, #182630, #253945)",
 };
 
 const NOISE_BG =

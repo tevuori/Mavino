@@ -237,7 +237,7 @@ export default function EditorApp({ win }: { win: WindowInstance }) {
   if (error && !content && !currentFileId) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 text-ink-muted">
-        <AlertCircle size={32} className="text-red-400" />
+        <AlertCircle size={32} className="text-danger" />
         <p className="text-sm">{error}</p>
       </div>
     );
@@ -269,7 +269,7 @@ export default function EditorApp({ win }: { win: WindowInstance }) {
         <div className="flex items-center gap-1.5 text-xs text-ink">
           <FileText size={14} className="text-accent" />
           <span className="font-medium">{name}</span>
-          {dirty && <span className="text-amber-400" title="Unsaved changes">●</span>}
+          {dirty && <span className="text-warning" title="Unsaved changes">●</span>}
         </div>
         <div className="ml-auto flex items-center gap-1">
           {isMarkdown && (
@@ -313,7 +313,7 @@ export default function EditorApp({ win }: { win: WindowInstance }) {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 border-b border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-400">
+        <div className="flex items-center gap-2 border-b border-danger bg-danger-soft px-3 py-1.5 text-xs text-danger">
           <AlertCircle size={13} /> {error}
         </div>
       )}

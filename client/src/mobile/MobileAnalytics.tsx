@@ -73,7 +73,7 @@ export default function MobileAnalytics({ onClose }: { onClose: () => void }) {
     return (
       <MobileContainer>
         <MobileHeader title="Analytics" subtitle="Your progress" onClose={onClose} />
-        <div className="flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} className="shrink-0" /> {error ?? "No analytics available."}
         </div>
       </MobileContainer>
@@ -186,7 +186,7 @@ export default function MobileAnalytics({ onClose }: { onClose: () => void }) {
                   <p className="truncate text-sm font-medium text-ink">{g.name}</p>
                   <p className="text-[11px] text-ink-muted">{g.course}</p>
                 </div>
-                <span className={`text-lg font-bold ${g.pct >= 80 ? "text-emerald-400" : g.pct >= 60 ? "text-amber-400" : "text-red-400"}`}>
+                <span className={`text-lg font-bold ${g.pct >= 80 ? "text-success" : g.pct >= 60 ? "text-warning" : "text-danger"}`}>
                   {Math.round(g.pct)}%
                 </span>
               </div>
@@ -208,9 +208,9 @@ export default function MobileAnalytics({ onClose }: { onClose: () => void }) {
               <div
                 key={a.id}
                 title={a.description}
-                className={`rounded-2xl border p-3 text-center ${a.unlocked ? "border-amber-500/30 bg-amber-500/[0.06]" : "border-edge bg-surface-2 opacity-50"}`}
+                className={`rounded-2xl border p-3 text-center ${a.unlocked ? "border-warning bg-warning/[0.06]" : "border-edge bg-surface-2 opacity-50"}`}
               >
-                <Trophy size={20} className={`mx-auto mb-1.5 ${a.unlocked ? "text-amber-400" : "text-ink-muted"}`} />
+                <Trophy size={20} className={`mx-auto mb-1.5 ${a.unlocked ? "text-warning" : "text-ink-muted"}`} />
                 <p className="truncate text-xs font-semibold text-ink">{a.label}</p>
                 <p className="mt-0.5 text-[9px] uppercase tracking-wide text-ink-muted">{a.tier}</p>
                 {a.isNew && <p className="mt-1 text-[10px] font-medium text-accent">New!</p>}

@@ -224,12 +224,12 @@ export default function MobileEcho({ onClose, onOpenTool }: { onClose: () => voi
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
       {micError && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-warning bg-warning-soft px-4 py-3 text-sm text-warning">
           <AlertCircle size={16} /> Mic: {micError}
         </div>
       )}
@@ -246,14 +246,14 @@ export default function MobileEcho({ onClose, onOpenTool }: { onClose: () => voi
               <div className="flex items-center gap-2">
                 {recording ? (
                   <>
-                    <span className="flex h-3 w-3 animate-pulse rounded-full bg-red-500" />
-                    <span className="text-sm font-medium text-red-400">{formatTime(elapsed)}</span>
+                    <span className="flex h-3 w-3 animate-pulse rounded-full bg-danger" />
+                    <span className="text-sm font-medium text-danger">{formatTime(elapsed)}</span>
                     <span className="text-xs text-ink-muted">{wordCount}w</span>
                   </>
                 ) : isCompleted ? (
                   <>
-                    <Sparkles size={16} className="text-emerald-400" />
-                    <span className="text-sm font-medium text-emerald-400">Completed</span>
+                    <Sparkles size={16} className="text-success" />
+                    <span className="text-sm font-medium text-success">Completed</span>
                   </>
                 ) : (
                   <span className="text-sm text-ink-muted">Ready</span>
@@ -266,7 +266,7 @@ export default function MobileEcho({ onClose, onOpenTool }: { onClose: () => voi
               ) : recording ? (
                 <button
                   onClick={stopRecording}
-                  className="flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white active:scale-95"
+                  className="flex items-center gap-2 rounded-xl bg-danger px-4 py-2 text-sm font-semibold text-white active:scale-95"
                 >
                   <Square size={14} /> Stop
                 </button>
@@ -338,8 +338,8 @@ export default function MobileEcho({ onClose, onOpenTool }: { onClose: () => voi
                 </p>
                 <div className="space-y-2">
                   {session.newTerms.map((t, i) => (
-                    <div key={i} className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-3">
-                      <p className="text-sm font-medium text-blue-300">{t.term}</p>
+                    <div key={i} className="rounded-2xl border border-accent bg-accent-soft p-3">
+                      <p className="text-sm font-medium text-accent">{t.term}</p>
                       <p className="mt-0.5 text-xs leading-5 text-ink-muted">{t.context}</p>
                       <div className="mt-2 rounded-xl bg-surface-2 p-2">
                         <p className="text-[11px] text-ink"><strong>Q:</strong> {t.suggestedFront}</p>
@@ -399,8 +399,8 @@ function ConceptChipMobile({ concept }: { concept: EchoConceptMatch }) {
   const pct = concept.mastery >= 0 ? Math.round(concept.mastery * 100) : null;
   const Icon = pct === null ? Minus : pct >= 80 ? TrendingUp : pct >= 60 ? Minus : TrendingDown;
   const color = concept.weak
-    ? "border-red-500/30 bg-red-500/10 text-red-300"
-    : "border-emerald-500/20 bg-emerald-500/5 text-emerald-300";
+    ? "border-danger bg-danger-soft text-danger"
+    : "border-success bg-success-soft text-success";
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border ${color} px-2.5 py-1 text-xs`}>
       <Icon size={10} />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Lock, Pin, PinOff } from "lucide-react";
 import AppLogo from "./AppLogo";
 import { renderAppIcon } from "./AppIcon";
@@ -24,6 +24,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
   const switchWorkspace = useWindows((s) => s.switchWorkspace);
   const { pins, isPinned, togglePin } = useTaskbarPins();
   const [startOpen, setStartOpen] = useState(false);
+  const startButtonRef = useRef<HTMLButtonElement>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; appId: AppId } | null>(null);
 
   // Escape closes the start menu (the Win/Meta key is not bound here because it
@@ -70,16 +71,17 @@ export default function Taskbar({ onOpenOverview }: Props) {
 
   return (
     <>
-      <div className="absolute bottom-0 left-0 right-0 z-[10000] flex h-12 items-center gap-1 border-t border-edge bg-surface/80 px-2 backdrop-blur-xl">
+      <div className="absolute bottom-0 left-0 right-0 z-[10000] flex h-12 items-center gap-1 border-t border-edge bg-surface px-2 shadow-[0_-10px_30px_-24px_rgb(0_0_0/.65)]">
         {/* Left: Start button (flex-1 keeps apps centered) */}
         <div className="flex flex-1 items-center gap-1">
           <button
+            ref={startButtonRef}
             onClick={() => setStartOpen((v) => !v)}
             aria-label="Open application menu"
             aria-expanded={startOpen}
             aria-controls="mavino-start-menu"
             className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
-              startOpen ? "bg-accent text-accent-fg" : "text-ink hover:bg-surface-3"
+              startOpen ? "bg-accent-soft text-accent" : "text-ink-muted hover:bg-surface-2 hover:text-ink"
             }`}
             title="Start"
           >
@@ -131,7 +133,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
               >
                 {renderAppIcon(app, { size: 18 })}
                 {app.access === "preview" && (
-                  <span className="absolute right-0 top-0 text-amber-500">
+                  <span className="absolute right-0 top-0 text-warning">
                     <Lock size={8} />
                   </span>
                 )}
@@ -156,7 +158,7 @@ export default function Taskbar({ onOpenOverview }: Props) {
         </div>
       </div>
 
-      <StartMenu open={startOpen} onClose={() => setStartOpen(false)} />
+      <StartMenu open={startOpen} onClose={() => setStartOpen(false)} triggerRef={startButtonRef} />
 
       {ctxMenu && (
         <ContextMenu

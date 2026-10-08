@@ -326,7 +326,7 @@ export default function TourPlanner({ resolvePlace, onDrawTour, onClearMap }: Pr
   return (
     <div className="space-y-3">
       {error && (
-        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-2 text-xs text-red-500">
+        <div className="rounded-md border border-danger bg-danger-soft px-2.5 py-2 text-xs text-danger">
           {error}
           <button onClick={() => setError(null)} className="ml-1 underline">dismiss</button>
         </div>
@@ -359,7 +359,7 @@ export default function TourPlanner({ resolvePlace, onDrawTour, onClearMap }: Pr
               value={base}
               onChange={(e) => setBase(e.target.value)}
               placeholder="Base / accommodation (place or lat,lon)"
-              className="w-full rounded-md border border-edge bg-surface py-1.5 pl-7 pr-2 text-xs text-ink outline-none focus:border-accent"
+              className="w-full rounded-md border border-edge bg-surface py-1.5 pl-7 pr-2 text-xs text-ink outline-none focus:border-focus"
             />
           </div>
           {/* End (through only) */}
@@ -370,7 +370,7 @@ export default function TourPlanner({ resolvePlace, onDrawTour, onClearMap }: Pr
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
                 placeholder="End point (place or lat,lon)"
-                className="w-full rounded-md border border-edge bg-surface py-1.5 pl-7 pr-2 text-xs text-ink outline-none focus:border-accent"
+                className="w-full rounded-md border border-edge bg-surface py-1.5 pl-7 pr-2 text-xs text-ink outline-none focus:border-focus"
               />
             </div>
           )}
@@ -397,7 +397,7 @@ export default function TourPlanner({ resolvePlace, onDrawTour, onClearMap }: Pr
             <select
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value as TourDifficulty)}
-              className="w-full rounded-md border border-edge bg-surface py-1.5 pl-7 pr-2 text-xs text-ink outline-none focus:border-accent"
+              className="w-full rounded-md border border-edge bg-surface py-1.5 pl-7 pr-2 text-xs text-ink outline-none focus:border-focus"
             >
               {(Object.keys(DIFFICULTY_LABELS) as TourDifficulty[]).map((d) => (
                 <option key={d} value={d}>{DIFFICULTY_LABELS[d]}</option>
@@ -410,7 +410,7 @@ export default function TourPlanner({ resolvePlace, onDrawTour, onClearMap }: Pr
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Optional notes for Mavino (fitness, season, gear, constraints…)"
             rows={2}
-            className="w-full rounded-md border border-edge bg-surface px-2 py-1.5 text-xs text-ink outline-none focus:border-accent"
+            className="w-full rounded-md border border-edge bg-surface px-2 py-1.5 text-xs text-ink outline-none focus:border-focus"
           />
           <button
             onClick={generate}
@@ -565,7 +565,7 @@ export default function TourPlanner({ resolvePlace, onDrawTour, onClearMap }: Pr
                     {t.mode} · {t.numDays}d · {t.difficulty} · {fmtKm(t.totalDistanceM)} · ↑{Math.round(t.totalAscentM)} m
                   </div>
                 </button>
-                <button onClick={() => deleteSaved(t.id)} className="text-ink-muted hover:text-red-500">
+                <button onClick={() => deleteSaved(t.id)} className="text-ink-muted hover:text-danger">
                   <Trash2 size={12} />
                 </button>
               </li>
@@ -611,7 +611,7 @@ function DayCard({
           <span>↑{Math.round(day.ascentM)} m</span>
           <span>~{fmtHours(day.durationS)}</span>
           {day.hardDay && (
-            <span className="flex items-center gap-0.5 text-amber-500">
+            <span className="flex items-center gap-0.5 text-warning">
               <AlertTriangle size={10} /> hard
             </span>
           )}
@@ -621,29 +621,29 @@ function DayCard({
         <div className="mt-1.5 space-y-1 text-[11px] text-ink-muted">
           {/* Overnight */}
           <div className="flex items-start gap-1">
-            <Tent size={11} className="mt-0.5 shrink-0 text-purple-500" />
+            <Tent size={11} className="mt-0.5 shrink-0 text-accent" />
             <span>
               Sleep: <span className="text-ink">{day.overnight?.name ?? "—"}</span>
               {day.wildCamp && (
-                <span className="ml-1 text-amber-500">(wild camp — no hut found)</span>
+                <span className="ml-1 text-warning">(wild camp — no hut found)</span>
               )}
             </span>
           </div>
           {/* Water */}
           <div className="flex items-start gap-1">
-            <Droplets size={11} className="mt-0.5 shrink-0 text-sky-500" />
+            <Droplets size={11} className="mt-0.5 shrink-0 text-accent" />
             <span>
               {water.length > 0 ? (
                 <>Water: <span className="text-ink">{water.slice(0, 4).map((p) => p.name).join(", ")}</span></>
               ) : (
-                <span className="text-amber-600">No water found nearby — carry enough</span>
+                <span className="text-warning">No water found nearby — carry enough</span>
               )}
             </span>
           </div>
           {/* Landmarks */}
           {sights.length > 0 && (
             <div className="flex items-start gap-1">
-              <MapPin size={11} className="mt-0.5 shrink-0 text-amber-500" />
+              <MapPin size={11} className="mt-0.5 shrink-0 text-warning" />
               <span>Sights: <span className="text-ink">{sights.slice(0, 3).map((p) => p.name).join(", ")}</span></span>
             </div>
           )}

@@ -115,18 +115,18 @@ export default function TwoFactorSection() {
       />
 
       {msg && (
-        <div className="mb-3 rounded-lg bg-green-500/10 px-3 py-2 text-xs text-green-400">
+        <div className="mb-3 rounded-lg bg-success-soft px-3 py-2 text-xs text-success">
           {msg}
         </div>
       )}
       {err && (
-        <div className="mb-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{err}</div>
+        <div className="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">{err}</div>
       )}
 
       {enabled ? (
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500/15 text-green-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-success-soft text-success">
               <ShieldCheck size={18} />
             </div>
             <div className="flex-1">
@@ -234,7 +234,7 @@ export default function TwoFactorSection() {
               <button
                 onClick={doDisable}
                 disabled={busy || !disablePw}
-                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-500 disabled:opacity-40"
+                className="flex items-center gap-1.5 rounded-lg bg-danger px-4 py-2 text-sm text-white hover:bg-danger disabled:opacity-40"
               >
                 {busy ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
                 Disable 2FA

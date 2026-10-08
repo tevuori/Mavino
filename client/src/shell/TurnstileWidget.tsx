@@ -116,7 +116,7 @@ export default function TurnstileWidget({ onToken, className }: TurnstileWidgetP
   return (
     <div className={className}>
       <div ref={containerRef} />
-      {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
     </div>
   );
 }

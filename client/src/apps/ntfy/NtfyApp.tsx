@@ -57,26 +57,26 @@ export default function NtfyApp() {
   const configured = status?.configured ?? false;
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
+    <div className="flex flex-col h-full bg-surface text-ink dark:text-ink">
       {/* Tab bar */}
-      <div className="flex items-center gap-1 px-3 pt-3 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+      <div className="flex items-center gap-1 px-3 pt-3 border-b border-edge dark:border-edge shrink-0">
         <TabBtn icon={<Cog size={15} />} label="Setup" active={tab === "setup"} onClick={() => setTab("setup")} />
         <TabBtn icon={<Bell size={15} />} label="Messages" active={tab === "messages"} onClick={() => setTab("messages")} disabled={!configured} />
         <TabBtn icon={<Clock size={15} />} label="Cron Jobs" active={tab === "cron"} onClick={() => setTab("cron")} disabled={!configured} />
         <div className="ml-auto flex items-center gap-2 pr-1 pb-2">
           {configured ? (
-            <span className={`text-xs px-2 py-0.5 rounded-full ${status?.enabled ? "bg-green-500/15 text-green-600 dark:text-green-400" : "bg-zinc-500/15 text-zinc-500"}`}>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${status?.enabled ? "bg-success-soft text-success dark:text-success" : "bg-surface-3 text-ink-muted"}`}>
               {status?.enabled ? "Connected" : "Disabled"}
             </span>
           ) : (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">Not configured</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-warning-soft text-warning dark:text-warning">Not configured</span>
           )}
         </div>
       </div>
 
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="p-8 text-center text-sm text-zinc-400">Loading…</div>
+          <div className="p-8 text-center text-sm text-ink-muted">Loading…</div>
         ) : tab === "setup" ? (
           <SetupTab status={status} onSaved={refreshStatus} />
         ) : tab === "messages" ? (
@@ -98,8 +98,8 @@ function TabBtn({ icon, label, active, onClick, disabled }: {
       disabled={disabled}
       className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-t-md border-b-2 transition-colors ${
         active
-          ? "border-indigo-500 text-indigo-600 dark:text-indigo-400 font-medium"
-          : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          ? "border-accent text-accent dark:text-accent font-medium"
+          : "border-transparent text-ink-muted hover:text-ink dark:hover:text-ink-muted"
       } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
     >
       {icon}
@@ -185,7 +185,7 @@ function SetupTab({ status, onSaved }: { status: NtfyStatus | null; onSaved: () 
     <div className="p-5 max-w-full @5xl:max-w-2xl mx-auto space-y-5">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold flex items-center gap-2"><Bell size={18} /> Ntfy Setup</h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-ink-muted dark:text-ink-muted">
           Ntfy is a bidirectional channel: Mavino sends you push notifications and you can message
           Mavino from your phone. Subscribe to the <b>notify</b> topic in the ntfy app to receive
           Mavino's messages; publish to the <b>inbox</b> topic to talk to Mavino.
@@ -208,11 +208,11 @@ function SetupTab({ status, onSaved }: { status: NtfyStatus | null; onSaved: () 
       <div className="grid grid-cols-1 @md:grid-cols-2 gap-4">
         <Field label="Notify topic (Mavino → you)">
           <input value={notifyTopic} onChange={(e) => setNotifyTopic(e.target.value)} placeholder="mavino-notify-…" className="inp" />
-          {notifyTopic && <p className="mt-1 text-xs text-zinc-400 break-all">Subscribe to: {notifyUrl}</p>}
+          {notifyTopic && <p className="mt-1 text-xs text-ink-muted break-all">Subscribe to: {notifyUrl}</p>}
         </Field>
         <Field label="Inbox topic (you → Mavino)">
           <input value={inboxTopic} onChange={(e) => setInboxTopic(e.target.value)} placeholder="mavino-inbox-…" className="inp" />
-          {inboxTopic && <p className="mt-1 text-xs text-zinc-400 break-all">Send to: {inboxUrl}</p>}
+          {inboxTopic && <p className="mt-1 text-xs text-ink-muted break-all">Send to: {inboxUrl}</p>}
         </Field>
       </div>
 
@@ -231,7 +231,7 @@ function SetupTab({ status, onSaved }: { status: NtfyStatus | null; onSaved: () 
       </div>
 
       {msg && (
-        <div className={`text-sm rounded-md px-3 py-2 ${msg.kind === "ok" ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-red-500/10 text-red-600 dark:text-red-400"}`}>
+        <div className={`text-sm rounded-md px-3 py-2 ${msg.kind === "ok" ? "bg-success-soft text-success dark:text-success" : "bg-danger-soft text-danger dark:text-danger"}`}>
           {msg.text}
         </div>
       )}
@@ -264,7 +264,7 @@ function SetupTab({ status, onSaved }: { status: NtfyStatus | null; onSaved: () 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</span>
+      <span className="text-xs font-medium text-ink-muted dark:text-ink-muted">{label}</span>
       {children}
     </label>
   );
@@ -314,9 +314,9 @@ function MessagesTab() {
   };
 
   const dirBadge = (d: string) => {
-    if (d === "in") return "bg-sky-500/15 text-sky-600 dark:text-sky-400";
-    if (d === "cron") return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
-    return "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400";
+    if (d === "in") return "bg-accent-soft text-accent dark:text-accent";
+    if (d === "cron") return "bg-warning-soft text-warning dark:text-warning";
+    return "bg-accent/15 text-accent dark:text-accent";
   };
 
   return (
@@ -327,7 +327,7 @@ function MessagesTab() {
       </div>
 
       {/* Manual send */}
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-3 space-y-2">
+      <div className="rounded-lg border border-edge dark:border-edge p-3 space-y-2">
         <div className="text-sm font-medium">Send a notification</div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)" className="inp" />
         <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message body…" rows={2} className="inp" />
@@ -339,24 +339,24 @@ function MessagesTab() {
             <Send size={14} /> {sending ? "Sending…" : "Send"}
           </button>
         </div>
-        {err && <div className="text-xs text-red-500">{err}</div>}
+        {err && <div className="text-xs text-danger">{err}</div>}
       </div>
 
       {/* Log */}
       {loading ? (
-        <div className="text-sm text-zinc-400 text-center py-8">Loading…</div>
+        <div className="text-sm text-ink-muted text-center py-8">Loading…</div>
       ) : messages.length === 0 ? (
-        <div className="text-sm text-zinc-400 text-center py-8">No messages yet.</div>
+        <div className="text-sm text-ink-muted text-center py-8">No messages yet.</div>
       ) : (
         <div className="space-y-2">
           {messages.map((m) => (
-            <div key={m.id} className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-3">
+            <div key={m.id} className="rounded-lg border border-edge dark:border-edge p-3">
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded-full font-medium ${dirBadge(m.direction)}`}>{m.direction}</span>
                 {m.title && <span className="text-sm font-medium">{m.title}</span>}
-                <span className="ml-auto text-xs text-zinc-400">{fmtTime(m.createdAt)}</span>
+                <span className="ml-auto text-xs text-ink-muted">{fmtTime(m.createdAt)}</span>
               </div>
-              <div className="text-sm whitespace-pre-wrap break-words text-zinc-700 dark:text-zinc-300">{m.body}</div>
+              <div className="text-sm whitespace-pre-wrap break-words text-ink dark:text-ink-muted">{m.body}</div>
             </div>
           ))}
         </div>
@@ -449,40 +449,40 @@ function CronTab() {
       )}
 
       {loading ? (
-        <div className="text-sm text-zinc-400 text-center py-8">Loading…</div>
+        <div className="text-sm text-ink-muted text-center py-8">Loading…</div>
       ) : jobs.length === 0 ? (
-        <div className="text-sm text-zinc-400 text-center py-8">
+        <div className="text-sm text-ink-muted text-center py-8">
           No cron jobs yet. Click "New" to schedule a notification or a Mavino-driven prompt.
         </div>
       ) : (
         <div className="space-y-2">
           {jobs.map((job) => (
-            <div key={job.id} className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-3">
+            <div key={job.id} className="rounded-lg border border-edge dark:border-edge p-3">
               <div className="flex items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm">{job.name}</span>
-                    <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded-full font-medium ${job.type === "athena" ? "bg-violet-500/15 text-violet-600 dark:text-violet-400" : "bg-sky-500/15 text-sky-600 dark:text-sky-400"}`}>{job.type}</span>
-                    {!job.enabled && <span className="text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-zinc-500/15 text-zinc-500">paused</span>}
+                    <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded-full font-medium ${job.type === "athena" ? "bg-accent/15 text-accent dark:text-accent" : "bg-accent-soft text-accent dark:text-accent"}`}>{job.type}</span>
+                    {!job.enabled && <span className="text-[10px] uppercase px-1.5 py-0.5 rounded-full bg-surface-3 text-ink-muted">paused</span>}
                   </div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-mono">{job.cron}</div>
-                  <div className="text-xs text-zinc-400 mt-0.5">
+                  <div className="text-xs text-ink-muted dark:text-ink-muted mt-0.5 font-mono">{job.cron}</div>
+                  <div className="text-xs text-ink-muted mt-0.5">
                     Next: {fmtTime(job.nextRunAt)}{job.lastRunAt ? ` · Last: ${fmtTime(job.lastRunAt)}` : ""}
                   </div>
                   {job.type === "notification" && job.message && (
-                    <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">{job.message}</div>
+                    <div className="text-xs text-ink-muted dark:text-ink-muted mt-1 line-clamp-2">{job.message}</div>
                   )}
                   {job.type === "athena" && job.prompt && (
-                    <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 italic">prompt: {job.prompt}</div>
+                    <div className="text-xs text-ink-muted dark:text-ink-muted mt-1 line-clamp-2 italic">prompt: {job.prompt}</div>
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button onClick={() => toggle(job)} title={job.enabled ? "Pause" : "Enable"} className="icon-btn">
-                    {job.enabled ? <Check size={15} className="text-green-500" /> : <X size={15} className="text-zinc-400" />}
+                    {job.enabled ? <Check size={15} className="text-success" /> : <X size={15} className="text-ink-muted" />}
                   </button>
                   <button onClick={() => runNow(job)} title="Run now" className="icon-btn"><Play size={14} /></button>
                   <button onClick={() => { setEditing(job); setShowForm(true); }} title="Edit" className="icon-btn"><Cog size={14} /></button>
-                  <button onClick={() => del(job)} title="Delete" className="icon-btn"><Trash2 size={14} className="text-red-500" /></button>
+                  <button onClick={() => del(job)} title="Delete" className="icon-btn"><Trash2 size={14} className="text-danger" /></button>
                 </div>
               </div>
             </div>
@@ -548,7 +548,7 @@ function CronForm({ existing, onClose, onSaved }: {
   };
 
   return (
-    <div className="rounded-lg border border-indigo-300 dark:border-indigo-700 p-4 space-y-3 bg-indigo-50/30 dark:bg-indigo-950/20">
+    <div className="rounded-lg border border-accent dark:border-accent p-4 space-y-3 bg-accent/30 dark:bg-accent/20">
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-sm">{existing ? "Edit cron job" : "New cron job"}</h3>
         <button onClick={onClose} className="icon-btn"><X size={14} /></button>
@@ -557,25 +557,25 @@ function CronForm({ existing, onClose, onSaved }: {
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Job name (e.g. 'Morning summary')" className="inp" />
 
       <div className="space-y-1">
-        <label className="text-xs font-medium text-zinc-500">Schedule (5-field cron)</label>
+        <label className="text-xs font-medium text-ink-muted">Schedule (5-field cron)</label>
         <input value={cron} onChange={(e) => setCron(e.target.value)} placeholder="0 8 * * *" className="inp font-mono" />
         <div className="flex flex-wrap gap-1 pt-1">
           {CRON_PRESETS.map((p) => (
             <button key={p.cron} onClick={() => setCron(p.cron)}
-              className="text-[11px] px-2 py-0.5 rounded-full border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+              className="text-[11px] px-2 py-0.5 rounded-full border border-edge dark:border-edge hover:bg-surface-2 dark:hover:bg-surface-3">
               {p.label}
             </button>
           ))}
         </div>
         {preview.length > 0 && (
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-1">
+          <div className="text-xs text-ink-muted dark:text-ink-muted pt-1">
             Next runs: {preview.map((r) => fmtTime(r)).join(" · ")}
           </div>
         )}
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs font-medium text-zinc-500">Type</label>
+        <label className="text-xs font-medium text-ink-muted">Type</label>
         <div className="flex gap-2">
           <button onClick={() => setType("notification")} className={`type-btn ${type === "notification" ? "active" : ""}`}>
             Notification (fixed message)
@@ -605,7 +605,7 @@ function CronForm({ existing, onClose, onSaved }: {
         Enabled
       </label>
 
-      {err && <div className="text-xs text-red-500">{err}</div>}
+      {err && <div className="text-xs text-danger">{err}</div>}
 
       <div className="flex gap-2">
         <button onClick={save} disabled={saving || !name.trim()} className="btn-primary-sm">

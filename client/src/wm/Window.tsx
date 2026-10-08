@@ -238,17 +238,17 @@ export default function Window({ win, children }: Props) {
           setCtxSubmenu(false);
           setCtxMenu({ x: e.clientX, y: e.clientY });
         }}
-        className="flex h-9 shrink-0 cursor-grab select-none items-center justify-between border-b border-edge bg-surface-2 px-2 active:cursor-grabbing"
+        className={`flex h-10 shrink-0 cursor-grab select-none items-center justify-between border-b border-edge/70 px-2 active:cursor-grabbing ${isFocused ? "bg-surface-2" : "bg-surface-sunken"}`}
       >
-        <div className="flex items-center gap-2 px-1 text-sm font-medium text-ink">
-          <span className="text-accent">●</span>
+        <div className={`min-w-0 px-1 text-sm font-medium ${isFocused ? "text-ink" : "text-ink-muted"}`}>
           <span className="truncate">{win.title}</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => minimize(win.id)}
-            className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-surface-3"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted hover:bg-surface-3 hover:text-ink"
+            aria-label={`Minimize ${win.title}`}
             title="Minimize"
           >
             <Minus size={14} />
@@ -256,7 +256,8 @@ export default function Window({ win, children }: Props) {
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => toggleMaximize(win.id)}
-            className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-surface-3"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted hover:bg-surface-3 hover:text-ink"
+            aria-label={`${isMax ? "Restore" : "Maximize"} ${win.title}`}
             title={isMax ? "Restore" : "Maximize"}
           >
             {isMax ? <Copy size={12} /> : <Square size={11} />}
@@ -264,7 +265,8 @@ export default function Window({ win, children }: Props) {
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => close(win.id)}
-            className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-red-500 hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-danger hover:text-white"
+            aria-label={`Close ${win.title}`}
             title="Close"
           >
             <X size={14} />

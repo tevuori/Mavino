@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Calendar as CalendarIcon, Plus, ChevronLeft, ChevronRight, RefreshCw,
-  Upload, Download, Trash2, X, Clock, MapPin, Layers, Cloud, CloudOff,
+  Upload, Download, Trash2, Clock, MapPin, Layers, Cloud, CloudOff,
 } from "lucide-react";
 import { calendarApi } from "../../services/calendar";
 import { tasksApi } from "../../services/tasks";
@@ -22,6 +22,8 @@ import { linksApi } from "../../services/links";
 import { setLinkPayload } from "../links/linkDnd";
 import LinkBadge from "../links/LinkBadge";
 import { useLinkDrop } from "../links/useLinkDrop";
+import { Dialog } from "../../ui/overlays";
+import { Button } from "../../ui/primitives";
 
 type ViewMode = "month" | "week" | "day" | "agenda";
 
@@ -1118,20 +1120,34 @@ function EventEditor({
   const fromLocalInput = (v: string) => new Date(v).toISOString();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-edge bg-surface p-4 shadow-xl sm:rounded-xl">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-ink">{event.id ? "Edit Event" : "New Event"}</h3>
-          <button onClick={onClose} className="rounded p-1 text-ink-muted hover:bg-surface-3"><X size={16} /></button>
-        </div>
+    <Dialog
+      open
+      onClose={onClose}
+      title={event.id ? "Edit event" : "New event"}
+      description="Keep the time, place, and context for this event together."
+      className="max-w-md"
+      footer={
+        <>
+          {onDelete && (
+            <Button variant="danger" size="sm" onClick={onDelete} className="mr-auto" leadingIcon={<Trash2 size={13} />}>
+              Delete
+            </Button>
+          )}
+          {isMicrosoftEvent && <span className="mr-auto inline-flex items-center gap-1 text-xs text-info"><Cloud size={12} /> Microsoft</span>}
+          {onPushToMs && <Button variant="secondary" size="sm" onClick={onPushToMs} leadingIcon={<Cloud size={13} />}>Push to MS</Button>}
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" onClick={onSave}>Save</Button>
+        </>
+      }
+    >
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-[11px] font-medium text-ink-muted">Title</label>
             <input
-              autoFocus
+              data-autofocus
               value={event.title ?? ""}
               onChange={(e) => onChange({ ...event, title: e.target.value })}
-              className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-sm text-ink outline-none focus:border-focus"
               placeholder="Event title"
             />
           </div>
@@ -1142,7 +1158,7 @@ function EventEditor({
                 type="datetime-local"
                 value={toLocalInput(event.start)}
                 onChange={(e) => onChange({ ...event, start: fromLocalInput(e.target.value) })}
-                className="w-full rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-sm text-ink outline-none focus:border-accent"
+                className="w-full rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-sm text-ink outline-none focus:border-focus"
               />
             </div>
             <div>
@@ -1151,7 +1167,7 @@ function EventEditor({
                 type="datetime-local"
                 value={toLocalInput(event.end)}
                 onChange={(e) => onChange({ ...event, end: fromLocalInput(e.target.value) })}
-                className="w-full rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-sm text-ink outline-none focus:border-accent"
+                className="w-full rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-sm text-ink outline-none focus:border-focus"
               />
             </div>
           </div>
@@ -1180,7 +1196,7 @@ function EventEditor({
             <input
               value={event.location ?? ""}
               onChange={(e) => onChange({ ...event, location: e.target.value })}
-              className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-sm text-ink outline-none focus:border-focus"
               placeholder="Optional"
             />
           </div>
@@ -1190,35 +1206,11 @@ function EventEditor({
               value={event.description ?? ""}
               onChange={(e) => onChange({ ...event, description: e.target.value })}
               rows={2}
-              className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-sm text-ink outline-none focus:border-focus"
               placeholder="Optional notes"
             />
           </div>
         </div>
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {onDelete ? (
-              <button onClick={onDelete} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-red-500 hover:bg-red-500/10">
-                <Trash2 size={13} /> Delete
-              </button>
-            ) : null}
-            {isMicrosoftEvent && (
-              <span className="flex items-center gap-1 rounded-md bg-sky-500/10 px-2 py-1 text-[11px] text-sky-500">
-                <Cloud size={12} /> Microsoft
-              </span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            {onPushToMs && (
-              <button onClick={onPushToMs} className="flex items-center gap-1 rounded-md border border-sky-500/40 px-2.5 py-1.5 text-xs text-sky-500 hover:bg-sky-500/10">
-                <Cloud size={13} /> Push to MS
-              </button>
-            )}
-            <button onClick={onClose} className="rounded-md border border-edge px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-3">Cancel</button>
-            <button onClick={onSave} className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">Save</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

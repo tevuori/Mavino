@@ -136,7 +136,7 @@ export default function ShortcutsSection() {
             <div>
               <div className="text-sm font-medium text-ink">{SHORTCUT_LABELS[action]}</div>
               {dup && (
-                <div className="mt-1 flex items-center gap-1 text-xs text-amber-400">
+                <div className="mt-1 flex items-center gap-1 text-xs text-warning">
                   <AlertTriangle size={12} />
                   Same shortcut as <span className="font-medium">{SHORTCUT_LABELS[dup]}</span>
                 </div>
@@ -154,7 +154,7 @@ export default function ShortcutsSection() {
       })}
 
       {conflict && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+        <div className="flex items-center gap-2 rounded-lg border border-warning bg-warning-soft p-3 text-sm text-warning">
           <AlertTriangle size={16} />
           That key is already assigned to {SHORTCUT_LABELS[conflict]}.
         </div>

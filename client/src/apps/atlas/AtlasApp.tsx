@@ -127,7 +127,7 @@ function MasteryBadge({ mastery }: { mastery: number }) {
   if (mastery < 0) return null;
   const pct = Math.round(mastery * 100);
   const Icon = pct >= 80 ? TrendingUp : pct >= 60 ? Minus : TrendingDown;
-  const color = pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-red-400";
+  const color = pct >= 80 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger";
   return (
     <span className={`inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-[10px] font-medium ${color}`}>
       <Icon size={10} /> {pct}% mastery
@@ -138,7 +138,7 @@ function MasteryBadge({ mastery }: { mastery: number }) {
 function GradeBadge({ gradePct }: { gradePct: number | null }) {
   if (gradePct === null) return null;
   const pct = Math.round(gradePct);
-  const color = pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-red-400";
+  const color = pct >= 80 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger";
   return (
     <span className={`inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-[10px] font-medium ${color}`}>
       <GraduationCap size={10} /> {pct}% grade
@@ -548,7 +548,7 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                 <button
                   onClick={() => setFilterWeak((v) => !v)}
                   className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs transition ${
-                    filterWeak ? "bg-red-500/15 text-red-400" : "text-ink-muted hover:bg-surface-3 hover:text-ink"
+                    filterWeak ? "bg-danger-soft text-danger" : "text-ink-muted hover:bg-surface-3 hover:text-ink"
                   }`}
                 >
                   <TrendingDown size={13} /> Weak ({weakCount})
@@ -569,7 +569,7 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
 
       {/* Stale banner */}
       {data && stale && !building && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+        <div className="flex items-center gap-2 rounded-lg border border-warning bg-warning-soft px-3 py-2 text-xs text-warning">
           <AlertCircle size={14} />
           <span>Your Study Hub graphs changed since this Atlas was built.</span>
           <button onClick={build} className="ml-auto font-medium underline">Rebuild now</button>
@@ -597,7 +597,7 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+        <div className="flex items-center gap-2 rounded-lg border border-danger bg-danger-soft px-3 py-2 text-xs text-danger">
           <AlertCircle size={14} />
           <span>{error}</span>
         </div>
@@ -684,8 +684,8 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                 </span>
               ))}
               {weakCount > 0 && (
-                <span className="flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400 backdrop-blur-sm">
-                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                <span className="flex items-center gap-1 rounded-full border border-danger bg-danger-soft px-2 py-0.5 text-[10px] font-medium text-danger backdrop-blur-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-danger" />
                   Weak
                 </span>
               )}
@@ -727,7 +727,7 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                     {TYPE_LABELS[selectedConcept.type] ?? selectedConcept.type}
                   </span>
                   {selectedConcept.weak && (
-                    <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-medium text-red-400">
+                    <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[10px] font-medium text-danger">
                       Weak spot
                     </span>
                   )}
@@ -810,7 +810,7 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                           <span className="italic opacity-80">{r.relation}</span>
                           <span className="opacity-50">→</span>
                           <span className="font-medium text-ink">{r.label}</span>
-                          {rc?.weak && <TrendingDown size={10} className="text-red-400" />}
+                          {rc?.weak && <TrendingDown size={10} className="text-danger" />}
                         </button>
                       );
                     })}
@@ -832,8 +832,8 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
                 </p>
 
                 {weakCount > 0 && (
-                  <div className="flex flex-col gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 p-2.5">
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-red-400">
+                  <div className="flex flex-col gap-1.5 rounded-lg border border-danger bg-danger-soft p-2.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-danger">
                       <TrendingDown size={12} /> {weakCount} weak concept{weakCount > 1 ? "s" : ""}
                     </div>
                     <p className="text-[10px] text-ink-muted">

@@ -10,9 +10,5 @@ if (!fs.existsSync(src)) {
 }
 
 fs.mkdirSync(path.dirname(dst), { recursive: true });
-const srcStat = fs.statSync(src);
-const dstStat = fs.existsSync(dst) ? fs.statSync(dst) : null;
-if (!dstStat || srcStat.mtimeMs > dstStat.mtimeMs) {
-  fs.copyFileSync(src, dst);
-  console.log("Copied pdf.worker.min.mjs to public/");
-}
+fs.copyFileSync(src, dst);
+console.log("Copied pdf.worker.min.mjs to public/");

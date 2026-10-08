@@ -96,6 +96,13 @@ const SECTIONS: SectionDef[] = [
   { id: "about", label: "About", icon: <Info size={15} /> },
 ];
 
+const SECTION_GROUPS = [
+  { label: "Personal", ids: ["appearance", "wallpaper", "animated-bg", "sound-athena", "shortcuts", "account", "date-time", "language"] },
+  { label: "Mavino", ids: ["athena", "integrations", "notifications", "proactive-alerts"] },
+  { label: "Data & product", ids: ["data", "legal", "about"] },
+  { label: "Administration", ids: ["users", "maintenance", "apps", "plugins", "tiers", "llm-admin", "storage-admin", "study-hub", "error-logs", "performance", "analytics"] },
+];
+
 const SECTION_KEYS: Partial<Record<string, MessageKey>> = {
   appearance: "appearance",
   wallpaper: "wallpaper",
@@ -168,21 +175,34 @@ export default function SettingsApp({ win }: { win: WindowInstance }) {
         <h2 className="mb-3 px-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">
           {t("settings")}
         </h2>
-        <nav className="space-y-1 text-sm">
-          {visibleSections.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setActive(s.id)}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
-                active === s.id
-                  ? "bg-surface-3 text-ink"
-                  : "text-ink-muted hover:bg-surface-3 hover:text-ink"
-              }`}
-            >
-              {s.icon}
-              <span>{SECTION_KEYS[s.id] ? t(SECTION_KEYS[s.id]!) : s.label}</span>
-            </button>
-          ))}
+        <nav className="space-y-5 text-sm">
+          {SECTION_GROUPS.map((group) => {
+            const sections = group.ids
+              .map((id) => visibleSections.find((section) => section.id === id))
+              .filter((section): section is SectionDef => Boolean(section));
+            if (sections.length === 0) return null;
+            return (
+              <section key={group.label}>
+                <h3 className="mb-1.5 px-2.5 text-[10px] font-semibold uppercase tracking-wider text-ink-tertiary">{group.label}</h3>
+                <div className="space-y-0.5">
+                  {sections.map((section) => (
+                    <button
+                      key={section.id}
+                      onClick={() => setActive(section.id)}
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
+                        active === section.id
+                          ? "bg-accent-soft text-ink"
+                          : "text-ink-muted hover:bg-surface-3 hover:text-ink"
+                      }`}
+                    >
+                      {section.icon}
+                      <span>{SECTION_KEYS[section.id] ? t(SECTION_KEYS[section.id]!) : section.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </nav>
       </CollapsibleSidebar>
 

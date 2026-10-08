@@ -49,6 +49,8 @@ server/prisma/migrations/dev.db*
 # Misc
 .cache/
 coverage/
+test-results/
+playwright-report/
 
 # Android release signing keystore — NEVER commit this.
 # Back it up somewhere safe outside the repo (password manager, encrypted backup).

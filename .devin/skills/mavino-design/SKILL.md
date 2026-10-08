@@ -17,7 +17,7 @@ Before UI work, read `PRODUCT.md`, `DESIGN.md`, `AGENTS.md`, and the relevant ex
 
 ## Product identity
 
-Mavino is a calm, connected student workspace. Desktop supports deep spatial work; mobile supports quick sequential action. Athena is a contextual collaborator inside normal workflows, not a separate novelty chatbot.
+Mavino is a calm, connected student workspace. Desktop supports deep spatial work; mobile supports quick sequential action. The Mavino assistant is a contextual collaborator inside normal workflows, not a separate novelty chatbot. “Athena” is a deprecated internal codename and must not appear in new user-facing language.
 
 The approved visual direction is **Calm Academic Workspace**. Use spatial design only to clarify real window, workspace, popover, and sheet relationships.
 
@@ -28,7 +28,7 @@ The approved visual direction is **Calm Academic Workspace**. Use spatial design
 3. Capture a task, note, source, or question.
 4. Plan and complete study work.
 5. Work with study sources and documents.
-6. Ask Athena to act and understand what changed.
+6. Ask Mavino to act and understand what changed.
 7. Organize parallel desktop work.
 8. Review and act quickly on mobile.
 

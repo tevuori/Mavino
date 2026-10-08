@@ -61,7 +61,7 @@ function NtfyMessages() {
       {loading ? <MobileLoading /> : messages.length ? messages.map((m) => (
         <article key={m.id} className="rounded-2xl border border-edge bg-surface-2 p-4">
           <div className="flex items-start gap-3">
-            <div className={`shrink-0 pt-0.5 ${m.direction === "out" ? "text-accent" : "text-emerald-400"}`}>
+            <div className={`shrink-0 pt-0.5 ${m.direction === "out" ? "text-accent" : "text-success"}`}>
               {m.direction === "out" ? <Send size={18} /> : <MessageSquare size={18} />}
             </div>
             <div className="min-w-0 flex-1">
@@ -164,7 +164,7 @@ function NtfyCron() {
               <button type="button" onClick={() => void run(job)} className="rounded-xl p-2 text-ink-muted">
                 <Send size={18} />
               </button>
-              <button type="button" onClick={() => void remove(job)} className="rounded-xl p-2 text-ink-muted active:text-rose-400">
+              <button type="button" onClick={() => void remove(job)} className="rounded-xl p-2 text-ink-muted active:text-danger">
                 <Trash2 size={18} />
               </button>
             </div>

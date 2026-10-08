@@ -131,7 +131,7 @@ export default function MobileCircle({ onClose, onOpenTool }: { onClose: () => v
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
@@ -165,7 +165,7 @@ export default function MobileCircle({ onClose, onOpenTool }: { onClose: () => v
                   <p className="truncate font-semibold text-ink">{g.name}</p>
                   {g.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-ink-muted">{g.description}</p>}
                 </div>
-                {g.role === "owner" && <Crown size={16} className="shrink-0 text-amber-400" />}
+                {g.role === "owner" && <Crown size={16} className="shrink-0 text-warning" />}
               </div>
               <div className="mt-2 flex items-center gap-3 text-[11px] text-ink-muted">
                 <span className="flex items-center gap-1"><Users size={11} /> {g.memberCount}</span>
@@ -288,11 +288,11 @@ function GroupDetail({
         onBack={onBack}
         right={
           isOwner ? (
-            <button onClick={onDelete} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-red-300">
+            <button onClick={onDelete} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-danger">
               <Trash2 size={20} />
             </button>
           ) : (
-            <button onClick={onLeave} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-red-300">
+            <button onClick={onLeave} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-danger">
               <LogOut size={20} />
             </button>
           )
@@ -300,7 +300,7 @@ function GroupDetail({
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
@@ -311,7 +311,7 @@ function GroupDetail({
         <span className="text-xs text-ink-muted">Invite code:</span>
         <code className="rounded-lg bg-surface-3 px-2 py-1 text-sm font-mono text-accent">{group.inviteCode}</code>
         <button onClick={copyInviteCode} className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-ink-muted active:bg-surface-3">
-          {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+          {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
         </button>
       </div>
 
@@ -334,16 +334,16 @@ function GroupDetail({
                 <p className="text-[11px] text-ink-muted">@{m.username}</p>
               </div>
               {m.role === "owner" ? (
-                <span className="flex items-center gap-1 text-[11px] text-amber-400"><Crown size={11} /> Owner</span>
+                <span className="flex items-center gap-1 text-[11px] text-warning"><Crown size={11} /> Owner</span>
               ) : m.role === "admin" ? (
-                <span className="flex items-center gap-1 text-[11px] text-blue-400"><Shield size={11} /> Admin</span>
+                <span className="flex items-center gap-1 text-[11px] text-accent"><Shield size={11} /> Admin</span>
               ) : (
                 <span className="text-[11px] text-ink-muted">Member</span>
               )}
               {isAdmin && m.role !== "owner" && (
                 <button
                   onClick={() => handleRemoveMember(m.userId, m.displayName || m.username)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-ink-muted active:bg-red-500/10 active:text-red-400"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-ink-muted active:bg-danger-soft active:text-danger"
                   title="Remove member"
                 >
                   <UserX size={14} />
@@ -377,10 +377,10 @@ function GroupDetail({
                     <p className="text-[11px] text-ink-muted">{d.cardCount} cards · shared by {d.sharedByName}</p>
                   </div>
                 </button>
-                <span className={`flex shrink-0 items-center gap-1 text-[11px] ${d.permission === "write" ? "text-emerald-400" : "text-ink-muted"}`}>
+                <span className={`flex shrink-0 items-center gap-1 text-[11px] ${d.permission === "write" ? "text-success" : "text-ink-muted"}`}>
                   {d.permission === "write" ? <Unlock size={11} /> : <Lock size={11} />}
                 </span>
-                <button onClick={() => handleUnshareDeck(d.deckId)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-ink-muted active:bg-red-500/10 active:text-red-400">
+                <button onClick={() => handleUnshareDeck(d.deckId)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-ink-muted active:bg-danger-soft active:text-danger">
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -412,10 +412,10 @@ function GroupDetail({
                     <p className="text-[11px] text-ink-muted">{f.noteCount} notes · shared by {f.sharedByName}</p>
                   </div>
                 </button>
-                <span className={`flex shrink-0 items-center gap-1 text-[11px] ${f.permission === "write" ? "text-emerald-400" : "text-ink-muted"}`}>
+                <span className={`flex shrink-0 items-center gap-1 text-[11px] ${f.permission === "write" ? "text-success" : "text-ink-muted"}`}>
                   {f.permission === "write" ? <Unlock size={11} /> : <Lock size={11} />}
                 </span>
-                <button onClick={() => handleUnshareFolder(f.folderId)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-ink-muted active:bg-red-500/10 active:text-red-400">
+                <button onClick={() => handleUnshareFolder(f.folderId)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-ink-muted active:bg-danger-soft active:text-danger">
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -507,7 +507,7 @@ function ShareForm({
           <Unlock size={13} /> Read & write
         </button>
       </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
       <div className="flex justify-end gap-2 pt-1">
         <MobileButton variant="ghost" onClick={onCancel}>Cancel</MobileButton>
         <MobileButton onClick={handleSubmit} disabled={loading || !selectedId}>

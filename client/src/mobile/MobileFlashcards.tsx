@@ -266,10 +266,10 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
         {flipped ? (
           <div className="grid grid-cols-2 gap-2 pt-4">
             {[
-              { label: "Again", quality: 0, color: "bg-rose-500" },
-              { label: "Hard", quality: 1, color: "bg-orange-500" },
-              { label: "Good", quality: 2, color: "bg-emerald-500" },
-              { label: "Easy", quality: 3, color: "bg-sky-500" },
+              { label: "Again", quality: 0, color: "bg-danger" },
+              { label: "Hard", quality: 1, color: "bg-warning" },
+              { label: "Good", quality: 2, color: "bg-success" },
+              { label: "Easy", quality: 3, color: "bg-accent" },
             ].map(({ label, quality, color }) => (
               <button key={label} type="button" onClick={() => void reviewCard(quality)} className={`rounded-2xl py-3 text-sm font-semibold text-ink ${color}`}>
                 {label}
@@ -298,7 +298,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
                 <MoreVertical size={20} />
               </button>
               {cards.some((c) => new Date(c.dueDate) <= new Date()) && (
-                <button type="button" onClick={startReview} className="rounded-2xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-ink">
+                <button type="button" onClick={startReview} className="rounded-2xl bg-success px-3 py-2 text-sm font-semibold text-ink">
                   <Brain size={16} className="mr-1 inline" /> Study
                 </button>
               )}
@@ -318,7 +318,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
               <button type="button" onClick={() => openDeckForm(selectedDeck)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-ink active:bg-surface-2">
                 <Pencil size={16} /> Edit deck
               </button>
-              <button type="button" onClick={() => void deleteDeck(selectedDeck)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-rose-400 active:bg-surface-2">
+              <button type="button" onClick={() => void deleteDeck(selectedDeck)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-danger active:bg-surface-2">
                 <Trash2 size={16} /> Delete deck
               </button>
             </div>
@@ -341,7 +341,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
                     <MoreVertical size={18} />
                   </button>
                 </div>
-                <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${new Date(card.dueDate) <= new Date() ? "bg-amber-500/15 text-amber-400" : "bg-surface-3 text-ink-muted"}`}>
+                <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${new Date(card.dueDate) <= new Date() ? "bg-warning-soft text-warning" : "bg-surface-3 text-ink-muted"}`}>
                   {new Date(card.dueDate) <= new Date() ? "Due" : `${card.interval}d`}
                 </span>
               </article>
@@ -359,7 +359,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
               <button type="button" onClick={() => openCardForm(cardMenu)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-ink active:bg-surface-2">
                 <Pencil size={18} /> Edit card
               </button>
-              <button type="button" onClick={() => void deleteCard(cardMenu.id)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-rose-400 active:bg-surface-2">
+              <button type="button" onClick={() => void deleteCard(cardMenu.id)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-danger active:bg-surface-2">
                 <Trash2 size={18} /> Delete card
               </button>
             </div>
@@ -447,7 +447,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
       />
 
       {importing && <p className="px-1 pb-2 text-sm text-accent">Importing Anki package…</p>}
-      {importError && <p className="px-1 pb-2 text-sm text-rose-400">{importError}</p>}
+      {importError && <p className="px-1 pb-2 text-sm text-danger">{importError}</p>}
 
       <div className="space-y-3">
         {loading ? (
@@ -488,7 +488,7 @@ export default function MobileFlashcards({ onClose }: { onClose?: () => void }) 
             <button type="button" onClick={() => openDeckForm(deckMenu)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-ink active:bg-surface-2">
               <Pencil size={18} /> Edit
             </button>
-            <button type="button" onClick={() => void deleteDeck(deckMenu)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-rose-400 active:bg-surface-2">
+            <button type="button" onClick={() => void deleteDeck(deckMenu)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-danger active:bg-surface-2">
               <Trash2 size={18} /> Delete
             </button>
           </div>
