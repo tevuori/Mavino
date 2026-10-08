@@ -32,7 +32,7 @@ function MasteryBadge({ mastery }: { mastery: number }) {
   if (mastery < 0) return null;
   const pct = Math.round(mastery * 100);
   const Icon = pct >= 80 ? TrendingUp : pct >= 60 ? Minus : TrendingDown;
-  const color = pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-red-400";
+  const color = pct >= 80 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger";
   return (
     <span className={`inline-flex items-center gap-0.5 text-[10px] ${color}`}>
       <Icon size={9} />{pct}%
@@ -325,17 +325,17 @@ export default function EchoApp({ win: _win }: { win: WindowInstance }) {
       </div>
 
       {error && (
-        <div className="mx-4 mt-3 flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+        <div className="mx-4 mt-3 flex items-center gap-2 rounded-md border border-danger bg-danger-soft px-3 py-2 text-xs text-danger">
           <AlertCircle size={14} /> {error}
         </div>
       )}
       {micError && (
-        <div className="mx-4 mt-3 flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+        <div className="mx-4 mt-3 flex items-center gap-2 rounded-md border border-warning bg-warning-soft px-3 py-2 text-xs text-warning">
           <AlertCircle size={14} /> Microphone access failed: {micError}
         </div>
       )}
       {transcriptionError && recording && (
-        <div className="mx-4 mt-3 flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+        <div className="mx-4 mt-3 flex items-start gap-2 rounded-md border border-danger bg-danger-soft px-3 py-2 text-xs text-danger">
           <AlertCircle size={14} className="mt-0.5 shrink-0" />
           <span>{transcriptionError}</span>
         </div>
@@ -422,8 +422,8 @@ function LiveView({
           <div className="flex items-center gap-3">
             {recording ? (
               <>
-                <span className="flex h-3 w-3 animate-pulse rounded-full bg-red-500" />
-                <span className="text-sm font-medium text-red-400">Recording</span>
+                <span className="flex h-3 w-3 animate-pulse rounded-full bg-danger" />
+                <span className="text-sm font-medium text-danger">Recording</span>
                 <span className="flex items-center gap-1 text-xs text-ink-muted">
                   <Clock size={12} /> {formatTime(elapsed)}
                 </span>
@@ -431,8 +431,8 @@ function LiveView({
               </>
             ) : isCompleted ? (
               <>
-                <Sparkles size={16} className="text-emerald-400" />
-                <span className="text-sm font-medium text-emerald-400">Session completed</span>
+                <Sparkles size={16} className="text-success" />
+                <span className="text-sm font-medium text-success">Session completed</span>
                 {session?.noteId && (
                   <button
                     onClick={() => onOpenNote(session.noteId!)}
@@ -454,7 +454,7 @@ function LiveView({
             ) : recording ? (
               <button
                 onClick={onStop}
-                className="flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+                className="flex items-center gap-2 rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white transition hover:bg-danger"
               >
                 <Square size={16} /> Stop & finalize
               </button>
@@ -543,8 +543,8 @@ function LiveView({
               </p>
               <div className="space-y-2">
                 {session.newTerms.map((t, i) => (
-                  <div key={i} className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2">
-                    <p className="text-xs font-medium text-blue-300">{t.term}</p>
+                  <div key={i} className="rounded-md border border-accent bg-accent-soft p-2">
+                    <p className="text-xs font-medium text-accent">{t.term}</p>
                     <p className="mt-0.5 text-[11px] leading-4 text-ink-muted">{t.context}</p>
                     <div className="mt-1.5 rounded bg-surface-2 p-1.5">
                       <p className="text-[10px] text-ink-muted">Suggested flashcard:</p>
@@ -563,11 +563,11 @@ function LiveView({
 }
 
 function ConceptChip({ concept, variant }: { concept: EchoConceptMatch; variant: "weak" | "known" }) {
-  const color = variant === "weak" ? "border-red-500/30 bg-red-500/10" : "border-emerald-500/20 bg-emerald-500/5";
+  const color = variant === "weak" ? "border-danger bg-danger-soft" : "border-success bg-success-soft";
   return (
     <div className={`rounded-md border ${color} p-2`}>
       <div className="flex items-center justify-between gap-1">
-        <p className={`text-xs font-medium ${variant === "weak" ? "text-red-300" : "text-emerald-300"}`}>
+        <p className={`text-xs font-medium ${variant === "weak" ? "text-danger" : "text-success"}`}>
           {concept.label}
         </p>
         <MasteryBadge mastery={concept.mastery} />
@@ -634,7 +634,7 @@ function HistoryView({
                   <span>{formatTime(s.durationSec)}</span>
                   <span>{wordCount} words</span>
                   {s.concepts.length > 0 && <span>{s.concepts.length} concepts</span>}
-                  {s.newTerms.length > 0 && <span className="text-blue-400">{s.newTerms.length} new terms</span>}
+                  {s.newTerms.length > 0 && <span className="text-accent">{s.newTerms.length} new terms</span>}
                 </div>
               </div>
               <div className="flex items-center gap-1">

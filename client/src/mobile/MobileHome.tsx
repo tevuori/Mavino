@@ -102,7 +102,7 @@ export default function MobileHome({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <NotificationBell />
-          <div className="brand-gradient flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-lg shadow-accent/30">{(firstName.slice(0, 1) || "A").toUpperCase()}</div>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-edge bg-surface text-sm font-semibold text-ink">{(firstName.slice(0, 1) || "A").toUpperCase()}</div>
         </div>
       </header>
 
@@ -110,7 +110,7 @@ export default function MobileHome({
 
       <MobileInstallBanner />
 
-      <section className="brand-border-glow mb-6 rounded-3xl border border-transparent bg-surface-2 p-5 shadow-[0_8px_28px_-12px_rgb(var(--brand-violet)/0.45)]">
+      <section className="mb-7 border-y border-edge py-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-accent">Your next step</p>
@@ -119,7 +119,7 @@ export default function MobileHome({
           </div>
           <Timer className="text-accent" size={27} />
         </div>
-        <button type="button" onClick={() => onNavigate("calendar")} className="brand-gradient mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-md shadow-accent/30 active:scale-[.98]">
+        <button type="button" onClick={() => onNavigate("calendar")} className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-accent-fg active:bg-accent-pressed">
           View today <ChevronRight size={17} />
         </button>
       </section>
@@ -141,9 +141,9 @@ export default function MobileHome({
             key={task.id}
             type="button"
             onClick={() => onNavigate("tasks")}
-            className="flex w-full items-center gap-3 rounded-2xl border border-edge bg-surface-2 p-4 text-left active:bg-surface-3"
+            className="flex min-h-14 w-full items-center gap-3 border-b border-edge px-1 py-3 text-left active:bg-surface-2"
           >
-            <CheckCircle2 size={20} className={task.priority === "HIGH" ? "text-rose-400" : "text-ink-muted"} />
+            <CheckCircle2 size={20} className={task.priority === "HIGH" ? "text-danger" : "text-ink-muted"} />
             <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{task.title}</span>
             <ChevronRight size={17} className="text-ink-muted" />
           </button>
@@ -160,7 +160,7 @@ export default function MobileHome({
 
 function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-edge bg-surface-2 text-ink transition active:scale-[.97] active:bg-surface-3">
+    <button type="button" onClick={onClick} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-lg border border-edge bg-surface text-ink transition active:translate-y-px active:bg-surface-2">
       <MobileIconChip icon={icon} size="sm" />
       <span className="text-xs font-medium">{label}</span>
     </button>
@@ -185,5 +185,5 @@ function Pulse({ label, value, icon, onClick }: { label: string; value: number; 
     </MobileCard>
   );
 }
-function LoadingCard() { return <div className="h-14 animate-pulse rounded-2xl bg-surface-3" />; }
-function Empty({ text }: { text: string }) { return <p className="rounded-2xl border border-dashed border-edge px-4 py-5 text-sm leading-6 text-ink-muted">{text}</p>; }
+function LoadingCard() { return <div className="h-14 animate-pulse rounded-lg bg-surface-3" />; }
+function Empty({ text }: { text: string }) { return <p className="border-y border-dashed border-edge px-1 py-5 text-sm leading-6 text-ink-muted">{text}</p>; }

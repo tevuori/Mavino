@@ -29,7 +29,7 @@ export default class TeachErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children;
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <AlertTriangle size={28} className="text-amber-400" />
+        <AlertTriangle size={28} className="text-warning" />
         <p className="text-sm text-ink">Teach Me hit an unexpected error.</p>
         <p className="max-w-md text-xs text-ink-muted">{error.message}</p>
         <button

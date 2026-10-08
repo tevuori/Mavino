@@ -148,6 +148,11 @@ docker compose up --build
 | `bun run typecheck` | TypeScript check for both server + client |
 | `bun run typecheck:server` | Server only |
 | `bun run typecheck:client` | Client only |
+| `bun test --cwd client` | Client unit tests |
+| `bun test --cwd server` | Server unit tests |
+| `bun run test:e2e` | Playwright + axe UI checks |
+| `bun run test:e2e:update` | Update Playwright visual baselines |
+| `bun run lint` | ESLint |
 | `bun run build` | Build both |
 | `bun run db:generate` | Prisma client generation |
 | `bun run db:migrate` | Prisma migrate dev |

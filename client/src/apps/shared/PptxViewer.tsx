@@ -129,7 +129,7 @@ export function PptxViewer({
   }
   if (error) {
     return (
-      <div className={`flex h-full w-full items-center justify-center p-4 text-center text-xs text-red-400 ${className}`}>
+      <div className={`flex h-full w-full items-center justify-center p-4 text-center text-xs text-danger ${className}`}>
         {error}
       </div>
     );
@@ -163,7 +163,7 @@ export function PptxViewer({
     return (
       <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">
         {before}
-        <mark className="rounded bg-amber-300 px-0.5 text-black">{match}</mark>
+        <mark className="rounded bg-warning px-0.5 text-black">{match}</mark>
         {after}
       </p>
     );

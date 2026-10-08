@@ -13,6 +13,8 @@ import {
   MobileLoading,
   MobileSelect,
 } from "./MobileUi";
+import { Sheet } from "../ui/overlays";
+import { Button } from "../ui/primitives";
 
 const HABIT_ICONS = ["✅", "📚", "🧠", "💪", "🏃", "💧", "🎯", "✍️", "🌅", "🧘", "💻", "🎨"];
 const HABIT_COLORS = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#8b5cf6", "#ef4444", "#14b8a6"];
@@ -108,16 +110,20 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
   };
 
   const HabitForm = () => (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
-      onClick={() => setShowForm(false)}
+    <Sheet
+      open
+      onClose={() => setShowForm(false)}
+      title="New habit"
+      description="Create a repeatable behavior to track."
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
+          <Button onClick={() => void createHabit()}>Create</Button>
+        </>
+      }
     >
-      <div
-        className="w-full max-w-md rounded-2xl border border-edge bg-surface p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="mb-3 text-lg font-semibold text-ink">New habit</h2>
         <MobileInput
+          data-autofocus
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Read 30 pages"
@@ -132,6 +138,8 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
                 key={ic}
                 type="button"
                 onClick={() => setIcon(ic)}
+                aria-label={`Use icon ${ic}`}
+                aria-pressed={icon === ic}
                 className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${
                   icon === ic ? "bg-surface-3 ring-1 ring-white/20" : "bg-surface-2"
                 }`}
@@ -150,6 +158,8 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
                 key={c}
                 type="button"
                 onClick={() => setColor(c)}
+                aria-label={`Use color ${c}`}
+                aria-pressed={color === c}
                 className={`h-8 w-8 rounded-full border-2 ${color === c ? "border-ink" : "border-transparent"}`}
                 style={{ backgroundColor: c }}
               />
@@ -176,24 +186,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setShowForm(false)}
-            className="rounded-xl px-4 py-2 text-sm text-ink-muted"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void createHabit()}
-            className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-ink"
-          >
-            Create
-          </button>
-        </div>
-      </div>
-    </div>
+    </Sheet>
   );
 
   if (view === "detail" && selected) {
@@ -209,7 +202,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
             <button
               type="button"
               onClick={() => void deleteHabit()}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:text-rose-400"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:text-danger"
             >
               <Trash2 size={20} />
             </button>
@@ -303,7 +296,7 @@ export default function MobileHabits({ onClose }: { onClose?: () => void }) {
                     <span className="truncate font-medium text-ink">{h.name}</span>
                   </div>
                   <p className="text-xs text-ink-muted">
-                    <Flame size={12} className="mr-1 inline text-orange-500" />
+                    <Flame size={12} className="mr-1 inline text-warning" />
                     {stat?.currentStreak ?? 0} day streak · best {stat?.longestStreak ?? 0}
                     {h.cadence === "weekly" ? " · weekly" : ""}
                     {h.target > 1 ? ` · target ${h.target}` : ""}

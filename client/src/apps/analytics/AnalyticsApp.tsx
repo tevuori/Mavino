@@ -152,8 +152,8 @@ function Dashboard({ data }: { data: AnalyticsDashboard }) {
 
       {/* Newly unlocked banner */}
       {data.newlyUnlocked.length > 0 && (
-        <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-3 @sm:p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-yellow-500">
+        <div className="rounded-xl border border-warning bg-warning-soft p-3 @sm:p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-warning">
             <Sparkles size={16} /> {data.newlyUnlocked.length} new achievement{data.newlyUnlocked.length > 1 ? "s" : ""} unlocked!
           </div>
           <div className="flex flex-wrap gap-2">
@@ -277,7 +277,7 @@ function Dashboard({ data }: { data: AnalyticsDashboard }) {
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-xs font-medium text-ink">{h.name}</div>
                   <div className="flex items-center gap-1 text-[10px] text-ink-muted">
-                    <Flame size={9} className="text-orange-500" />
+                    <Flame size={9} className="text-warning" />
                     {h.currentStreak}d · best {h.longestStreak}d · {h.totalLogs} total
                   </div>
                 </div>
@@ -333,7 +333,7 @@ function HeroCard({ data }: { data: AnalyticsDashboard }) {
       </div>
       <div className="flex-1 text-center @sm:text-left">
         <div className="flex items-center justify-center gap-1.5 @sm:justify-start">
-          <Zap size={16} className="text-yellow-500" />
+          <Zap size={16} className="text-warning" />
           <span className="text-2xl font-bold text-ink">{xp.total.toLocaleString()}</span>
           <span className="text-sm text-ink-muted">XP</span>
         </div>
@@ -447,7 +447,7 @@ function AchievementBadge({ a, showInfo }: { a: Achievement; showInfo?: boolean 
       title={a.description}
     >
       {a.isNew && (
-        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-500 text-[8px] font-bold text-white">
+        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-warning text-[8px] font-bold text-white">
           !
         </span>
       )}

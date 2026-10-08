@@ -138,7 +138,7 @@ export default function LinkBadge({ type, id, compact = true, className = "", re
                         e.stopPropagation();
                         void remove(l.id);
                       }}
-                      className="shrink-0 rounded p-0.5 text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                      className="shrink-0 rounded p-0.5 text-ink-muted opacity-0 transition hover:text-danger group-hover:opacity-100"
                       title="Unlink"
                     >
                       <X size={12} />

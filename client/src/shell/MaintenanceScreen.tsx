@@ -39,25 +39,25 @@ export default function MaintenanceScreen({
     : null;
 
   return (
-    <div className="flex min-h-full w-full items-center justify-center bg-slate-950 p-5 text-slate-100">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900/90 p-7 text-center shadow-2xl shadow-black/30">
+    <div className="flex min-h-full w-full items-center justify-center bg-canvas p-5 text-ink">
+      <div className="w-full max-w-lg rounded-2xl border border-edge bg-surface-overlay/90 p-7 text-center shadow-2xl shadow-black/30">
         <AppLogo size={72} className="mx-auto mb-5" />
-        <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-amber-500/15 text-amber-400">
+        <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-warning-soft text-warning">
           <Wrench size={22} />
         </div>
         <h1 className="text-2xl font-semibold">Mavino is under maintenance</h1>
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-400">
+        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink-muted">
           {status.message}
         </p>
         {remaining !== null && remaining > 0 && (
-          <div className="mx-auto mt-6 flex w-fit items-center gap-2 rounded-full border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200">
-            <Clock3 size={15} className="text-amber-400" />
+          <div className="mx-auto mt-6 flex w-fit items-center gap-2 rounded-full border border-edge bg-surface-3 px-4 py-2 text-sm text-ink">
+            <Clock3 size={15} className="text-warning" />
             Expected back in {formatRemaining(remaining)}
           </div>
         )}
         <button
           onClick={onAdminSignIn}
-          className="mx-auto mt-7 flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 hover:text-white"
+          className="mx-auto mt-7 flex items-center gap-2 rounded-lg border border-edge px-4 py-2 text-sm text-ink-muted transition hover:border-edge hover:bg-surface-3 hover:text-white"
         >
           <LogIn size={15} />
           {authenticated ? "Sign out and use admin account" : "Administrator sign in"}

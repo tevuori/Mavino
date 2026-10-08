@@ -138,13 +138,13 @@ export default function WorkspaceEditor({ workspace, onSaved, onCancel }: Props)
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Workspace name (e.g. Calculus II — Final)"
-          className="w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+          className="w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-focus"
         />
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Optional description"
-          className="w-full rounded-md border border-edge bg-surface px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+          className="w-full rounded-md border border-edge bg-surface px-3 py-1.5 text-xs text-ink outline-none focus:border-focus"
         />
         <div className="flex items-center gap-1.5">
           {COLOR_PRESETS.map((c) => (
@@ -202,7 +202,7 @@ export default function WorkspaceEditor({ workspace, onSaved, onCancel }: Props)
         {showPicker && (
           <div className="flex flex-col gap-2 rounded-lg border border-edge bg-surface p-3">
             {justAdded && !pickerValue && (
-              <div className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-400">
+              <div className="flex items-center gap-1.5 rounded-md bg-success-soft px-2 py-1 text-[11px] text-success">
                 <Check size={11} /> Added "{justAdded}" — add another or close.
               </div>
             )}

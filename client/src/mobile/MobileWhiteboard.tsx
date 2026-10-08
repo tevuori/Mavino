@@ -5,6 +5,8 @@ import type { Whiteboard, WhiteboardSummary } from "../types";
 import { MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileInput, MobileLoading } from "./MobileUi";
 import { useMobileDialog } from "../store/mobileDialog";
 import { useMobileToast } from "../store/mobileToast";
+import { Sheet } from "../ui/overlays";
+import { Button } from "../ui/primitives";
 
 type AnyEl = Record<string, unknown> & { type: string };
 
@@ -193,7 +195,7 @@ export default function MobileWhiteboard({ onClose }: { onClose?: () => void }) 
                 </div>
                 <p className="mt-1 text-xs text-ink-muted">{new Date(w.updatedAt).toLocaleDateString()}</p>
               </button>
-              <button type="button" onClick={() => void remove(w.id)} className="rounded-xl p-2 text-ink-muted active:text-rose-400">
+              <button type="button" onClick={() => void remove(w.id)} className="rounded-xl p-2 text-ink-muted active:text-danger">
                 <Trash2 size={18} />
               </button>
             </article>
@@ -203,18 +205,20 @@ export default function MobileWhiteboard({ onClose }: { onClose?: () => void }) 
         )}
       </div>
 
-      {creating && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setCreating(false)}>
-          <div className="w-full max-w-md rounded-2xl border border-edge bg-surface p-4" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-3 text-lg font-semibold text-ink">New whiteboard</h2>
-            <MobileInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="mb-4" />
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setCreating(false)} className="rounded-xl px-4 py-2 text-sm text-ink-muted">Cancel</button>
-              <button type="button" onClick={() => void create()} className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-ink">Create</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Sheet
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="New whiteboard"
+        description="Create a blank canvas for sketches and visual notes."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setCreating(false)}>Cancel</Button>
+            <Button onClick={() => void create()}>Create</Button>
+          </>
+        }
+      >
+        <MobileInput data-autofocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
+      </Sheet>
     </MobileContainer>
   );
 }
@@ -344,7 +348,7 @@ function WhiteboardEditor({
               >
                 <Pencil size={18} />
               </button>
-              <button type="button" onClick={onDelete} className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:text-rose-400">
+              <button type="button" onClick={onDelete} className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:text-danger">
                 <Trash2 size={18} />
               </button>
             </div>

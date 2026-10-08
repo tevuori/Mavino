@@ -77,7 +77,7 @@ export default function PluginsAdminSection() {
       <SectionHeader
         icon={<Puzzle size={18} />}
         title="Plugin Marketplace"
-        description="Publish and manage community plugins. Plugins are loaded from a remote ES module URL (default export = React component). Optionally declare Athena tools (proxied to a webhook). Only published plugins appear in the marketplace."
+        description="Publish and manage community plugins. Plugins are loaded from a remote ES module URL (default export = React component). Optionally declare Mavino assistant tools (proxied to a webhook). Only published plugins appear in the marketplace."
       />
 
       <div className="mb-4 flex items-center gap-2">
@@ -106,9 +106,9 @@ export default function PluginsAdminSection() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-medium text-ink">{p.name}</span>
-                  {p.featured && <Star size={12} className="shrink-0 text-amber-500" />}
+                  {p.featured && <Star size={12} className="shrink-0 text-warning" />}
                   {!p.published && (
-                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-500">
+                    <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-medium text-warning">
                       Unpublished
                     </span>
                   )}
@@ -146,7 +146,7 @@ export default function PluginsAdminSection() {
                   onClick={() => remove(p)}
                   disabled={busyKey === p.pluginKey}
                   title="Delete"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-500/15"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-danger hover:bg-danger-soft"
                 >
                   <Trash2 size={14} />
                 </button>

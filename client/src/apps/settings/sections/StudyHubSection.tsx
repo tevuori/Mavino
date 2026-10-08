@@ -22,7 +22,7 @@ function TierToggle({
       disabled={busy}
       className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
         on
-          ? "bg-emerald-500/15 text-emerald-500"
+          ? "bg-success-soft text-success"
           : "bg-surface-3 text-ink-muted"
       } disabled:opacity-50`}
     >
@@ -84,7 +84,7 @@ function PollyConfigCard() {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <SaveButton busy={busy} onClick={save} disabled={!accessKeyId.trim() || !secretAccessKey.trim()}><KeyRound size={13} /> Verify & save</SaveButton>
         {config?.configured && <button onClick={test} disabled={busy} className="rounded-lg border border-edge px-3 py-2 text-xs text-ink-muted hover:bg-surface-3">Test connection</button>}
-        {config?.source === "database" && <button onClick={remove} disabled={busy} className="rounded-lg border border-edge p-2 text-ink-muted hover:text-red-500"><Trash2 size={14} /></button>}
+        {config?.source === "database" && <button onClick={remove} disabled={busy} className="rounded-lg border border-edge p-2 text-ink-muted hover:text-danger"><Trash2 size={14} /></button>}
         {message && <span className="text-xs text-ink-muted">{message}</span>}
       </div>
     </Card>
@@ -157,7 +157,7 @@ export default function StudyHubSection() {
           <span className="text-sm">Loading functions…</span>
         </Card>
       ) : error ? (
-        <Card className="p-4 text-sm text-red-500">{error}</Card>
+        <Card className="p-4 text-sm text-danger">{error}</Card>
       ) : (
         <>
           <div className="mb-3 flex items-center justify-between text-xs font-medium text-ink-muted">
@@ -202,7 +202,7 @@ export default function StudyHubSection() {
             ))}
           </div>
           <div className="mt-4 flex items-center justify-between">
-            {error ? <p className="text-xs text-red-500">{error}</p> : <div />}
+            {error ? <p className="text-xs text-danger">{error}</p> : <div />}
             <SaveButton busy={saving} onClick={save}>
               Save Study Hub settings
             </SaveButton>

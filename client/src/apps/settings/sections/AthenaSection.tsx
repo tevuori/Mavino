@@ -45,7 +45,7 @@ function EligibilityCard() {
   if (!status || status.ageBand !== "UNKNOWN") {
     if (status?.ageBand === "AGE_13_17" && status.guardianConsentStatus !== "VERIFIED") {
       return (
-        <Card className="mb-4 border-amber-500/30">
+        <Card className="mb-4 border-warning">
           <p className="text-sm font-medium text-ink">Waiting for guardian consent</p>
           <p className="mt-1 text-xs text-ink-muted">Hosted AI will become available after your parent or guardian confirms the email request.</p>
         </Card>
@@ -130,9 +130,9 @@ function TierInfoCard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-            status.tier === "admin" ? "bg-amber-500/15 text-amber-500"
-            : status.tier === "paid" ? "bg-indigo-500/15 text-indigo-400"
-            : status.tier === "demo" ? "bg-amber-500/15 text-amber-400"
+            status.tier === "admin" ? "bg-warning-soft text-warning"
+            : status.tier === "paid" ? "bg-accent/15 text-accent"
+            : status.tier === "demo" ? "bg-warning-soft text-warning"
             : "bg-surface-3 text-ink-muted"
           }`}>
             <TierIcon size={16} />
@@ -298,7 +298,7 @@ function TtsConfigCard() {
               <button
                 onClick={remove}
                 disabled={busy}
-                className="flex items-center gap-1.5 rounded-md border border-edge px-3 py-1.5 text-xs text-ink-muted transition hover:text-red-400 disabled:opacity-40"
+                className="flex items-center gap-1.5 rounded-md border border-edge px-3 py-1.5 text-xs text-ink-muted transition hover:text-danger disabled:opacity-40"
               >
                 <Trash2 size={13} /> Remove
               </button>
@@ -577,7 +577,7 @@ function LlmConfigCard() {
           <button
             onClick={remove}
             disabled={busy}
-            className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-red-500 hover:text-white disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-danger hover:text-white disabled:opacity-40"
             title="Remove key"
           >
             <Trash2 size={14} />
@@ -871,7 +871,7 @@ function InstructionsCard() {
         disabled={!loaded}
         rows={5}
         placeholder="e.g. Always answer in Spanish. Be concise. I'm studying computer science."
-        className={`mb-3 w-full resize-y rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent ${inputClass}`}
+        className={`mb-3 w-full resize-y rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-focus ${inputClass}`}
       />
       <div className="flex items-center justify-between">
         <span className="text-[11px] text-ink-muted">{text.length}/4000</span>

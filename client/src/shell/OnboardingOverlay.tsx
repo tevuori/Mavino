@@ -384,7 +384,7 @@ function NameStep({ value, onChange, onSubmit }: {
         maxLength={64}
         placeholder="Your name or nickname"
         aria-label="Your name"
-        className="mx-auto mt-5 block w-full max-w-xs rounded-lg border border-edge bg-surface-2 px-3 py-2 text-center text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent"
+        className="mx-auto mt-5 block w-full max-w-xs rounded-lg border border-edge bg-surface-2 px-3 py-2 text-center text-sm text-ink outline-none placeholder:text-ink-muted focus:border-focus"
       />
       <p className="mt-3 text-xs text-ink-muted/70">Optional — skip it and Mavino will ask later.</p>
     </div>
@@ -595,11 +595,11 @@ function GeminiKeySaveStep({ saveRef }: { saveRef: React.MutableRefObject<Gemini
           placeholder="AIza..."
           aria-label="Gemini API key"
           autoComplete="off"
-          className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-center text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent disabled:opacity-50"
+          className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-center text-sm text-ink outline-none placeholder:text-ink-muted focus:border-focus disabled:opacity-50"
         />
       </div>
       {msg && (
-        <p className={`mt-3 text-xs ${err ? "text-red-400" : "text-emerald-400"}`}>{msg}</p>
+        <p className={`mt-3 text-xs ${err ? "text-danger" : "text-success"}`}>{msg}</p>
       )}
       <p className="mt-3 text-xs text-ink-muted/70">
         Press <strong>Next</strong> to save and continue, or skip and add a key later in Settings → Mavino Assistant.

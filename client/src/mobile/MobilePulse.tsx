@@ -30,9 +30,9 @@ function readinessStroke(pct: number): string {
 function masteryColor(m: number): string {
   if (m < 0) return "text-ink-muted";
   const pct = Math.round(m * 100);
-  if (pct >= 80) return "text-emerald-400";
-  if (pct >= 60) return "text-amber-400";
-  return "text-red-400";
+  if (pct >= 80) return "text-success";
+  if (pct >= 60) return "text-warning";
+  return "text-danger";
 }
 
 function masteryPct(m: number): string {
@@ -194,7 +194,7 @@ export default function MobilePulse({ onClose, onOpenTool }: { onClose: () => vo
               <button onClick={rebuild} disabled={building} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-ink-muted disabled:opacity-50">
                 {building ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
               </button>
-              <button onClick={deleteForecast} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-red-300">
+              <button onClick={deleteForecast} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-danger">
                 <Trash2 size={18} />
               </button>
             </div>
@@ -203,20 +203,20 @@ export default function MobilePulse({ onClose, onOpenTool }: { onClose: () => vo
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} className="shrink-0" /> {error}
         </div>
       )}
 
       {stale && data && !building && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-warning bg-warning-soft px-4 py-3 text-sm text-warning">
           <RefreshCw size={15} /> Forecast is stale — new reviews since last build.
-          <button onClick={rebuild} className="ml-auto shrink-0 rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-semibold">Rebuild</button>
+          <button onClick={rebuild} className="ml-auto shrink-0 rounded-lg bg-warning-soft px-2.5 py-1 text-xs font-semibold">Rebuild</button>
         </div>
       )}
 
       {building && (
-        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
           <Sparkles size={16} className="animate-pulse" /> Building your forecast…
         </div>
       )}
@@ -249,7 +249,7 @@ export default function MobilePulse({ onClose, onOpenTool }: { onClose: () => vo
               <p className="text-[11px] text-ink-muted">Concepts</p>
             </div>
             <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
-              <p className={`text-2xl font-bold ${data.stats.atRiskCount > 0 ? "text-red-400" : "text-ink"}`}>{data.stats.atRiskCount}</p>
+              <p className={`text-2xl font-bold ${data.stats.atRiskCount > 0 ? "text-danger" : "text-ink"}`}>{data.stats.atRiskCount}</p>
               <p className="text-[11px] text-ink-muted">At-risk</p>
             </div>
           </div>
@@ -268,7 +268,7 @@ export default function MobilePulse({ onClose, onOpenTool }: { onClose: () => vo
                       </div>
                       <p className="mt-0.5 text-[10px] text-ink-muted">{fmtDate(exam.date)} · {exam.daysUntil}d</p>
                       {exam.atRiskCount > 0 && (
-                        <p className="mt-1 flex items-center justify-center gap-1 text-[10px] text-red-400">
+                        <p className="mt-1 flex items-center justify-center gap-1 text-[10px] text-danger">
                           <TrendingDown size={10} /> {exam.atRiskCount} at-risk
                         </p>
                       )}
@@ -292,10 +292,10 @@ export default function MobilePulse({ onClose, onOpenTool }: { onClose: () => vo
           ) : (
             <div className="space-y-2">
               {atRiskConcepts.map((c) => (
-                <div key={c.id} className="rounded-xl border border-red-500/20 bg-red-500/[0.04] p-3">
+                <div key={c.id} className="rounded-xl border border-danger bg-danger/[0.04] p-3">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10">
-                      <TrendingDown size={15} className="text-red-400" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger-soft">
+                      <TrendingDown size={15} className="text-danger" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-ink">{c.label}</p>

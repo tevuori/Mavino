@@ -730,7 +730,7 @@ export default function BrowserApp({ win }: { win: WindowInstance }) {
             onKeyDown={onAddressEnter}
             onFocus={(e) => e.target.select()}
             placeholder="Search DuckDuckGo or type a URL"
-            className="w-full rounded-full border border-edge bg-surface py-1 pl-8 pr-3 text-xs text-ink outline-none focus:border-accent focus:ring-1 focus:ring-accent/40"
+            className="w-full rounded-full border border-edge bg-surface py-1 pl-8 pr-3 text-xs text-ink outline-none focus:border-focus focus:ring-1 focus:ring-accent/40"
             spellCheck={false}
           />
         </div>
@@ -793,7 +793,7 @@ export default function BrowserApp({ win }: { win: WindowInstance }) {
             />
             {activeTab?.error && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface text-ink-muted">
-                <AlertCircle size={32} className="text-red-400" />
+                <AlertCircle size={32} className="text-danger" />
                 <p className="text-sm">{activeTab.error}</p>
                 <button
                   onClick={() => reload()}
@@ -805,7 +805,7 @@ export default function BrowserApp({ win }: { win: WindowInstance }) {
             )}
             {activeTab?.renderFailed && !activeTab?.error && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface px-6 text-center text-ink-muted">
-                <AlertCircle size={36} className="text-amber-400" />
+                <AlertCircle size={36} className="text-warning" />
                 <div>
                   <p className="text-sm font-medium text-ink">This site may not render in the embedded browser</p>
                   <p className="mt-1 max-w-md text-xs">
@@ -893,7 +893,7 @@ function StartPage({ onNavigate }: { onNavigate: (url: string) => void }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search DuckDuckGo or type a URL"
-            className="w-full rounded-full border border-edge bg-surface-2 py-2.5 pl-11 pr-4 text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+            className="w-full rounded-full border border-edge bg-surface-2 py-2.5 pl-11 pr-4 text-sm text-ink outline-none focus:border-focus focus:ring-2 focus:ring-accent/30"
             spellCheck={false}
           />
         </div>

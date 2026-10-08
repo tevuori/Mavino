@@ -35,6 +35,7 @@ import { useLanguage } from "../store/language";
 import {
   MobileContainer, MobileEmpty, MobileFab, MobileHeader, MobileLoading, MobileTextarea,
 } from "./MobileUi";
+import { Sheet } from "../ui/overlays";
 
 const LEVELS: StudentLevel[] = ["beginner", "intermediate", "advanced"];
 const STYLES: TeachingStyle[] = ["explain", "socratic"];
@@ -428,7 +429,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
                     type="button"
                     onClick={() => toggleSource(s.id)}
                     className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left ${
-                      on ? "border-indigo-400/60 bg-accent/15" : "border-edge bg-surface-2"
+                      on ? "border-accent/60 bg-accent/15" : "border-edge bg-surface-2"
                     }`}
                   >
                     <Icon size={18} className={on ? "text-accent" : "text-ink-muted"} />
@@ -476,7 +477,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
             type="button"
             onClick={() => setWithPlan((v) => !v)}
             className={`mb-2 flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm ${
-              withPlan ? "border-indigo-400/60 bg-accent/15 text-ink" : "border-edge bg-surface-2 text-ink-muted"
+              withPlan ? "border-accent/60 bg-accent/15 text-ink" : "border-edge bg-surface-2 text-ink-muted"
             }`}
           >
             <span className="flex items-center gap-2"><Sparkles size={16} /> Generate a lesson plan</span>
@@ -489,7 +490,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
             type="button"
             onClick={() => setImageAware((v) => !v)}
             className={`mb-4 flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm ${
-              imageAware ? "border-indigo-400/60 bg-accent/15 text-ink" : "border-edge bg-surface-2 text-ink-muted"
+              imageAware ? "border-accent/60 bg-accent/15 text-ink" : "border-edge bg-surface-2 text-ink-muted"
             }`}
           >
             <span className="flex items-center gap-2"><Image size={16} /> Image recognition</span>
@@ -498,7 +499,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
             </span>
           </button>
 
-          {error && <p className="mb-3 rounded-2xl bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>}
+          {error && <p className="mb-3 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}
 
           <button
             type="button"
@@ -540,7 +541,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
                 </button>
                 <button
                   onClick={() => void deleteSession(s.id)}
-                  className="shrink-0 rounded-xl p-2 text-ink-muted active:bg-surface-3 active:text-red-400"
+                  className="shrink-0 rounded-xl p-2 text-ink-muted active:bg-surface-3 active:text-danger"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -704,10 +705,10 @@ export default function MobileTeach({ initialSessionId = null, language: request
         ))}
 
         {error && (
-          <div className="flex items-center justify-between gap-2 rounded-2xl bg-red-500/10 px-3.5 py-2.5 text-sm text-red-300">
+          <div className="flex items-center justify-between gap-2 rounded-2xl bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
             <span className="min-w-0 flex-1">{error}</span>
             {canRetry && (
-              <button onClick={retry} className="shrink-0 rounded-lg bg-red-500/20 px-2 py-1 text-xs">Retry</button>
+              <button onClick={retry} className="shrink-0 rounded-lg bg-danger-soft px-2 py-1 text-xs">Retry</button>
             )}
           </div>
         )}
@@ -735,7 +736,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
             type="button"
             onClick={listening ? stopListening : startListening}
             className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
-              listening ? "animate-pulse bg-red-500 text-ink" : "bg-surface-3 text-ink"
+              listening ? "animate-pulse bg-danger text-ink" : "bg-surface-3 text-ink"
             }`}
           >
             <Mic size={20} />
@@ -753,20 +754,8 @@ export default function MobileTeach({ initialSessionId = null, language: request
 
       {/* source bottom sheet */}
       {sheet && (
-        <div className="fixed inset-0 z-50 flex items-end" onClick={() => setSheet(null)}>
-          <div className="absolute inset-0 bg-black/50" />
-          <div
-            ref={sheetContainerRef}
-            className="mobile-teach-source-sheet relative flex max-h-[75vh] w-full flex-col rounded-t-3xl border-t border-edge bg-[#0f1117] pb-[max(1rem,env(safe-area-inset-bottom))]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 border-b border-edge px-4 py-3">
-              <BookOpen size={16} className="shrink-0 text-accent" />
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{sheet.name}</span>
-              <button onClick={() => setSheet(null)} className="rounded-xl p-1.5 text-ink-muted active:bg-surface-3">
-                <X size={18} />
-              </button>
-            </div>
+        <Sheet open onClose={() => setSheet(null)} title={sheet.name} className="max-h-[82vh] max-w-3xl">
+          <div ref={sheetContainerRef}>
             {askSelection && (
               <div className="border-b border-edge bg-accent/10 px-4 py-2">
                 <div className="mb-1.5 line-clamp-2 text-[11px] text-ink-muted">“{askSelection}”</div>
@@ -821,7 +810,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
               )}
             </div>
           </div>
-        </div>
+        </Sheet>
       )}
     </div>
   );
@@ -847,7 +836,7 @@ function SourceText({ text, highlight, posStart, posEnd, navigationKey }: { text
   return (
     <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-ink-muted">
       {text.slice(0, range.from)}
-      <mark ref={markRef} className="rounded bg-amber-400/30 text-amber-100">{text.slice(range.from, range.to)}</mark>
+      <mark ref={markRef} className="rounded bg-warning-soft text-warning">{text.slice(range.from, range.to)}</mark>
       {text.slice(range.to)}
     </pre>
   );

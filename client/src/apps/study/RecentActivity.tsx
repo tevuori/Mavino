@@ -8,15 +8,15 @@ import { useWindows } from "../../store/windows";
 import { teachLaunchInput } from "../teach/launch";
 
 const TYPE_META: Record<string, { label: string; icon: typeof Brain; color: string }> = {
-  flashcards: { label: "Flashcards", icon: Brain, color: "text-indigo-400" },
-  summary: { label: "Summary", icon: FileText, color: "text-sky-400" },
-  quiz: { label: "Quiz", icon: HelpCircle, color: "text-amber-400" },
-  explain: { label: "Explain", icon: Lightbulb, color: "text-yellow-400" },
-  study_guide: { label: "Study Guide", icon: BookOpen, color: "text-emerald-400" },
-  syllabus: { label: "Tasks", icon: ListTodo, color: "text-rose-400" },
-  chat: { label: "Study Chat", icon: MessageSquare, color: "text-violet-400" },
-  podcast: { label: "Podcast", icon: Mic, color: "text-rose-400" },
-  teach: { label: "Teach Me", icon: Presentation, color: "text-indigo-400" },
+  flashcards: { label: "Flashcards", icon: Brain, color: "text-accent" },
+  summary: { label: "Summary", icon: FileText, color: "text-accent" },
+  quiz: { label: "Quiz", icon: HelpCircle, color: "text-warning" },
+  explain: { label: "Explain", icon: Lightbulb, color: "text-warning" },
+  study_guide: { label: "Study Guide", icon: BookOpen, color: "text-success" },
+  syllabus: { label: "Tasks", icon: ListTodo, color: "text-danger" },
+  chat: { label: "Study Chat", icon: MessageSquare, color: "text-accent" },
+  podcast: { label: "Podcast", icon: Mic, color: "text-danger" },
+  teach: { label: "Teach Me", icon: Presentation, color: "text-accent" },
 };
 
 function timeAgo(iso: string): string {

@@ -81,7 +81,7 @@ export default function AnalyticsSection() {
 
       {err && (
         <Card className="mb-4">
-          <p className="text-sm text-red-500">{err}</p>
+          <p className="text-sm text-danger">{err}</p>
         </Card>
       )}
 

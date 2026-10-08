@@ -101,7 +101,7 @@ export default function MusicWidget() {
   if (connection === "error") {
     return (
       <div className="flex w-72 items-center gap-2 rounded-xl border border-edge bg-surface/80 p-3 shadow-window backdrop-blur-xl">
-        <AlertCircle size={16} className="shrink-0 text-red-400" />
+        <AlertCircle size={16} className="shrink-0 text-danger" />
         <span className="flex-1 truncate text-xs text-ink-muted">{error}</span>
         <button onClick={() => init()} className="rounded p-1 text-ink-muted hover:bg-surface-3 hover:text-ink">
           <RefreshCw size={12} />
@@ -139,9 +139,9 @@ export default function MusicWidget() {
           )}
           {isPlaying && (
             <div className="absolute bottom-0.5 right-0.5 flex items-end gap-px rounded bg-black/50 px-0.5">
-              <span className="h-1.5 w-0.5 animate-pulse bg-green-400" style={{ animationDelay: "0ms" }} />
-              <span className="h-2 w-0.5 animate-pulse bg-green-400" style={{ animationDelay: "150ms" }} />
-              <span className="h-1 w-0.5 animate-pulse bg-green-400" style={{ animationDelay: "300ms" }} />
+              <span className="h-1.5 w-0.5 animate-pulse bg-success" style={{ animationDelay: "0ms" }} />
+              <span className="h-2 w-0.5 animate-pulse bg-success" style={{ animationDelay: "150ms" }} />
+              <span className="h-1 w-0.5 animate-pulse bg-success" style={{ animationDelay: "300ms" }} />
             </div>
           )}
         </div>

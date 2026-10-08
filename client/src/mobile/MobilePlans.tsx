@@ -159,7 +159,7 @@ export default function MobilePlans({ onClose }: { onClose: () => void }) {
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} className="shrink-0" /> {error}
         </div>
       )}
@@ -178,7 +178,7 @@ export default function MobilePlans({ onClose }: { onClose: () => void }) {
                   <p className="mt-0.5 flex items-center gap-2 text-lg font-semibold capitalize text-ink">
                     {currentPlan}
                     {isActive && (
-                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-normal text-emerald-400">Active</span>
+                      <span className="rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-normal text-success">Active</span>
                     )}
                   </p>
                 </div>
@@ -190,7 +190,7 @@ export default function MobilePlans({ onClose }: { onClose: () => void }) {
                 </p>
               )}
               {status.cancelAt && (
-                <p className="mt-1 flex items-center gap-1 text-xs text-amber-400">
+                <p className="mt-1 flex items-center gap-1 text-xs text-warning">
                   <Ban size={12} /> Cancels {new Date(status.cancelAt).toLocaleDateString()}
                 </p>
               )}
@@ -207,7 +207,7 @@ export default function MobilePlans({ onClose }: { onClose: () => void }) {
                   <button
                     onClick={handleCancel}
                     disabled={actionLoading === "cancel"}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-500/30 px-3 py-2.5 text-xs font-medium text-red-300 active:bg-red-500/10"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-danger px-3 py-2.5 text-xs font-medium text-danger active:bg-danger-soft"
                   >
                     {actionLoading === "cancel" ? <Loader2 size={13} className="animate-spin" /> : <Ban size={13} />}
                     Cancel
@@ -243,7 +243,7 @@ export default function MobilePlans({ onClose }: { onClose: () => void }) {
                   <ul className="mt-3 space-y-1.5">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2 text-xs text-ink-muted">
-                        <Check size={13} className="mt-0.5 shrink-0 text-emerald-400" /> {f}
+                        <Check size={13} className="mt-0.5 shrink-0 text-success" /> {f}
                       </li>
                     ))}
                   </ul>

@@ -12,11 +12,11 @@ import { bridgeApi, type ConceptBridge, type BridgeStats } from "../services/bri
 import { MobileContainer, MobileHeader, MobileEmpty, MobileChip } from "./MobileUi";
 
 const RELATION_META: Record<string, { label: string; color: string; icon: typeof Link2 }> = {
-  prerequisite: { label: "Prerequisite", color: "text-blue-400", icon: ArrowRight },
-  shared_application: { label: "Shared Application", color: "text-emerald-400", icon: Link2 },
-  analogy: { label: "Analogy", color: "text-amber-400", icon: Lightbulb },
-  contrasts: { label: "Contrasts", color: "text-red-400", icon: Filter },
-  generalizes: { label: "Generalizes", color: "text-purple-400", icon: Network },
+  prerequisite: { label: "Prerequisite", color: "text-accent", icon: ArrowRight },
+  shared_application: { label: "Shared Application", color: "text-success", icon: Link2 },
+  analogy: { label: "Analogy", color: "text-warning", icon: Lightbulb },
+  contrasts: { label: "Contrasts", color: "text-danger", icon: Filter },
+  generalizes: { label: "Generalizes", color: "text-accent", icon: Network },
 };
 
 function relationMeta(relation: string) {
@@ -103,13 +103,13 @@ export default function MobileBridge({ onClose }: { onClose: () => void }) {
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} className="shrink-0" /> {error}
         </div>
       )}
 
       {discovering && (
-        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-500/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
           <Sparkles size={16} className="animate-pulse" /> Discovering new connections…
         </div>
       )}
@@ -197,7 +197,7 @@ export default function MobileBridge({ onClose }: { onClose: () => void }) {
                       )}
                       <button
                         onClick={() => handleDelete(b.id)}
-                        className="ml-auto flex h-8 w-8 items-center justify-center rounded-xl text-ink-muted active:text-red-400"
+                        className="ml-auto flex h-8 w-8 items-center justify-center rounded-xl text-ink-muted active:text-danger"
                       >
                         <Trash2 size={15} />
                       </button>

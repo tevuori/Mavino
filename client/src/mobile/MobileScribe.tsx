@@ -31,9 +31,9 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 };
 
 const SEVERITY_META: Record<ScribeIssue["severity"], { label: string; color: string; bg: string; icon: typeof Info }> = {
-  info: { label: "Info", color: "text-blue-400", bg: "bg-blue-500/10", icon: Info },
-  warning: { label: "Warning", color: "text-amber-400", bg: "bg-amber-500/10", icon: AlertTriangle },
-  critical: { label: "Critical", color: "text-red-400", bg: "bg-red-500/10", icon: AlertCircle },
+  info: { label: "Info", color: "text-accent", bg: "bg-accent-soft", icon: Info },
+  warning: { label: "Warning", color: "text-warning", bg: "bg-warning-soft", icon: AlertTriangle },
+  critical: { label: "Critical", color: "text-danger", bg: "bg-danger-soft", icon: AlertCircle },
 };
 
 export default function MobileScribe({ onClose }: { onClose: () => void; onOpenTool: (tool: MobileTool) => void }) {
@@ -112,7 +112,7 @@ export default function MobileScribe({ onClose }: { onClose: () => void; onOpenT
       <MobileDesktopNote text="Scribe's full split-pane editor (side-by-side draft + feedback) is more comfortable for long documents on desktop." />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
@@ -149,7 +149,7 @@ export default function MobileScribe({ onClose }: { onClose: () => void; onOpenT
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); void handleDelete(doc.id); }}
-                  className="shrink-0 rounded-lg p-1.5 text-ink-muted active:bg-surface-3 active:text-red-300"
+                  className="shrink-0 rounded-lg p-1.5 text-ink-muted active:bg-surface-3 active:text-danger"
                 >
                   <Trash2 size={15} />
                 </button>
@@ -255,7 +255,7 @@ function DocumentView({
         right={
           <button
             onClick={onDelete}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-red-300 active:bg-surface-3"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-danger active:bg-surface-3"
             aria-label="Delete"
           >
             <Trash2 size={18} />
@@ -264,7 +264,7 @@ function DocumentView({
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
@@ -372,7 +372,7 @@ function FeedbackPanel({ feedback }: { feedback: ScribeFeedback }) {
 
   if (feedback.status === "error") {
     return (
-      <div className="flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+      <div className="flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
         <AlertCircle size={16} /> {feedback.error || "Feedback generation failed."}
       </div>
     );
@@ -389,7 +389,7 @@ function FeedbackPanel({ feedback }: { feedback: ScribeFeedback }) {
       <div className="flex items-center gap-3 rounded-2xl border border-edge bg-surface-2 p-4">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface-3">
           <span className={`text-lg font-bold ${
-            feedback.score >= 80 ? "text-emerald-400" : feedback.score >= 60 ? "text-amber-400" : "text-red-400"
+            feedback.score >= 80 ? "text-success" : feedback.score >= 60 ? "text-warning" : "text-danger"
           }`}>
             {feedback.score}
           </span>
@@ -497,7 +497,7 @@ function CreateDocumentSheet({
         className="w-full rounded-xl border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none placeholder:text-ink-muted"
       />
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs text-red-300">
+        <div className="flex items-center gap-2 rounded-xl border border-danger bg-danger-soft px-3 py-2.5 text-xs text-danger">
           <AlertCircle size={14} /> {error}
         </div>
       )}

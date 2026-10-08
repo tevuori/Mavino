@@ -178,7 +178,7 @@ export default function LectureNotes({ language }: { language: StudyLanguage }) 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <Video size={18} className="text-teal-400" />
+        <Video size={18} className="text-success" />
         <h2 className="text-base font-semibold text-ink">Lecture Video → Notes</h2>
       </div>
 
@@ -283,7 +283,7 @@ export default function LectureNotes({ language }: { language: StudyLanguage }) 
                   </button>
                 </div>
                 {videoType === "camera" && (
-                  <p className="mt-1 text-[10px] text-amber-500">
+                  <p className="mt-1 text-[10px] text-warning">
                     Camera mode uses vision AI to detect the slide region. Works best with a fixed camera
                     and clearly visible projected slides. Quality may vary.
                   </p>
@@ -373,9 +373,9 @@ export default function LectureNotes({ language }: { language: StudyLanguage }) 
                   className="group flex items-center gap-2.5 rounded-md border border-edge bg-surface-2 px-3 py-2"
                 >
                   {j.status === "completed" ? (
-                    <CheckCircle2 size={14} className="shrink-0 text-emerald-400" />
+                    <CheckCircle2 size={14} className="shrink-0 text-success" />
                   ) : (
-                    <XCircle size={14} className="shrink-0 text-red-400" />
+                    <XCircle size={14} className="shrink-0 text-danger" />
                   )}
                   <div className="flex flex-1 flex-col min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -389,7 +389,7 @@ export default function LectureNotes({ language }: { language: StudyLanguage }) 
                     <div className="flex items-center gap-1.5 text-[10px] text-ink-muted">
                       <Clock size={9} />
                       {timeAgo(j.createdAt)}
-                      {j.error && <span className="text-red-400 truncate">— {j.error}</span>}
+                      {j.error && <span className="text-danger truncate">— {j.error}</span>}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
@@ -413,7 +413,7 @@ export default function LectureNotes({ language }: { language: StudyLanguage }) 
                     )}
                     <button
                       onClick={() => deleteJob(j.id)}
-                      className="rounded p-1 text-ink-muted hover:text-red-400"
+                      className="rounded p-1 text-ink-muted hover:text-danger"
                       title="Remove from history"
                     >
                       <Trash2 size={12} />

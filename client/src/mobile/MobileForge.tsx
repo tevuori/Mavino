@@ -34,9 +34,9 @@ const FORMAT_LABELS: Record<string, string> = {
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: "text-emerald-400",
-  medium: "text-amber-400",
-  hard: "text-red-400",
+  easy: "text-success",
+  medium: "text-warning",
+  hard: "text-danger",
   adaptive: "text-accent",
 };
 
@@ -116,7 +116,7 @@ export default function MobileForge({ onClose }: { onClose: () => void; onOpenTo
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
@@ -172,7 +172,7 @@ export default function MobileForge({ onClose }: { onClose: () => void; onOpenTo
                       </div>
                       <button
                         onClick={(e) => { e.stopPropagation(); void handleDelete(set.id); }}
-                        className="shrink-0 rounded-lg p-1.5 text-ink-muted active:bg-surface-3 active:text-red-300"
+                        className="shrink-0 rounded-lg p-1.5 text-ink-muted active:bg-surface-3 active:text-danger"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -260,7 +260,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
       <MobileContainer>
         <MobileHeader title="Forge" subtitle={set.title} onBack={onBack} />
         <div className="flex flex-col items-center gap-4 py-14 text-center">
-          <CheckCircle2 size={44} className="text-emerald-400" />
+          <CheckCircle2 size={44} className="text-success" />
           <p className="text-sm text-ink">All done with this set!</p>
           <MobileButton onClick={onBack}>Back to sets</MobileButton>
         </div>
@@ -284,7 +284,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
       </div>
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
@@ -303,13 +303,13 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
       {/* Hint */}
       {problem.hint && !attempt && (
         showHint[problem.id] ? (
-          <div className="mb-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs leading-5 text-amber-200">
+          <div className="mb-4 rounded-2xl border border-warning bg-warning-soft px-4 py-3 text-xs leading-5 text-warning">
             <span className="font-semibold">Hint:</span> <MobileMarkdown content={problem.hint} className="inline" />
           </div>
         ) : (
           <button
             onClick={() => setShowHint((prev) => ({ ...prev, [problem.id]: true }))}
-            className="mb-4 flex items-center gap-1.5 text-sm text-amber-400 active:opacity-70"
+            className="mb-4 flex items-center gap-1.5 text-sm text-warning active:opacity-70"
           >
             <Lightbulb size={14} /> Show hint
           </button>
@@ -364,16 +364,16 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
       {attempt && (
         <div className="space-y-4">
           <div className={`rounded-2xl border p-4 ${
-            attempt.result === "correct" ? "border-emerald-500/30 bg-emerald-500/10"
-            : attempt.result === "partial" ? "border-amber-500/30 bg-amber-500/10"
-            : "border-red-500/30 bg-red-500/10"
+            attempt.result === "correct" ? "border-success bg-success-soft"
+            : attempt.result === "partial" ? "border-warning bg-warning-soft"
+            : "border-danger bg-danger-soft"
           }`}>
             <div className="mb-2 flex items-center gap-2">
-              {attempt.result === "correct" ? <CheckCircle2 size={18} className="text-emerald-400" />
-                : attempt.result === "partial" ? <AlertTriangle size={18} className="text-amber-400" />
-                : <XCircle size={18} className="text-red-400" />}
+              {attempt.result === "correct" ? <CheckCircle2 size={18} className="text-success" />
+                : attempt.result === "partial" ? <AlertTriangle size={18} className="text-warning" />
+                : <XCircle size={18} className="text-danger" />}
               <span className={`text-sm font-semibold ${
-                attempt.result === "correct" ? "text-emerald-400" : attempt.result === "partial" ? "text-amber-400" : "text-red-400"
+                attempt.result === "correct" ? "text-success" : attempt.result === "partial" ? "text-warning" : "text-danger"
               }`}>
                 {attempt.result === "correct" ? "Correct!" : attempt.result === "partial" ? "Partially correct" : "Incorrect"}
               </span>
@@ -385,7 +385,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
               <div className="mt-3 space-y-2">
                 {attempt.feedback.steps.map((step, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs">
-                    {step.correct ? <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-400" /> : <XCircle size={13} className="mt-0.5 shrink-0 text-red-400" />}
+                    {step.correct ? <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-success" /> : <XCircle size={13} className="mt-0.5 shrink-0 text-danger" />}
                     <div className="min-w-0 flex-1">
                       <MobileMarkdown content={step.step} className="text-xs" />
                       {!step.correct && <MobileMarkdown content={step.explanation} className="mt-0.5 text-xs text-ink-muted" />}
@@ -584,7 +584,7 @@ function GenerateSheet({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs text-red-300">
+        <div className="flex items-center gap-2 rounded-xl border border-danger bg-danger-soft px-3 py-2.5 text-xs text-danger">
           <AlertCircle size={14} /> {error}
         </div>
       )}

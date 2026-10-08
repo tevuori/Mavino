@@ -17,6 +17,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test:e2e": "playwright test",
+    "test:e2e:update": "playwright test --update-snapshots",
     "db:generate": "cd server && bunx prisma generate",
     "db:migrate": "cd server && bunx prisma migrate dev",
     "db:seed": "cd server && bun run src/db/seed.ts",
@@ -32,8 +34,10 @@
     "waydroid:deploy:fast": "./scripts/waydroid-deploy.sh --skip-build"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
     "@capacitor/cli": "^8.4.2",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.56.1",
     "concurrently": "^9.1.0",
     "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",

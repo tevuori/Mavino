@@ -10,7 +10,7 @@ import { useWindows } from "../../store/windows";
 import { useLanguage, type LanguagePreference } from "../../store/language";
 
 interface Props { initialPodcastId?: string | null; initialWorkspaceId?: string | null; language?: "en" | "cs" }
-const fieldClass = "w-full rounded-lg border border-edge bg-surface px-3 py-2 text-xs text-ink outline-none focus:border-accent";
+const fieldClass = "w-full rounded-lg border border-edge bg-surface px-3 py-2 text-xs text-ink outline-none focus:border-focus";
 
 function duration(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -18,9 +18,9 @@ function duration(seconds: number) {
 }
 
 function statusStyle(status: PodcastRow["status"]) {
-  if (status === "ready") return "bg-emerald-500/15 text-emerald-500";
-  if (status === "failed") return "bg-red-500/15 text-red-500";
-  return "bg-amber-500/15 text-amber-500";
+  if (status === "ready") return "bg-success-soft text-success";
+  if (status === "failed") return "bg-danger-soft text-danger";
+  return "bg-warning-soft text-warning";
 }
 
 export default function Podcast({ initialPodcastId, initialWorkspaceId }: Props) {
@@ -139,7 +139,7 @@ export default function Podcast({ initialPodcastId, initialWorkspaceId }: Props)
           <p className="mt-1 text-xs leading-5 text-ink-muted">Two AI hosts unpack your material in a polished, downloadable AWS Polly episode.</p>
         </div>
 
-        {configured === false && <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-500"><AlertCircle size={15} className="shrink-0" /><span>AWS Polly is not configured. An administrator must add global credentials in Settings → Study Hub.</span></div>}
+        {configured === false && <div className="flex gap-2 rounded-xl border border-warning bg-warning-soft p-3 text-xs text-warning"><AlertCircle size={15} className="shrink-0" /><span>AWS Polly is not configured. An administrator must add global credentials in Settings → Study Hub.</span></div>}
         <div className="rounded-2xl border border-edge bg-surface-2 p-4">
           <div className="mb-3 flex items-center gap-2"><BookOpen size={15} className="text-accent" /><h3 className="text-sm font-semibold text-ink">1. Choose sources</h3><span className="ml-auto rounded-full bg-accent/10 px-2 py-0.5 text-[10px] text-accent">{selectedIds.size} selected</span></div>
           <WorkspaceSourceSelector selectedIds={selectedIds} onToggle={(id) => setSelectedIds((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; })} disabled={generating} onSourceAdded={(source) => setLibrary((current) => [source, ...current])} />
@@ -162,7 +162,7 @@ export default function Podcast({ initialPodcastId, initialWorkspaceId }: Props)
             <label className="text-[11px] text-ink-muted">{host1Label || "Host 1"} voice<select className={`${fieldClass} mt-1`} value={voice1} onChange={(event) => setVoice1(event.target.value)}>{compatibleVoices.map((voice) => <option key={voice.id} value={voice.id}>{voice.name} · {voice.gender}</option>)}</select></label>
             <label className="text-[11px] text-ink-muted">{host2Label || "Host 2"} voice<select className={`${fieldClass} mt-1`} value={voice2} onChange={(event) => setVoice2(event.target.value)}>{compatibleVoices.map((voice) => <option key={voice.id} value={voice.id}>{voice.name} · {voice.gender}</option>)}</select></label>
           </div>
-          {language === "cs" && compatibleVoices.length < 2 && <p className="mt-2 text-[11px] text-amber-500">Polly currently exposes only one compatible Czech voice for this engine, so both hosts will share it.</p>}
+          {language === "cs" && compatibleVoices.length < 2 && <p className="mt-2 text-[11px] text-warning">Polly currently exposes only one compatible Czech voice for this engine, so both hosts will share it.</p>}
           <div className="mt-4"><ActionButton onClick={generate} disabled={!configured || !selectedIds.size || !voice1 || !voice2 || generating} loading={generating}><Sparkles size={14} /> Create podcast</ActionButton></div>
         </div>
         {generating && <Loading label="Writing your episode script…" />}{error && <ErrorBanner message={error} />}{success && <SuccessBanner message={success} />}
@@ -170,7 +170,7 @@ export default function Podcast({ initialPodcastId, initialWorkspaceId }: Props)
 
       <div className="space-y-4">
         {active ? <div className="overflow-hidden rounded-2xl border border-edge bg-surface-2 shadow-xl shadow-black/5">
-          <div className="relative bg-gradient-to-br from-violet-500/25 via-accent/15 to-cyan-500/10 p-6">
+          <div className="relative bg-gradient-to-br from-accent/25 via-accent/15 to-accent/10 p-6">
             <div className="absolute right-5 top-5 rounded-full border border-white/10 bg-black/10 p-3 text-accent"><Headphones size={24} /></div>
             <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${statusStyle(active.status)}`}>{active.status === "processing" || active.status === "queued" ? active.stage : active.status}</span>
             <h2 className="mt-4 max-w-[80%] text-2xl font-semibold text-ink">{active.title}</h2>
@@ -178,9 +178,9 @@ export default function Podcast({ initialPodcastId, initialWorkspaceId }: Props)
           </div>
           <div className="space-y-4 p-5">
             {(active.status === "queued" || active.status === "processing") && <div className="rounded-xl border border-accent/20 bg-accent/5 p-4"><div className="flex items-center gap-2 text-sm text-ink"><Loader2 size={16} className="animate-spin text-accent" />AWS Polly is producing the episode</div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-3"><div className="h-full w-2/3 animate-pulse rounded-full bg-accent" /></div><p className="mt-2 text-[11px] text-ink-muted">{active.stage}</p></div>}
-            {active.status === "failed" && <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-500">{active.error}<button className="ml-2 underline" onClick={() => void studyPodcastsApi.regenerateAudio(active.id).then(() => selectPodcast(active))}>Try again</button></div>}
+            {active.status === "failed" && <div className="rounded-xl border border-danger bg-danger-soft p-3 text-xs text-danger">{active.error}<button className="ml-2 underline" onClick={() => void studyPodcastsApi.regenerateAudio(active.id).then(() => selectPodcast(active))}>Try again</button></div>}
             {active.status === "ready" && audioUrl && <div className="rounded-xl border border-edge bg-surface p-4"><audio className="w-full" controls preload="metadata" src={audioUrl} /><div className="mt-3 flex items-center justify-between text-[11px] text-ink-muted"><span><Cloud size={12} className="mr-1 inline" />Rendered with AWS Polly</span><a href={audioUrl} download={`${active.title}.mp3`} className="flex items-center gap-1 rounded-lg border border-edge px-2.5 py-1.5 hover:text-ink"><Download size={12} />Download MP3</a></div></div>}
-            <div className="flex flex-wrap gap-2"><button onClick={() => active.scriptNoteId && openWindow({ appId: "notes", title: "Notes", icon: "StickyNote", payload: { noteId: active.scriptNoteId } })} className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-xs text-ink-muted hover:bg-surface-3 hover:text-ink"><FileText size={13} />Open script</button>{active.status === "ready" && <button onClick={() => void studyPodcastsApi.regenerateAudio(active.id).then(() => selectPodcast(active))} className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-xs text-ink-muted hover:bg-surface-3 hover:text-ink"><RefreshCw size={13} />Regenerate audio</button>}<button onClick={() => void remove(active.id)} className="ml-auto rounded-lg border border-edge p-2 text-ink-muted hover:text-red-500"><Trash2 size={14} /></button></div>
+            <div className="flex flex-wrap gap-2"><button onClick={() => active.scriptNoteId && openWindow({ appId: "notes", title: "Notes", icon: "StickyNote", payload: { noteId: active.scriptNoteId } })} className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-xs text-ink-muted hover:bg-surface-3 hover:text-ink"><FileText size={13} />Open script</button>{active.status === "ready" && <button onClick={() => void studyPodcastsApi.regenerateAudio(active.id).then(() => selectPodcast(active))} className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-xs text-ink-muted hover:bg-surface-3 hover:text-ink"><RefreshCw size={13} />Regenerate audio</button>}<button onClick={() => void remove(active.id)} className="ml-auto rounded-lg border border-edge p-2 text-ink-muted hover:text-danger"><Trash2 size={14} /></button></div>
             {active.script && <details className="rounded-xl border border-edge bg-surface"><summary className="cursor-pointer px-4 py-3 text-xs font-medium text-ink">Episode transcript</summary><div className="border-t border-edge p-4"><HighlightableMarkdown content={active.script} scope="podcast" scopeId={active.id} sourceName={`Podcast: ${active.title}`} /></div></details>}
           </div>
         </div> : <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-edge bg-surface-2 p-8 text-center"><Mic2 size={34} className="mb-3 text-accent" /><h3 className="text-sm font-semibold text-ink">Your next study episode starts here</h3><p className="mt-1 max-w-xs text-xs text-ink-muted">Choose sources and tune the hosts, tone, and depth. Your finished audio will appear here.</p></div>}

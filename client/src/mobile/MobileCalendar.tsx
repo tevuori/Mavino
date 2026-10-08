@@ -242,11 +242,11 @@ export default function MobileCalendar() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-ink-muted">Starts</label>
-            <input type={allDay ? "date" : "datetime-local"} value={allDay ? startDt.slice(0, 10) : startDt} onChange={(e) => setStartDt(e.target.value)} className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none focus:border-accent/60" />
+            <input type={allDay ? "date" : "datetime-local"} value={allDay ? startDt.slice(0, 10) : startDt} onChange={(e) => setStartDt(e.target.value)} className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none focus:border-focus/60" />
           </div>
           <div>
             <label className="block text-xs font-medium text-ink-muted">Ends</label>
-            <input type={allDay ? "date" : "datetime-local"} value={allDay ? endDt.slice(0, 10) : endDt} onChange={(e) => setEndDt(e.target.value)} className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none focus:border-accent/60" />
+            <input type={allDay ? "date" : "datetime-local"} value={allDay ? endDt.slice(0, 10) : endDt} onChange={(e) => setEndDt(e.target.value)} className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none focus:border-focus/60" />
           </div>
         </div>
         <div>

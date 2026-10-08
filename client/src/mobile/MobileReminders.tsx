@@ -163,7 +163,7 @@ function ReminderCard({
   return (
     <article className="rounded-2xl border border-edge bg-surface-2 p-4">
       <div className="flex items-start gap-3">
-        <div className={`shrink-0 pt-0.5 ${isAthena ? "text-accent" : "text-amber-400"}`}>
+        <div className={`shrink-0 pt-0.5 ${isAthena ? "text-accent" : "text-warning"}`}>
           {isAthena ? <Sparkles size={18} /> : <BellRing size={18} />}
         </div>
         <div className="min-w-0 flex-1">
@@ -173,13 +173,13 @@ function ReminderCard({
             </span>
             <span
               className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                isAthena ? "brand-gradient text-white" : "bg-amber-500/15 text-amber-300"
+                isAthena ? "brand-gradient text-white" : "bg-warning-soft text-warning"
               }`}
             >
               {isAthena ? "smart" : "basic"}
             </span>
             {reminder.priority >= 4 && (
-              <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium text-rose-300">
+              <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[10px] font-medium text-danger">
                 P{reminder.priority}
               </span>
             )}
@@ -187,10 +187,10 @@ function ReminderCard({
           <p className="mt-1 text-xs text-ink-muted">
             {fmtTime(reminder.fireAt)}
             {showCountdown && (
-              <span className={`ml-2 ${overdue ? "text-rose-400" : "text-ink-muted"}`}>· {relText}</span>
+              <span className={`ml-2 ${overdue ? "text-danger" : "text-ink-muted"}`}>· {relText}</span>
             )}
             {reminder.fired && reminder.firedAt && (
-              <span className="ml-2 text-emerald-400">· fired {fmtTime(reminder.firedAt)}</span>
+              <span className="ml-2 text-success">· fired {fmtTime(reminder.firedAt)}</span>
             )}
             {reminder.cancelled && <span className="ml-2 text-ink-muted">· cancelled</span>}
           </p>
@@ -205,7 +205,7 @@ function ReminderCard({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-xl p-2 text-ink-muted active:text-amber-400"
+              className="rounded-xl p-2 text-ink-muted active:text-warning"
             >
               <X size={18} />
             </button>
@@ -213,7 +213,7 @@ function ReminderCard({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-xl p-2 text-ink-muted active:text-rose-400"
+            className="rounded-xl p-2 text-ink-muted active:text-danger"
           >
             <Trash2 size={18} />
           </button>
@@ -334,7 +334,7 @@ function NewReminderForm({ onCreated, onCancel }: { onCreated: () => void; onCan
             type="datetime-local"
             value={fireAt}
             onChange={(e) => setFireAt(e.target.value)}
-            className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none focus:border-indigo-400/50"
+            className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none focus:border-focus/50"
           />
         </div>
         <div>
@@ -356,7 +356,7 @@ function NewReminderForm({ onCreated, onCancel }: { onCreated: () => void; onCan
         className="mb-4"
       />
 
-      {err && <p className="mb-4 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{err}</p>}
+      {err && <p className="mb-4 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">{err}</p>}
 
       <div className="flex gap-2">
         <button

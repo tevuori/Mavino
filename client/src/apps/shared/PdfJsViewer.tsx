@@ -10,7 +10,7 @@ import * as pdfjsViewer from "pdfjs-dist/web/pdf_viewer.mjs";
 import "pdfjs-dist/web/pdf_viewer.css";
 
 // The worker file is copied into public/ by the postinstall script.
-pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = `${window.location.origin}/pdf.worker.min.mjs?v=${pdfjs.version}`;
 
 interface PdfJsViewerProps {
   fileUrl: string;

@@ -43,9 +43,9 @@ export default function LockedAppPreview({ win }: Props) {
       ) : (
         <button
           onClick={() => setDismissed(false)}
-          className="absolute bottom-3 right-3 z-[9999] flex items-center gap-1.5 rounded-lg bg-amber-500/90 px-3 py-1.5 text-xs font-medium text-white shadow-lg transition hover:bg-amber-500"
+          className="absolute bottom-3 right-3 z-[9999] flex items-center gap-1.5 rounded-lg bg-warning-soft px-3 py-1.5 text-xs font-medium text-white shadow-lg transition hover:bg-warning"
         >
-          <span className="text-amber-200">🔒</span>
+          <span className="text-warning">🔒</span>
           {requiredTier === "pro" ? "Pro" : "Paid"} preview — tap to upgrade
         </button>
       )}
@@ -65,8 +65,8 @@ function getAppHighlights(appId: string): string[] {
     viewer: ["PDF/image viewer", "Pinch-to-zoom", "File preview"],
     browser: ["In-app browsing", "Quick links", "Mavino page summarization"],
     voice: ["Voice recording", "AI transcription", "Lecture capture"],
-    ntfy: ["Push notifications", "Athena 2-way chat", "Cron schedules"],
-    reminders: ["One-shot reminders", "Athena-powered context", "Scheduled delivery"],
+    ntfy: ["Push notifications", "Mavino 2-way chat", "Cron schedules"],
+    reminders: ["One-shot reminders", "Mavino-powered context", "Scheduled delivery"],
     analytics: ["Usage insights", "Study tracking", "Productivity metrics"],
     maps: ["Hiking maps", "Route planning", "Multi-day tour planner"],
   };

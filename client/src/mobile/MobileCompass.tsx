@@ -26,15 +26,15 @@ import {
 
 const STATUS_META: Record<CompassPaper["status"], { label: string; icon: typeof Circle; color: string }> = {
   to_read: { label: "To Read", icon: Circle, color: "text-ink-muted" },
-  reading: { label: "Reading", icon: Clock, color: "text-amber-400" },
-  read: { label: "Read", icon: CheckCircle2, color: "text-emerald-400" },
+  reading: { label: "Reading", icon: Clock, color: "text-warning" },
+  read: { label: "Read", icon: CheckCircle2, color: "text-success" },
 };
 
 const EXTRACT_STATUS_META: Record<CompassPaper["extractStatus"], { label: string; color: string }> = {
   idle: { label: "Not analyzed", color: "text-ink-muted" },
-  extracting: { label: "Analyzing…", color: "text-amber-400" },
-  done: { label: "Analyzed", color: "text-emerald-400" },
-  error: { label: "Analysis failed", color: "text-red-400" },
+  extracting: { label: "Analyzing…", color: "text-warning" },
+  done: { label: "Analyzed", color: "text-success" },
+  error: { label: "Analysis failed", color: "text-danger" },
 };
 
 function authorsString(authors: string[]): string {
@@ -155,7 +155,7 @@ export default function MobileCompass({ onClose }: { onClose: () => void; onOpen
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
@@ -332,14 +332,14 @@ function ProjectDetail({
         subtitle="Compass project"
         onBack={onBack}
         right={
-          <button onClick={onDelete} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-red-300">
+          <button onClick={onDelete} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-surface-2 text-danger">
             <Trash2 size={20} />
           </button>
         }
       />
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} /> {error}
         </div>
       )}
@@ -592,7 +592,7 @@ function SearchForm({
           {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
         </MobileButton>
       </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
       <div className="max-h-[50vh] space-y-2 overflow-y-auto">
         {results.map((r, i) => {
           const alreadyInCorpus = r.inCorpus || existingPapers.some((p) => p.url === r.url);
@@ -603,9 +603,9 @@ function SearchForm({
               </a>
               <p className="mt-1 line-clamp-2 text-xs text-ink-muted">{r.description}</p>
               {alreadyInCorpus ? (
-                <span className="mt-2 inline-block rounded-full bg-emerald-500/15 px-2 py-1 text-[10px] text-emerald-400">In corpus</span>
+                <span className="mt-2 inline-block rounded-full bg-success-soft px-2 py-1 text-[10px] text-success">In corpus</span>
               ) : addedUrls.has(r.url) ? (
-                <span className="mt-2 inline-flex items-center gap-1 text-[10px] text-emerald-400"><CheckCircle2 size={11} /> Added</span>
+                <span className="mt-2 inline-flex items-center gap-1 text-[10px] text-success"><CheckCircle2 size={11} /> Added</span>
               ) : (
                 <button onClick={() => handleAdd(r)} className="mt-2 rounded-full bg-surface-3 px-3 py-1 text-[10px] text-ink active:bg-surface-2">
                   <Plus size={10} className="mr-1 inline" /> Add
@@ -653,8 +653,8 @@ function ReviewTab({ project, onGenerate }: { project: CompassProject; onGenerat
   if (review.status === "error") {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <AlertCircle size={28} className="text-red-400" />
-        <p className="text-sm text-red-400">Generation failed</p>
+        <AlertCircle size={28} className="text-danger" />
+        <p className="text-sm text-danger">Generation failed</p>
         <p className="max-w-xs text-xs text-ink-muted">{review.error}</p>
         <MobileButton onClick={onGenerate}>
           <RefreshCw size={16} /> Retry
@@ -695,24 +695,24 @@ function GapsTab({ projectId, onAddPaper }: { projectId: string; onAddPaper: () 
           <p className="text-[11px] text-ink-muted">Total</p>
         </div>
         <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
-          <p className="text-xl font-bold text-emerald-400">{gaps.readCount}</p>
+          <p className="text-xl font-bold text-success">{gaps.readCount}</p>
           <p className="text-[11px] text-ink-muted">Read</p>
         </div>
         <div className="rounded-2xl border border-edge bg-surface-2 p-3 text-center">
-          <p className="text-xl font-bold text-amber-400">{gaps.unreadCount}</p>
+          <p className="text-xl font-bold text-warning">{gaps.unreadCount}</p>
           <p className="text-[11px] text-ink-muted">To Read</p>
         </div>
       </div>
 
       {gaps.gaps.length === 0 ? (
-        <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+        <div className="flex items-center gap-2 rounded-2xl border border-success bg-success-soft px-4 py-3 text-sm text-success">
           <CheckCircle2 size={16} /> No significant gaps detected.
         </div>
       ) : (
         <div className="space-y-2">
           {gaps.gaps.map((gap, i) => {
             const Icon = gap.severity === "warning" ? AlertTriangle : Lightbulb;
-            const color = gap.severity === "warning" ? "text-amber-400" : "text-accent";
+            const color = gap.severity === "warning" ? "text-warning" : "text-accent";
             return (
               <div key={i} className="rounded-2xl border border-edge bg-surface-2 p-3.5">
                 <div className="mb-1 flex items-center gap-1.5">

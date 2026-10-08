@@ -4,7 +4,7 @@
 // it as task / note / flashcard / athena), then dispatches the returned
 // clientAction to open the relevant app. Modeled on CommandPalette.tsx.
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Zap, Loader2, CheckCircle2, AlertCircle, Mic, Square } from "lucide-react";
 import { useWindows, type AppId } from "../store/windows";
@@ -15,6 +15,7 @@ import { voiceApi } from "../services/voice";
 import { useShortcut, formatShortcut } from "../store/shortcuts";
 import { useSettings } from "../store/settings";
 import { useQuickCapture } from "../store/quickCapture";
+import { useOverlayFocus } from "../ui/overlays";
 
 interface CaptureResponse {
   target: "task" | "note" | "flashcard" | "athena" | "study";
@@ -37,7 +38,7 @@ export default function QuickCapture() {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useOverlayFocus(open, () => setOpen(false));
   const { open: openWindow } = useWindows();
   const pushNotification = useNotifications((s) => s.push);
   const rec = useRecorder();
@@ -46,22 +47,12 @@ export default function QuickCapture() {
   // Configurable shortcut to toggle Quick Capture
   useShortcut("toggleQuickCapture", () => setOpen(!open));
 
-  // Escape closes the overlay
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [setOpen]);
-
   useEffect(() => {
     if (open) {
       setText("");
       setFeedback(null);
       setBusy(false);
       setVoiceMode(false);
-      setTimeout(() => inputRef.current?.focus(), 50);
     } else {
       // Stop any in-progress recording when the overlay closes.
       if (rec.recording) rec.stop();
@@ -182,7 +173,12 @@ export default function QuickCapture() {
           style={{ paddingTop: "20vh" }}
         >
           <motion.div
-            className="w-full max-w-lg overflow-hidden rounded-xl border border-edge bg-surface shadow-2xl"
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Quick Capture"
+            tabIndex={-1}
+            className="w-full max-w-lg overflow-hidden rounded-xl border border-edge bg-surface shadow-2xl outline-none"
             initial={{ scale: 0.96, y: -10, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.96, y: -10, opacity: 0 }}
@@ -201,7 +197,7 @@ export default function QuickCapture() {
                     onClick={submitVoice}
                     disabled={busy || !rec.supported}
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition disabled:opacity-40 ${
-                      rec.recording ? "bg-red-500 hover:bg-red-600" : "bg-accent hover:opacity-90"
+                      rec.recording ? "bg-danger hover:bg-danger" : "bg-accent hover:opacity-90"
                     }`}
                     title={rec.recording ? "Stop & transcribe" : "Start recording"}
                   >
@@ -218,8 +214,8 @@ export default function QuickCapture() {
                       className={`h-2 w-2 rounded-full ${
                         rec.recording
                           ? rec.paused
-                            ? "bg-amber-400"
-                            : "animate-pulse bg-red-500"
+                            ? "bg-warning"
+                            : "animate-pulse bg-danger"
                           : "bg-surface-3"
                       }`}
                     />
@@ -248,7 +244,7 @@ export default function QuickCapture() {
               ) : (
                 <div className="flex items-center gap-2">
                   <input
-                    ref={inputRef}
+                    data-autofocus
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={(e) => {
@@ -258,7 +254,7 @@ export default function QuickCapture() {
                       }
                     }}
                     disabled={busy}
-                    className="flex-1 rounded-md border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent disabled:opacity-50"
+                    className="flex-1 rounded-md border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus disabled:opacity-50"
                     placeholder="Type anything — a task, idea, question… Mavino will route it."
                   />
                   <button
@@ -284,14 +280,14 @@ export default function QuickCapture() {
                 </div>
               )}
               {rec.error && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-red-500">
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-danger">
                   <AlertCircle size={13} /> {rec.error}
                 </div>
               )}
               {feedback && (
                 <div
                   className={`mt-2 flex items-center gap-1.5 text-xs ${
-                    feedback.ok ? "text-emerald-500" : "text-red-500"
+                    feedback.ok ? "text-success" : "text-danger"
                   }`}
                 >
                   {feedback.ok ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}

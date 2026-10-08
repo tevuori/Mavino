@@ -269,7 +269,7 @@ export default function MobileFiles({
                 </p>
               </button>
               <div className="flex items-center gap-1">
-                <button type="button" onClick={() => void toggleStar(f)} className={`rounded-xl p-2 ${f.starred ? "text-amber-400" : "text-ink-muted"}`} aria-label="Star">
+                <button type="button" onClick={() => void toggleStar(f)} className={`rounded-xl p-2 ${f.starred ? "text-warning" : "text-ink-muted"}`} aria-label="Star">
                   <Star size={18} fill={f.starred ? "currentColor" : "none"} />
                 </button>
                 <button type="button" onClick={() => setFileMenu(f)} className="rounded-xl p-2 text-ink-muted active:bg-surface-3" aria-label="More">
@@ -305,7 +305,7 @@ export default function MobileFiles({
               <Star size={18} /> {fileMenu.starred ? "Unstar" : "Star"}
             </button>
             <div className="my-1 border-t border-edge" />
-            <button type="button" onClick={() => void remove(fileMenu)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-rose-400 active:bg-surface-2">
+            <button type="button" onClick={() => void remove(fileMenu)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-danger active:bg-surface-2">
               <Trash2 size={18} /> Delete
             </button>
           </div>
@@ -324,7 +324,7 @@ export default function MobileFiles({
           </>
         }
       >
-        <MobileInput value={newFolder} onChange={(e) => setNewFolder(e.target.value)} placeholder="Folder name" autoFocus />
+        <MobileInput value={newFolder} onChange={(e) => setNewFolder(e.target.value)} placeholder="Folder name" data-autofocus />
       </MobileModal>
 
       {/* Rename modal */}
@@ -339,7 +339,7 @@ export default function MobileFiles({
           </>
         }
       >
-        <MobileInput value={renameValue} onChange={(e) => setRenameValue(e.target.value)} placeholder="Name" autoFocus />
+        <MobileInput value={renameValue} onChange={(e) => setRenameValue(e.target.value)} placeholder="Name" data-autofocus />
       </MobileModal>
 
       {/* Move modal */}

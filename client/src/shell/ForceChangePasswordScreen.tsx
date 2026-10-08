@@ -45,7 +45,7 @@ export default function ForceChangePasswordScreen() {
 
   return (
     <div className="fixed inset-0 z-[15000] flex items-center justify-center">
-      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xl" />
+      <div className="absolute inset-0 bg-scrim/60 backdrop-blur-xl" />
       <motion.div
         initial={{ y: 20, opacity: 0, scale: 0.97 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -58,9 +58,9 @@ export default function ForceChangePasswordScreen() {
           <p className="text-sm text-ink-muted">Set a new password to continue</p>
         </div>
 
-        <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-400" />
-          <p className="text-xs text-amber-200/90">
+        <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-warning bg-warning-soft px-3 py-2.5">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning" />
+          <p className="text-xs text-warning/90">
             Your account is using a temporary or default password. You must set a new
             one before you can use Mavino.
             {user && (
@@ -80,7 +80,7 @@ export default function ForceChangePasswordScreen() {
             placeholder="Current (temporary) password"
             autoFocus
             autoComplete="current-password"
-            className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+            className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
           />
           <input
             type="password"
@@ -88,7 +88,7 @@ export default function ForceChangePasswordScreen() {
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="New password (min 8 characters)"
             autoComplete="new-password"
-            className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+            className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
           />
           <input
             type="password"
@@ -96,10 +96,10 @@ export default function ForceChangePasswordScreen() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirm new password"
             autoComplete="new-password"
-            className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+            className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
           />
           {error && (
-            <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
+            <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
           )}
           <button
             type="submit"

@@ -7,12 +7,14 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  X, FileText, ClipboardPaste, Search, Loader2, AlertCircle,
+  FileText, ClipboardPaste, Search, Loader2, AlertCircle,
   Sparkles, Check,
 } from "lucide-react";
 import { filesApi, isPdfFile, formatBytes } from "../../services/files";
 import { studyApi, type SourceDescriptor, type NoteStyle, type NoteDetail, type NotesFromSourceResult } from "../../services/study";
 import type { VFile } from "../../types";
+import { Dialog } from "../../ui/overlays";
+import { Alert, Button, Switch } from "../../ui/primitives";
 
 type SourceTab = "pdf" | "paste";
 
@@ -128,31 +130,22 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !generating) onClose();
-      }}
+    <Dialog
+      open
+      onClose={() => { if (!generating) onClose(); }}
+      title="Create notes from a source"
+      description="Turn a PDF or pasted text into structured study notes."
+      className="max-w-lg"
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onClose} disabled={generating}>Cancel</Button>
+          <Button size="sm" onClick={() => void generate()} disabled={!canGenerate} loading={generating} leadingIcon={<Sparkles size={13} />}>
+            {generating ? "Generating…" : "Generate notes"}
+          </Button>
+        </>
+      }
     >
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-edge bg-surface shadow-window">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-edge px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-accent" />
-            <h2 className="text-sm font-semibold text-ink">Notes from PDF</h2>
-          </div>
-          <button
-            onClick={onClose}
-            disabled={generating}
-            className="rounded p-1 text-ink-muted hover:bg-surface-3 hover:text-ink disabled:opacity-40"
-            title="Close"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-4 py-3">
+        <div className="max-h-[65vh] overflow-y-auto pr-1">
           {/* Source tabs */}
           <div className="mb-2 flex gap-1">
             <TabButton active={tab === "pdf"} onClick={() => setTab("pdf")} icon={FileText} label="PDF file" />
@@ -167,7 +160,7 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
                   value={fileQuery}
                   onChange={(e) => setFileQuery(e.target.value)}
                   placeholder="Search PDFs…"
-                  className="w-full rounded-md border border-edge bg-surface-2 px-7 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                  className="w-full rounded-md border border-edge bg-surface-2 px-7 py-1.5 text-xs text-ink outline-none focus:border-focus"
                 />
               </div>
               <div className="max-h-44 overflow-y-auto rounded-md border border-edge bg-surface-2">
@@ -196,24 +189,18 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
                   ))
                 )}
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={includeImages}
-                onClick={() => setIncludeImages((current) => {
-                  const next = !current;
-                  localStorage.setItem(IMAGE_NOTES_KEY, String(next));
-                  return next;
-                })}
-                className={`mt-2 flex w-full items-center justify-between rounded-md border px-2.5 py-2 text-left text-[11px] transition ${
-                  includeImages ? "border-accent/50 bg-accent/10 text-ink" : "border-edge bg-surface-2 text-ink-muted"
-                }`}
-              >
+              <div className="mt-2 flex min-h-11 items-center justify-between border-y border-edge py-2 text-xs text-ink">
                 <span>Include useful images &amp; diagrams</span>
-                <span className={`relative h-4 w-7 rounded-full transition ${includeImages ? "bg-accent" : "bg-surface-3"}`}>
-                  <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition ${includeImages ? "left-3.5" : "left-0.5"}`} />
-                </span>
-              </button>
+                <Switch
+                  checked={includeImages}
+                  label="Include useful images and diagrams"
+                  onClick={() => setIncludeImages((current) => {
+                    const next = !current;
+                    localStorage.setItem(IMAGE_NOTES_KEY, String(next));
+                    return next;
+                  })}
+                />
+              </div>
               <p className="mt-1.5 text-[10px] text-ink-muted">
                 Text is extracted server-side. With a vision-capable model, full PDF pages—including scans,
                 formulas, diagrams, and useful figures—are analyzed and useful figures are embedded in the notes.
@@ -226,7 +213,7 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
                 onChange={(e) => setPasteText(e.target.value)}
                 placeholder="Paste the text you want notes from…"
                 rows={6}
-                className="w-full resize-y rounded-md border border-edge bg-surface-2 px-2.5 py-2 text-xs text-ink outline-none focus:border-accent"
+                className="w-full resize-y rounded-md border border-edge bg-surface-2 px-2.5 py-2 text-xs text-ink outline-none focus:border-focus"
               />
             </div>
           )}
@@ -269,7 +256,7 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
             placeholder="e.g. &quot;Start with a glossary of key terms, then one section per chapter with definitions and examples, end with 5 review questions.&quot;"
             rows={3}
             maxLength={2000}
-            className="mb-1 w-full resize-y rounded-md border border-edge bg-surface-2 px-2.5 py-2 text-xs text-ink outline-none focus:border-accent"
+            className="mb-1 w-full resize-y rounded-md border border-edge bg-surface-2 px-2.5 py-2 text-xs text-ink outline-none focus:border-focus"
           />
           <div className="mb-3 flex justify-end text-[10px] text-ink-muted">
             {customStructure.length}/2000
@@ -284,45 +271,16 @@ export default function NotesFromPdfModal({ folderId, onCreated, onClose }: Prop
             onChange={(e) => setTitle(e.target.value)}
             placeholder={tab === "pdf" ? "Defaults to &quot;Notes: &lt;filename&gt;&quot;" : "Defaults to &quot;Notes: Pasted text&quot;"}
             maxLength={200}
-            className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
+            className="w-full rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-xs text-ink outline-none focus:border-focus"
           />
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-edge px-4 py-3">
           {error && (
-            <div className="mb-2 flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 p-2 text-[11px] text-red-400">
+            <Alert variant="danger" className="mt-3 flex items-start gap-2 text-xs">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
               <span className="flex-1">{error}</span>
-            </div>
+            </Alert>
           )}
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={onClose}
-              disabled={generating}
-              className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted hover:bg-surface-3 hover:text-ink disabled:opacity-40"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => void generate()}
-              disabled={!canGenerate}
-              className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:opacity-90 disabled:opacity-40"
-            >
-              {generating ? (
-                <>
-                  <Loader2 size={13} className="animate-spin" /> Generating…
-                </>
-              ) : (
-                <>
-                  <Sparkles size={13} /> Generate notes
-                </>
-              )}
-            </button>
-          </div>
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }
 

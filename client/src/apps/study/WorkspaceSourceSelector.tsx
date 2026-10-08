@@ -279,7 +279,7 @@ export default function WorkspaceSourceSelector({
       {showPicker && (
         <div className="flex flex-col gap-2 rounded-lg border border-edge bg-surface-2 p-3">
           {justAdded && !pickerValue && (
-            <div className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-400">
+            <div className="flex items-center gap-1.5 rounded-md bg-success-soft px-2 py-1 text-[11px] text-success">
               <Check size={11} /> Added "{justAdded}" — add another or close.
             </div>
           )}

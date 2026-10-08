@@ -71,12 +71,12 @@ export function formatBytes(bytes: number): string {
 }
 
 export function fileIconColor(mime: string): string {
-  if (mime.startsWith("image/")) return "text-green-400";
-  if (mime === "application/pdf") return "text-red-400";
-  if (mime.startsWith("text/")) return "text-blue-400";
-  if (mime.startsWith("audio/")) return "text-purple-400";
-  if (mime.startsWith("video/")) return "text-pink-400";
-  if (mime.includes("zip") || mime.includes("compressed")) return "text-amber-400";
+  if (mime.startsWith("image/")) return "text-success";
+  if (mime === "application/pdf") return "text-danger";
+  if (mime.startsWith("text/")) return "text-accent";
+  if (mime.startsWith("audio/")) return "text-accent";
+  if (mime.startsWith("video/")) return "text-danger";
+  if (mime.includes("zip") || mime.includes("compressed")) return "text-warning";
   return "text-ink-muted";
 }
 

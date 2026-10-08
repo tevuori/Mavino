@@ -270,7 +270,7 @@ function ProactiveAlertsCard() {
           onChange={(e) => setCustomPrompt(e.target.value)}
           rows={4}
           placeholder="e.g. Focus only on my CS exam tomorrow. Be very brief and end with a study plan."
-          className={`mb-2 w-full resize-y rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent ${inputClass}`}
+          className={`mb-2 w-full resize-y rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-focus ${inputClass}`}
         />
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-ink-muted">{customPrompt.length}/4000</span>
@@ -294,7 +294,7 @@ function ProactiveAlertsCard() {
             <p className="mb-1 text-[11px] uppercase tracking-wide text-ink-muted">
               Test briefing preview
             </p>
-            <p className={`whitespace-pre-wrap text-sm ${err ? "text-red-500" : "text-ink"}`}>
+            <p className={`whitespace-pre-wrap text-sm ${err ? "text-danger" : "text-ink"}`}>
               {testResult}
             </p>
           </div>

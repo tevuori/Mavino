@@ -153,7 +153,7 @@ export default function MobileMarketplace({
       </div>
 
       {err && (
-        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <AlertCircle size={16} className="shrink-0" /> {err}
         </div>
       )}
@@ -196,7 +196,7 @@ export default function MobileMarketplace({
       ) : (
         <>
           {installedList.length === 0 ? (
-            <MobileEmpty text="No plugins installed. Switch to Browse to find community-built apps and Athena tools." />
+            <MobileEmpty text="No plugins installed. Switch to Browse to find community-built apps and Mavino tools." />
           ) : (
             <div className="space-y-3">
               {installedList.map((p) => (
@@ -246,7 +246,7 @@ function PluginCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h4 className="truncate text-sm font-semibold text-ink">{plugin.name}</h4>
-            {plugin.featured && <Star size={12} className="shrink-0 text-amber-500" />}
+            {plugin.featured && <Star size={12} className="shrink-0 text-warning" />}
           </div>
           <p className="text-xs text-ink-muted">
             by {plugin.author || "unknown"} · v{plugin.version}
@@ -267,12 +267,12 @@ function PluginCard({
           <Download size={9} /> {plugin.installCount}
         </span>
         {plugin.hasTools && (
-          <span className="flex items-center gap-0.5 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-400">
-            <Wrench size={9} /> Athena tools
+          <span className="flex items-center gap-0.5 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">
+            <Wrench size={9} /> Mavino tools
           </span>
         )}
         {tierLocked && (
-          <span className="flex items-center gap-0.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-500">
+          <span className="flex items-center gap-0.5 rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-medium text-warning">
             <Lock size={9} /> Pro
           </span>
         )}

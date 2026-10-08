@@ -19,7 +19,7 @@
 // pattern (same as Atlas/Crunch): POST kicks off the background job, the
 // client polls GET until status flips to "ready"/"error".
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
 import ForceGraph2D, { type NodeObject, type LinkObject } from "react-force-graph-2d";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -40,20 +40,22 @@ import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
 import { confirmDialog } from "../../store/mobileDialog";
 import type { VFile } from "../../types";
+import { Dialog } from "../../ui/overlays";
+import { Alert, Button } from "../../ui/primitives";
 
 // ----- helpers -----
 
 const STATUS_META: Record<CompassPaper["status"], { label: string; icon: typeof Circle; color: string }> = {
   to_read: { label: "To Read", icon: Circle, color: "text-ink-muted" },
-  reading: { label: "Reading", icon: Clock, color: "text-amber-400" },
-  read: { label: "Read", icon: CheckCircle2, color: "text-emerald-400" },
+  reading: { label: "Reading", icon: Clock, color: "text-warning" },
+  read: { label: "Read", icon: CheckCircle2, color: "text-success" },
 };
 
 const EXTRACT_STATUS_META: Record<CompassPaper["extractStatus"], { label: string; color: string }> = {
   idle: { label: "Not analyzed", color: "text-ink-muted" },
-  extracting: { label: "Analyzing…", color: "text-amber-400" },
-  done: { label: "Analyzed", color: "text-emerald-400" },
-  error: { label: "Analysis failed", color: "text-red-400" },
+  extracting: { label: "Analyzing…", color: "text-warning" },
+  done: { label: "Analyzed", color: "text-success" },
+  error: { label: "Analysis failed", color: "text-danger" },
 };
 
 function authorsString(authors: string[]): string {
@@ -343,8 +345,8 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
   if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <AlertCircle className="text-red-400" size={32} />
-        <p className="text-sm text-red-400">{error}</p>
+        <AlertCircle className="text-danger" size={32} />
+        <p className="text-sm text-danger">{error}</p>
         <button
           onClick={() => { setError(null); loadProjects(); }}
           className="rounded-lg bg-surface-3 px-3 py-1.5 text-xs hover:brightness-110"
@@ -409,13 +411,13 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
           </button>
           <button
             onClick={() => setShowAddPaper(true)}
-            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-2 py-1 text-xs text-white hover:bg-indigo-500"
+            className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1 text-xs text-white hover:bg-accent"
           >
             <Plus size={14} /> Add Paper
           </button>
           <button
             onClick={handleDeleteProject}
-            className="rounded-lg p-1.5 text-ink-muted hover:bg-red-500/10 hover:text-red-400"
+            className="rounded-lg p-1.5 text-ink-muted hover:bg-danger-soft hover:text-danger"
             title="Delete project"
           >
             <Trash2 size={14} />
@@ -467,13 +469,13 @@ export default function CompassApp({ win }: { win: WindowInstance }) {
           <div className="flex border-b border-surface-3">
             <button
               onClick={() => setRightTab("review")}
-              className={`flex-1 px-3 py-2 text-xs font-medium ${rightTab === "review" ? "border-b-2 border-indigo-500 text-ink" : "text-ink-muted hover:text-ink"}`}
+              className={`flex-1 px-3 py-2 text-xs font-medium ${rightTab === "review" ? "border-b-2 border-accent text-ink" : "text-ink-muted hover:text-ink"}`}
             >
               Literature Review
             </button>
             <button
               onClick={() => setRightTab("gaps")}
-              className={`flex-1 px-3 py-2 text-xs font-medium ${rightTab === "gaps" ? "border-b-2 border-indigo-500 text-ink" : "text-ink-muted hover:text-ink"}`}
+              className={`flex-1 px-3 py-2 text-xs font-medium ${rightTab === "gaps" ? "border-b-2 border-accent text-ink" : "text-ink-muted hover:text-ink"}`}
             >
               Reading Gaps
             </button>
@@ -535,7 +537,7 @@ function ProjectListView({
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-surface-3 px-4 py-3">
         <div className="flex items-center gap-2">
-          <Compass size={18} className="text-indigo-400" />
+          <Compass size={18} className="text-accent" />
           <h2 className="text-sm font-semibold">Compass</h2>
           <span className="text-xs text-ink-muted">— Research & Literature Review</span>
         </div>
@@ -549,7 +551,7 @@ function ProjectListView({
           </button>
           <button
             onClick={onCreate}
-            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs text-white hover:bg-indigo-500"
+            className="flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1.5 text-xs text-white hover:bg-accent"
           >
             <Plus size={14} /> New Project
           </button>
@@ -566,7 +568,7 @@ function ProjectListView({
             </p>
             <button
               onClick={onCreate}
-              className="mt-2 flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs text-white hover:bg-indigo-500"
+              className="mt-2 flex items-center gap-1 rounded-lg bg-accent px-3 py-2 text-xs text-white hover:bg-accent"
             >
               <Plus size={14} /> Create your first project
             </button>
@@ -577,10 +579,10 @@ function ProjectListView({
               <button
                 key={p.id}
                 onClick={() => onOpen(p.id)}
-                className="group flex flex-col gap-2 rounded-xl border border-surface-3 bg-surface-2 p-4 text-left transition hover:border-indigo-500/50 hover:bg-surface-2"
+                className="group flex flex-col gap-2 rounded-xl border border-surface-3 bg-surface-2 p-4 text-left transition hover:border-accent/50 hover:bg-surface-2"
               >
                 <div className="flex items-start justify-between">
-                  <h3 className="text-sm font-semibold text-ink group-hover:text-indigo-400">{p.title}</h3>
+                  <h3 className="text-sm font-semibold text-ink group-hover:text-accent">{p.title}</h3>
                   <span className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px] text-ink-muted">
                     {p.paperCount} paper{p.paperCount !== 1 ? "s" : ""}
                   </span>
@@ -601,6 +603,28 @@ function ProjectListView({
   );
 }
 
+function CompassDialog({
+  title,
+  description,
+  onCancel,
+  children,
+  footer,
+  className = "max-w-md",
+}: {
+  title: string;
+  description?: string;
+  onCancel: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Dialog open onClose={onCancel} title={title} description={description} className={className} footer={footer}>
+      {children}
+    </Dialog>
+  );
+}
+
 // ----- create project dialog -----
 
 function CreateProjectDialog({
@@ -614,18 +638,26 @@ function CreateProjectDialog({
   const [question, setQuestion] = useState("");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onCancel}>
-      <div className="w-full max-w-md rounded-xl border border-surface-3 bg-surface-2 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-4 text-sm font-semibold">New Research Project</h3>
+    <CompassDialog
+      title="New research project"
+      description="Define the project and the question that should guide paper analysis."
+      onCancel={onCancel}
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button size="sm" onClick={() => title.trim() && onSubmit(title.trim(), question.trim())} disabled={!title.trim()}>Create</Button>
+        </>
+      }
+    >
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-xs text-ink-muted">Project title *</label>
             <input
-              autoFocus
+              data-autofocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Literature review on transformer architectures"
-              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-focus focus:outline-none"
             />
           </div>
           <div>
@@ -635,24 +667,11 @@ function CreateProjectDialog({
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="e.g. How have attention mechanisms evolved to handle long-range dependencies?"
               rows={3}
-              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-focus focus:outline-none"
             />
           </div>
         </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onCancel} className="rounded-lg px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-3">
-            Cancel
-          </button>
-          <button
-            onClick={() => title.trim() && onSubmit(title.trim(), question.trim())}
-            disabled={!title.trim()}
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-500 disabled:opacity-50"
-          >
-            Create
-          </button>
-        </div>
-      </div>
-    </div>
+    </CompassDialog>
   );
 }
 
@@ -693,7 +712,7 @@ function PaperList({
             key={p.id}
             onClick={() => onSelect(p.id)}
             className={`mb-1 w-full rounded-lg p-2.5 text-left transition ${
-              isSelected ? "bg-indigo-600/20 ring-1 ring-indigo-500/50" : "hover:bg-surface-2"
+              isSelected ? "bg-accent/20 ring-1 ring-accent/50" : "hover:bg-surface-2"
             }`}
           >
             <div className="flex items-start gap-2">
@@ -793,9 +812,9 @@ function CitationGraphView({
       />
       {/* Legend */}
       <div className="absolute bottom-2 left-2 flex flex-col gap-1 rounded-lg bg-surface-2/80 p-2 text-[10px] backdrop-blur">
-        <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-emerald-400" /> Read</div>
-        <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-amber-400" /> Reading</div>
-        <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-slate-400" /> To Read</div>
+        <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-success" /> Read</div>
+        <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-warning" /> Reading</div>
+        <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-surface-3" /> To Read</div>
       </div>
     </div>
   );
@@ -852,14 +871,14 @@ function PaperDetail({
           {paper.venue && <span>· {paper.venue}</span>}
           {paper.doi && <span>· DOI: {paper.doi}</span>}
           {paper.url && (
-            <a href={paper.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 text-indigo-400 hover:underline">
+            <a href={paper.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 text-accent hover:underline">
               <ExternalLink size={10} /> Link
             </a>
           )}
           {paper.fileId && (
             <button
               onClick={() => onOpenFile(paper.fileId!)}
-              className="flex items-center gap-0.5 text-indigo-400 hover:underline"
+              className="flex items-center gap-0.5 text-accent hover:underline"
             >
               <FileText size={10} /> Open file
             </button>
@@ -903,7 +922,7 @@ function PaperDetail({
           <button
             onClick={onExtract}
             disabled={paper.extractStatus === "extracting" || !paper.fullText}
-            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-2 py-1 text-[10px] text-white hover:bg-indigo-500 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1 text-[10px] text-white hover:bg-accent-hover disabled:opacity-50"
           >
             {paper.extractStatus === "extracting" ? (
               <><Loader2 size={10} className="animate-spin" /> Analyzing…</>
@@ -920,7 +939,7 @@ function PaperDetail({
           </p>
         )}
         {paper.extractStatus === "error" && (
-          <p className="text-[10px] text-red-400">{paper.extractError}</p>
+          <p className="text-[10px] text-danger">{paper.extractError}</p>
         )}
         {paper.keyConcepts.length > 0 && (
           <div className="mt-2">
@@ -929,7 +948,7 @@ function PaperDetail({
               {paper.keyConcepts.map((c, i) => (
                 <span
                   key={i}
-                  className="rounded-full bg-indigo-600/20 px-2 py-0.5 text-[10px] text-indigo-300"
+                  className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px] text-accent"
                   title={c.definition}
                 >
                   {c.label}
@@ -947,7 +966,7 @@ function PaperDetail({
           {!editingAnnotations ? (
             <button
               onClick={() => setEditingAnnotations(true)}
-              className="flex items-center gap-0.5 text-[10px] text-indigo-400 hover:underline"
+              className="flex items-center gap-0.5 text-[10px] text-accent hover:underline"
             >
               <Edit3 size={10} /> Edit
             </button>
@@ -955,7 +974,7 @@ function PaperDetail({
             <button
               onClick={handleSaveAnnotations}
               disabled={savingAnnotations}
-              className="flex items-center gap-0.5 text-[10px] text-emerald-400 hover:underline"
+              className="flex items-center gap-0.5 text-[10px] text-success hover:underline"
             >
               {savingAnnotations ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} Save
             </button>
@@ -967,7 +986,7 @@ function PaperDetail({
             onChange={(e) => setAnnotations(e.target.value)}
             rows={6}
             placeholder="Add your notes about this paper…"
-            className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-focus focus:outline-none"
           />
         ) : (
           <p className="text-sm text-ink-muted whitespace-pre-wrap">
@@ -979,7 +998,7 @@ function PaperDetail({
       {/* Delete */}
       <button
         onClick={onDelete}
-        className="flex items-center gap-1 text-xs text-red-400 hover:underline"
+        className="flex items-center gap-1 text-xs text-danger hover:underline"
       >
         <Trash2 size={12} /> Remove from project
       </button>
@@ -1050,21 +1069,37 @@ function AddPaperDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onCancel}>
-      <div className="w-full max-w-lg rounded-xl border border-surface-3 bg-surface-2 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Add Paper</h3>
-          <button onClick={onCancel} className="text-ink-muted hover:text-ink"><X size={16} /></button>
-        </div>
-
+    <CompassDialog
+      title="Add paper"
+      description="Add a source from Files, a URL, or manual bibliographic data."
+      onCancel={onCancel}
+      className="max-w-lg"
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={submitting ||
+              (tab === "file" && !selectedFileId) ||
+              (tab === "url" && !url.trim()) ||
+              (tab === "manual" && !title.trim())}
+            loading={submitting}
+          >
+            Add paper
+          </Button>
+        </>
+      }
+    >
         {/* Tabs */}
         <div className="mb-4 flex gap-1 border-b border-surface-3">
           {(["file", "url", "manual"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
+              aria-pressed={tab === t}
               className={`px-3 py-1.5 text-xs font-medium ${
-                tab === t ? "border-b-2 border-indigo-500 text-ink" : "text-ink-muted hover:text-ink"
+                tab === t ? "border-b-2 border-accent text-ink" : "text-ink-muted hover:text-ink"
               }`}
             >
               {t === "file" ? "From Files" : t === "url" ? "From URL" : "Manual Entry"}
@@ -1082,12 +1117,13 @@ function AddPaperDialog({
                 <p className="text-xs text-ink-muted">No PDF or text files found. Upload a paper to Files first.</p>
               ) : (
                 <div className="max-h-48 overflow-y-auto rounded-lg border border-surface-3">
-                  {files.map((f) => (
+                  {files.map((f, index) => (
                     <button
                       key={f.id}
+                      data-autofocus={index === 0 ? "" : undefined}
                       onClick={() => setSelectedFileId(f.id)}
                       className={`flex w-full items-center gap-2 p-2 text-left text-xs transition ${
-                        selectedFileId === f.id ? "bg-indigo-600/20" : "hover:bg-surface-2"
+                        selectedFileId === f.id ? "bg-accent/20" : "hover:bg-surface-2"
                       }`}
                     >
                       <FileText size={14} className="shrink-0 text-ink-muted" />
@@ -1103,19 +1139,21 @@ function AddPaperDialog({
           )}
           {tab === "url" && (
             <input
+              data-autofocus
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://arxiv.org/abs/..."
-              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-focus focus:outline-none"
             />
           )}
           {tab === "manual" && (
             <input
+              data-autofocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Paper title *"
-              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-focus focus:outline-none"
             />
           )}
 
@@ -1126,49 +1164,32 @@ function AddPaperDialog({
                 value={authors}
                 onChange={(e) => setAuthors(e.target.value)}
                 placeholder="Authors (comma-separated, optional)"
-                className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-focus focus:outline-none"
               />
               <div className="flex gap-2">
                 <input
                   value={year}
                   onChange={(e) => setYear(e.target.value)}
                   placeholder="Year"
-                  className="w-24 rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  className="w-24 rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-focus focus:outline-none"
                 />
                 <input
                   value={venue}
                   onChange={(e) => setVenue(e.target.value)}
                   placeholder="Venue (e.g. NeurIPS)"
-                  className="flex-1 rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                  className="flex-1 rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-focus focus:outline-none"
                 />
               </div>
               <input
                 value={doi}
                 onChange={(e) => setDoi(e.target.value)}
                 placeholder="DOI (optional)"
-                className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-focus focus:outline-none"
               />
             </>
           )}
         </div>
-
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onCancel} className="rounded-lg px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-3">
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting ||
-              (tab === "file" && !selectedFileId) ||
-              (tab === "url" && !url.trim()) ||
-              (tab === "manual" && !title.trim())}
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-500 disabled:opacity-50"
-          >
-            Add Paper
-          </button>
-        </div>
-      </div>
-    </div>
+    </CompassDialog>
   );
 }
 
@@ -1209,45 +1230,42 @@ function SearchDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onCancel}>
-      <div className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-xl border border-surface-3 bg-surface-2 p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Find Related Work</h3>
-          <button onClick={onCancel} className="text-ink-muted hover:text-ink"><X size={16} /></button>
-        </div>
-        <p className="mb-3 text-xs text-ink-muted">
-          Searches the web for related academic work, enriched with your project's research question and key concepts.
-        </p>
+    <CompassDialog
+      title="Find related work"
+      description="Search the web for related academic work using this project's question and concepts."
+      onCancel={onCancel}
+      className="max-w-2xl"
+    >
         <div className="mb-4 flex gap-2">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="e.g. transformer attention mechanisms survey"
-            className="flex-1 rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-            autoFocus
+            className="flex-1 rounded-lg border border-surface-3 bg-surface px-3 py-2 text-sm focus:border-focus focus:outline-none"
+            data-autofocus
           />
           <button
             onClick={handleSearch}
             disabled={searching || !query.trim()}
-            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs text-white hover:bg-indigo-500 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg bg-accent px-3 py-2 text-xs text-white hover:bg-accent-hover disabled:opacity-50"
           >
             {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
             Search
           </button>
         </div>
-        {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
+        {error && <Alert variant="danger" className="mb-2 text-xs">{error}</Alert>}
         <div className="flex-1 overflow-y-auto">
           {results.map((r, i) => (
             <div key={i} className="mb-2 rounded-lg border border-surface-3 bg-surface p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-indigo-400 hover:underline">
+                  <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-accent hover:underline">
                     {r.title}
                   </a>
                   <p className="mt-0.5 text-[10px] text-ink-muted">{r.url}</p>
                   <p className="mt-1 text-xs text-ink-muted line-clamp-2">{r.description}</p>
-                  {r.inCorpus && <span className="mt-1 inline-block rounded-full bg-emerald-600/20 px-2 py-0.5 text-[10px] text-emerald-400">Already in corpus</span>}
+                  {r.inCorpus && <span className="mt-1 inline-block rounded-full bg-success-soft px-2 py-0.5 text-[10px] text-success">Already in corpus</span>}
                 </div>
                 {!r.inCorpus && !addedUrls.has(r.url) && (
                   <button
@@ -1258,7 +1276,7 @@ function SearchDialog({
                   </button>
                 )}
                 {addedUrls.has(r.url) && (
-                  <span className="shrink-0 text-[10px] text-emerald-400"><CheckCircle2 size={12} className="inline" /> Added</span>
+                  <span className="shrink-0 text-[10px] text-success"><CheckCircle2 size={12} className="inline" /> Added</span>
                 )}
               </div>
             </div>
@@ -1267,8 +1285,7 @@ function SearchDialog({
             <p className="text-center text-xs text-ink-muted">No results yet. Try a search.</p>
           )}
         </div>
-      </div>
-    </div>
+    </CompassDialog>
   );
 }
 
@@ -1341,7 +1358,7 @@ function ReviewPanel({
         </p>
         <button
           onClick={onGenerate}
-          className="mt-1 flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs text-white hover:bg-indigo-500"
+          className="mt-1 flex items-center gap-1 rounded-lg bg-accent px-3 py-2 text-xs text-white hover:bg-accent"
         >
           <Sparkles size={14} /> Generate Review
         </button>
@@ -1352,7 +1369,7 @@ function ReviewPanel({
   if (review.status === "building") {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
-        <Loader2 size={32} className="animate-spin text-indigo-400" />
+        <Loader2 size={32} className="animate-spin text-accent" />
         <p className="text-sm text-ink-muted">Generating literature review…</p>
         <p className="text-xs text-ink-muted">This may take a minute. The review will appear here automatically.</p>
       </div>
@@ -1362,12 +1379,12 @@ function ReviewPanel({
   if (review.status === "error") {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
-        <AlertCircle size={32} className="text-red-400" />
-        <p className="text-sm text-red-400">Generation failed</p>
+        <AlertCircle size={32} className="text-danger" />
+        <p className="text-sm text-danger">Generation failed</p>
         <p className="max-w-xs text-xs text-ink-muted">{review.error}</p>
         <button
           onClick={onGenerate}
-          className="mt-1 flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs text-white hover:bg-indigo-500"
+          className="mt-1 flex items-center gap-1 rounded-lg bg-accent px-3 py-2 text-xs text-white hover:bg-accent"
         >
           <RefreshCw size={14} /> Retry
         </button>
@@ -1413,7 +1430,7 @@ function ReviewPanel({
         {!editing ? (
           <button
             onClick={() => { setEditContent(review.content); setEditing(true); }}
-            className="text-[10px] text-indigo-400 hover:underline"
+            className="text-[10px] text-accent hover:underline"
           >
             Edit
           </button>
@@ -1428,7 +1445,7 @@ function ReviewPanel({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-0.5 text-[10px] text-emerald-400 hover:underline"
+              className="flex items-center gap-0.5 text-[10px] text-success hover:underline"
             >
               {saving ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} Save
             </button>
@@ -1450,7 +1467,7 @@ function ReviewPanel({
         {review.generatedAt ? (
           <span>Generated {new Date(review.generatedAt).toLocaleString()}</span>
         ) : <span />}
-        {saveMsg && <span className="text-emerald-400">{saveMsg}</span>}
+        {saveMsg && <span className="text-success">{saveMsg}</span>}
       </div>
       {showFullscreen && (
         <ReviewFullscreenDialog
@@ -1474,40 +1491,18 @@ function ReviewFullscreenDialog({
   content: string;
   onClose: () => void;
 }) {
-  // Close on Escape.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-surface" onClick={onClose}>
-      <div
-        className="flex items-center justify-between border-b border-surface-3 bg-surface-2 px-4 py-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex min-w-0 items-center gap-2">
-          <BookOpen size={16} className="shrink-0 text-indigo-400" />
-          <h3 className="truncate text-sm font-semibold">{title} — Literature Review</h3>
-        </div>
-        <button
-          onClick={onClose}
-          className="rounded-lg p-1.5 text-ink-muted hover:bg-surface-3 hover:text-ink"
-          title="Close (Esc)"
-        >
-          <X size={18} />
-        </button>
+    <Dialog
+      open
+      onClose={onClose}
+      title={`${title} — Literature review`}
+      description="A generated review draft based on the project corpus."
+      className="max-w-4xl"
+    >
+      <div className="selectable markdown-body max-w-3xl">
+        <ReviewMarkdown content={content} />
       </div>
-      <div
-        className="flex-1 overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="selectable markdown-body mx-auto max-w-3xl p-8">
-          <ReviewMarkdown content={content} />
-        </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -1547,8 +1542,8 @@ function ReviewMarkdown({ content }: { content: string }) {
       const text = li.textContent?.trim() ?? "";
       if (text.startsWith(`[${n}]`)) {
         li.scrollIntoView({ behavior: "smooth", block: "center" });
-        li.classList.add("ring-2", "ring-indigo-500/60", "rounded");
-        setTimeout(() => li.classList.remove("ring-2", "ring-indigo-500/60", "rounded"), 1800);
+        li.classList.add("ring-2", "ring-accent/60", "rounded");
+        setTimeout(() => li.classList.remove("ring-2", "ring-accent/60", "rounded"), 1800);
         return;
       }
     }
@@ -1618,13 +1613,13 @@ function splitCitations(
         <button
           key={`cite-${key++}`}
           onClick={(e) => { e.stopPropagation(); scrollToRef(n, e.currentTarget); }}
-          className="mx-0.5 align-super text-[0.7em] font-semibold text-indigo-400 hover:text-indigo-300 hover:underline"
+          className="mx-0.5 align-super text-[0.7em] font-semibold text-accent hover:text-accent hover:underline"
           title={`Jump to reference [${n}]`}
         >
           [{n}]
         </button>
       ) : (
-        <span key={`cite-${key++}`} className="mx-0.5 align-super text-[0.7em] font-semibold text-indigo-400">
+        <span key={`cite-${key++}`} className="mx-0.5 align-super text-[0.7em] font-semibold text-accent">
           [{n}]
         </span>
       )
@@ -1668,26 +1663,26 @@ function GapsPanel({
           <p className="text-[10px] text-ink-muted">Total</p>
         </div>
         <div className="rounded-lg bg-surface-2 p-2 text-center">
-          <p className="text-lg font-semibold text-emerald-400">{gaps.readCount}</p>
+          <p className="text-lg font-semibold text-success">{gaps.readCount}</p>
           <p className="text-[10px] text-ink-muted">Read</p>
         </div>
         <div className="rounded-lg bg-surface-2 p-2 text-center">
-          <p className="text-lg font-semibold text-amber-400">{gaps.unreadCount}</p>
+          <p className="text-lg font-semibold text-warning">{gaps.unreadCount}</p>
           <p className="text-[10px] text-ink-muted">To Read</p>
         </div>
       </div>
 
       {/* Gaps */}
       {gaps.gaps.length === 0 ? (
-        <div className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-600/10 p-3">
-          <CheckCircle2 size={16} className="text-emerald-400" />
-          <p className="text-xs text-emerald-400">No significant gaps detected. Your corpus looks well-balanced.</p>
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-success-soft p-3">
+          <CheckCircle2 size={16} className="text-success" />
+          <p className="text-xs text-success">No significant gaps detected. Your corpus looks well-balanced.</p>
         </div>
       ) : (
         <div className="mb-4 space-y-2">
           {gaps.gaps.map((gap, i) => {
             const Icon = gap.severity === "warning" ? AlertTriangle : Lightbulb;
-            const color = gap.severity === "warning" ? "text-amber-400" : "text-indigo-400";
+            const color = gap.severity === "warning" ? "text-warning" : "text-accent";
             return (
               <div key={i} className={`rounded-lg bg-surface-2 p-3`}>
                 <div className="mb-1 flex items-center gap-1.5">
@@ -1711,7 +1706,7 @@ function GapsPanel({
               const h = (y.count / maxCount) * 50;
               return (
                 <div key={y.year} className="flex flex-1 flex-col items-center gap-0.5" title={`${y.year}: ${y.count} paper${y.count !== 1 ? "s" : ""}`}>
-                  <div className="w-full rounded-t bg-indigo-500/60" style={{ height: h }} />
+                  <div className="w-full rounded-t bg-accent/60" style={{ height: h }} />
                   <span className="text-[8px] text-ink-muted">{y.year}</span>
                 </div>
               );
@@ -1740,16 +1735,13 @@ function GapsDialog({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="flex max-h-[80vh] w-full max-w-md flex-col rounded-xl border border-surface-3 bg-surface-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-surface-3 px-4 py-3">
-          <h3 className="text-sm font-semibold">Reading Gaps Analysis</h3>
-          <button onClick={onClose} className="text-ink-muted hover:text-ink"><X size={16} /></button>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <GapsPanel projectId={projectId} onAddPaper={onClose} />
-        </div>
-      </div>
-    </div>
+    <CompassDialog
+      title="Reading gaps analysis"
+      description="Review missing coverage and add papers that fill the gaps."
+      onCancel={onClose}
+      className="max-w-md"
+    >
+      <GapsPanel projectId={projectId} onAddPaper={onClose} />
+    </CompassDialog>
   );
 }

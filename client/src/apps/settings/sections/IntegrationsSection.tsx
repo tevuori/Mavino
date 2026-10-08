@@ -136,7 +136,7 @@ function SpotifyCard() {
           <button
             onClick={disconnect}
             disabled={busy}
-            className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-red-500 hover:text-white disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-danger hover:text-white disabled:opacity-40"
           >
             <LogOut size={14} /> Disconnect
           </button>
@@ -339,7 +339,7 @@ function MicrosoftCard() {
           <button
             onClick={disconnect}
             disabled={busy}
-            className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-red-500 hover:text-white disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-danger hover:text-white disabled:opacity-40"
           >
             <LogOut size={14} /> Disconnect
           </button>
@@ -536,7 +536,7 @@ function MapyCard() {
           <button
             onClick={disconnect}
             disabled={busy}
-            className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-red-500 hover:text-white disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-danger hover:text-white disabled:opacity-40"
           >
             <LogOut size={14} /> Disconnect
           </button>

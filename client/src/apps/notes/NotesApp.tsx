@@ -630,7 +630,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
                   }`}
                   title={f.sharedGroupName ? `Shared via ${f.sharedGroupName}` : undefined}
                 >
-                  <Users size={13} className="shrink-0 text-emerald-400" />
+                  <Users size={13} className="shrink-0 text-success" />
                   <button
                     onClick={() => setSelectedFolder(f.id)}
                     className="flex-1 truncate text-left"
@@ -638,7 +638,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
                     {f.name}
                   </button>
                   <span className={`shrink-0 rounded px-1 py-0 text-[8px] font-medium ${
-                    f.sharedPermission === "write" ? "bg-emerald-500/15 text-emerald-400" : "bg-surface-3 text-ink-muted"
+                    f.sharedPermission === "write" ? "bg-success-soft text-success" : "bg-surface-3 text-ink-muted"
                   }`}>
                     {f.sharedPermission === "write" ? "write" : "read"}
                   </span>
@@ -671,7 +671,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
                 const f = folders.find((x) => x.id === folderMenu.folderId);
                 if (f) deleteFolder(f);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-surface-3"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-danger hover:bg-danger-soft"
             >
               <Trash2 size={12} /> Delete
             </button>
@@ -741,7 +741,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
                   deleteNote(noteMenu.noteId);
                   setNoteMenu(null);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-surface-3"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-danger hover:bg-danger-soft"
               >
                 <Trash2 size={12} /> Delete
               </button>
@@ -836,7 +836,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
               >
                 <div className="flex items-start justify-between gap-1">
                   <span className="line-clamp-1 text-sm font-medium text-ink">
-                    {dirtyIds.has(note.id) && <span className="text-amber-400">● </span>}
+                    {dirtyIds.has(note.id) && <span className="text-warning">● </span>}
                     {note.title || "Untitled"}
                   </span>
                   <div className="flex shrink-0 items-center gap-0.5">
@@ -993,7 +993,7 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
               {!isReadOnlyShared && (
                 <button
                   onClick={() => deleteNote(selected.id)}
-                  className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-red-500 hover:text-white"
+                  className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-danger hover:text-white"
                   title="Delete"
                 >
                   <Trash2 size={14} />
@@ -1004,10 +1004,10 @@ export default function NotesApp({ win }: { win: WindowInstance }) {
             <div className="flex items-center gap-2 border-b border-edge bg-surface-2 px-3 py-1.5">
               <div className="ml-auto flex items-center gap-2">
                 {dirtyIds.has(selected.id) && (
-                  <span className="text-[10px] text-amber-400">Unsaved</span>
+                  <span className="text-[10px] text-warning">Unsaved</span>
                 )}
                 {!dirtyIds.has(selected.id) && (
-                  <span className="flex items-center gap-1 text-[10px] text-emerald-500">
+                  <span className="flex items-center gap-1 text-[10px] text-success">
                     <Check size={10} /> Saved
                   </span>
                 )}

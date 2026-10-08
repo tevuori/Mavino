@@ -99,7 +99,7 @@ export default function CodemirrorHighlightToolbar({
           if (e.key === "Escape") onDismiss();
         }}
         placeholder="Annotation…"
-        className="w-44 rounded-md border border-edge bg-surface-2 px-2 py-1 text-[11px] text-ink outline-none focus:border-accent"
+        className="w-44 rounded-md border border-edge bg-surface-2 px-2 py-1 text-[11px] text-ink outline-none focus:border-focus"
       />
       <button
         onClick={handleSave}
@@ -134,7 +134,7 @@ export default function CodemirrorHighlightToolbar({
             {existing ? (
               <button
                 onClick={() => { onDelete(existing.id); onDismiss(); }}
-                className="flex items-center gap-1 rounded-md border border-red-500/30 px-2 py-1.5 text-[11px] text-red-400 hover:bg-red-500/10"
+                className="flex items-center gap-1 rounded-md border border-danger px-2 py-1.5 text-[11px] text-danger hover:bg-danger-soft"
               >
                 <Trash2 size={12} /> Delete
               </button>
@@ -171,7 +171,7 @@ export default function CodemirrorHighlightToolbar({
         {existing && (
           <button
             onClick={() => { onDelete(existing.id); onDismiss(); }}
-            className="ml-1 flex items-center gap-1 rounded-md border border-red-500/30 px-1.5 py-1 text-[10px] text-red-400 hover:bg-red-500/10"
+            className="ml-1 flex items-center gap-1 rounded-md border border-danger px-1.5 py-1 text-[10px] text-danger hover:bg-danger-soft"
             title="Delete highlight"
           >
             <Trash2 size={11} />

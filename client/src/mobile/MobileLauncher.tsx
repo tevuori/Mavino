@@ -124,7 +124,7 @@ export default function MobileLauncher({ onClose, onOpen }: { onClose: () => voi
   return (
     <div className="mx-auto min-w-0 max-w-md px-5 pb-7 pt-[max(1.5rem,env(safe-area-inset-top))]">
       <MobileHeader title="Your tools" subtitle="Everything else" onBack={onClose} compact />
-      <label className="mb-5 flex items-center gap-3 rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-ink-muted transition focus-within:border-accent/70 focus-within:ring-2 focus-within:ring-accent/15">
+      <label className="mb-6 flex min-h-11 items-center gap-3 rounded-lg border border-edge bg-surface px-4 py-3 text-ink-muted transition focus-within:border-focus focus-within:ring-2 focus-within:ring-focus/20">
         <Search size={18} />
         <input
           value={query}
@@ -134,28 +134,28 @@ export default function MobileLauncher({ onClose, onOpen }: { onClose: () => voi
         />
       </label>
       {grouped.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-edge px-4 py-5 text-sm text-ink-muted">No apps match "{query}".</p>
+        <p className="border-y border-dashed border-edge py-5 text-sm text-ink-muted">No apps match "{query}".</p>
       ) : (
         <div className="space-y-6">
           {grouped.map(({ cat, items }) => (
             <section key={cat}>
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-accent">{cat}</h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="divide-y divide-edge border-y border-edge">
                 {items.map(({ id, name, description, icon: Icon, access }) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => onOpen(id)}
-                    className="relative min-h-32 rounded-3xl border border-edge bg-surface-2 p-4 text-left transition active:scale-[.98] active:bg-surface-3"
+                    className="relative flex min-h-16 w-full items-center gap-3 py-3 text-left transition active:bg-surface-2"
                   >
-                    <div className="mb-5">
-                      <MobileIconChip icon={<Icon size={20} />} size="md" />
-                    </div>
-                    <p className="flex items-center gap-1.5 font-semibold text-ink">
-                      {name}
-                      {access === "preview" && <Lock size={12} className="text-amber-400" />}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-ink-muted">{description}</p>
+                    <MobileIconChip icon={<Icon size={19} />} size="sm" />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                        {name}
+                        {access === "preview" && <Lock size={12} className="text-warning" />}
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-ink-muted">{description}</span>
+                    </span>
                   </button>
                 ))}
               </div>

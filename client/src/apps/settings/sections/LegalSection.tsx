@@ -60,8 +60,8 @@ export default function LegalSection() {
         </p>
       </Card>
 
-      <Card className="mb-3 border-red-500/40">
-        <h4 className="mb-1 flex items-center gap-2 text-sm font-semibold text-red-500">
+      <Card className="mb-3 border-danger">
+        <h4 className="mb-1 flex items-center gap-2 text-sm font-semibold text-danger">
           <Trash2 size={15} /> Delete your account
         </h4>
         <p className="mb-3 text-xs text-ink-muted">

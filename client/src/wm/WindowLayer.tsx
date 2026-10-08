@@ -8,8 +8,8 @@ import PluginAppWrapper from "../apps/plugins/PluginAppWrapper";
 /** Loading fallback shown while a lazy-loaded app chunk is downloading. */
 function AppLoader() {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-slate-900/50">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
+    <div className="flex h-full w-full items-center justify-center bg-surface-sunken">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
     </div>
   );
 }

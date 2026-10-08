@@ -4,62 +4,89 @@
 
 /* ===== Theme tokens (CSS vars, switchable at runtime) ===== */
 :root {
-  --accent: 99 102 241; /* indigo-500 */
+  --accent: 59 130 246;
+  --accent-hover: 37 99 235;
+  --accent-pressed: 29 78 216;
+  --accent-soft: 219 234 254;
   --accent-fg: 255 255 255;
 
-  /* Light theme */
-  --surface: 248 250 252;
-  --surface-2: 241 245 249;
-  --surface-3: 226 232 240;
-  --ink: 15 23 42;
-  --ink-muted: 100 116 139;
-  --edge: 203 213 225;
+  --canvas: 245 248 249;
+  --surface: 255 255 253;
+  --surface-2: 247 250 251;
+  --surface-3: 235 241 243;
+  --surface-overlay: 255 255 253;
+  --surface-sunken: 239 245 246;
+  --ink: 24 38 48;
+  --ink-muted: 83 102 113;
+  --ink-tertiary: 119 137 146;
+  --ink-disabled: 158 171 177;
+  --edge: 211 222 226;
+  --edge-strong: 171 190 197;
+  --focus: 59 130 246;
+  --success: 22 128 91;
+  --success-soft: 232 247 240;
+  --warning: 180 99 15;
+  --warning-soft: 255 247 230;
+  --danger: 190 54 54;
+  --danger-soft: 254 238 238;
+  --info: 37 99 171;
+  --info-soft: 235 244 253;
+  --scrim: 15 23 42;
 }
 
 .dark {
-  --surface: 15 23 42;
-  --surface-2: 30 41 59;
-  --surface-3: 51 65 85;
-  --ink: 241 245 249;
-  --ink-muted: 148 163 184;
-  --edge: 51 65 85;
+  --accent: 96 165 250;
+  --accent-hover: 147 197 253;
+  --accent-pressed: 59 130 246;
+  --accent-soft: 30 58 88;
+  --canvas: 19 29 38;
+  --surface: 27 40 50;
+  --surface-2: 34 49 60;
+  --surface-3: 47 65 77;
+  --surface-overlay: 36 52 63;
+  --surface-sunken: 22 33 42;
+  --ink: 241 247 249;
+  --ink-muted: 183 199 207;
+  --ink-tertiary: 140 160 170;
+  --ink-disabled: 96 116 126;
+  --edge: 57 76 87;
+  --edge-strong: 88 109 120;
+  --focus: 96 165 250;
+  --success: 52 184 132;
+  --success-soft: 20 59 48;
+  --warning: 240 172 66;
+  --warning-soft: 67 48 24;
+  --danger: 248 113 113;
+  --danger-soft: 69 31 35;
+  --info: 96 165 250;
+  --info-soft: 25 48 78;
+  --scrim: 0 0 0;
 }
 
-/* ===== Mobile brand identity ("Aurora" gradient) =====
+/* ===== Mobile brand identity =====
    Scoped to .mobile-shell (the MobileShell.tsx root) so it never affects the
    desktop shell or its user-customizable accent color (Settings → Appearance).
-   Stops are sampled from the actual logo artwork (assets/logo.png) so the UI
-   echoes the brand mark rather than an arbitrary palette. */
+   The values stay aligned with the default blue/teal workspace palette. */
 .mobile-shell {
-  --brand-blue: 51 85 224; /* #3355E0 */
-  --brand-violet: 109 69 251; /* #6D45FB */
-  --brand-cyan: 0 180 209; /* #00B4D1 */
-
-  /* Re-point the shared --accent token to the brand violet so existing
-     bg-accent / text-accent usage across mobile screens is on-brand without
-     touching every call site. */
-  --accent: var(--brand-violet);
+  --brand-blue: 59 130 246;
+  --brand-violet: 96 165 250;
+  --brand-cyan: 20 184 166;
 }
 
 .mobile-shell .brand-gradient {
-  background-image: linear-gradient(135deg, rgb(var(--brand-blue)) 0%, rgb(var(--brand-violet)) 55%, rgb(var(--brand-cyan)) 100%);
+  background: rgb(var(--accent));
 }
 
 .mobile-shell .brand-gradient-text {
-  background-image: linear-gradient(135deg, rgb(var(--brand-blue)) 0%, rgb(var(--brand-violet)) 55%, rgb(var(--brand-cyan)) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  background: none;
+  color: rgb(var(--accent));
 }
 
 /* Soft gradient-tinted 1px border via the two-background layering trick.
    Pair with an explicit `border border-transparent` + `rounded-*` utility. */
 .mobile-shell .brand-border-glow {
-  background-image:
-    linear-gradient(rgb(var(--surface-2)), rgb(var(--surface-2))),
-    linear-gradient(135deg, rgb(var(--brand-blue) / 0.55), rgb(var(--brand-violet) / 0.55), rgb(var(--brand-cyan) / 0.55));
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
+  background: rgb(var(--surface));
+  border-color: rgb(var(--edge));
 }
 
 @keyframes brandGradientPan {
@@ -72,8 +99,8 @@
   }
 }
 .mobile-shell .brand-gradient-animated {
-  background-size: 200% 200%;
-  animation: brandGradientPan 7s ease-in-out infinite;
+  background-size: auto;
+  animation: none;
 }
 
 html,
@@ -89,10 +116,52 @@ body,
 
 body {
   font-family: theme("fontFamily.sans");
-  background: rgb(var(--surface));
+  background: rgb(var(--canvas));
   color: rgb(var(--ink));
   -webkit-font-smoothing: antialiased;
+}
+
+button,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+[role="option"] {
   user-select: none;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--focus));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl {
+    backdrop-filter: none !important;
+    background-color: rgb(var(--surface-overlay)) !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root,
+  .dark {
+    --edge: var(--edge-strong);
+  }
 }
 
 /* Custom scrollbars */

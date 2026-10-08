@@ -784,7 +784,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                   </button>
                   <button
                     onClick={() => void deleteSession(s.id)}
-                    className="shrink-0 rounded p-0.5 text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                    className="shrink-0 rounded p-0.5 text-ink-muted opacity-0 transition hover:text-danger group-hover:opacity-100"
                     title="Delete session"
                   >
                     <Trash2 size={11} />
@@ -835,7 +835,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                       <span className="truncate text-ink">{s.title}</span>
                       <span className="text-[10px] text-ink-muted">{s.sourceIds.length} src · {timeAgo(s.updatedAt)}</span>
                     </button>
-                    <button onClick={() => void deleteSession(s.id)} className="shrink-0 rounded p-0.5 text-ink-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100">
+                    <button onClick={() => void deleteSession(s.id)} className="shrink-0 rounded p-0.5 text-ink-muted opacity-0 transition hover:text-danger group-hover:opacity-100">
                       <Trash2 size={12} />
                     </button>
                   </div>
@@ -935,7 +935,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                     if (e.key === "Enter") { void renameSession(titleDraft); setTitleDraft(null); }
                     if (e.key === "Escape") setTitleDraft(null);
                   }}
-                  className="min-w-0 flex-1 rounded-md border border-edge bg-surface-2 px-2 py-1 text-sm text-ink outline-none focus:border-accent/50"
+                  className="min-w-0 flex-1 rounded-md border border-edge bg-surface-2 px-2 py-1 text-sm text-ink outline-none focus:border-focus/50"
                 />
               )}
               <button
@@ -997,7 +997,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         )}
 
         {showIssue && (
-          <div className="flex items-start gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-300">
+          <div className="flex items-start gap-1.5 rounded-md border border-warning bg-warning-soft px-2.5 py-1.5 text-[11px] text-warning">
             <AlertTriangle size={12} className="mt-0.5 shrink-0" />
             <span className="flex-1">{showIssue}</span>
             <button onClick={() => setShowIssue("")} className="shrink-0 opacity-70 hover:opacity-100"><X size={11} /></button>
@@ -1178,14 +1178,14 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
               placeholder={session ? "Ask Mavino to teach you…" : "Select sources and start a session first"}
               disabled={!session || streaming || listening}
               rows={1}
-              className="flex-1 resize-none rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent/50 disabled:opacity-50"
+              className="flex-1 resize-none rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-focus/50 disabled:opacity-50"
             />
             {sttSupported && session && (
               <button
                 onClick={listening ? stopListening : startListening}
                 disabled={streaming}
                 className={`flex items-center gap-1 rounded-lg px-3 py-2 text-sm transition disabled:opacity-40 ${
-                  listening ? "bg-red-500/20 text-red-400 hover:bg-red-500/30" : "border border-edge text-ink-muted hover:bg-surface-2 hover:text-ink"
+                  listening ? "bg-danger-soft text-danger hover:bg-danger-soft" : "border border-edge text-ink-muted hover:bg-surface-2 hover:text-ink"
                 }`}
                 title={listening ? "Stop listening" : "Speak your question"}
               >
@@ -1193,7 +1193,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
               </button>
             )}
             {streaming ? (
-              <button onClick={stop} className="flex items-center gap-1 rounded-lg bg-red-500/20 px-3 py-2 text-sm text-red-400 hover:bg-red-500/30">
+              <button onClick={stop} className="flex items-center gap-1 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger hover:bg-danger-soft">
                 <Square size={14} /> Stop
               </button>
             ) : (
@@ -1357,7 +1357,7 @@ function SessionSettings({
               </button>
               <button
                 onClick={() => onReorder(ids.filter((x) => x !== s.id))}
-                className="rounded p-0.5 text-ink-muted hover:text-red-400"
+                className="rounded p-0.5 text-ink-muted hover:text-danger"
                 title="Remove from lesson"
               >
                 <Trash2 size={11} />

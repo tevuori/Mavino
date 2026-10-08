@@ -154,8 +154,8 @@ export default function DataStorageSection() {
         <MsgBox msg={cacheMsg} />
       </Card>
 
-      <Card className="border-red-500/40">
-        <h4 className="mb-1 flex items-center gap-2 text-sm font-semibold text-red-500">
+      <Card className="border-danger">
+        <h4 className="mb-1 flex items-center gap-2 text-sm font-semibold text-danger">
           <AlertTriangle size={15} /> Danger zone
         </h4>
         <p className="mb-3 text-xs text-ink-muted">
@@ -173,7 +173,7 @@ export default function DataStorageSection() {
           <button
             onClick={doDelete}
             disabled={delBusy || !delPw}
-            className="flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-2 text-sm text-white hover:opacity-90 disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-lg bg-danger px-3 py-2 text-sm text-white hover:opacity-90 disabled:opacity-40"
           >
             {delBusy ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />} Delete account
           </button>

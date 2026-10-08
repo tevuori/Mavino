@@ -458,7 +458,7 @@ export default function HighlightableMarkdown({
                   value={annotateText}
                   onChange={(e) => setAnnotateText(e.target.value)}
                   placeholder="Annotation (optional)"
-                  className="flex-1 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                  className="flex-1 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-xs text-ink outline-none focus:border-focus"
                 />
                 {onAskAboutSelection && (
                   <button
@@ -548,7 +548,7 @@ export default function HighlightableMarkdown({
                     if (e.key === "Escape") dismissToolbar();
                   }}
                   placeholder="Annotation…"
-                  className="w-44 rounded-md border border-edge bg-surface-2 px-2 py-1 text-[11px] text-ink outline-none focus:border-accent"
+                  className="w-44 rounded-md border border-edge bg-surface-2 px-2 py-1 text-[11px] text-ink outline-none focus:border-focus"
                 />
                 <button
                   onClick={() => void doCreate(pendingColor, annotateText)}
@@ -645,12 +645,12 @@ function HighlightEditPopover({
         onBlur={() => onChangeAnnotation(annotation)}
         placeholder="Add an annotation…"
         rows={2}
-        className="w-full resize-none rounded-md border border-edge bg-surface-2 px-2 py-1 text-[11px] text-ink outline-none focus:border-accent"
+        className="w-full resize-none rounded-md border border-edge bg-surface-2 px-2 py-1 text-[11px] text-ink outline-none focus:border-focus"
       />
       <div className="mt-1.5 flex justify-end">
         <button
           onClick={onDelete}
-          className="flex items-center gap-1 rounded-md border border-red-500/30 px-2 py-1 text-[10px] text-red-400 hover:bg-red-500/10"
+          className="flex items-center gap-1 rounded-md border border-danger px-2 py-1 text-[10px] text-danger hover:bg-danger-soft"
         >
           <Trash2 size={11} /> Delete
         </button>

@@ -81,8 +81,8 @@ export default function AboutSection() {
     if (!(await confirmDialog("Reset all appearance, wallpaper, and notification settings to defaults?", { danger: true, confirmLabel: "Reset" }))) return;
     setResetting(true);
     setTheme("dark");
-    setAccent("#6366f1");
-    setWallpaper("aurora");
+    setAccent("#3b82f6");
+    setWallpaper("ocean");
     setAnimatedBg("none");
     setVolume(70);
     setNotificationsEnabled(true);
@@ -124,7 +124,7 @@ export default function AboutSection() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="flex-1 rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+              className="flex-1 rounded-lg border border-edge bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-focus"
             />
             <button
               onClick={saveServerUrl}

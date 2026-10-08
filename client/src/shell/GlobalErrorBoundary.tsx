@@ -58,25 +58,25 @@ export default class GlobalErrorBoundary extends Component<Props, State> {
     // stale-chunk auto-reload is in progress.
     if (error && isStaleChunkError(error)) {
       return (
-        <div className="flex h-full w-full items-center justify-center bg-slate-950">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
+        <div className="flex h-full w-full items-center justify-center bg-canvas">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
         </div>
       );
     }
 
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-slate-950 p-8 text-center">
-        <AlertTriangle size={32} className="text-amber-400" />
+      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-canvas p-8 text-center">
+        <AlertTriangle size={32} className="text-warning" />
         <div>
-          <p className="text-base font-semibold text-slate-200">Something went wrong</p>
-          <p className="mt-1 max-w-md text-sm text-slate-400">{error.message}</p>
+          <p className="text-base font-semibold text-ink">Something went wrong</p>
+          <p className="mt-1 max-w-md text-sm text-ink-muted">{error.message}</p>
         </div>
         <button
           onClick={() => {
             this.setState({ error: null });
             location.reload();
           }}
-          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+          className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent"
         >
           <RotateCcw size={14} /> Reload
         </button>

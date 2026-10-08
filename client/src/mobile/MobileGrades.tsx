@@ -157,7 +157,7 @@ export default function MobileGrades({ onClose }: { onClose?: () => void }) {
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); void deleteCourse(c); }}
-                  className="mt-2 text-xs text-ink-muted active:text-rose-400"
+                  className="mt-2 text-xs text-ink-muted active:text-danger"
                 >
                   <Trash2 size={14} className="inline mr-1" /> Delete
                 </button>
@@ -242,7 +242,7 @@ function CourseDetail({ course, onBack, onUpdate }: { course: Course; onBack: ()
                   {((a.score / a.maxScore) * 100).toFixed(0)}%
                 </p>
               </div>
-              <button type="button" onClick={() => void remove(a.id)} className="rounded-xl p-2 text-ink-muted active:text-rose-400">
+              <button type="button" onClick={() => void remove(a.id)} className="rounded-xl p-2 text-ink-muted active:text-danger">
                 <Trash2 size={18} />
               </button>
             </article>

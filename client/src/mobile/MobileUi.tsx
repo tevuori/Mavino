@@ -1,8 +1,9 @@
-import { forwardRef, useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { ArrowLeft, Monitor, Plus, X } from "lucide-react";
 import type { ReactNode, InputHTMLAttributes, TextareaHTMLAttributes, SelectHTMLAttributes } from "react";
 import { useMobileDialog } from "../store/mobileDialog";
 import { useMobileToast } from "../store/mobileToast";
+import { Sheet } from "../ui/overlays";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -116,11 +117,11 @@ export function MobileCard({
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`w-full rounded-2xl p-4 text-left transition ${
+      className={`w-full rounded-xl p-4 text-left transition ${
         variant === "feature"
-          ? "brand-border-glow border border-transparent shadow-[0_8px_28px_-12px_rgb(var(--brand-violet)/0.45)]"
-          : "border border-edge bg-surface-2"
-      } ${onClick ? "active:scale-[.99] active:bg-surface-3" : ""} ${active ? "ring-1 ring-accent/60" : ""} ${className}`}
+          ? "border border-edge-strong bg-surface shadow-sm"
+          : "border border-edge bg-surface"
+      } ${onClick ? "active:translate-y-px active:bg-surface-2" : ""} ${active ? "ring-2 ring-focus/30" : ""} ${className}`}
     >
       {children}
     </Tag>
@@ -197,7 +198,7 @@ export function MobileInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15 ${props.className ?? ""}`}
+      className={`w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-focus/70 focus:ring-2 focus:ring-accent/15 ${props.className ?? ""}`}
     />
   );
 }
@@ -207,7 +208,7 @@ export const MobileTextarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttrib
     <textarea
       ref={ref}
       {...props}
-      className={`w-full resize-none rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15 ${props.className ?? ""}`}
+      className={`w-full resize-none rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-focus/70 focus:ring-2 focus:ring-accent/15 ${props.className ?? ""}`}
     />
   );
 });
@@ -216,7 +217,7 @@ export function MobileSelect(props: SelectHTMLAttributes<HTMLSelectElement> & { 
   return (
     <select
       {...props}
-      className={`w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15 ${props.className ?? ""}`}
+      className={`w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none transition focus:border-focus/70 focus:ring-2 focus:ring-accent/15 ${props.className ?? ""}`}
     >
       {props.children}
     </select>
@@ -294,43 +295,10 @@ export function MobileModal({
   children: ReactNode;
   footer?: ReactNode;
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-edge bg-surface p-5 pt-3 shadow-2xl sm:rounded-3xl sm:pt-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mb-3 h-1.5 w-10 shrink-0 rounded-full bg-surface-3 sm:hidden" aria-hidden />
-        {title && (
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-ink">{title}</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-2 text-ink-muted active:bg-surface-3"
-              aria-label="Close"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        )}
-        <div className="space-y-3">{children}</div>
-        {footer && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
-      </div>
-    </div>
+    <Sheet open={open} onClose={onClose} title={title} footer={footer}>
+      <div className="space-y-3">{children}</div>
+    </Sheet>
   );
 }
 
@@ -350,13 +318,13 @@ export function MobileButton({
   disabled?: boolean;
   type?: "button" | "submit";
 }) {
-  const base = "inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 active:scale-[.98]";
+  const base = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 active:translate-y-px";
   const styles =
     variant === "primary"
-      ? "brand-gradient text-white shadow-md shadow-accent/30"
+      ? "bg-accent text-accent-fg active:bg-accent-pressed"
       : variant === "danger"
-      ? "bg-rose-500/15 text-rose-400 active:bg-rose-500/25"
-      : "bg-surface-2 text-ink-muted active:bg-surface-3";
+      ? "bg-danger-soft text-danger active:brightness-95"
+      : "border border-edge bg-surface text-ink-muted active:bg-surface-2";
   return (
     <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${styles} ${className}`}>
       {children}
@@ -388,14 +356,9 @@ export function MobileDesktopNote({ text }: { text: string }) {
 export function MobileDialogRenderer() {
   const { dialog, _resolve, _dismiss } = useMobileDialog();
   const [inputValue, setInputValue] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (dialog.type === "prompt") {
-      setInputValue(dialog.defaultValue ?? "");
-      // Wait for the DOM to paint, then focus
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
+    if (dialog.type === "prompt") setInputValue(dialog.defaultValue ?? "");
   }, [dialog.type, dialog.defaultValue]);
 
   if (!dialog.type) return null;
@@ -408,52 +371,42 @@ export function MobileDialogRenderer() {
   };
 
   return (
-    <div className="fixed inset-0 z-[19000] flex items-end justify-center bg-black/60" onClick={_dismiss}>
-      <div
-        className="w-full max-w-md rounded-t-3xl border border-edge bg-surface p-5 pt-3 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mb-4 h-1.5 w-10 shrink-0 rounded-full bg-surface-3" aria-hidden />
-        {opts.title && <h2 className="mb-1.5 text-sm font-semibold text-ink">{opts.title}</h2>}
-        <p className="mb-4 text-sm leading-6 text-ink">{dialog.message}</p>
-        {dialog.type === "prompt" && (
-          <input
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                onConfirm();
-              }
-            }}
-            className="mb-4 w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15"
-          />
-        )}
-        <div className="flex gap-3">
+    <Sheet
+      open
+      onClose={_dismiss}
+      title={opts.title}
+      footer={
+        <div className="flex w-full gap-3">
           {dialog.type !== "alert" && (
-            <button
-              type="button"
-              onClick={_dismiss}
-              className="flex-1 rounded-2xl bg-surface-2 py-3 text-sm font-medium text-ink-muted active:bg-surface-3"
-            >
+            <MobileButton variant="ghost" onClick={_dismiss} className="flex-1">
               {opts.cancelLabel ?? "Cancel"}
-            </button>
+            </MobileButton>
           )}
-          <button
-            type="button"
+          <MobileButton
+            variant={opts.danger || (dialog.type === "confirm" && !opts.confirmLabel) ? "danger" : "primary"}
             onClick={onConfirm}
-            className={`flex-1 rounded-2xl py-3 text-sm font-semibold active:scale-[.98] ${
-              opts.danger || (dialog.type === "confirm" && !opts.confirmLabel)
-                ? "bg-rose-500/15 text-rose-400 active:bg-rose-500/25"
-                : "brand-gradient text-white shadow-md shadow-accent/30"
-            }`}
+            className="flex-1"
           >
             {opts.confirmLabel ?? (dialog.type === "confirm" ? "Delete" : "OK")}
-          </button>
+          </MobileButton>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <p className="text-sm leading-6 text-ink">{dialog.message}</p>
+      {dialog.type === "prompt" && (
+        <MobileInput
+          value={inputValue}
+          onChange={(event) => setInputValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              onConfirm();
+            }
+          }}
+          className="mt-4"
+        />
+      )}
+    </Sheet>
   );
 }
 
@@ -466,18 +419,18 @@ export function MobileToastRenderer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-[19500] flex flex-col items-center gap-2 px-4">
+    <div className="pointer-events-none fixed inset-x-0 top-[max(1rem,env(safe-area-inset-top))] z-[19500] flex flex-col items-center gap-2 px-4" aria-live="polite" aria-atomic="false">
       {toasts.map((t) => (
         <button
           key={t.id}
           type="button"
           onClick={() => dismiss(t.id)}
-          className={`pointer-events-auto w-full max-w-sm animate-[slideDown_0.25s_ease-out] rounded-2xl border px-4 py-3 text-sm font-medium shadow-xl backdrop-blur-xl ${
+          className={`pointer-events-auto w-full max-w-sm animate-[slideDown_0.25s_ease-out] rounded-lg border px-4 py-3 text-sm font-medium shadow-panel ${
             t.variant === "error"
-              ? "border-red-500/30 bg-red-500/15 text-red-300"
+              ? "border-danger/25 bg-danger-soft text-danger"
               : t.variant === "success"
-                ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-                : "border-edge bg-surface/95 text-ink"
+                ? "border-success/25 bg-success-soft text-success"
+                : "border-edge bg-surface-overlay text-ink"
           }`}
         >
           {t.message}

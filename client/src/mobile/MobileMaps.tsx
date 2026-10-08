@@ -628,7 +628,7 @@ export default function MobileMaps({
 
       {/* Error toast */}
       {error && (
-        <div className="absolute bottom-20 left-4 right-4 z-[1001] flex items-start gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="absolute bottom-20 left-4 right-4 z-[1001] flex items-start gap-2 rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           <X size={16} className="mt-0.5 shrink-0" />
           <span className="min-w-0 flex-1">{error}</span>
           <button type="button" onClick={() => setError(null)} className="shrink-0">

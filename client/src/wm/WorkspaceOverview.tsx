@@ -180,7 +180,7 @@ export default function WorkspaceOverview({ open, onClose }: Props) {
                       <button
                         onClick={() => removeWorkspace(ws.id)}
                         disabled={workspaces.length <= 1}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-white/60 transition hover:bg-red-500 hover:text-white disabled:opacity-30"
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-white/60 transition hover:bg-danger hover:text-white disabled:opacity-30"
                         title="Delete workspace"
                       >
                         <Trash2 size={14} />

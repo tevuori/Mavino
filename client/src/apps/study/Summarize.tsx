@@ -92,7 +92,7 @@ export default function Summarize({ initialSource, initialGraphId, language }: {
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value as typeof mode)}
-            className="rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-accent"
+            className="rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-focus"
           >
             <option value="keypoints">Key points</option>
             <option value="outline">Outline</option>

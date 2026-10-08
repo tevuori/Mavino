@@ -191,13 +191,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="fixed inset-0 z-[15000] flex items-center justify-center">
-      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xl" />
+    <div className="fixed inset-0 z-[15000] flex items-center justify-center bg-canvas px-5">
+      <div className="absolute inset-0 bg-surface-sunken/35" />
       <motion.div
         initial={{ y: 20, opacity: 0, scale: 0.97 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="relative z-10 w-full max-w-sm rounded-2xl border border-edge bg-surface/95 p-8 shadow-window"
+        className="relative z-10 w-full max-w-sm rounded-xl border border-edge/70 bg-surface p-8 shadow-panel"
       >
         <div className="mb-6 text-center">
           <AppLogo size={56} className="mx-auto mb-3" />
@@ -212,7 +212,7 @@ export default function LoginScreen() {
               : "Reset your password"}
           </p>
           {mode === "login" && (
-            <p className="mt-1 text-[11px] text-ink-muted/70">Made by students, for students</p>
+            <p className="mt-1 text-[11px] text-ink-muted">Made by students, for students</p>
           )}
         </div>
 
@@ -255,10 +255,10 @@ export default function LoginScreen() {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+                  className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
                 />
                 {error && (
-                  <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
+                  <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
                 )}
                 <button
                   type="submit"
@@ -298,10 +298,10 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-center text-lg tracking-[0.5em] text-ink outline-none focus:border-accent"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-center text-lg tracking-[0.5em] text-ink outline-none focus:border-focus"
             />
             {error && (
-              <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
+              <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
             )}
             <button
               type="submit"
@@ -338,7 +338,7 @@ export default function LoginScreen() {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+                  className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
                 />
                 <p className="text-[11px] text-ink-muted">
                   The address of your Mavino server (including port).
@@ -351,14 +351,14 @@ export default function LoginScreen() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Username"
               autoFocus={!isNative}
-              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
             />
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
             />
 
             <label className="flex cursor-pointer items-center gap-2 pt-1 text-xs text-ink-muted select-none">
@@ -372,7 +372,7 @@ export default function LoginScreen() {
             </label>
 
             {error && (
-              <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
+              <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
             )}
 
             <TurnstileWidget onToken={onTurnstileToken} className="flex justify-center" />
@@ -420,25 +420,25 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
             />
             <input
               type="password"
               value={regPassword}
               onChange={(e) => setRegPassword(e.target.value)}
               placeholder="Password (min 4 characters)"
-              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
             />
             <input
               value={regDisplayName}
               onChange={(e) => setRegDisplayName(e.target.value)}
               placeholder="Display name (optional)"
-              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
             />
             <select
               value={regAgeBand}
               onChange={(e) => setRegAgeBand(e.target.value as "AGE_13_17" | "AGE_18_PLUS")}
-              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
             >
               <option value="AGE_18_PLUS">I am 18 or older</option>
               <option value="AGE_13_17">I am 13–17</option>
@@ -449,7 +449,7 @@ export default function LoginScreen() {
                 value={guardianEmail}
                 onChange={(e) => setGuardianEmail(e.target.value)}
                 placeholder="Parent or guardian email"
-                className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+                className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-focus"
               />
             )}
             <label className="flex items-start gap-2 text-xs text-ink-muted">
@@ -463,7 +463,7 @@ export default function LoginScreen() {
             </label>
 
             {error && (
-              <p className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">{error}</p>
+              <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
             )}
 
             <TurnstileWidget onToken={onTurnstileToken} className="flex justify-center" />

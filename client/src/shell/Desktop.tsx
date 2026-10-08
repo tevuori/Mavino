@@ -125,7 +125,7 @@ export default function Desktop() {
               <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white shadow-lg backdrop-blur-sm transition group-hover:scale-105">
                 {renderAppIcon(app, { size: 22 })}
                 {app.access === "preview" && (
-                  <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-white/20">
+                  <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-warning shadow-sm ring-1 ring-white/20">
                     <Lock size={9} />
                   </span>
                 )}

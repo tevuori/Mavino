@@ -58,9 +58,9 @@ function InlineCode({ children }: { children: ReactNode }) {
 
 function Callout({ type = "info", children }: { type?: "info" | "warn" | "tip"; children: ReactNode }) {
   const styles = {
-    info: "border-blue-500/30 bg-blue-500/10 text-blue-300",
-    warn: "border-amber-500/30 bg-amber-500/10 text-amber-300",
-    tip: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+    info: "border-accent bg-accent-soft text-accent",
+    warn: "border-warning bg-warning-soft text-warning",
+    tip: "border-success bg-success-soft text-success",
   };
   const icons = { info: "ℹ️", warn: "⚠️", tip: "💡" };
   return (
@@ -110,7 +110,7 @@ const TOC: TocEntry[] = [
   { id: "overview", label: "Overview", icon: <Rocket size={14} /> },
   { id: "manifest", label: "Plugin Manifest", icon: <FileJson size={14} /> },
   { id: "frontend", label: "Frontend App", icon: <Code2 size={14} /> },
-  { id: "tools", label: "Athena Tools", icon: <Wrench size={14} /> },
+  { id: "tools", label: "Mavino Tools", icon: <Wrench size={14} /> },
   { id: "publishing", label: "Publishing", icon: <Upload size={14} /> },
   { id: "testing", label: "Testing", icon: <FlaskConical size={14} /> },
   { id: "security", label: "Security", icon: <ShieldCheck size={14} /> },
@@ -187,7 +187,7 @@ export default function DeveloperGuide() {
           <Section id="overview" icon={<Rocket size={18} />} title="Overview">
             <p>
               A Mavino plugin extends the platform with a <strong>frontend app</strong> (a React
-              component loaded from a remote ES module) and optionally <strong>Athena tools</strong>{" "}
+              component loaded from a remote ES module) and optionally <strong>Mavino tools</strong>{" "}
               (LLM-callable functions backed by a webhook on your own server). Plugins are installed
               by paid/pro users from the in-app Marketplace; they appear in the taskbar, start menu,
               desktop, and command palette alongside built-in apps.
@@ -236,7 +236,7 @@ export default function DeveloperGuide() {
         │
 Server (Mavino backend)
   │
-  └── Athena tool call (proxy)
+  └── Mavino tool call (proxy)
         │
         └── POST { plugin, arguments } ──► Your webhook (handlerUrl)
                                            Returns JSON`} />
@@ -271,7 +271,7 @@ Server (Mavino backend)
                 ["entryUrl", "string", "Yes", "HTTPS URL to your ES module. This is import()-ed by the browser."],
                 ["minTier", "\"paid\"|\"pro\"", "No", "Minimum tier to install. Default: \"paid\"."],
                 ["permissions", "string[]", "No", "Declared permissions (shown as a badge)."],
-                ["tools", "Tool[]", "No", "Athena tool definitions. See Athena Tools section."],
+                ["tools", "Tool[]", "No", "Mavino assistant tool definitions. See Mavino Tools section."],
               ]}
             />
 
@@ -432,10 +432,10 @@ export default defineConfig({
             </p>
           </Section>
 
-          {/* ===== Athena Tools ===== */}
-          <Section id="tools" icon={<Wrench size={18} />} title="Athena Tools">
+          {/* ===== Mavino Tools ===== */}
+          <Section id="tools" icon={<Wrench size={18} />} title="Mavino Tools">
             <p>
-              Athena tools let the Mavino AI assistant call your plugin's backend. When a user asks
+              Mavino tools let the Mavino AI assistant call your plugin's backend. When a user asks
               Mavino to do something your tool handles, the LLM calls your tool, and Mavino proxies
               the call to your <InlineCode>handlerUrl</InlineCode> webhook.
             </p>
@@ -510,7 +510,7 @@ export default { port: 3000, fetch: app.fetch };`} />
               </li>
               <li className="flex gap-2.5">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[10px] font-bold text-accent">2</span>
-                <span><strong>Host your webhook</strong> (if you have Athena tools) — deploy to a public HTTPS URL.</span>
+                <span><strong>Host your webhook</strong> (if you have Mavino tools) — deploy to a public HTTPS URL.</span>
               </li>
               <li className="flex gap-2.5">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-[10px] font-bold text-accent">3</span>
@@ -564,7 +564,7 @@ npx serve dist --cors -p 4000
               window to pick up the new module.
             </p>
 
-            <h4 className="mt-4 mb-2 text-sm font-semibold text-ink">Testing Athena tools</h4>
+            <h4 className="mt-4 mb-2 text-sm font-semibold text-ink">Testing Mavino tools</h4>
             <CodeBlock lang="bash" code={`# Run your webhook
 bun run server.ts
 
@@ -623,7 +623,7 @@ ngrok http 3000
                   ].map(([res, access, notes], i) => (
                     <tr key={i} className={i < 4 ? "border-b border-edge" : ""}>
                       <td className="px-3 py-2 font-medium text-ink">{res}</td>
-                      <td className={`px-3 py-2 font-medium ${access === "Yes" ? "text-amber-500" : "text-emerald-500"}`}>{access}</td>
+                      <td className={`px-3 py-2 font-medium ${access === "Yes" ? "text-warning" : "text-success"}`}>{access}</td>
                       <td className="px-3 py-2 text-ink-muted">{notes}</td>
                     </tr>
                   ))}
@@ -633,7 +633,7 @@ ngrok http 3000
 
             <h4 className="mt-4 mb-2 text-sm font-semibold text-ink">Best practices for authors</h4>
             <ul className="space-y-1.5 text-xs text-ink-muted">
-              <li className="flex gap-2"><ChevronRight size={14} className="mt-0.5 shrink-0 text-accent" /><span><strong>Don't exfiltrate the JWT.</strong> Use Mavino's API directly from the client, or Athena tools (which proxy without forwarding credentials).</span></li>
+              <li className="flex gap-2"><ChevronRight size={14} className="mt-0.5 shrink-0 text-accent" /><span><strong>Don't exfiltrate the JWT.</strong> Use Mavino's API directly from the client, or Mavino tools (which proxy without forwarding credentials).</span></li>
               <li className="flex gap-2"><ChevronRight size={14} className="mt-0.5 shrink-0 text-accent" /><span><strong>Use HTTPS</strong> for <InlineCode>entryUrl</InlineCode> and <InlineCode>handlerUrl</InlineCode>.</span></li>
               <li className="flex gap-2"><ChevronRight size={14} className="mt-0.5 shrink-0 text-accent" /><span><strong>Validate webhook inputs</strong> — the LLM generates the arguments. Validate types and ranges.</span></li>
               <li className="flex gap-2"><ChevronRight size={14} className="mt-0.5 shrink-0 text-accent" /><span><strong>Don't bundle React</strong> — mark it external. Mavino provides it.</span></li>

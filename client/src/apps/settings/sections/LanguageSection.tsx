@@ -41,7 +41,7 @@ export default function LanguageSection() {
             <option value="cs">{t("czech")}</option>
           </select>
         </Field>
-        {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+        {error && <p className="mt-2 text-xs text-danger">{error}</p>}
       </Card>
       <Card>
         <div className="mb-3 flex items-start justify-between gap-3">

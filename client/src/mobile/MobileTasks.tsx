@@ -11,7 +11,7 @@ import { useMobileDialog } from "../store/mobileDialog";
 import { useMobileToast } from "../store/mobileToast";
 import { usePullToRefresh } from "./usePullToRefresh";
 
-const priorityStyle: Record<TaskPriority, string> = { HIGH: "bg-rose-400", MEDIUM: "bg-amber-400", LOW: "bg-sky-400" };
+const priorityStyle: Record<TaskPriority, string> = { HIGH: "bg-danger", MEDIUM: "bg-warning", LOW: "bg-accent" };
 const priorityLabel: Record<TaskPriority, string> = { HIGH: "High", MEDIUM: "Medium", LOW: "Low" };
 const ACTIVE_WS_KEY = "athena.activeTaskWorkspace";
 
@@ -209,7 +209,7 @@ export default function MobileTasks() {
       <div className="space-y-2">
         {loading ? <MobileLoading /> : visible.length ? visible.map((task) => (
           <article key={task.id} className="flex items-center gap-3 rounded-2xl border border-edge bg-surface-2 p-4">
-            <button type="button" onClick={() => void toggle(task)} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${task.status === "DONE" ? "border-emerald-400 bg-emerald-400 text-surface" : "border-ink-muted text-transparent"}`} aria-label="Toggle done">
+            <button type="button" onClick={() => void toggle(task)} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${task.status === "DONE" ? "border-success bg-success text-surface" : "border-ink-muted text-transparent"}`} aria-label="Toggle done">
               <Check size={16} />
             </button>
             <button type="button" onClick={() => openEditor(task)} className="min-w-0 flex-1 text-left">
@@ -261,7 +261,7 @@ export default function MobileTasks() {
         </div>
         <div>
           <label className="block text-xs font-medium text-ink-muted">Due date</label>
-          <input type="datetime-local" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none focus:border-accent/60" />
+          <input type="datetime-local" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-base text-ink outline-none focus:border-focus/60" />
         </div>
         <div>
           <label className="block text-xs font-medium text-ink-muted">Workspace</label>

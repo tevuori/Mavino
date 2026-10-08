@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { Users as UsersIcon, Plus, Trash2, KeyRound, X, Loader2, ShieldCheck, User as UserIcon, UserPlus } from "lucide-react";
+import { Users as UsersIcon, Plus, Trash2, KeyRound, Loader2, ShieldCheck, User as UserIcon, UserPlus } from "lucide-react";
 import { usersApi } from "../../../services/users";
 import { useAuth } from "../../../store/auth";
 import type { AdminUser, UserRole } from "../../../types";
 import { SectionHeader, Card, Field, inputClass } from "../ui";
 import { confirmDialog } from "../../../store/mobileDialog";
+import { Dialog } from "../../../ui/overlays";
+import { Alert } from "../../../ui/primitives";
 
 const AVATAR_PRESETS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
@@ -201,26 +203,26 @@ function UserRow({
             <ShieldCheck size={13} className="shrink-0 text-accent" />
           )}
           {u.role === "MANAGER" && (
-            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">MANAGER</span>
+            <span className="rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-medium text-warning">MANAGER</span>
           )}
           {u.role === "PAID" && (
-            <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-medium text-indigo-400">PAID</span>
+            <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent">PAID</span>
           )}
           {u.role === "PRO" && (
-            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-500">PRO</span>
+            <span className="rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-medium text-warning">PRO</span>
           )}
           {u.role === "FREE" && (
             <span className="rounded bg-surface-3 px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">FREE</span>
           )}
           {u.role === "DEMO" && (
-            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400">DEMO</span>
+            <span className="rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-medium text-warning">DEMO</span>
           )}
           {isMe && <span className="text-[10px] uppercase text-ink-muted">(you)</span>}
         </p>
         <p className="truncate text-xs text-ink-muted">
           @{u.username} · {new Date(u.createdAt).toLocaleDateString()}
         </p>
-        {err && <p className="text-xs text-red-500">{err}</p>}
+        {err && <Alert variant="danger" className="text-xs">{err}</Alert>}
       </div>
       {canManage && (
         <div className="flex shrink-0 items-center gap-1">
@@ -244,7 +246,7 @@ function UserRow({
             <button
               onClick={del}
               disabled={busy}
-              className="rounded-md p-1.5 text-ink-muted hover:bg-red-500 hover:text-white"
+              className="rounded-md p-1.5 text-ink-muted hover:bg-danger hover:text-white"
               title="Delete"
             >
               <Trash2 size={15} />
@@ -266,20 +268,9 @@ function Modal({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-md rounded-xl border border-edge bg-surface shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-edge px-4 py-3">
-          <h4 className="text-sm font-semibold text-ink">{title}</h4>
-          <button onClick={onClose} className="rounded-md p-1 text-ink-muted hover:bg-surface-3">
-            <X size={16} />
-          </button>
-        </div>
-        <div className="p-4">{children}</div>
-      </div>
-    </div>
+    <Dialog open onClose={onClose} title={title} className="max-w-md">
+      {children}
+    </Dialog>
   );
 }
 
@@ -334,7 +325,7 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
     <Modal title="Create user" onClose={onClose}>
       <div className="space-y-3">
         <Field label="Username">
-          <input value={username} onChange={(e) => setUsername(e.target.value)} className={inputClass} />
+          <input data-autofocus value={username} onChange={(e) => setUsername(e.target.value)} className={inputClass} />
         </Field>
         <Field label="Password">
           <input
@@ -353,6 +344,8 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
               <button
                 key={c}
                 onClick={() => setAvatarColor(c)}
+                aria-label={`Select avatar color ${c}`}
+                aria-pressed={avatarColor === c}
                 className={`h-7 w-7 rounded-full border-2 transition ${
                   avatarColor === c ? "border-ink ring-2 ring-accent" : "border-transparent"
                 }`}
@@ -368,7 +361,7 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
             ))}
           </select>
         </Field>
-        {err && <p className="text-xs text-red-500">{err}</p>}
+        {err && <Alert variant="danger" className="text-xs">{err}</Alert>}
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={onClose} className="rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-surface-3">
             Cancel
@@ -442,7 +435,7 @@ function EditUserModal({
     <Modal title={`Edit @${user.username}`} onClose={onClose}>
       <div className="space-y-3">
         <Field label="Display name">
-          <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} />
+          <input data-autofocus value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} />
         </Field>
         <Field label="Avatar color">
           <div className="flex flex-wrap items-center gap-2">
@@ -450,6 +443,8 @@ function EditUserModal({
               <button
                 key={c}
                 onClick={() => setAvatarColor(c)}
+                aria-label={`Select avatar color ${c}`}
+                aria-pressed={avatarColor === c}
                 className={`h-7 w-7 rounded-full border-2 transition ${
                   avatarColor === c ? "border-ink ring-2 ring-accent" : "border-transparent"
                 }`}
@@ -470,7 +465,7 @@ function EditUserModal({
             ))}
           </select>
         </Field>
-        {err && <p className="text-xs text-red-500">{err}</p>}
+        {err && <Alert variant="danger" className="text-xs">{err}</Alert>}
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={onClose} className="rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-surface-3">
             Cancel
@@ -525,12 +520,13 @@ function ResetPasswordModal({
         <Field label="New password">
           <input
             type="password"
+            data-autofocus
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={inputClass}
           />
         </Field>
-        {err && <p className="text-xs text-red-500">{err}</p>}
+        {err && <Alert variant="danger" className="text-xs">{err}</Alert>}
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={onClose} className="rounded-lg border border-edge px-3 py-2 text-sm text-ink-muted hover:bg-surface-3">
             Cancel

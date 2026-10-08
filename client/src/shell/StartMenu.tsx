@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type RefObject } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Power, LogOut, Lock } from "lucide-react";
 import { renderAppIcon } from "./AppIcon";
@@ -10,22 +10,29 @@ import { useI18n } from "../i18n";
 interface Props {
   open: boolean;
   onClose: () => void;
+  triggerRef: RefObject<HTMLButtonElement>;
 }
 
-export default function StartMenu({ open, onClose }: Props) {
+export default function StartMenu({ open, onClose, triggerRef }: Props) {
   const { open: openWindow } = useWindows();
   const { user, logout } = useAuth();
   const apps = useAccessibleApps();
   const { appName } = useI18n();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
     if (open) {
+      wasOpenRef.current = true;
       setQuery("");
-      setTimeout(() => inputRef.current?.focus(), 50);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    } else if (wasOpenRef.current) {
+      wasOpenRef.current = false;
+      triggerRef.current?.focus();
     }
-  }, [open]);
+  }, [open, triggerRef]);
 
   useEffect(() => {
     if (!open) return;
@@ -49,11 +56,28 @@ export default function StartMenu({ open, onClose }: Props) {
         <>
           <div className="fixed inset-0 z-[11000]" onClick={onClose} />
           <motion.div
+            ref={panelRef}
+            id="mavino-start-menu"
+            role="dialog"
+            aria-label="Applications"
+            onKeyDown={(event) => {
+              if (event.key !== "Tab" || !panelRef.current) return;
+              const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>("input, button:not([disabled]), [tabindex]:not([tabindex='-1'])"));
+              const first = items[0];
+              const last = items[items.length - 1];
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last?.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first?.focus();
+              }
+            }}
             initial={{ y: 20, opacity: 0, scale: 0.97 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 10, opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="fixed bottom-14 left-1/2 z-[11001] w-[440px] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl border border-edge bg-surface/95 p-4 shadow-window backdrop-blur-xl"
+            className="fixed bottom-14 left-1/2 z-[11001] w-[440px] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-edge/70 bg-surface-overlay/95 p-4 shadow-window backdrop-blur-xl"
           >
             {/* Search */}
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-edge bg-surface-2 px-3 py-2">
@@ -73,12 +97,12 @@ export default function StartMenu({ open, onClose }: Props) {
                 <button
                   key={app.id}
                   onClick={() => launch(app)}
-                  className="flex flex-col items-center gap-1.5 rounded-lg p-3 transition hover:bg-surface-3"
+                  className="flex min-h-20 flex-col items-center gap-2 rounded-lg p-2.5 transition hover:bg-surface-2 active:translate-y-px"
                 >
-                  <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
+                  <div className="relative flex h-10 w-10 items-center justify-center text-accent">
                     {renderAppIcon(app, { size: 22 })}
                     {app.access === "preview" && (
-                      <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-amber-500 shadow-sm ring-1 ring-edge">
+                      <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface text-warning shadow-sm ring-1 ring-edge">
                         <Lock size={9} />
                       </span>
                     )}
@@ -118,7 +142,7 @@ export default function StartMenu({ open, onClose }: Props) {
                     logout();
                     onClose();
                   }}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-red-500 hover:text-white"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-danger hover:text-white"
                   title="Power"
                 >
                   <Power size={16} />

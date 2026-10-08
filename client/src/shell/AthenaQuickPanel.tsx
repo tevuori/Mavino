@@ -210,7 +210,9 @@ export default function AthenaQuickPanel() {
           animate={{ x: 0, y: 0, opacity: 1 }}
           exit={initialOffset(edge, rect)}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="absolute flex flex-col overflow-hidden rounded-lg border border-edge bg-surface shadow-window"
+          role="region"
+          aria-label="Mavino quick panel"
+          className="absolute flex flex-col overflow-hidden rounded-[10px] border border-edge/70 bg-surface shadow-window ring-1 ring-inset ring-accent/10"
           style={{
             left: rect.x,
             top: rect.y,

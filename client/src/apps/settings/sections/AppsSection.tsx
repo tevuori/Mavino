@@ -86,8 +86,8 @@ export default function AppsSection() {
           title={canToggle ? (isDisabled ? "Enable" : "Disable") : "Always enabled"}
           className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition disabled:opacity-40 ${
             isDisabled
-              ? "bg-red-500/15 text-red-500 hover:bg-red-500/25"
-              : "bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25"
+              ? "bg-danger-soft text-danger hover:bg-danger-soft"
+              : "bg-success-soft text-success hover:bg-success-soft"
           }`}
         >
           {busyId === app.id ? (

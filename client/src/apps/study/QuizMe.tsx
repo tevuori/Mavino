@@ -279,7 +279,7 @@ export default function QuizMe({
               max={20}
               value={count}
               onChange={(e) => setCount(Math.max(1, Math.min(20, Number(e.target.value) || 5)))}
-              className="w-20 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-accent"
+              className="w-20 rounded-md border border-edge bg-surface-2 px-2 py-1.5 text-ink outline-none focus:border-focus"
             />
           </label>
           <div className="flex flex-col gap-1 text-xs text-ink-muted">
@@ -325,7 +325,7 @@ export default function QuizMe({
     return (
       <div className="flex flex-col gap-3">
         <div className="flex flex-col items-center gap-2 rounded-lg border border-edge bg-surface-2 p-6 text-center">
-          <Award size={36} className={score >= 70 ? "text-emerald-500" : "text-amber-500"} />
+          <Award size={36} className={score >= 70 ? "text-success" : "text-warning"} />
           <div className="text-2xl font-bold text-ink">{score}%</div>
           <div className="text-xs text-ink-muted">
             {correctCount} / {total} correct — {sourceName}
@@ -379,15 +379,15 @@ export default function QuizMe({
               key={i}
               className={`rounded-lg border p-3 text-xs ${
                 qq.result?.correct
-                  ? "border-emerald-500/30 bg-emerald-500/5"
-                  : "border-red-500/30 bg-red-500/5"
+                  ? "border-success bg-success-soft"
+                  : "border-danger bg-danger-soft"
               }`}
             >
               <div className="flex items-start gap-2">
                 {qq.result?.correct ? (
-                  <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-500" />
+                  <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-success" />
                 ) : (
-                  <XCircle size={14} className="mt-0.5 shrink-0 text-red-400" />
+                  <XCircle size={14} className="mt-0.5 shrink-0 text-danger" />
                 )}
                 <div className="flex flex-col gap-1">
                   <div className="font-medium text-ink">{qq.prompt}</div>
@@ -443,8 +443,8 @@ export default function QuizMe({
             const isCorrect = feedback?.modelAnswer === opt;
             const showResult = phase === "feedback";
             let cls = "border-edge bg-surface-2 hover:bg-surface-3";
-            if (showResult && isCorrect) cls = "border-emerald-500/40 bg-emerald-500/10";
-            else if (showResult && selected && !isCorrect) cls = "border-red-500/40 bg-red-500/10";
+            if (showResult && isCorrect) cls = "border-success bg-success-soft";
+            else if (showResult && selected && !isCorrect) cls = "border-danger bg-danger-soft";
             else if (selected) cls = "border-accent bg-accent/10";
             return (
               <button
@@ -457,8 +457,8 @@ export default function QuizMe({
                   {String.fromCharCode(65 + i)}
                 </span>
                 {opt}
-                {showResult && isCorrect && <CheckCircle2 size={13} className="ml-auto text-emerald-500" />}
-                {showResult && selected && !isCorrect && <XCircle size={13} className="ml-auto text-red-400" />}
+                {showResult && isCorrect && <CheckCircle2 size={13} className="ml-auto text-success" />}
+                {showResult && selected && !isCorrect && <XCircle size={13} className="ml-auto text-danger" />}
               </button>
             );
           })}
@@ -470,7 +470,7 @@ export default function QuizMe({
           disabled={phase === "feedback"}
           placeholder="Type your answer…"
           rows={3}
-          className="resize-y rounded-md border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent disabled:opacity-70"
+          className="resize-y rounded-md border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus disabled:opacity-70"
         />
       )}
 
@@ -480,8 +480,8 @@ export default function QuizMe({
         <div
           className={`rounded-lg border p-3 text-xs ${
             feedback.correct
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
-              : "border-red-500/30 bg-red-500/10 text-red-400"
+              ? "border-success bg-success-soft text-success"
+              : "border-danger bg-danger-soft text-danger"
           }`}
         >
           <div className="mb-1 flex items-center gap-1.5 font-medium">

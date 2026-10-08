@@ -141,7 +141,7 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
       <MobileHeader title="Voice Notes" subtitle="Record, transcribe, listen" onClose={onClose} />
 
       {!supported && (
-        <p className="mb-4 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <p className="mb-4 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">
           Microphone recording is not supported in this browser.
         </p>
       )}
@@ -155,7 +155,7 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
               type="button"
               onClick={() => void start()}
               disabled={!supported}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-ink shadow-lg disabled:opacity-50"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-danger text-ink shadow-lg disabled:opacity-50"
             >
               <Mic size={32} />
             </button>
@@ -163,7 +163,7 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
             <button
               type="button"
               onClick={stop}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-ink shadow-lg"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-warning text-ink shadow-lg"
             >
               <Square size={28} fill="currentColor" />
             </button>
@@ -174,7 +174,7 @@ export default function MobileVoice({ onClose }: { onClose?: () => void }) {
       {loading && <p className="mb-4 text-center text-sm text-ink-muted">Transcribing...</p>}
 
       {error && (
-        <p className="mb-4 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</p>
+        <p className="mb-4 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>
       )}
 
       {result && (result.note || result.transcript) && (

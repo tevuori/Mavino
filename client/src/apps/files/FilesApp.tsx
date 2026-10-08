@@ -1060,7 +1060,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
               <button onClick={cutSelected} className="flex items-center gap-1 rounded px-2 py-1 text-ink-muted hover:bg-surface-2 hover:text-ink" title="Cut">
                 <Scissors size={13} />
               </button>
-              <button onClick={deleteSelected} className="flex items-center gap-1 rounded px-2 py-1 text-red-400 hover:bg-red-500/15" title="Delete">
+              <button onClick={deleteSelected} className="flex items-center gap-1 rounded px-2 py-1 text-danger hover:bg-danger-soft" title="Delete">
                 <Trash2 size={13} />
               </button>
               <button onClick={clearSelection} className="flex items-center gap-1 rounded px-2 py-1 text-ink-muted hover:bg-surface-2 hover:text-ink" title="Clear selection">
@@ -1146,7 +1146,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
                     selected.has(folder.id) ? "bg-accent/10 ring-1 ring-accent/40" : ""
                   }`}
                 >
-                  <Folder size={36} className="text-amber-400" />
+                  <Folder size={36} className="text-warning" />
                   {renaming?.type === "folder" && renaming.id === folder.id ? (
                     <input
                       autoFocus
@@ -1164,7 +1164,8 @@ export default function FilesApp(_: { win: WindowInstance }) {
                   )}
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteFolder(folder); }}
-                    className="absolute right-1 top-1 hidden h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-red-500 hover:text-white group-hover:flex"
+                    className="absolute right-1 top-1 hidden h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-danger hover:text-white group-hover:flex"
+                    aria-label={`Delete ${folder.name}`}
                   >
                     <Trash2 size={12} />
                   </button>
@@ -1185,7 +1186,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
                   }`}
                 >
                   <FilePreviewIcon file={file} size={36} />
-                  {file.starred && <Star size={10} className="absolute left-2 top-2 fill-amber-400 text-amber-400" />}
+                  {file.starred && <Star size={10} className="absolute left-2 top-2 fill-warning text-warning" />}
                   {renaming?.type === "file" && renaming.id === file.id ? (
                     <input
                       autoFocus
@@ -1208,12 +1209,14 @@ export default function FilesApp(_: { win: WindowInstance }) {
                     <button
                       onClick={(e) => { e.stopPropagation(); download(file); }}
                       className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-surface-3 hover:text-ink"
+                      aria-label={`Download ${file.name}`}
                     >
                       <Download size={12} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteFile(file); }}
-                      className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-red-500 hover:text-white"
+                      className="flex h-6 w-6 items-center justify-center rounded text-ink-muted hover:bg-danger hover:text-white"
+                      aria-label={`Delete ${file.name}`}
                     >
                       <Trash2 size={12} />
                     </button>
@@ -1257,7 +1260,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
                   >
                     <td className="px-2 py-1.5">
                       <div className="flex items-center gap-2">
-                        <Folder size={16} className="text-amber-400" />
+                        <Folder size={16} className="text-warning" />
                         {renaming?.type === "folder" && renaming.id === folder.id ? (
                           <input
                             autoFocus
@@ -1311,7 +1314,7 @@ export default function FilesApp(_: { win: WindowInstance }) {
                         ) : (
                           <span className="text-ink">{file.name}</span>
                         )}
-                        {file.starred && <Star size={10} className="fill-amber-400 text-amber-400" />}
+                        {file.starred && <Star size={10} className="fill-warning text-warning" />}
                       </div>
                     </td>
                     <td className="px-2 py-1.5 text-ink-muted">
@@ -1463,7 +1466,7 @@ function FolderTreeNodeView({
         ) : (
           <span className="w-4 shrink-0" />
         )}
-        <Folder size={14} className="shrink-0 text-amber-400" />
+        <Folder size={14} className="shrink-0 text-warning" />
         <span className="line-clamp-1 flex-1">{node.name}</span>
         {node.fileCount > 0 && (
           <span className="text-[10px] text-ink-muted/60">{node.fileCount}</span>
@@ -1491,11 +1494,11 @@ function FolderTreeNodeView({
 }
 
 function FilePreviewIcon({ file, size }: { file: VFile; size: number }) {
-  if (isImageFile(file)) return <ImageIcon size={size} className="text-green-400" />;
-  if (isPdfFile(file)) return <FileText size={size} className="text-red-400" />;
-  if (isAudioFile(file)) return <MusicIcon size={size} className="text-purple-400" />;
-  if (isVideoFile(file)) return <VideoIcon size={size} className="text-pink-400" />;
-  if (isTextFile(file)) return <FileCode size={size} className="text-blue-400" />;
+  if (isImageFile(file)) return <ImageIcon size={size} className="text-success" />;
+  if (isPdfFile(file)) return <FileText size={size} className="text-danger" />;
+  if (isAudioFile(file)) return <MusicIcon size={size} className="text-accent" />;
+  if (isVideoFile(file)) return <VideoIcon size={size} className="text-danger" />;
+  if (isTextFile(file)) return <FileCode size={size} className="text-accent" />;
   return <FileIcon size={size} className={fileIconColor(file.mimeType)} />;
 }
 

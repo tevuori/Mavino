@@ -19,9 +19,9 @@ import { SectionHeader, Card, MsgBox, SaveButton } from "../ui";
 const TIER_OPTIONS: AppTier[] = ["free", "paid", "pro"];
 
 const TIER_COLORS: Record<AppTier, string> = {
-  free: "bg-emerald-500/15 text-emerald-500",
-  paid: "bg-indigo-500/15 text-indigo-400",
-  pro: "bg-amber-500/15 text-amber-500",
+  free: "bg-success-soft text-success",
+  paid: "bg-accent/15 text-accent",
+  pro: "bg-warning-soft text-warning",
 };
 
 export default function TiersSection() {
@@ -107,12 +107,12 @@ export default function TiersSection() {
         <div className="mb-3 flex items-center gap-2 text-sm">
           {prices?.stripeConfigured ? (
             <>
-              <Check size={16} className="text-emerald-500" />
+              <Check size={16} className="text-success" />
               <span className="text-ink">Stripe is configured (secret key detected)</span>
             </>
           ) : (
             <>
-              <AlertCircle size={16} className="text-amber-500" />
+              <AlertCircle size={16} className="text-warning" />
               <span className="text-ink-muted">
                 Stripe is not configured. Set <code className="rounded bg-surface-3 px-1 text-xs">STRIPE_SECRET_KEY</code> and <code className="rounded bg-surface-3 px-1 text-xs">STRIPE_WEBHOOK_SECRET</code> env vars to enable payments.
               </span>
@@ -129,7 +129,7 @@ export default function TiersSection() {
               value={paidPriceId}
               onChange={(e) => setPaidPriceId(e.target.value)}
               placeholder="price_..."
-              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus"
             />
           </div>
           <div>
@@ -141,7 +141,7 @@ export default function TiersSection() {
               value={proPriceId}
               onChange={(e) => setProPriceId(e.target.value)}
               placeholder="price_..."
-              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-focus"
             />
           </div>
         </div>

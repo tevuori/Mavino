@@ -52,7 +52,7 @@ export default function PerformanceAnalysisSection() {
       {enabled && (
         <>
           {/* Stability verdict */}
-          <Card className={`mb-4 ${s.stable ? "border-emerald-500/30" : "border-amber-500/30"}`}>
+          <Card className={`mb-4 ${s.stable ? "border-success" : "border-warning"}`}>
             <div className="flex items-center gap-3">
               {s.samples < 3 ? (
                 <>
@@ -66,9 +66,9 @@ export default function PerformanceAnalysisSection() {
                 </>
               ) : s.stable ? (
                 <>
-                  <CheckCircle size={24} className="text-emerald-500" />
+                  <CheckCircle size={24} className="text-success" />
                   <div>
-                    <p className="text-sm font-semibold text-emerald-400">App is stable</p>
+                    <p className="text-sm font-semibold text-success">App is stable</p>
                     <p className="text-xs text-ink-muted">
                       No performance issues detected across {s.samples} samples
                     </p>
@@ -76,9 +76,9 @@ export default function PerformanceAnalysisSection() {
                 </>
               ) : (
                 <>
-                  <AlertTriangle size={24} className="text-amber-500" />
+                  <AlertTriangle size={24} className="text-warning" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-amber-400">App is unstable</p>
+                    <p className="text-sm font-semibold text-warning">App is unstable</p>
                     <p className="text-xs text-ink-muted">
                       {s.issues.length} issue{s.issues.length === 1 ? "" : "s"} detected — see log below
                     </p>
@@ -99,7 +99,7 @@ export default function PerformanceAnalysisSection() {
             {s.issues.length > 0 && (
               <div className="mt-3 space-y-1.5 border-t border-edge pt-3">
                 {s.issues.map((issue, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-amber-300">
+                  <div key={i} className="flex items-start gap-2 text-xs text-warning">
                     <AlertTriangle size={12} className="mt-0.5 shrink-0" />
                     <span>{issue}</span>
                   </div>
@@ -151,8 +151,8 @@ export default function PerformanceAnalysisSection() {
                 <Activity size={14} className="text-accent" />
                 <span className="text-xs font-semibold text-ink">Performance Log</span>
                 {running && (
-                  <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> LIVE
+                  <span className="flex items-center gap-1 text-[10px] text-success">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> LIVE
                   </span>
                 )}
               </div>
@@ -193,14 +193,14 @@ function StatCard({
   status: "good" | "warn" | "bad" | "neutral";
 }) {
   const color =
-    status === "good" ? "text-emerald-400"
-    : status === "warn" ? "text-amber-400"
-    : status === "bad" ? "text-red-400"
+    status === "good" ? "text-success"
+    : status === "warn" ? "text-warning"
+    : status === "bad" ? "text-danger"
     : "text-ink";
   const border =
-    status === "good" ? "border-emerald-500/20"
-    : status === "warn" ? "border-amber-500/20"
-    : status === "bad" ? "border-red-500/20"
+    status === "good" ? "border-success"
+    : status === "warn" ? "border-warning"
+    : status === "bad" ? "border-danger"
     : "border-edge";
   return (
     <div className={`rounded-lg border ${border} bg-surface-2 p-3`}>
@@ -221,9 +221,9 @@ function LogEntry({ sample, index }: { sample: PerfSample; index: number }) {
   const taskStatus = sample.longTaskCount === 0 ? "good" : sample.longTaskCount <= 2 ? "warn" : "bad";
 
   const colorClass = (s: string) =>
-    s === "good" ? "text-emerald-400"
-    : s === "warn" ? "text-amber-400"
-    : s === "bad" ? "text-red-400"
+    s === "good" ? "text-success"
+    : s === "warn" ? "text-warning"
+    : s === "bad" ? "text-danger"
     : "text-ink-muted";
 
   return (
@@ -243,17 +243,17 @@ function LogEntry({ sample, index }: { sample: PerfSample; index: number }) {
         {sample.longTaskCount > 0 ? `${sample.longTaskCount}lt/${sample.longestTaskMs}ms` : "0lt"}
       </span>
       {sample.jsHeapMB !== null && (
-        <span className="shrink-0 text-sky-400">
+        <span className="shrink-0 text-accent">
           <MemoryStick size={10} className="mr-0.5 inline" />
           {sample.jsHeapMB}MB
         </span>
       )}
-      <span className="shrink-0 text-violet-400">
+      <span className="shrink-0 text-accent">
         <Cpu size={10} className="mr-0.5 inline" />
         {sample.domNodes}dom
       </span>
       {sample.pendingFetches > 0 && (
-        <span className="shrink-0 text-amber-400">
+        <span className="shrink-0 text-warning">
           <Network size={10} className="mr-0.5 inline" />
           {sample.pendingFetches}req
         </span>

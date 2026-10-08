@@ -10,7 +10,7 @@
 //
 // Integrates with Flashcards (deck sharing) and Notes (folder sharing).
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import {
   Users, Plus, Trash2, RefreshCw, Loader2, AlertCircle, X,
   ChevronLeft, Copy, Check, UserPlus, LogOut, Crown, Shield,
@@ -24,6 +24,8 @@ import { flashcardsApi } from "../../services/flashcards";
 import { notesApi } from "../../services/notes";
 import type { WindowInstance } from "../../store/windows";
 import { confirmDialog } from "../../store/mobileDialog";
+import { Dialog } from "../../ui/overlays";
+import { Alert, Button } from "../../ui/primitives";
 
 // ----- main component -----
 
@@ -105,8 +107,8 @@ export default function CircleApp({ win }: { win: WindowInstance }) {
   if (error && !activeGroup) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <AlertCircle className="text-red-400" size={32} />
-        <p className="text-sm text-red-400">{error}</p>
+        <AlertCircle className="text-danger" size={32} />
+        <p className="text-sm text-danger">{error}</p>
         <button
           onClick={() => { setError(null); loadGroups(); }}
           className="rounded-lg bg-surface-3 px-3 py-1.5 text-xs hover:brightness-110"
@@ -167,9 +169,9 @@ function GroupListView({
 }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-surface-3 px-4 py-2">
+      <div className="flex items-center justify-between border-b border-edge px-4 py-2">
         <div className="flex items-center gap-2">
-          <Users className="text-emerald-400" size={18} />
+          <Users className="text-accent" size={18} />
           <h2 className="text-sm font-semibold text-ink">Circle</h2>
           <span className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px] text-ink-muted">
             {groups.length} group{groups.length !== 1 ? "s" : ""}
@@ -191,7 +193,7 @@ function GroupListView({
           </button>
           <button
             onClick={onCreate}
-            className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-500"
+            className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1 text-xs text-white hover:bg-accent-hover"
           >
             <Plus size={14} /> Create
           </button>
@@ -207,7 +209,7 @@ function GroupListView({
             <div className="flex gap-2">
               <button
                 onClick={onCreate}
-                className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-500"
+                className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover"
               >
                 <Plus size={14} /> Create Group
               </button>
@@ -224,7 +226,7 @@ function GroupListView({
             {groups.map((group) => (
               <div
                 key={group.id}
-                className="group cursor-pointer rounded-xl border border-surface-3 bg-surface-2 p-4 transition hover:border-emerald-500/50 hover:bg-surface-3"
+                className="group cursor-pointer rounded-xl border border-edge bg-surface-2 p-4 transition hover:border-accent/50 hover:bg-surface-3"
                 onClick={() => onOpen(group.id)}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -235,7 +237,7 @@ function GroupListView({
                     )}
                   </div>
                   {group.role === "owner" && (
-                    <Crown className="shrink-0 text-amber-400" size={14} />
+                    <Crown className="shrink-0 text-warning" size={14} />
                   )}
                 </div>
                 <div className="mt-3 flex items-center gap-3 text-[10px] text-ink-muted">
@@ -318,7 +320,7 @@ function GroupDetailView({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-surface-3 px-4 py-2">
+      <div className="flex items-center justify-between border-b border-edge px-4 py-2">
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={onBack}
@@ -328,7 +330,7 @@ function GroupDetailView({
           </button>
           <span className="text-ink-muted">/</span>
           <h2 className="truncate text-sm font-semibold text-ink">{group.name}</h2>
-          {isOwner && <Crown className="text-amber-400" size={12} />}
+          {isOwner && <Crown className="text-warning" size={12} />}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -341,7 +343,7 @@ function GroupDetailView({
           {isOwner ? (
             <button
               onClick={onDelete}
-              className="rounded-lg p-1.5 text-ink-muted hover:bg-red-500/10 hover:text-red-400"
+              className="rounded-lg p-1.5 text-ink-muted hover:bg-danger-soft hover:text-danger"
               title="Delete group"
             >
               <Trash2 size={14} />
@@ -349,7 +351,7 @@ function GroupDetailView({
           ) : (
             <button
               onClick={onLeave}
-              className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs text-ink-muted hover:text-red-400"
+              className="flex items-center gap-1 rounded-lg bg-surface-3 px-2 py-1 text-xs text-ink-muted hover:text-danger"
             >
               <LogOut size={12} /> Leave
             </button>
@@ -366,14 +368,14 @@ function GroupDetailView({
 
           <div className="flex items-center gap-2 rounded-lg bg-surface-2 p-3">
             <span className="text-xs text-ink-muted">Invite code:</span>
-            <code className="rounded bg-surface-3 px-2 py-0.5 text-sm font-mono text-emerald-400">
+            <code className="rounded bg-surface-3 px-2 py-0.5 text-sm font-mono text-accent">
               {group.inviteCode}
             </code>
             <button
               onClick={copyInviteCode}
               className="ml-auto flex items-center gap-1 rounded p-1 text-ink-muted hover:text-ink"
             >
-              {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+              {copied ? <Check size={14} className="text-accent" /> : <Copy size={14} />}
             </button>
           </div>
 
@@ -399,11 +401,11 @@ function GroupDetailView({
                     <p className="text-[10px] text-ink-muted">@{m.username}</p>
                   </div>
                   {m.role === "owner" ? (
-                    <span className="flex items-center gap-1 text-[10px] text-amber-400">
+                    <span className="flex items-center gap-1 text-[10px] text-warning">
                       <Crown size={10} /> Owner
                     </span>
                   ) : m.role === "admin" ? (
-                    <span className="flex items-center gap-1 text-[10px] text-blue-400">
+                    <span className="flex items-center gap-1 text-[10px] text-info">
                       <Shield size={10} /> Admin
                     </span>
                   ) : (
@@ -412,7 +414,7 @@ function GroupDetailView({
                   {isAdmin && m.role !== "owner" && (
                     <button
                       onClick={() => handleRemoveMember(m.userId, m.displayName || m.username)}
-                      className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                      className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
                       title="Remove member"
                     >
                       <UserX size={12} />
@@ -452,13 +454,13 @@ function GroupDetailView({
                         {d.cardCount} cards · shared by {d.sharedByName}
                       </p>
                     </div>
-                    <span className={`flex items-center gap-1 text-[10px] ${d.permission === "write" ? "text-emerald-400" : "text-ink-muted"}`}>
+                    <span className={`flex items-center gap-1 text-[10px] ${d.permission === "write" ? "text-accent" : "text-ink-muted"}`}>
                       {d.permission === "write" ? <Unlock size={10} /> : <Lock size={10} />}
                       {d.permission}
                     </span>
                     <button
                       onClick={() => handleUnshareDeck(d.deckId)}
-                      className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                      className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
                       title="Unshare"
                     >
                       <X size={12} />
@@ -495,13 +497,13 @@ function GroupDetailView({
                         {f.noteCount} notes · shared by {f.sharedByName}
                       </p>
                     </div>
-                    <span className={`flex items-center gap-1 text-[10px] ${f.permission === "write" ? "text-emerald-400" : "text-ink-muted"}`}>
+                    <span className={`flex items-center gap-1 text-[10px] ${f.permission === "write" ? "text-accent" : "text-ink-muted"}`}>
                       {f.permission === "write" ? <Unlock size={10} /> : <Lock size={10} />}
                       {f.permission}
                     </span>
                     <button
                       onClick={() => handleUnshareFolder(f.folderId)}
-                      className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                      className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
                       title="Unshare"
                     >
                       <X size={12} />
@@ -513,7 +515,7 @@ function GroupDetailView({
           </section>
 
           {error && (
-            <div className="rounded-lg bg-red-500/10 p-3 text-xs text-red-400">{error}</div>
+            <div className="rounded-lg bg-danger-soft p-3 text-xs text-danger">{error}</div>
           )}
         </div>
       </div>
@@ -537,6 +539,24 @@ function GroupDetailView({
         />
       )}
     </div>
+  );
+}
+
+function CircleDialog({
+  title,
+  onCancel,
+  children,
+  footer,
+}: {
+  title: string;
+  onCancel: () => void;
+  children: ReactNode;
+  footer: ReactNode;
+}) {
+  return (
+    <Dialog open onClose={onCancel} title={title} className="max-w-md" footer={footer}>
+      {children}
+    </Dialog>
   );
 }
 
@@ -568,24 +588,25 @@ function CreateGroupDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-surface-3 bg-surface-1 p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Users className="text-emerald-400" size={16} /> Create Study Group
-          </h3>
-          <button onClick={onCancel} className="rounded p-1 text-ink-muted hover:bg-surface-3">
-            <X size={16} />
-          </button>
-        </div>
+    <CircleDialog
+      title="Create study group"
+      onCancel={onCancel}
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button size="sm" onClick={handleSubmit} disabled={loading || !name.trim()} loading={loading} leadingIcon={<Plus size={14} />}>Create</Button>
+        </>
+      }
+    >
         <div className="space-y-4">
           <div>
             <label className="mb-1 block text-xs text-ink-muted">Group name</label>
             <input
+              data-autofocus
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Calculus Study Group"
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-focus focus:outline-none"
             />
           </div>
           <div>
@@ -595,26 +616,12 @@ function CreateGroupDialog({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What's this group for?"
               rows={2}
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-focus focus:outline-none"
             />
           </div>
-          {error && <div className="rounded-lg bg-red-500/10 p-3 text-xs text-red-400">{error}</div>}
-          <div className="flex justify-end gap-2">
-            <button onClick={onCancel} className="rounded-lg bg-surface-3 px-4 py-2 text-xs text-ink-muted hover:brightness-110">
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading || !name.trim()}
-              className="flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2 text-xs text-white hover:bg-emerald-500 disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
-              Create
-            </button>
-          </div>
+          {error && <Alert variant="danger" className="text-xs">{error}</Alert>}
         </div>
-      </div>
-    </div>
+    </CircleDialog>
   );
 }
 
@@ -645,45 +652,32 @@ function JoinGroupDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-surface-3 bg-surface-1 p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <UserPlus className="text-emerald-400" size={16} /> Join Study Group
-          </h3>
-          <button onClick={onCancel} className="rounded p-1 text-ink-muted hover:bg-surface-3">
-            <X size={16} />
-          </button>
-        </div>
+    <CircleDialog
+      title="Join study group"
+      onCancel={onCancel}
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button size="sm" onClick={handleSubmit} disabled={loading || !inviteCode.trim()} loading={loading} leadingIcon={<UserPlus size={14} />}>Join</Button>
+        </>
+      }
+    >
         <div className="space-y-4">
           <div>
             <label className="mb-1 block text-xs text-ink-muted">Invite code</label>
             <input
+              data-autofocus
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
               placeholder="e.g. ABC123"
               maxLength={10}
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm font-mono text-ink placeholder:text-ink-muted focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm font-mono text-ink placeholder:text-ink-muted focus:border-focus focus:outline-none"
             />
             <p className="mt-1 text-[10px] text-ink-muted">Ask the group owner for the 6-character invite code.</p>
           </div>
-          {error && <div className="rounded-lg bg-red-500/10 p-3 text-xs text-red-400">{error}</div>}
-          <div className="flex justify-end gap-2">
-            <button onClick={onCancel} className="rounded-lg bg-surface-3 px-4 py-2 text-xs text-ink-muted hover:brightness-110">
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading || !inviteCode.trim()}
-              className="flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2 text-xs text-white hover:bg-emerald-500 disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="animate-spin" size={14} /> : <UserPlus size={14} />}
-              Join
-            </button>
-          </div>
+          {error && <Alert variant="danger" className="text-xs">{error}</Alert>}
         </div>
-      </div>
-    </div>
+    </CircleDialog>
   );
 }
 
@@ -731,16 +725,16 @@ function ShareDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-surface-3 bg-surface-1 p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Sparkles className="text-emerald-400" size={16} /> {title}
-          </h3>
-          <button onClick={onCancel} className="rounded p-1 text-ink-muted hover:bg-surface-3">
-            <X size={16} />
-          </button>
-        </div>
+    <CircleDialog
+      title={title}
+      onCancel={onCancel}
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button size="sm" onClick={handleSubmit} disabled={loading || !selectedId} loading={loading} leadingIcon={<Plus size={14} />}>Share</Button>
+        </>
+      }
+    >
         <div className="space-y-4">
           <div>
             <label className="mb-1 block text-xs text-ink-muted">
@@ -749,7 +743,7 @@ function ShareDialog({
             <select
               value={selectedId}
               onChange={(e) => setSelectedId(e.target.value)}
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink focus:border-focus focus:outline-none"
             >
               <option value="">Select...</option>
               {items.map((item) => (
@@ -767,38 +761,26 @@ function ShareDialog({
             <div className="flex gap-2">
               <button
                 onClick={() => setPermission("read")}
+                aria-pressed={permission === "read"}
                 className={`flex flex-1 items-center justify-center gap-1 rounded-lg border p-2 text-xs ${
-                  permission === "read" ? "border-emerald-500 bg-emerald-500/10 text-ink" : "border-surface-3 bg-surface-2 text-ink-muted"
+                  permission === "read" ? "border-accent bg-accent-soft text-ink" : "border-edge bg-surface-2 text-ink-muted"
                 }`}
               >
                 <Lock size={12} /> Read only
               </button>
               <button
                 onClick={() => setPermission("write")}
+                aria-pressed={permission === "write"}
                 className={`flex flex-1 items-center justify-center gap-1 rounded-lg border p-2 text-xs ${
-                  permission === "write" ? "border-emerald-500 bg-emerald-500/10 text-ink" : "border-surface-3 bg-surface-2 text-ink-muted"
+                  permission === "write" ? "border-accent bg-accent-soft text-ink" : "border-edge bg-surface-2 text-ink-muted"
                 }`}
               >
                 <Unlock size={12} /> Read & Write
               </button>
             </div>
           </div>
-          {error && <div className="rounded-lg bg-red-500/10 p-3 text-xs text-red-400">{error}</div>}
-          <div className="flex justify-end gap-2">
-            <button onClick={onCancel} className="rounded-lg bg-surface-3 px-4 py-2 text-xs text-ink-muted hover:brightness-110">
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading || !selectedId}
-              className="flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2 text-xs text-white hover:bg-emerald-500 disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
-              Share
-            </button>
-          </div>
+          {error && <Alert variant="danger" className="text-xs">{error}</Alert>}
         </div>
-      </div>
-    </div>
+    </CircleDialog>
   );
 }

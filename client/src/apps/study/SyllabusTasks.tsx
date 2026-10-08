@@ -146,18 +146,18 @@ export default function SyllabusTasks({ initialSource, language }: { initialSour
                   value={t.title}
                   onChange={(e) => updateTask(i, "title", e.target.value)}
                   placeholder="Task title"
-                  className="flex-1 rounded border border-edge bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="flex-1 rounded border border-edge bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 />
                 <input
                   type="date"
                   value={t.dueDate ? t.dueDate.slice(0, 10) : ""}
                   onChange={(e) => updateTask(i, "dueDate", e.target.value || "")}
-                  className="rounded border border-edge bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="rounded border border-edge bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 />
                 <select
                   value={t.priority}
                   onChange={(e) => updateTask(i, "priority", e.target.value)}
-                  className="rounded border border-edge bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="rounded border border-edge bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 >
                   <option value="LOW">Low</option>
                   <option value="MEDIUM">Med</option>
@@ -165,7 +165,7 @@ export default function SyllabusTasks({ initialSource, language }: { initialSour
                 </select>
                 <button
                   onClick={() => removeTask(i)}
-                  className="rounded p-1 text-ink-muted hover:bg-red-500/10 hover:text-red-400"
+                  className="rounded p-1 text-ink-muted hover:bg-danger-soft hover:text-danger"
                 >
                   <Trash2 size={13} />
                 </button>

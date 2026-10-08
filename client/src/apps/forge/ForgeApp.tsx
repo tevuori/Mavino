@@ -19,7 +19,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import {
-  Flame, Plus, Trash2, RefreshCw, Loader2, AlertCircle, X,
+  Flame, Plus, Trash2, RefreshCw, Loader2, AlertCircle,
   ChevronLeft, ChevronRight, CheckCircle2, XCircle, AlertTriangle,
   Lightbulb, FileText, Brain, Network, Type, Sparkles, RotateCw,
   TrendingUp, Award,
@@ -35,6 +35,8 @@ import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
 import { confirmDialog } from "../../store/mobileDialog";
 import type { VFile } from "../../types";
+import { Dialog } from "../../ui/overlays";
+import { Alert, Button } from "../../ui/primitives";
 
 // ----- helpers -----
 
@@ -46,10 +48,10 @@ const FORMAT_LABELS: Record<string, string> = {
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: "text-emerald-400",
-  medium: "text-amber-400",
-  hard: "text-red-400",
-  adaptive: "text-indigo-400",
+  easy: "text-success",
+  medium: "text-warning",
+  hard: "text-danger",
+  adaptive: "text-accent",
 };
 
 const SOURCE_ICONS: Record<string, typeof FileText> = {
@@ -68,7 +70,7 @@ function MarkdownText({ content, className = "" }: { content: string; className?
         rehypePlugins={[rehypeKatex]}
         components={{
           a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:opacity-80">
+            <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent underline hover:opacity-80">
               {children}
             </a>
           ),
@@ -158,8 +160,8 @@ export default function ForgeApp({ win }: { win: WindowInstance }) {
   if (error && !activeSet) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <AlertCircle className="text-red-400" size={32} />
-        <p className="text-sm text-red-400">{error}</p>
+        <AlertCircle className="text-danger" size={32} />
+        <p className="text-sm text-danger">{error}</p>
         <button
           onClick={() => { setError(null); loadSets(); }}
           className="rounded-lg bg-surface-3 px-3 py-1.5 text-xs hover:brightness-110"
@@ -214,9 +216,9 @@ function SetListView({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-surface-3 px-4 py-2">
+      <div className="flex items-center justify-between border-b border-edge px-4 py-2">
         <div className="flex items-center gap-2">
-          <Flame className="text-orange-400" size={18} />
+          <Flame className="text-accent" size={18} />
           <h2 className="text-sm font-semibold text-ink">Forge</h2>
           <span className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px] text-ink-muted">
             {sets.length} set{sets.length !== 1 ? "s" : ""}
@@ -232,7 +234,7 @@ function SetListView({
           </button>
           <button
             onClick={onGenerate}
-            className="flex items-center gap-1 rounded-lg bg-orange-600 px-2 py-1 text-xs text-white hover:bg-orange-500"
+            className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1 text-xs text-white hover:bg-accent-hover"
           >
             <Plus size={14} /> Generate
           </button>
@@ -241,7 +243,7 @@ function SetListView({
 
       {/* Stats bar */}
       {stats && (
-        <div className="flex items-center gap-4 border-b border-surface-3 bg-surface-2 px-4 py-2 text-xs text-ink-muted">
+        <div className="flex items-center gap-4 border-b border-edge bg-surface-2 px-4 py-2 text-xs text-ink-muted">
           <span className="flex items-center gap-1">
             <FileText size={12} /> {stats.totalProblems} problems
           </span>
@@ -270,7 +272,7 @@ function SetListView({
             <p className="text-xs text-ink-muted">Generate problems from notes, files, or your Atlas knowledge graph.</p>
             <button
               onClick={onGenerate}
-              className="flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs text-white hover:bg-orange-500"
+              className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover"
             >
               <Plus size={14} /> Generate First Set
             </button>
@@ -282,7 +284,7 @@ function SetListView({
               return (
                 <div
                   key={set.id}
-                  className="group cursor-pointer rounded-xl border border-surface-3 bg-surface-2 p-4 transition hover:border-orange-500/50 hover:bg-surface-3"
+                  className="group cursor-pointer rounded-xl border border-edge bg-surface-2 p-4 transition hover:border-accent/50 hover:bg-surface-3"
                   onClick={() => onOpen(set.id)}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -295,19 +297,19 @@ function SetListView({
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); onDelete(set.id); }}
-                      className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                      className="rounded p-1 text-ink-muted opacity-0 transition hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
                     >
                       <Trash2 size={12} />
                     </button>
                   </div>
                   <div className="mt-3 flex items-center gap-2 text-[10px]">
-                    <span className="rounded-full bg-surface-4 px-2 py-0.5 text-ink-muted">
+                    <span className="rounded-full bg-surface-3 px-2 py-0.5 text-ink-muted">
                       {set.count} problems
                     </span>
-                    <span className="rounded-full bg-surface-4 px-2 py-0.5 text-ink-muted">
+                    <span className="rounded-full bg-surface-3 px-2 py-0.5 text-ink-muted">
                       {FORMAT_LABELS[set.format] ?? set.format}
                     </span>
-                    <span className={`rounded-full bg-surface-4 px-2 py-0.5 ${DIFFICULTY_COLORS[set.difficulty] ?? "text-ink-muted"}`}>
+                    <span className={`rounded-full bg-surface-3 px-2 py-0.5 ${DIFFICULTY_COLORS[set.difficulty] ?? "text-ink-muted"}`}>
                       {set.difficulty}
                     </span>
                   </div>
@@ -389,7 +391,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
   if (!problem) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3">
-        <CheckCircle2 className="text-emerald-400" size={48} />
+        <CheckCircle2 className="text-success" size={48} />
         <p className="text-sm text-ink">All done!</p>
         <button onClick={onBack} className="rounded-lg bg-surface-3 px-3 py-1.5 text-xs hover:brightness-110">
           Back to sets
@@ -401,7 +403,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-surface-3 px-4 py-2">
+      <div className="flex items-center justify-between border-b border-edge px-4 py-2">
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={onBack}
@@ -420,7 +422,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
       {/* Progress bar */}
       <div className="h-1 bg-surface-3">
         <div
-          className="h-full bg-orange-500 transition-all"
+          className="h-full bg-accent transition-all"
           style={{ width: `${((currentIdx + 1) / set.problems.length) * 100}%` }}
         />
       </div>
@@ -439,7 +441,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
           </div>
 
           {/* Prompt */}
-          <div className="mb-6 rounded-xl border border-surface-3 bg-surface-2 p-4">
+          <div className="mb-6 rounded-xl border border-edge bg-surface-2 p-4">
             <MarkdownText content={problem.prompt} className="text-sm text-ink" />
           </div>
 
@@ -447,15 +449,15 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
           {problem.hint && !showHint[problem.id] && !attempt && (
             <button
               onClick={() => setShowHint((prev) => ({ ...prev, [problem.id]: true }))}
-              className="mb-4 flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300"
+              className="mb-4 flex items-center gap-1 text-xs text-warning hover:text-warning"
             >
               <Lightbulb size={12} /> Show hint
             </button>
           )}
           {showHint[problem.id] && problem.hint && (
-            <div className="mb-4 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-300">
+            <div className="mb-4 rounded-lg bg-warning-soft p-3 text-xs text-warning">
               <span className="font-medium">Hint:</span>{" "}
-              <MarkdownText content={problem.hint} className="text-xs text-amber-300" />
+              <MarkdownText content={problem.hint} className="text-xs text-warning" />
             </div>
           )}
 
@@ -470,12 +472,12 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
                       onClick={() => setAnswers((prev) => ({ ...prev, [problem.id]: opt.id }))}
                       className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left text-sm transition ${
                         answers[problem.id] === opt.id
-                          ? "border-orange-500 bg-orange-500/10 text-ink"
-                          : "border-surface-3 bg-surface-2 text-ink-muted hover:border-surface-4"
+                          ? "border-accent bg-accent-soft text-ink"
+                          : "border-edge bg-surface-2 text-ink-muted hover:border-surface-4"
                       }`}
                     >
                       <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                        answers[problem.id] === opt.id ? "bg-orange-500 text-white" : "bg-surface-4 text-ink-muted"
+                        answers[problem.id] === opt.id ? "bg-accent text-white" : "bg-surface-3 text-ink-muted"
                       }`}>
                         {opt.id}
                       </span>
@@ -489,13 +491,13 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
                   onChange={(e) => setAnswers((prev) => ({ ...prev, [problem.id]: e.target.value }))}
                   placeholder={problem.type === "step_by_step" ? "Enter your solution step by step..." : "Enter your answer..."}
                   rows={problem.type === "step_by_step" ? 8 : 4}
-                  className="w-full rounded-lg border border-surface-3 bg-surface-2 p-3 text-sm text-ink placeholder:text-ink-muted focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-lg border border-edge bg-surface-2 p-3 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
                 />
               )}
               <button
                 onClick={handleSubmit}
                 disabled={!answers[problem.id]?.trim() || grading === problem.id}
-                className="mt-3 flex items-center gap-1 rounded-lg bg-orange-600 px-4 py-2 text-sm text-white hover:bg-orange-500 disabled:opacity-50"
+                className="mt-3 flex items-center gap-1 rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover disabled:opacity-50"
               >
                 {grading === problem.id ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
                 Submit Answer
@@ -508,23 +510,23 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
             <div className="space-y-4">
               <div className={`rounded-xl border p-4 ${
                 attempt.result === "correct"
-                  ? "border-emerald-500/30 bg-emerald-500/10"
+                  ? "border-success/30 bg-success-soft"
                   : attempt.result === "partial"
-                  ? "border-amber-500/30 bg-amber-500/10"
-                  : "border-red-500/30 bg-red-500/10"
+                  ? "border-warning/30 bg-warning-soft"
+                  : "border-danger/30 bg-danger-soft"
               }`}>
                 <div className="flex items-center gap-2 mb-2">
                   {attempt.result === "correct" ? (
-                    <CheckCircle2 className="text-emerald-400" size={18} />
+                    <CheckCircle2 className="text-success" size={18} />
                   ) : attempt.result === "partial" ? (
-                    <AlertTriangle className="text-amber-400" size={18} />
+                    <AlertTriangle className="text-warning" size={18} />
                   ) : (
-                    <XCircle className="text-red-400" size={18} />
+                    <XCircle className="text-danger" size={18} />
                   )}
                   <span className={`text-sm font-medium ${
-                    attempt.result === "correct" ? "text-emerald-400"
-                    : attempt.result === "partial" ? "text-amber-400"
-                    : "text-red-400"
+                    attempt.result === "correct" ? "text-success"
+                    : attempt.result === "partial" ? "text-warning"
+                    : "text-danger"
                   }`}>
                     {attempt.result === "correct" ? "Correct!" : attempt.result === "partial" ? "Partially Correct" : "Incorrect"}
                   </span>
@@ -540,9 +542,9 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
                     {attempt.feedback.steps.map((step, i) => (
                       <div key={i} className="flex items-start gap-2 text-xs">
                         {step.correct ? (
-                          <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-400" size={12} />
+                          <CheckCircle2 className="mt-0.5 shrink-0 text-success" size={12} />
                         ) : (
-                          <XCircle className="mt-0.5 shrink-0 text-red-400" size={12} />
+                          <XCircle className="mt-0.5 shrink-0 text-danger" size={12} />
                         )}
                         <div className="min-w-0 flex-1">
                           <MarkdownText content={step.step} className="text-xs text-ink" />
@@ -566,7 +568,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
 
               {/* Solution */}
               {showSolution[problem.id] && (
-                <div className="rounded-xl border border-surface-3 bg-surface-2 p-4">
+                <div className="rounded-xl border border-edge bg-surface-2 p-4">
                   <h4 className="mb-2 flex items-center gap-1 text-xs font-medium text-ink">
                     <Award size={12} /> Worked Solution
                   </h4>
@@ -589,7 +591,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
                 {!isLast && (
                   <button
                     onClick={() => setCurrentIdx((i) => i + 1)}
-                    className="flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-1.5 text-xs text-white hover:bg-orange-500"
+                    className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover"
                   >
                     Next Problem <ChevronRight size={12} />
                   </button>
@@ -607,7 +609,7 @@ function PracticeView({ set, onBack }: { set: ForgeProblemSet; onBack: () => voi
           )}
 
           {error && (
-            <div className="mt-4 rounded-lg bg-red-500/10 p-3 text-xs text-red-400">{error}</div>
+            <div className="mt-4 rounded-lg bg-danger-soft p-3 text-xs text-danger">{error}</div>
           )}
         </div>
       </div>
@@ -681,17 +683,19 @@ function GenerateDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-surface-3 bg-surface-1 p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Sparkles className="text-orange-400" size={16} /> Generate Practice Problems
-          </h3>
-          <button onClick={onCancel} className="rounded p-1 text-ink-muted hover:bg-surface-3">
-            <X size={16} />
-          </button>
-        </div>
-
+    <Dialog
+      open
+      onClose={onCancel}
+      title="Generate practice problems"
+      description="Choose a source and the shape of the practice set Mavino should create."
+      className="max-w-lg"
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+          <Button size="sm" onClick={handleSubmit} disabled={loading} loading={loading} leadingIcon={<Sparkles size={14} />}>Generate</Button>
+        </>
+      }
+    >
         <div className="space-y-4">
           {/* Title */}
           <div>
@@ -700,7 +704,7 @@ function GenerateDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Calculus Practice — Derivatives"
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-orange-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
             />
           </div>
 
@@ -719,8 +723,8 @@ function GenerateDialog({
                   onClick={() => setSourceKind(key)}
                   className={`flex flex-col items-center gap-1 rounded-lg border p-2 text-xs transition ${
                     sourceKind === key
-                      ? "border-orange-500 bg-orange-500/10 text-ink"
-                      : "border-surface-3 bg-surface-2 text-ink-muted hover:border-surface-4"
+                      ? "border-accent bg-accent-soft text-ink"
+                      : "border-edge bg-surface-2 text-ink-muted hover:border-surface-4"
                   }`}
                 >
                   <Icon size={16} />
@@ -737,14 +741,14 @@ function GenerateDialog({
               onChange={(e) => setSourceText(e.target.value)}
               placeholder="Paste the text you want to generate problems from..."
               rows={5}
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-orange-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
             />
           )}
           {sourceKind === "note" && (
             <select
               value={selectedNoteId}
               onChange={(e) => setSelectedNoteId(e.target.value)}
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink focus:border-orange-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
             >
               <option value="">Select a note...</option>
               {notes.map((n) => (
@@ -756,7 +760,7 @@ function GenerateDialog({
             <select
               value={selectedFileId}
               onChange={(e) => setSelectedFileId(e.target.value)}
-              className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink focus:border-orange-500 focus:outline-none"
+              className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
             >
               <option value="">Select a file...</option>
               {files.map((f) => (
@@ -765,7 +769,7 @@ function GenerateDialog({
             </select>
           )}
           {sourceKind === "atlas" && (
-            <p className="rounded-lg bg-indigo-500/10 p-3 text-xs text-indigo-300">
+            <p className="rounded-lg bg-accent/10 p-3 text-xs text-accent">
               Problems will be generated from your Atlas knowledge graph concepts, targeting weak areas.
             </p>
           )}
@@ -777,7 +781,7 @@ function GenerateDialog({
               <select
                 value={format}
                 onChange={(e) => setFormat(e.target.value as any)}
-                className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink focus:border-orange-500 focus:outline-none"
+                className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
               >
                 <option value="mixed">Mixed</option>
                 <option value="mcq">Multiple Choice</option>
@@ -790,7 +794,7 @@ function GenerateDialog({
               <select
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value as any)}
-                className="w-full rounded-lg border border-surface-3 bg-surface-2 px-3 py-2 text-sm text-ink focus:border-orange-500 focus:outline-none"
+                className="w-full rounded-lg border border-edge bg-surface-2 px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
               >
                 <option value="adaptive">Adaptive (targets weak concepts)</option>
                 <option value="easy">Easy</option>
@@ -809,32 +813,12 @@ function GenerateDialog({
               max={20}
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
-              className="w-full accent-orange-500"
+              className="w-full accent-accent"
             />
           </div>
 
-          {error && (
-            <div className="rounded-lg bg-red-500/10 p-3 text-xs text-red-400">{error}</div>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={onCancel}
-              className="rounded-lg bg-surface-3 px-4 py-2 text-xs text-ink-muted hover:brightness-110"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="flex items-center gap-1 rounded-lg bg-orange-600 px-4 py-2 text-xs text-white hover:bg-orange-500 disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
-              Generate
-            </button>
-          </div>
+          {error && <Alert variant="danger" className="text-xs">{error}</Alert>}
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

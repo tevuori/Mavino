@@ -4,7 +4,7 @@
 // flashcards, or start a Teach Me session.
 
 import { useState, useEffect, useMemo } from "react";
-import { X, Folder, FileText, Sparkles, Loader2, Brain, GraduationCap, BookOpen, AlertCircle, Languages } from "lucide-react";
+import { Folder, FileText, Sparkles, Loader2, Brain, GraduationCap, BookOpen, AlertCircle, Languages } from "lucide-react";
 import { formatBytes } from "../../services/files";
 import {
   suggestUploadPlan,
@@ -16,6 +16,8 @@ import {
   type StudyLanguage,
 } from "../../services/athena";
 import { useLanguage, type LanguagePreference } from "../../store/language";
+import { Dialog } from "../../ui/overlays";
+import { Alert, Button, Switch } from "../../ui/primitives";
 
 interface Props {
   staged: IntelligentUploadFile[];
@@ -205,46 +207,56 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
   const hasEnhancements = Boolean(actions.createFolder || actions.createStructure || actions.notes || actions.flashcards || actions.teach || actions.workspace);
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !processing && !suggesting) onClose();
-      }}
+    <Dialog
+      open
+      onClose={() => { if (!processing && !suggesting) onClose(); }}
+      title="Process uploaded files"
+      description="Choose what Mavino should create from these files."
+      className="max-w-2xl"
+      footer={
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void handleSuggest()}
+            disabled={suggesting || processing || !hasTextual}
+            loading={suggesting}
+            leadingIcon={<Sparkles size={13} />}
+            className="mr-auto"
+          >
+            {suggesting ? "Suggesting…" : "Suggest a plan"}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={onClose} disabled={processing || suggesting}>Cancel</Button>
+          <Button
+            size="sm"
+            onClick={() => void handleProcess()}
+            disabled={!canProcess || processing || suggesting}
+            loading={processing}
+            leadingIcon={hasEnhancements ? <Sparkles size={13} /> : <FileText size={13} />}
+          >
+            {processing ? "Uploading…" : hasEnhancements ? "Process files" : "Upload files"}
+          </Button>
+        </>
+      }
     >
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-edge bg-surface shadow-window">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-edge px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-accent" />
-            <h2 className="text-sm font-semibold text-ink">Mavino: process uploaded files</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1 rounded-md border border-edge px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
-              <Languages size={11} />
-              <select
-                value={languagePreference}
-                onChange={(event) => setLanguageOverride("intelligent-upload", event.target.value as LanguagePreference)}
-                disabled={processing || suggesting}
-                className="bg-transparent outline-none disabled:opacity-40"
-                title="Output language"
-              >
-                <option value="global">Global ({globalLanguage.toUpperCase()})</option>
-                <option value="en">EN</option>
-                <option value="cs">CS</option>
-              </select>
-            </label>
-            <button
-              onClick={onClose}
+        <div className="mb-3 flex justify-end">
+          <label className="flex items-center gap-1 rounded-md border border-edge px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
+            <Languages size={11} />
+            <span className="sr-only">Output language</span>
+            <select
+              value={languagePreference}
+              onChange={(event) => setLanguageOverride("intelligent-upload", event.target.value as LanguagePreference)}
               disabled={processing || suggesting}
-              className="rounded p-1 text-ink-muted hover:bg-surface-3 hover:text-ink disabled:opacity-40"
+              className="bg-transparent outline-none disabled:opacity-40"
+              aria-label="Output language"
             >
-              <X size={16} />
-            </button>
-          </div>
+              <option value="global">Global ({globalLanguage.toUpperCase()})</option>
+              <option value="en">EN</option>
+              <option value="cs">CS</option>
+            </select>
+          </label>
         </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-4 py-3">
+        <div className="max-h-[62vh] overflow-y-auto pr-1">
           {/* File list */}
           <div className="mb-3 rounded-md border border-edge bg-surface-2 p-2">
             <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Files ({staged.length})</div>
@@ -256,7 +268,7 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
               </div>
             ))}
             {!hasTextual && (
-              <p className="mt-1 text-[10px] text-amber-400">No text-extractable files found. Notes / flashcards / Teach Me will not be available.</p>
+              <p className="mt-1 text-[10px] text-warning">No text-extractable files found. Notes / flashcards / Teach Me will not be available.</p>
             )}
           </div>
 
@@ -277,7 +289,7 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
               value={actions.folderName ?? ""}
               onChange={(e) => setAction("folderName", e.target.value || null)}
               placeholder="Folder name"
-              className="mt-1 w-full rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+              className="mt-1 w-full rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
             />
           </ActionRow>
 
@@ -313,7 +325,7 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
                 <select
                   value={actions.notes.style}
                   onChange={(e) => updateNote({ style: e.target.value as any })}
-                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 >
                   {NOTE_STYLES.map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
@@ -322,7 +334,7 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
                 <select
                   value={actions.notes.detail}
                   onChange={(e) => updateNote({ detail: e.target.value as any })}
-                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 >
                   {NOTE_DETAILS.map((d) => (
                     <option key={d.value} value={d.value}>{d.label}</option>
@@ -332,33 +344,27 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
                   value={actions.notes.title}
                   onChange={(e) => updateNote({ title: e.target.value })}
                   placeholder="Note title (optional)"
-                  className="col-span-2 rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="col-span-2 rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 />
                 <textarea
                   value={actions.notes.customStructure}
                   onChange={(e) => updateNote({ customStructure: e.target.value })}
                   placeholder="Custom structure instructions (optional)"
                   rows={2}
-                  className="col-span-2 resize-y rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="col-span-2 resize-y rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 />
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={actions.notes.includeImages !== false}
-                  onClick={() => {
-                    const next = actions.notes?.includeImages === false;
-                    localStorage.setItem(IMAGE_NOTES_KEY, String(next));
-                    updateNote({ includeImages: next });
-                  }}
-                  className={`col-span-2 flex items-center justify-between rounded border px-2 py-1.5 text-left text-[11px] transition ${
-                    actions.notes.includeImages !== false ? "border-accent/50 bg-accent/10 text-ink" : "border-edge bg-surface-2 text-ink-muted"
-                  }`}
-                >
+                <div className="col-span-2 flex min-h-10 items-center justify-between border-y border-edge py-1.5 text-left text-[11px] text-ink">
                   <span>Include useful PDF images &amp; diagrams</span>
-                  <span className={`relative h-4 w-7 rounded-full transition ${actions.notes.includeImages !== false ? "bg-accent" : "bg-surface-3"}`}>
-                    <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition ${actions.notes.includeImages !== false ? "left-3.5" : "left-0.5"}`} />
-                  </span>
-                </button>
+                  <Switch
+                    checked={actions.notes.includeImages !== false}
+                    label="Include useful PDF images and diagrams"
+                    onClick={() => {
+                      const next = actions.notes?.includeImages === false;
+                      localStorage.setItem(IMAGE_NOTES_KEY, String(next));
+                      updateNote({ includeImages: next });
+                    }}
+                  />
+                </div>
               </div>
             )}
           </ActionRow>
@@ -378,12 +384,12 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
                   max={40}
                   value={actions.flashcards.count}
                   onChange={(e) => updateFlashcards({ count: Math.max(1, Math.min(40, Number(e.target.value) || 1)) })}
-                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 />
                 <select
                   value={actions.flashcards.mode}
                   onChange={(e) => updateFlashcards({ mode: e.target.value as any })}
-                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 >
                   {FLASHCARD_MODES.map((m) => (
                     <option key={m.value} value={m.value}>{m.label}</option>
@@ -393,7 +399,7 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
                   value={actions.flashcards.deckName}
                   onChange={(e) => updateFlashcards({ deckName: e.target.value })}
                   placeholder="Deck name (optional)"
-                  className="col-span-2 rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="col-span-2 rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 />
               </div>
             )}
@@ -411,7 +417,7 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
                 <select
                   value={actions.teach.level}
                   onChange={(e) => updateTeach({ level: e.target.value as any })}
-                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 >
                   {TEACH_LEVELS.map((l) => (
                     <option key={l.value} value={l.value}>{l.label}</option>
@@ -421,7 +427,7 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
                   value={actions.teach.title}
                   onChange={(e) => updateTeach({ title: e.target.value })}
                   placeholder="Session title (optional)"
-                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 />
               </div>
             )}
@@ -440,52 +446,20 @@ export default function IntelligentUploadDialog({ staged, targetFolderId = null,
                   value={actions.workspace.name}
                   onChange={(e) => updateWorkspace({ name: e.target.value })}
                   placeholder="Workspace name"
-                  className="w-full rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+                  className="w-full rounded border border-edge bg-surface-2 px-2 py-1 text-xs text-ink outline-none focus:border-focus"
                 />
               </div>
             )}
           </ActionRow>
 
           {error && (
-            <div className="mt-3 flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 p-2 text-[11px] text-red-400">
+            <Alert variant="danger" className="mt-3 flex items-start gap-2 text-xs">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
               <span>{error}</span>
-            </div>
+            </Alert>
           )}
         </div>
-
-        {/* Footer */}
-        <div className="border-t border-edge px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <button
-              onClick={() => void handleSuggest()}
-              disabled={suggesting || processing || !hasTextual}
-              className="flex items-center gap-1.5 rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted hover:bg-surface-3 hover:text-ink disabled:opacity-40"
-            >
-              {suggesting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-              {suggesting ? "Suggesting…" : "Suggest a plan"}
-            </button>
-            <div className="flex gap-2">
-              <button
-                onClick={onClose}
-                disabled={processing || suggesting}
-                className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-ink-muted hover:bg-surface-3 hover:text-ink disabled:opacity-40"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => void handleProcess()}
-                disabled={!canProcess || processing || suggesting}
-                className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:opacity-90 disabled:opacity-40"
-              >
-                {processing ? <Loader2 size={13} className="animate-spin" /> : hasEnhancements ? <Sparkles size={13} /> : <FileText size={13} />}
-                {processing ? "Uploading…" : hasEnhancements ? "Process files" : "Upload files"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }
 

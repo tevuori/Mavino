@@ -235,7 +235,7 @@ function NameStep({
         maxLength={64}
         placeholder="Your name or nickname"
         aria-label="Your name"
-        className="mt-6 w-full max-w-xs rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-center text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15"
+        className="mt-6 w-full max-w-xs rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-center text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-focus/70 focus:ring-2 focus:ring-accent/15"
       />
       <p className="mt-3 text-xs text-ink-muted/70">
         Optional — skip it and Mavino will ask later.
@@ -343,12 +343,12 @@ function GeminiKeyStep({
           placeholder="Paste your API key (AIza...)"
           aria-label="Gemini API key"
           autoComplete="off"
-          className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-center text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-accent/70 focus:ring-2 focus:ring-accent/15 disabled:opacity-50"
+          className="w-full rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-center text-base text-ink outline-none placeholder:text-ink-muted transition focus:border-focus/70 focus:ring-2 focus:ring-accent/15 disabled:opacity-50"
         />
       </div>
 
       {msg && (
-        <p className={`mt-3 text-center text-xs ${err ? "text-red-400" : "text-emerald-400"}`}>
+        <p className={`mt-3 text-center text-xs ${err ? "text-danger" : "text-success"}`}>
           {msg}
         </p>
       )}
@@ -462,8 +462,8 @@ function FeatureCard({ icon, name, desc }: { icon: React.ReactNode; name: string
 function CompleteStep() {
   return (
     <div className="flex flex-col items-center pt-12 text-center">
-      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/20">
-        <Check size={32} className="text-emerald-400" />
+      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-success-soft">
+        <Check size={32} className="text-success" />
       </div>
       <h2 className="font-display mb-2 text-2xl font-bold text-ink">
         You're all set!
