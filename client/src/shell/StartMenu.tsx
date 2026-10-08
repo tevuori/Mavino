@@ -49,11 +49,14 @@ export default function StartMenu({ open, onClose }: Props) {
         <>
           <div className="fixed inset-0 z-[11000]" onClick={onClose} />
           <motion.div
+            id="mavino-start-menu"
+            role="dialog"
+            aria-label="Applications"
             initial={{ y: 20, opacity: 0, scale: 0.97 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 10, opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="fixed bottom-14 left-1/2 z-[11001] w-[440px] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl border border-edge bg-surface/95 p-4 shadow-window backdrop-blur-xl"
+            className="fixed bottom-14 left-1/2 z-[11001] w-[440px] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-edge/70 bg-surface-overlay/95 p-4 shadow-window backdrop-blur-xl"
           >
             {/* Search */}
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-edge bg-surface-2 px-3 py-2">

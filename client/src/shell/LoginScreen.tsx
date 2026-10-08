@@ -191,13 +191,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="fixed inset-0 z-[15000] flex items-center justify-center">
-      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xl" />
+    <div className="fixed inset-0 z-[15000] flex items-center justify-center bg-canvas px-5">
+      <div className="absolute inset-0 bg-surface-sunken/35" />
       <motion.div
         initial={{ y: 20, opacity: 0, scale: 0.97 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="relative z-10 w-full max-w-sm rounded-2xl border border-edge bg-surface/95 p-8 shadow-window"
+        className="relative z-10 w-full max-w-sm rounded-xl border border-edge/70 bg-surface p-8 shadow-panel"
       >
         <div className="mb-6 text-center">
           <AppLogo size={56} className="mx-auto mb-3" />

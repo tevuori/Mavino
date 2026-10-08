@@ -116,11 +116,11 @@ export function MobileCard({
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`w-full rounded-2xl p-4 text-left transition ${
+      className={`w-full rounded-xl p-4 text-left transition ${
         variant === "feature"
-          ? "brand-border-glow border border-transparent shadow-[0_8px_28px_-12px_rgb(var(--brand-violet)/0.45)]"
-          : "border border-edge bg-surface-2"
-      } ${onClick ? "active:scale-[.99] active:bg-surface-3" : ""} ${active ? "ring-1 ring-accent/60" : ""} ${className}`}
+          ? "border border-edge-strong bg-surface shadow-sm"
+          : "border border-edge bg-surface"
+      } ${onClick ? "active:translate-y-px active:bg-surface-2" : ""} ${active ? "ring-2 ring-focus/30" : ""} ${className}`}
     >
       {children}
     </Tag>
@@ -350,13 +350,13 @@ export function MobileButton({
   disabled?: boolean;
   type?: "button" | "submit";
 }) {
-  const base = "inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 active:scale-[.98]";
+  const base = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 active:translate-y-px";
   const styles =
     variant === "primary"
-      ? "brand-gradient text-white shadow-md shadow-accent/30"
+      ? "bg-accent text-accent-fg active:bg-accent-pressed"
       : variant === "danger"
-      ? "bg-rose-500/15 text-rose-400 active:bg-rose-500/25"
-      : "bg-surface-2 text-ink-muted active:bg-surface-3";
+      ? "bg-danger-soft text-danger active:brightness-95"
+      : "border border-edge bg-surface text-ink-muted active:bg-surface-2";
   return (
     <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${styles} ${className}`}>
       {children}

@@ -75,6 +75,9 @@ export default function Taskbar({ onOpenOverview }: Props) {
         <div className="flex flex-1 items-center gap-1">
           <button
             onClick={() => setStartOpen((v) => !v)}
+            aria-label="Open application menu"
+            aria-expanded={startOpen}
+            aria-controls="mavino-start-menu"
             className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
               startOpen ? "bg-accent text-accent-fg" : "text-ink hover:bg-surface-3"
             }`}

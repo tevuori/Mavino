@@ -21,20 +21,49 @@ export default {
     extend: {
       colors: {
         // Accent color driven by CSS var --accent (set at runtime by Settings)
+        canvas: "rgb(var(--canvas) / <alpha-value>)",
         accent: {
           DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          hover: "rgb(var(--accent-hover) / <alpha-value>)",
+          pressed: "rgb(var(--accent-pressed) / <alpha-value>)",
+          soft: "rgb(var(--accent-soft) / <alpha-value>)",
           fg: "rgb(var(--accent-fg) / <alpha-value>)",
         },
         surface: {
           DEFAULT: "rgb(var(--surface) / <alpha-value>)",
           2: "rgb(var(--surface-2) / <alpha-value>)",
           3: "rgb(var(--surface-3) / <alpha-value>)",
+          overlay: "rgb(var(--surface-overlay) / <alpha-value>)",
+          sunken: "rgb(var(--surface-sunken) / <alpha-value>)",
         },
         ink: {
           DEFAULT: "rgb(var(--ink) / <alpha-value>)",
           muted: "rgb(var(--ink-muted) / <alpha-value>)",
+          tertiary: "rgb(var(--ink-tertiary) / <alpha-value>)",
+          disabled: "rgb(var(--ink-disabled) / <alpha-value>)",
         },
-        edge: "rgb(var(--edge) / <alpha-value>)",
+        edge: {
+          DEFAULT: "rgb(var(--edge) / <alpha-value>)",
+          strong: "rgb(var(--edge-strong) / <alpha-value>)",
+        },
+        focus: "rgb(var(--focus) / <alpha-value>)",
+        success: {
+          DEFAULT: "rgb(var(--success) / <alpha-value>)",
+          soft: "rgb(var(--success-soft) / <alpha-value>)",
+        },
+        warning: {
+          DEFAULT: "rgb(var(--warning) / <alpha-value>)",
+          soft: "rgb(var(--warning-soft) / <alpha-value>)",
+        },
+        danger: {
+          DEFAULT: "rgb(var(--danger) / <alpha-value>)",
+          soft: "rgb(var(--danger-soft) / <alpha-value>)",
+        },
+        info: {
+          DEFAULT: "rgb(var(--info) / <alpha-value>)",
+          soft: "rgb(var(--info-soft) / <alpha-value>)",
+        },
+        scrim: "rgb(var(--scrim) / <alpha-value>)",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "Segoe UI", "Roboto", "sans-serif"],

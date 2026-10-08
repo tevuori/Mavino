@@ -95,8 +95,7 @@ export default function MobileShell() {
   }
 
   return (
-    <main className="mobile-shell relative flex h-full w-full overflow-clip bg-surface text-ink" aria-label="Mavino mobile">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgb(var(--brand-violet)/.16),transparent_34%),radial-gradient(circle_at_100%_18%,rgb(var(--brand-cyan)/.10),transparent_28%)]" />
+    <main className="mobile-shell relative flex h-full w-full overflow-clip bg-canvas text-ink" aria-label="Mavino mobile">
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         {isDemo && (
           <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
@@ -134,7 +133,7 @@ export default function MobileShell() {
                 continuous motion rather than five identical toggle buttons. */}
             <div
               aria-hidden
-              className={`brand-gradient pointer-events-none absolute inset-y-0.5 rounded-2xl opacity-[0.14] transition-[transform,opacity] duration-300 ease-out ${activeIndex < 0 ? "opacity-0" : ""}`}
+              className={`pointer-events-none absolute inset-y-0.5 rounded-lg bg-accent-soft transition-[transform,opacity] duration-200 ease-out ${activeIndex < 0 ? "opacity-0" : ""}`}
               style={{ width: `${100 / ROUTE_ORDER.length}%`, transform: `translateX(${Math.max(activeIndex, 0) * 100}%)` }}
             />
             {TABS.map(({ id, label, icon: Icon }) => {

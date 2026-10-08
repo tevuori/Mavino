@@ -45,6 +45,7 @@ function detectSnapZone(clientX: number, clientY: number): SnapZone {
 
 export default function Window({ win, children }: Props) {
   const { focus, close, minimize, toggleMaximize, snap, setRect } = useWindows();
+  const focusedId = useWindows((s) => s.focusedId);
   const workspaces = useWindows((s) => s.workspaces);
   // Teach Me: the source the tutor's voice is currently anchored to glows.
   const speaking = useShowControl((s) => s.speakingWindowId) === win.id;
@@ -181,6 +182,7 @@ export default function Window({ win, children }: Props) {
     );
   }
 
+  const isFocused = focusedId === win.id;
   const isMax =
     win.snap === "maximized" ||
     (win.rect.width >= window.innerWidth - 4 &&
@@ -203,8 +205,14 @@ export default function Window({ win, children }: Props) {
         ease: win.closing ? "easeIn" : "easeOut",
       }}
       onPointerDown={() => focus(win.id)}
-      className={`absolute flex flex-col overflow-hidden rounded-lg border bg-surface shadow-window ${
-        speaking ? "border-accent/60 ring-2 ring-accent/40" : "border-edge"
+      role="region"
+      aria-label={`${win.title} window`}
+      className={`absolute flex flex-col overflow-hidden rounded-[10px] border bg-surface shadow-window transition-[border-color,box-shadow,opacity] ${
+        speaking
+          ? "border-accent/60 ring-2 ring-accent/40"
+          : isFocused
+            ? "border-edge/70 shadow-window ring-1 ring-inset ring-accent/10"
+            : "border-edge/45 opacity-[0.97] shadow-panel"
       }`}
       style={{
         left: win.rect.x,
