@@ -8,6 +8,14 @@ export interface ModelPrice {
 }
 
 const MODEL_PRICES: Record<string, ModelPrice> = {
+  // OpenAI standard tier, short-context pricing (per 1M tokens):
+  // gpt-6-luna: $0.10 input / $0.01 cached / $0.50 output.
+  "openai:gpt-6-luna": {
+    inputMicrosPerMillion: 100_000,
+    cachedInputMicrosPerMillion: 10_000,
+    outputMicrosPerMillion: 500_000,
+    reasoningMicrosPerMillion: 500_000,
+  },
   "openai:gpt-5.6-luna": {
     inputMicrosPerMillion: 200_000,
     cachedInputMicrosPerMillion: 20_000,
