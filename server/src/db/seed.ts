@@ -2,10 +2,11 @@
  * Seed script — creates a default admin user (from env) if none exist,
  * plus demo notes, tasks, and folders so the UI isn't empty on first run.
  *
- * SECURITY: In production, if SEED_PASSWORD is unset or "admin", a strong
- * random password is generated and printed once to stdout. The seeded user
- * is created with passwordMustChange=true so the user is forced to set their
- * own password on first login.
+ * SECURITY: If SEED_PASSWORD is unset or insecure ("admin", ...), a strong
+ * random password is generated and printed once to stdout — a known default
+ * password is never seeded. The seeded user is created with
+ * passwordMustChange=true so the user is forced to set their own password
+ * on first login.
  */
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
@@ -24,21 +25,17 @@ async function main() {
   const username = process.env.SEED_USERNAME ?? "admin";
   const envPassword = process.env.SEED_PASSWORD ?? "";
 
-  // In production, never use the insecure default "admin" — generate a strong one.
-  // In dev, fall back to "admin" for convenience.
+  // Never seed a known/default password. An unset or insecure SEED_PASSWORD
+  // gets a random one, printed once to stdout, with a forced change on login.
   let password: string;
   let mustChange: boolean;
-  if (isProduction && INSECURE_SEED_PASSWORDS.has(envPassword)) {
-    password = generateRandomPassword();
-    mustChange = true;
-  } else if (!envPassword) {
-    // Dev with no SEED_PASSWORD set — use "admin" for convenience.
-    password = "admin";
-    mustChange = true;
-  } else {
+  if (envPassword && !INSECURE_SEED_PASSWORDS.has(envPassword)) {
     // Explicit SEED_PASSWORD provided — use it, but still force change in prod.
     password = envPassword;
     mustChange = isProduction;
+  } else {
+    password = generateRandomPassword();
+    mustChange = true;
   }
 
   let user = await prisma.user.findUnique({ where: { username } });

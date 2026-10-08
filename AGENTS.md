@@ -118,7 +118,7 @@ cd server
 ln -sf ../.env .env          # if not already linked
 bunx prisma generate
 bunx prisma migrate dev      # creates SQLite DB + migration
-bun run src/db/seed.ts       # seeds admin/admin + demo data
+bun run src/db/seed.ts       # seeds admin + demo data (prints a random password once — forced change on first login)
 cd ..
 
 # Run both server + client (from root)
@@ -127,7 +127,7 @@ bun run dev
 #   client → http://localhost:5173
 ```
 
-Open http://localhost:5173 → boot screen → login with `admin` / `admin`.
+Open http://localhost:5173 → boot screen → login with `admin` / the random password printed by the seed (you'll be forced to set your own).
 
 ## Docker
 

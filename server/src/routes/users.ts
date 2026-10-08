@@ -188,7 +188,9 @@ users.post("/:id/reset-password", zValidator("json", resetSchema), async (c) => 
   }
   await prisma.user.update({
     where: { id: targetId },
-    data: { passwordHash: await bcrypt.hash(password, 10) },
+    // Force the target to set their own password on next login — the
+    // admin-set password should only ever be a temporary credential.
+    data: { passwordHash: await bcrypt.hash(password, 10), passwordMustChange: true },
   });
   return c.json({ ok: true });
 });

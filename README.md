@@ -246,8 +246,8 @@ bun run dev
 #   client → http://localhost:5173
 ```
 
-Open <http://localhost:5173> → boot screen → login with `admin` / `admin` (local
-dev only — you'll be prompted to change it immediately).
+Open <http://localhost:5173> → boot screen → login with `admin` / the random
+password printed by the seed (you'll be prompted to change it immediately).
 
 ---
 
