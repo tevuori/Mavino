@@ -67,6 +67,7 @@ interface SettingsState {
 }
 
 const STORAGE_KEY = "athena.settings";
+const APPEARANCE_RESET_KEY = "mavino.appearance-reset.v1";
 
 interface PersistedSettings {
   theme: ThemeMode;
@@ -149,6 +150,15 @@ if (!loaded.dockFavorites || loaded.dockFavorites.length === 0) {
 }
 if (!Array.isArray(loaded.onboardedUserIds)) {
   loaded.onboardedUserIds = [];
+}
+// One-time appearance migration: reset every existing browser profile to the
+// new default background/accent while preserving theme and other preferences.
+if (localStorage.getItem(APPEARANCE_RESET_KEY) !== "done") {
+  loaded.accent = defaults.accent;
+  loaded.wallpaper = defaults.wallpaper;
+  loaded.animatedBg = defaults.animatedBg;
+  localStorage.setItem(APPEARANCE_RESET_KEY, "done");
+  persist(loaded);
 }
 // Drop the legacy browser-global flag so it stops round-tripping into persist().
 delete (loaded as Partial<Record<string, unknown>>).hasOnboarded;

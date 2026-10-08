@@ -18,9 +18,30 @@ const storage = new Map<string, string>();
 // Simulate the pre-fix bug state: the browser-global "hasOnboarded" flag was
 // set by a previous account on this browser (or the demo flow). A brand-new
 // account on the same browser must still see the onboarding tour.
-storage.set("athena.settings", JSON.stringify({ hasOnboarded: true, theme: "light" }));
+storage.set("athena.settings", JSON.stringify({
+  hasOnboarded: true,
+  theme: "light",
+  accent: "#a855f7",
+  wallpaper: "aurora",
+  animatedBg: "starfield",
+}));
 
 const { useSettings } = await import("./settings");
+
+describe("appearance migration", () => {
+  it("resets an existing profile to the default wallpaper and accent once", () => {
+    const state = useSettings.getState();
+    expect(state.wallpaper).toBe("ocean");
+    expect(state.accent).toBe("#3b82f6");
+    expect(state.animatedBg).toBe("none");
+    expect(state.theme).toBe("light");
+
+    const parsed = JSON.parse(storage.get("athena.settings")!);
+    expect(parsed.wallpaper).toBe("ocean");
+    expect(parsed.accent).toBe("#3b82f6");
+    expect(storage.get("mavino.appearance-reset.v1")).toBe("done");
+  });
+});
 
 describe("onboarding flag (per-account)", () => {
   it("does not let a stale global hasOnboarded flag skip onboarding for a new account", () => {

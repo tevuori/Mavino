@@ -735,7 +735,7 @@ Every significant UI change must pass:
 - Shared primitives cover buttons, icon buttons, fields, surfaces, alerts, switches, desktop dialogs, and mobile sheets.
 - Shared overlays provide dialog semantics, initial focus via `data-autofocus`, focus containment, Escape/backdrop dismissal, and focus restoration.
 - Desktop shell, window controls, taskbar, Start menu, command palette, Quick Capture, update prompt, system feedback, and mobile shell use the shared material and overlay model.
-- Ocean is the default wallpaper and `#3b82f6` is the default accent; persisted user preferences remain intact.
+- Ocean is the default wallpaper and `#3b82f6` is the default accent. A one-time `mavino.appearance-reset.v1` migration resets stored browser profiles to those values after deployment while preserving theme and unrelated preferences.
 - User-facing copy uses Mavino; Athena remains only as an internal technical codename.
 
 ### Migration matrix
