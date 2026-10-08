@@ -25,7 +25,7 @@ const rawStudyGraphTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "study.graph" });
 
       const src: SourceDescriptor = {
         kind: String(args.kind) as SourceKind,

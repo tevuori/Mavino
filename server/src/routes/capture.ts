@@ -42,7 +42,7 @@ capture.post("/", zValidator("json", captureSchema), async (c) => {
 
   if (await isLlmConfiguredFor(userId)) {
     try {
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "capture" });
       classification = await generateJson<CaptureClassification>(
         model,
         `Classify this student input and extract structured fields:\n\n"${text}"`,

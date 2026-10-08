@@ -332,7 +332,7 @@ const rawStudyHubTools: ToolDef[] = [
       const messages = safeParseMessages(chat.messages);
       messages.push({ role: "user", content: question, timestamp: new Date().toISOString() });
 
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "study" });
       const sysPrompt = groundedQaSystemPrompt(sources, await getUserLanguage(userId));
       const thread: Message[] = [new Message("system", sysPrompt)];
       for (const m of messages) {
@@ -414,7 +414,7 @@ const rawStudyHubTools: ToolDef[] = [
       const host1Label = String(args.host1Label ?? "Host A").slice(0, 40) || "Host A";
       const host2Label = String(args.host2Label ?? "Host B").slice(0, 40) || "Host B";
 
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "study" });
       let script: string;
       try {
         script = await generateText(
@@ -632,7 +632,7 @@ const rawStudyHubTools: ToolDef[] = [
         };
       }
       try {
-        const { model } = await acquireLlmModel(userId);
+        const { model } = await acquireLlmModel(userId, { feature: "study" });
         const result = await generateJson<{ correct: boolean; explanation: string; modelAnswer: string }>(
           model,
           quizGradePrompt(quiz.sourceText, question, answer, await getUserLanguage(userId)),
@@ -679,7 +679,7 @@ const rawStudyHubTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "study" });
 
       const src: SourceDescriptor = {
         kind: String(args.kind) as SourceKind,

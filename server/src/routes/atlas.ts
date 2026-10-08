@@ -51,7 +51,7 @@ atlas.post("/build", async (c) => {
   }
   let model;
   try {
-    ({ model } = await acquireLlmModel(userId));
+    ({ model } = await acquireLlmModel(userId, { feature: "atlas" }));
   } catch (e) {
     if (e instanceof LlmError) {
       return c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500);

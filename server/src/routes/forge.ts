@@ -79,7 +79,7 @@ forge.post("/sets/generate", zValidator("json", generateSchema), async (c) => {
   }
   let model;
   try {
-    ({ model } = await acquireLlmModel(userId));
+    ({ model } = await acquireLlmModel(userId, { feature: "forge" }));
   } catch (e) {
     if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500);
     return c.json({ error: e instanceof Error ? e.message : "LLM error" }, 500);
@@ -118,7 +118,7 @@ forge.post("/grade", zValidator("json", gradeSchema), async (c) => {
   const configured = await isLlmConfiguredFor(userId);
   if (configured) {
     try {
-      ({ model } = await acquireLlmModel(userId));
+      ({ model } = await acquireLlmModel(userId, { feature: "forge" }));
     } catch (e) {
       if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500);
     }
@@ -141,7 +141,7 @@ forge.post("/variant", zValidator("json", variantSchema), async (c) => {
   }
   let model;
   try {
-    ({ model } = await acquireLlmModel(userId));
+    ({ model } = await acquireLlmModel(userId, { feature: "forge" }));
   } catch (e) {
     if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500);
     return c.json({ error: e instanceof Error ? e.message : "LLM error" }, 500);

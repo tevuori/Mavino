@@ -46,6 +46,21 @@ export interface AdminUsageStats {
   reservations: { active: number; activeMicros: number };
 }
 
+export type ReasoningEffort = "off" | "low" | "medium" | "high";
+
+export interface ReasoningFeature {
+  key: string;
+  label: string;
+}
+
+export type ReasoningFeatureMap = Record<string, Partial<Record<RateTier, ReasoningEffort>>>;
+
+export interface ReasoningConfigResponse {
+  features: ReasoningFeature[];
+  tiers: RateTier[];
+  config: { features: ReasoningFeatureMap };
+}
+
 export interface DemoConfig {
   enabled: boolean;
   hasKey: boolean;
@@ -76,6 +91,9 @@ export const adminLlmApi = {
     tiers?: Partial<Record<RateTier, number>>;
   }) => api.put<{ ok: boolean }>("/api/admin/llm/hosted-budget", data),
   getUsage: () => api.get<AdminUsageStats>("/api/admin/llm/usage"),
+  getReasoning: () => api.get<ReasoningConfigResponse>("/api/admin/llm/reasoning"),
+  setReasoning: (features: ReasoningFeatureMap) =>
+    api.put<{ ok: boolean }>("/api/admin/llm/reasoning", { features }),
   getDemoConfig: () => api.get<DemoConfig>("/api/admin/llm/demo"),
   setDemoConfig: (data: {
     enabled?: boolean;

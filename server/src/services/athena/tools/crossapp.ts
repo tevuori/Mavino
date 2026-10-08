@@ -38,7 +38,7 @@ export const crossAppTools: ToolDef[] = [
       if (!title) {
         const cfg = await getUserConfig(userId);
         if (!cfg.apiKey) return { error: "No AI provider configured to extract a task title." };
-        const { model } = await acquireLlmModel(userId);
+        const { model } = await acquireLlmModel(userId, { feature: "athena.tools" });
         try {
           const result = await generateJson<{ tasks: SyllabusTaskSpec[] }>(
             model,
@@ -96,7 +96,7 @@ export const crossAppTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "athena.tools" });
 
       const note = await prisma.note.findFirst({ where: { id: String(args.noteId), userId } });
       if (!note) return { error: "Note not found" };
@@ -168,7 +168,7 @@ export const crossAppTools: ToolDef[] = [
       if (args.expand) {
         const cfg = await getUserConfig(userId);
         if (!cfg.apiKey) return { error: "No AI provider configured for expansion." };
-        const { model } = await acquireLlmModel(userId);
+        const { model } = await acquireLlmModel(userId, { feature: "athena.tools" });
         try {
           content = await generateText(
             model,

@@ -81,7 +81,7 @@ podcasts.post("/generate", zValidator("json", generateSchema), async (c) => {
 
   const host1Label = body.host1Label?.trim() || "Alex";
   const host2Label = body.host2Label?.trim() || "Sam";
-  const { model } = await acquireLlmModel(userId);
+  const { model } = await acquireLlmModel(userId, { feature: "study.podcast" });
   let script: string;
   try {
     script = await generateText(model, podcastScriptPrompt(sources, host1Label, host2Label, body.language as StudyLanguage, { length: body.length, tone: body.tone, focus: body.focus }), "You are a podcast scriptwriter. Output only dialogue lines in the requested Host: text format.");

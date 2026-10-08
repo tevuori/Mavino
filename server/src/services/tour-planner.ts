@@ -527,7 +527,7 @@ interface NarrateInput {
 async function narrateTour(userId: string, tour: NarrateInput): Promise<string> {
   const cfg = await getUserConfig(userId);
   if (!cfg.apiKey) throw new Error("No AI provider configured");
-  const { model } = await acquireLlmModel(userId);
+  const { model } = await acquireLlmModel(userId, { feature: "tour-planner" });
 
   const dayLines = tour.days
     .map((d) => {

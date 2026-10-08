@@ -284,7 +284,7 @@ export async function suggestUploadPlan(
       reasoning: "AI not configured. Files will be saved to a single folder and a Study Hub workspace.",
     };
   }
-  const { model } = await acquireLlmModel(userId);
+  const { model } = await acquireLlmModel(userId, { feature: "intelligent-upload" });
 
   const fileList = files
     .map((f, i) => `${i + 1}. ${f.name} (${f.mimeType})\nPreview: ${f.text.slice(0, 500).replace(/\s+/g, " ").trim()}`)
@@ -452,7 +452,7 @@ export async function processUploads(
   let teacherSessionResult: { id: string; title: string } | null = null;
 
   if ((actions.notes || actions.flashcards) && sources.length > 0) {
-    const { model } = await acquireLlmModel(userId);
+    const { model } = await acquireLlmModel(userId, { feature: "intelligent-upload" });
 
     if (actions.notes) {
       const { style, detail, customStructure, title, includeImages = true } = actions.notes;

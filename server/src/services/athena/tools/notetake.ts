@@ -76,7 +76,7 @@ export const notetakeTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "notes" });
 
       const url = String(args.url ?? "").trim();
       if (!url) return { error: "url is required" };
@@ -172,7 +172,7 @@ export const notetakeTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "notes" });
 
       const fileId = String(args.fileId ?? "").trim();
       if (!fileId) return { error: "fileId is required" };

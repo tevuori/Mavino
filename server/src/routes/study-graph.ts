@@ -34,7 +34,7 @@ async function loadModel(c: any, userId: string) {
     } as const;
   }
   try {
-    const { model } = await acquireLlmModel(userId);
+    const { model } = await acquireLlmModel(userId, { feature: "study.graph" });
     return { model } as const;
   } catch (e) {
     if (e instanceof LlmError) {

@@ -102,7 +102,7 @@ export const forgeTools: ToolDef[] = [
       if (!configured) return { error: "No AI provider configured. Add an API key in Settings → AI." };
       let model;
       try {
-        ({ model } = await acquireLlmModel(userId));
+        ({ model } = await acquireLlmModel(userId, { feature: "forge" }));
       } catch (e) {
         if (e instanceof LlmError) return { error: e.message };
         return { error: e instanceof Error ? e.message : "LLM error" };

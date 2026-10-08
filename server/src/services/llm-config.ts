@@ -252,6 +252,98 @@ export async function setTierRateLimits(config: {
   if (config.freeRpm !== undefined) await setSetting(FREE_RPM_KEY, String(config.freeRpm));
 }
 
+// ----- Reasoning effort config (per feature × tier, admin-configurable) -----
+
+export type ReasoningEffort = "off" | "low" | "medium" | "high";
+
+export const REASONING_TIERS: RateTier[] = ["free", "paid", "pro", "admin", "demo"];
+
+export interface ReasoningFeature {
+  key: string;
+  label: string;
+}
+
+/** Catalog of features that can get a configurable reasoning effort. Keys are
+ *  the `feature` strings passed to acquireLlmModel (and recorded in LlmUsage).
+ *  "*" is the fallback applied when a feature has no override. */
+export const REASONING_FEATURES: ReasoningFeature[] = [
+  { key: "*", label: "Default (all features)" },
+  { key: "athena.chat", label: "Athena chat" },
+  { key: "athena.proactive", label: "Athena proactive" },
+  { key: "athena.tools", label: "Athena tools (other)" },
+  { key: "teacher", label: "Teacher" },
+  { key: "forge", label: "Forge" },
+  { key: "scribe", label: "Scribe" },
+  { key: "bridge", label: "Bridge" },
+  { key: "crunch", label: "Crunch" },
+  { key: "compass", label: "Compass" },
+  { key: "echo", label: "Echo" },
+  { key: "atlas", label: "Atlas" },
+  { key: "study", label: "Study tools" },
+  { key: "study.chat", label: "Study chat" },
+  { key: "study.podcast", label: "Podcast generation" },
+  { key: "study.graph", label: "Study graph" },
+  { key: "lecture-pipeline", label: "Lecture pipeline" },
+  { key: "lecture-notes", label: "Lecture notes" },
+  { key: "lecture-summary", label: "Lecture summary" },
+  { key: "notes", label: "Note-taking" },
+  { key: "research", label: "Research" },
+  { key: "intelligent-upload", label: "Intelligent upload" },
+  { key: "tour-planner", label: "Tour planner" },
+  { key: "conversations", label: "Conversation titles" },
+  { key: "capture", label: "Quick capture" },
+  { key: "voice", label: "Voice cleanup" },
+];
+
+export interface ReasoningConfig {
+  features: Record<string, Partial<Record<RateTier, ReasoningEffort>>>;
+}
+
+const REASONING_KEY = "llm.reasoning";
+const REASONING_EFFORTS = new Set<string>(["off", "low", "medium", "high"]);
+const REASONING_CACHE_MS = 5_000;
+
+let reasoningCache: { config: ReasoningConfig; expiresAt: number } | null = null;
+
+function parseReasoningConfig(raw: string | null): ReasoningConfig {
+  if (!raw) return { features: {} };
+  try {
+    const parsed = JSON.parse(raw) as { features?: Record<string, Record<string, string>> };
+    const features: ReasoningConfig["features"] = {};
+    for (const [feature, tiers] of Object.entries(parsed.features ?? {})) {
+      if (!tiers || typeof tiers !== "object") continue;
+      const clean: Partial<Record<RateTier, ReasoningEffort>> = {};
+      for (const [tier, effort] of Object.entries(tiers)) {
+        if (REASONING_TIERS.includes(tier as RateTier) && REASONING_EFFORTS.has(effort)) {
+          clean[tier as RateTier] = effort as ReasoningEffort;
+        }
+      }
+      if (Object.keys(clean).length > 0) features[feature] = clean;
+    }
+    return { features };
+  } catch {
+    return { features: {} };
+  }
+}
+
+export async function getReasoningConfig(): Promise<ReasoningConfig> {
+  if (reasoningCache && reasoningCache.expiresAt > Date.now()) return reasoningCache.config;
+  const config = parseReasoningConfig(await getSetting(REASONING_KEY));
+  reasoningCache = { config, expiresAt: Date.now() + REASONING_CACHE_MS };
+  return config;
+}
+
+export async function setReasoningConfig(config: ReasoningConfig): Promise<void> {
+  await setSetting(REASONING_KEY, JSON.stringify(config));
+  reasoningCache = null;
+}
+
+/** Resolve the reasoning effort for a feature + tier. "off" = send no effort. */
+export async function resolveReasoningEffort(feature: string, tier: RateTier): Promise<ReasoningEffort> {
+  const { features } = await getReasoningConfig();
+  return features[feature]?.[tier] ?? features["*"]?.[tier] ?? "off";
+}
+
 /** Map a user role to a rate tier. */
 export function roleToTier(role: string): RateTier {
   if (role === "ADMIN") return "admin";

@@ -134,7 +134,7 @@ conversations.post("/:id/generate-title", async (c) => {
   }
 
   try {
-    const { model } = await acquireLlmModel(userId);
+    const { model } = await acquireLlmModel(userId, { feature: "conversations" });
     const title = await generateJson<{ title: string }>(
       model,
       `Based on this conversation, generate a very short descriptive title (max 5 words). The title should describe what the chat was about.\n\nConversation:\n${transcript}\n\nRespond with JSON: { "title": "short title here" }`,

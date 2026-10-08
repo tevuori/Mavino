@@ -57,7 +57,7 @@ bridge.post("/discover", async (c) => {
   }
   let model;
   try {
-    ({ model } = await acquireLlmModel(userId));
+    ({ model } = await acquireLlmModel(userId, { feature: "bridge" }));
   } catch (e) {
     if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500);
     return c.json({ error: e instanceof Error ? e.message : "LLM error" }, 500);

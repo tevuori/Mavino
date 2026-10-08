@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { Sparkles, KeyRound, Gauge, Trash2, Check, AlertCircle, Play, Loader2, WalletCards, BarChart3, RefreshCw } from "lucide-react";
-import { adminLlmApi, type GlobalLlmConfig, type TierRateLimitsMap, type DemoConfig, type HostedBudgetConfig, type AdminUsageStats } from "../../../services/admin-llm";
+import { Sparkles, KeyRound, Gauge, Trash2, Check, AlertCircle, Play, Loader2, WalletCards, BarChart3, RefreshCw, Brain } from "lucide-react";
+import { adminLlmApi, type GlobalLlmConfig, type TierRateLimitsMap, type DemoConfig, type HostedBudgetConfig, type AdminUsageStats, type ReasoningConfigResponse, type ReasoningFeatureMap, type ReasoningEffort } from "../../../services/admin-llm";
+import type { RateTier } from "../../../services/ai";
 import { SectionHeader, Card, Field, StatusPill, SaveButton, MsgBox, inputClass } from "../ui";
 import { confirmDialog } from "../../../store/mobileDialog";
 
@@ -15,6 +16,7 @@ export default function LlmAdminSection() {
       <GlobalKeyCard />
       <HostedBudgetCard />
       <HostedUsageCard />
+      <ReasoningCard />
       <DemoModeCard />
       <TierRateLimitsCard />
     </section>
@@ -496,6 +498,103 @@ function HostedUsageCard() {
           )}
         </>
       )}
+    </Card>
+  );
+}
+
+const REASONING_EFFORTS: ReasoningEffort[] = ["off", "low", "medium", "high"];
+
+function ReasoningCard() {
+  const [data, setData] = useState<ReasoningConfigResponse | null>(null);
+  const [map, setMap] = useState<ReasoningFeatureMap>({});
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const value = await adminLlmApi.getReasoning();
+      setData(value);
+      setMap(value.config.features ?? {});
+    } catch {}
+  }, []);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const setCell = (feature: string, tier: RateTier, effort: ReasoningEffort) => {
+    setMap((m) => ({ ...m, [feature]: { ...m[feature], [tier]: effort } }));
+  };
+
+  const save = async () => {
+    setBusy(true);
+    setErr(false);
+    setMsg(null);
+    try {
+      await adminLlmApi.setReasoning(map);
+      await refresh();
+      setMsg("Reasoning efforts saved.");
+    } catch (e) {
+      setErr(true);
+      setMsg(e instanceof Error ? e.message : "Failed to save reasoning config");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const anyOn = Object.values(map).some((tiers) =>
+    Object.values(tiers).some((effort) => effort && effort !== "off")
+  );
+
+  return (
+    <Card className="mb-4">
+      <div className="mb-3 flex items-center gap-2 text-sm">
+        <Brain size={16} className="text-accent" />
+        <h3 className="font-semibold text-ink">Reasoning effort</h3>
+        <StatusPill on={anyOn} onLabel="Active" offLabel="All off" />
+      </div>
+      <p className="mb-3 text-xs text-ink-muted">
+        Per-feature reasoning effort sent to reasoning-capable OpenAI models (gpt-5/6, o-series).
+        Reasoning tokens are billed as output. Features that use function tools on gpt-6-luna are
+        pinned to "none" — the model's chat API does not combine tools with reasoning.
+      </p>
+      {!data ? null : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-ink-muted">
+                <th className="pb-2 pr-3 font-medium">Feature</th>
+                {data.tiers.map((tier) => (
+                  <th key={tier} className="pb-2 pr-3 font-medium capitalize">{tier}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.features.map((f) => (
+                <tr key={f.key} className="border-t border-edge">
+                  <td className="py-1.5 pr-3 text-ink">{f.label}</td>
+                  {data.tiers.map((tier) => (
+                    <td key={tier} className="py-1.5 pr-3">
+                      <select
+                        value={map[f.key]?.[tier] ?? "off"}
+                        onChange={(e) => setCell(f.key, tier, e.target.value as ReasoningEffort)}
+                        className="rounded-md border border-edge bg-surface-2 px-1.5 py-1 text-xs text-ink"
+                      >
+                        {REASONING_EFFORTS.map((effort) => (
+                          <option key={effort} value={effort}>{effort}</option>
+                        ))}
+                      </select>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="mt-3">
+        <SaveButton busy={busy} onClick={save}>Save reasoning efforts</SaveButton>
+      </div>
+      <MsgBox msg={msg} error={err} />
     </Card>
   );
 }

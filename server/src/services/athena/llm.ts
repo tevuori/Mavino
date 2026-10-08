@@ -24,7 +24,15 @@ import {
 import prisma from "../../db/client";
 import { decryptSecret } from "../crypto";
 import { llmRateLimiter } from "./rate-limiter";
-import { getGlobalLlmConfig, getGlobalLlmSecrets, getRateLimitsForUser } from "../llm-config";
+import {
+  getGlobalLlmConfig,
+  getGlobalLlmSecrets,
+  getRateLimitsForUser,
+  resolveReasoningEffort,
+  roleToTier,
+  type RateTier,
+  type ReasoningEffort,
+} from "../llm-config";
 import { getDemoLlmSecrets } from "../demo";
 import { releaseBudgetReservation, reserveHostedBudget, type BudgetSnapshot } from "../llm-budget";
 import { getModelPrice } from "../llm-pricing";
@@ -244,8 +252,9 @@ export async function isLlmConfiguredFor(userId: string): Promise<boolean> {
   return Boolean(cfg.apiKey);
 }
 
-/** Build a fresh LlmModel for a request. Cheap — no network call (loadModels skipped). */
-export function buildModel(cfg: LlmUserConfig): LlmModel {
+/** Build a fresh LlmModel for a request. Cheap — no network call (loadModels skipped).
+ *  `reasoningEffort` is the admin-configured effort for this feature+tier. */
+export function buildModel(cfg: LlmUserConfig, reasoningEffort: ReasoningEffort = "off"): LlmModel {
   const config: EngineCreateOpts = { apiKey: cfg.apiKey };
   if (cfg.baseURL) config.baseURL = cfg.baseURL;
   // requestCooldown avoids rate-limit hits during multi-step tool loops.
@@ -266,26 +275,42 @@ export function buildModel(cfg: LlmUserConfig): LlmModel {
     },
   };
   const model = igniteModel(cfg.provider, chatModel, config);
-  return wrapCompletionOpts(model, cfg);
+  return wrapReasoningEffort(model, cfg, reasoningEffort);
 }
 
-/** Models whose provider applies a non-empty default reasoning_effort on
- *  /chat/completions, which rejects function tools unless the effort is
- *  explicitly disabled. multi-llm-ts only sends reasoning_effort when the
- *  ChatModel advertises reasoning capability — which we deliberately keep
- *  false — so inject it via customOpts instead. */
+// OpenAI model families that accept reasoning_effort on /chat/completions.
+const OPENAI_REASONING_MODELS = /^(gpt-5|gpt-6|o[0-9])/;
+// gpt-6-luna additionally applies a server-side default effort that rejects
+// function tools unless reasoning_effort is explicitly "none".
 const REASONING_EFFORT_NONE_MODELS = /^gpt-6-luna/;
 
-function wrapCompletionOpts(model: LlmModel, cfg: LlmUserConfig): LlmModel {
-  if (cfg.provider !== "openai" || !REASONING_EFFORT_NONE_MODELS.test(cfg.modelId)) {
-    return model;
-  }
+/** Wrap generate() to inject reasoning_effort via customOpts — multi-llm-ts
+ *  only sends the param when the ChatModel advertises reasoning capability,
+ *  which we deliberately keep false (reasoning is opt-in per feature+tier).
+ *  For gpt-6-luna + tools the API rejects any non-"none" effort, so tools
+ *  take precedence over the configured effort there. */
+function wrapReasoningEffort(model: LlmModel, cfg: LlmUserConfig, configured: ReasoningEffort): LlmModel {
+  if (cfg.provider !== "openai") return model;
+  const requiresNone = REASONING_EFFORT_NONE_MODELS.test(cfg.modelId);
+  const supportsEffort = requiresNone || OPENAI_REASONING_MODELS.test(cfg.modelId);
+  if (!supportsEffort) return model;
   const originalGenerate = model.generate.bind(model);
-  model.generate = (thread: Message[], opts?: LlmCompletionOpts): AsyncIterable<LlmChunk> =>
-    originalGenerate(thread, {
+  model.generate = (thread: Message[], opts?: LlmCompletionOpts): AsyncIterable<LlmChunk> => {
+    const toolsEnabled = opts?.tools !== false;
+    let effort: string | null;
+    if (requiresNone && toolsEnabled) {
+      effort = "none";
+    } else if (configured === "off") {
+      effort = requiresNone ? "none" : null;
+    } else {
+      effort = configured;
+    }
+    if (!effort) return originalGenerate(thread, opts);
+    return originalGenerate(thread, {
       ...opts,
-      customOpts: { ...opts?.customOpts, reasoning_effort: "none" },
+      customOpts: { ...opts?.customOpts, reasoning_effort: effort },
     });
+  };
   return model;
 }
 
@@ -321,6 +346,7 @@ interface ResolvedAcquisition {
   requestId: string;
   budget: BudgetSnapshot | null;
   minor: boolean;
+  tier: RateTier;
 }
 
 /** Shared resolution for all provider access: user/age/consent checks, source
@@ -385,7 +411,7 @@ async function resolveAcquisition(
       throw error;
     }
   }
-  return { cfg, source, requestId, budget, minor };
+  return { cfg, source, requestId, budget, minor, tier: roleToTier(user.role) };
 }
 
 interface RateLimitOutcome {
@@ -454,10 +480,11 @@ export async function acquireLlmModel(
   userId: string,
   context: { feature?: string; requestedMicros?: number } = {}
 ): Promise<AcquiredModel> {
-  const { cfg, source, requestId, budget, minor } = await resolveAcquisition(userId, context);
+  const { cfg, source, requestId, budget, minor, tier } = await resolveAcquisition(userId, context);
+  const reasoningEffort = await resolveReasoningEffort(context.feature ?? "unknown", tier);
 
   const wrap = (config: LlmUserConfig, usingFallback: boolean, rateLimit: AcquiredModel["rateLimit"]): AcquiredModel => ({
-    model: meterModel(buildModel(config), {
+    model: meterModel(buildModel(config, reasoningEffort), {
       userId,
       source,
       provider: config.provider,
@@ -474,7 +501,7 @@ export async function acquireLlmModel(
     rateLimit,
   });
 
-  const outcome = await checkAcquisitionRateLimit(userId, { cfg, source, requestId, budget, minor });
+  const outcome = await checkAcquisitionRateLimit(userId, { cfg, source, requestId, budget, minor, tier });
   if (outcome.fallbackConfig) return wrap(outcome.fallbackConfig, true, outcome.rateLimit);
   return wrap(cfg, false, outcome.rateLimit);
 }

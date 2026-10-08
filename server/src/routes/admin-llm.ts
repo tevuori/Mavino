@@ -12,6 +12,10 @@ import {
   setTierRateLimits,
   getHostedBudgetConfig,
   setHostedBudgetConfig,
+  getReasoningConfig,
+  setReasoningConfig,
+  REASONING_FEATURES,
+  REASONING_TIERS,
   type LlmMode,
 } from "../services/llm-config";
 import { getDemoConfig, setDemoConfig, cleanupOldDemoUsers, type DemoConfigInput } from "../services/demo";
@@ -98,6 +102,26 @@ const hostedBudgetSchema = z.object({
     free: z.number().int().min(0).max(1_000_000_000).optional(),
     demo: z.number().int().min(0).max(1_000_000_000).optional(),
   }).optional(),
+});
+
+// ---------- Reasoning effort (per feature × tier) ----------
+
+/** GET /api/admin/llm/reasoning — feature catalog + per-tier effort map. */
+adminLlm.get("/reasoning", async (c) => {
+  const config = await getReasoningConfig();
+  return c.json({ features: REASONING_FEATURES, tiers: REASONING_TIERS, config });
+});
+
+const effortSchema = z.enum(["off", "low", "medium", "high"]);
+const tierSchema = z.enum(["free", "paid", "pro", "admin", "demo"]);
+const reasoningSchema = z.object({
+  features: z.record(z.string(), z.record(tierSchema, effortSchema)),
+});
+
+/** PUT /api/admin/llm/reasoning — save the per-feature × per-tier effort map. */
+adminLlm.put("/reasoning", zValidator("json", reasoningSchema), async (c) => {
+  await setReasoningConfig(c.req.valid("json"));
+  return c.json({ ok: true });
 });
 
 adminLlm.get("/hosted-budget", async (c) => c.json(await getHostedBudgetConfig()));

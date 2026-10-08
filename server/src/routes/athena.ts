@@ -615,7 +615,7 @@ athena.post("/suggest-folder", zValidator("json", suggestFolderSchema), async (c
   }
   let model;
   try {
-    model = (await acquireLlmModel(userId)).model;
+    model = (await acquireLlmModel(userId, { feature: "athena.chat" })).model;
   } catch (e) {
     if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500);
     return c.json({ error: e instanceof Error ? e.message : "LLM error" }, 500);

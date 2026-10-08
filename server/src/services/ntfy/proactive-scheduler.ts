@@ -76,7 +76,7 @@ async function runProactiveTurn(userId: string, userText: string): Promise<strin
       new Message("user", effectivePrompt),
     ];
 
-    const { model } = await acquireLlmModel(userId);
+    const { model } = await acquireLlmModel(userId, { feature: "athena.proactive" });
     const allowedTools = await toolsForAssistant(userId, role, []);
     const plugin = new AthenaToolsPlugin(allowedTools, { userId, windows: [] });
     model.addPlugin(plugin);

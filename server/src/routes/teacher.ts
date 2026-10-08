@@ -346,7 +346,7 @@ teacher.post("/:id/plan", zValidator("json", planSchema), async (c) => {
   const state = parseState(row.state);
   let plan;
   try {
-    const { model } = await acquireLlmModel(userId);
+    const { model } = await acquireLlmModel(userId, { feature: "teacher" });
     plan = await generateLessonPlan(model, sources, {
       studentLevel: state.studentLevel ?? "intermediate",
       focus: body.focus,
@@ -394,7 +394,7 @@ teacher.post("/:id/assess", zValidator("json", assessSchema), async (c) => {
 
   let result;
   try {
-    const { model } = await acquireLlmModel(userId);
+    const { model } = await acquireLlmModel(userId, { feature: "teacher" });
     result = await assessComprehension(model, {
       question: body.question,
       expectedConcept: concept || undefined,
@@ -449,7 +449,7 @@ teacher.post("/:id/title", zValidator("json", titleBodySchema), async (c) => {
 
   let title: string;
   try {
-    const { model } = await acquireLlmModel(userId);
+    const { model } = await acquireLlmModel(userId, { feature: "teacher" });
     title = await generateSessionTitle(model, {
       question: firstUser.content,
       answer: firstAssistant.content,
@@ -534,7 +534,7 @@ teacher.post("/:id/export", zValidator("json", exportSchema), async (c) => {
   // flashcards / quiz both need a generation pass.
   let model;
   try {
-    model = (await acquireLlmModel(userId)).model;
+    model = (await acquireLlmModel(userId, { feature: "teacher" })).model;
   } catch (e) {
     const status = e instanceof LlmError ? e.status : 502;
     return c.json({ error: e instanceof Error ? e.message : "AI unavailable" }, status as 400);
@@ -643,7 +643,7 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
   const state: TeacherSessionState = mergeState(parseState(row.state), body.state as TeacherSessionState);
 
   const cfg = await getUserConfig(userId);
-  const { model } = await acquireLlmModel(userId);
+  const { model } = await acquireLlmModel(userId, { feature: "teacher" });
   const visionCapable = modelSupportsVision(cfg.provider, cfg.modelId);
 
   const history2 = parseMessages(row.messages);

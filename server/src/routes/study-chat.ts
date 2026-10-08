@@ -259,7 +259,7 @@ chat.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
     return c.json({ error: "This chat has no sources. Add at least one source first." }, 400);
   }
 
-  const { model } = await acquireLlmModel(userId);
+  const { model } = await acquireLlmModel(userId, { feature: "study.chat" });
   const systemPrompt = groundedQaSystemPrompt(sources, body.language as StudyLanguage);
 
   // Build the message thread from stored history + the new user message.

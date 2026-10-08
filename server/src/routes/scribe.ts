@@ -106,7 +106,7 @@ scribe.post("/documents/:id/feedback", zValidator("json", generateSchema), async
   }
   let model;
   try {
-    ({ model } = await acquireLlmModel(userId));
+    ({ model } = await acquireLlmModel(userId, { feature: "scribe" }));
   } catch (e) {
     if (e instanceof LlmError) return c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500);
     return c.json({ error: e instanceof Error ? e.message : "LLM error" }, 500);

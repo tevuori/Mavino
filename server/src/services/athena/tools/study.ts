@@ -47,7 +47,7 @@ const rawStudyTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "study" });
 
       let resolved;
       try {
@@ -119,7 +119,7 @@ const rawStudyTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "study" });
 
       let resolved;
       try {
@@ -181,7 +181,7 @@ const rawStudyTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "study" });
 
       let resolved;
       try {
@@ -297,7 +297,7 @@ const rawStudyTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "study" });
 
       let resolved;
       try {
@@ -359,7 +359,7 @@ const rawStudyTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "study" });
 
       const ids = String(args.noteIds ?? "")
         .split(",")
@@ -426,7 +426,7 @@ const rawStudyTools: ToolDef[] = [
     handler: async (args, { userId }) => {
       const cfg = await getUserConfig(userId);
       if (!cfg.apiKey) return { error: "No AI provider configured." };
-      const { model } = await acquireLlmModel(userId);
+      const { model } = await acquireLlmModel(userId, { feature: "study" });
 
       let resolved;
       try {
