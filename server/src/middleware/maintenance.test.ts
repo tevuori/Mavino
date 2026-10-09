@@ -13,6 +13,8 @@ describe("maintenance middleware exclusions", () => {
     expect(isMaintenanceExempt("/api/auth/login", "POST")).toBe(true);
     expect(isMaintenanceExempt("/api/auth/login/totp", "POST")).toBe(true);
     expect(isMaintenanceExempt("/api/auth/refresh", "POST")).toBe(true);
+    expect(isMaintenanceExempt("/api/auth/password", "POST")).toBe(true);
+    expect(isMaintenanceExempt("/api/auth/reset-password", "POST")).toBe(true);
     expect(isMaintenanceExempt("/api/auth/me", "GET")).toBe(true);
   });
 

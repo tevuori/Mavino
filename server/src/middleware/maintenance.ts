@@ -9,6 +9,8 @@ const EXEMPT_AUTH_PATHS = new Set([
   "/api/auth/refresh",
   "/api/auth/logout",
   "/api/auth/me",
+  "/api/auth/password",
+  "/api/auth/reset-password",
   "/api/auth/turnstile-config",
   "/api/auth/registration-status",
 ]);
@@ -44,6 +46,12 @@ export async function maintenanceMiddleware(c: Context, next: Next) {
         select: { role: true },
       });
       if (user?.role === "ADMIN") return next();
+    } else {
+      // A Bearer token was presented but is expired/invalid. Return 401 (not
+      // 503) so the client's refresh-token flow kicks in — otherwise an admin
+      // whose access token expired mid-maintenance gets an empty, dead UI
+      // that looks like wiped data.
+      return c.json({ error: "Unauthorized", code: "TOKEN_INVALID" }, 401);
     }
   }
 
