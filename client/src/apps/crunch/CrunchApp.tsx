@@ -16,16 +16,22 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   CalendarClock, Plus, Trash2, RefreshCw, Loader2, AlertCircle, X,
   CheckCircle2, Circle, Clock, Brain, GraduationCap, TrendingDown,
-  Sparkles, ChevronLeft, ChevronRight, BookOpen, Zap, Target,
+  Sparkles, ChevronLeft, ChevronRight, ChevronDown, BookOpen, Zap, Target,
+  Presentation, ListChecks, Files, ClipboardList,
 } from "lucide-react";
 import {
   crunchApi,
   type CrunchState, type CrunchPlanData, type CrunchExamInput,
   type CrunchDay, type CrunchDayTask, type CrunchTopic, type CrunchTaskType,
+  type CrunchExam, type ChapterProgress,
 } from "../../services/crunch";
+import { studySourcesApi, type StudySource } from "../../services/study-sources";
 import { useWindows } from "../../store/windows";
 import type { WindowInstance } from "../../store/windows";
 import { confirmDialog } from "../../store/mobileDialog";
+import WorkspaceSourceSelector from "../study/WorkspaceSourceSelector";
+import { teachLaunchInput } from "../teach/launch";
+import { useLanguage } from "../../store/language";
 
 // ----- helpers -----
 
@@ -80,10 +86,69 @@ interface ExamFormRow {
   date: string;
   syllabus: string;
   courseId: string;
+  sourceIds: Set<string>;
+  pastExamSourceIds: Set<string>;
+  syllabusSourceId: string;
+  workspaceId: string;
+  mockSessionId: string;
 }
 
 function newExamRow(): ExamFormRow {
-  return { id: `tmp_${Math.random().toString(36).slice(2, 8)}`, name: "", date: "", syllabus: "", courseId: "" };
+  return {
+    id: `tmp_${Math.random().toString(36).slice(2, 8)}`,
+    name: "",
+    date: "",
+    syllabus: "",
+    courseId: "",
+    sourceIds: new Set(),
+    pastExamSourceIds: new Set(),
+    syllabusSourceId: "",
+    workspaceId: "",
+    mockSessionId: "",
+  };
+}
+
+/** Collapsible wrapper around WorkspaceSourceSelector so the exam form stays
+ *  compact — each exam has two of these (materials + past exams). */
+function CollapsibleSources({
+  title,
+  icon: Icon,
+  selectedIds,
+  onToggle,
+  onSourceAdded,
+}: {
+  title: string;
+  icon: typeof Files;
+  selectedIds: Set<string>;
+  onToggle: (id: string) => void;
+  onSourceAdded: (s: StudySource) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-edge bg-surface">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-ink"
+      >
+        <ChevronDown size={11} className={`shrink-0 text-ink-muted transition ${open ? "" : "-rotate-90"}`} />
+        <Icon size={12} className="shrink-0 text-accent" />
+        <span className="flex-1 font-medium">{title}</span>
+        <span className="text-[10px] text-ink-muted">
+          {selectedIds.size > 0 ? `${selectedIds.size} selected` : "none"}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-edge px-2.5 py-2">
+          <WorkspaceSourceSelector
+            selectedIds={selectedIds}
+            onToggle={onToggle}
+            onSourceAdded={onSourceAdded}
+            compact
+          />
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ExamSetupForm({
@@ -102,9 +167,41 @@ function ExamSetupForm({
   const [rows, setRows] = useState<ExamFormRow[]>(initialExams.length > 0 ? initialExams : [newExamRow()]);
   const [minutes, setMinutes] = useState(dailyMinutes);
   const [error, setError] = useState<string | null>(null);
+  // Source library (for the optional "syllabus file" select per exam).
+  const [library, setLibrary] = useState<StudySource[]>([]);
+
+  useEffect(() => {
+    void studySourcesApi.list().then((r) => setLibrary(r.sources)).catch(() => {});
+  }, []);
 
   const updateRow = (id: string, field: keyof ExamFormRow, value: string) => {
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  };
+
+  /** Toggle a source id in one of the row's source sets. */
+  const toggleSource = (id: string, field: "sourceIds" | "pastExamSourceIds", sourceId: string) => {
+    setRows((rs) =>
+      rs.map((r) => {
+        if (r.id !== id) return r;
+        const next = new Set(r[field]);
+        if (next.has(sourceId)) next.delete(sourceId);
+        else next.add(sourceId);
+        return { ...r, [field]: next };
+      })
+    );
+  };
+
+  /** Auto-select a newly added source into the given set. */
+  const autoSelectNew = (id: string, field: "sourceIds" | "pastExamSourceIds") => (s: StudySource) => {
+    setLibrary((prev) => (prev.some((x) => x.id === s.id) ? prev : [s, ...prev]));
+    setRows((rs) =>
+      rs.map((r) => {
+        if (r.id !== id) return r;
+        const next = new Set(r[field]);
+        next.add(s.id);
+        return { ...r, [field]: next };
+      })
+    );
   };
 
   const addRow = () => setRows((rs) => [...rs, newExamRow()]);
@@ -130,10 +227,16 @@ function ExamSetupForm({
     }
     onSubmit(
       valid.map((r) => ({
+        id: r.id.startsWith("tmp_") ? undefined : r.id,
         name: r.name.trim(),
         date: r.date,
         syllabus: r.syllabus.trim(),
         courseId: r.courseId || undefined,
+        sourceIds: [...r.sourceIds],
+        pastExamSourceIds: [...r.pastExamSourceIds],
+        syllabusSourceId: r.syllabusSourceId || undefined,
+        workspaceId: r.workspaceId || undefined,
+        mockSessionId: r.mockSessionId || undefined,
       })),
       minutes
     );
@@ -200,6 +303,35 @@ function ExamSetupForm({
               rows={3}
               className="mt-2 w-full resize-y rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-focus/50"
             />
+            {library.length > 0 && (
+              <select
+                value={r.syllabusSourceId}
+                onChange={(e) => updateRow(r.id, "syllabusSourceId", e.target.value)}
+                className="mt-2 w-full rounded-md border border-edge bg-surface px-2.5 py-1.5 text-xs text-ink outline-none transition focus:border-focus/50"
+                title="Optional: pick a study source that contains the exam syllabus — its text is used to build the chapter outline"
+              >
+                <option value="">Syllabus file (optional)…</option>
+                {library.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            )}
+            <div className="mt-2 flex flex-col gap-1.5">
+              <CollapsibleSources
+                title="Study materials"
+                icon={Files}
+                selectedIds={r.sourceIds}
+                onToggle={(sid) => toggleSource(r.id, "sourceIds", sid)}
+                onSourceAdded={autoSelectNew(r.id, "sourceIds")}
+              />
+              <CollapsibleSources
+                title="Past exams"
+                icon={ClipboardList}
+                selectedIds={r.pastExamSourceIds}
+                onToggle={(sid) => toggleSource(r.id, "pastExamSourceIds", sid)}
+                onSourceAdded={autoSelectNew(r.id, "pastExamSourceIds")}
+              />
+            </div>
           </div>
         ))}
       </div>
@@ -382,6 +514,176 @@ function DayCard({
   );
 }
 
+// ----- chapters (Teach Me integration) -----
+
+function chapterChip(progress: ChapterProgress | undefined): { label: string; cls: string } {
+  switch (progress?.status) {
+    case "completed":
+      return { label: "Completed", cls: "border-success bg-success-soft text-success" };
+    case "in_progress":
+      return {
+        label: progress.total > 0 ? `${progress.covered}/${progress.total} concepts` : "In progress",
+        cls: "border-accent/40 bg-accent/10 text-accent",
+      };
+    default:
+      return { label: "Not started", cls: "border-edge text-ink-muted" };
+  }
+}
+
+function ChapterRow({
+  index,
+  topic,
+  busy,
+  onTeach,
+}: {
+  index: number;
+  topic: CrunchTopic;
+  busy: boolean;
+  onTeach: () => void;
+}) {
+  const chip = chapterChip(topic.chapterProgress);
+  const started = topic.chapterProgress && topic.chapterProgress.status !== "not_started";
+  const completed = topic.chapterProgress?.status === "completed";
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-edge bg-surface px-2.5 py-1.5">
+      <span
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
+          completed ? "bg-success text-white" : "bg-surface-3 text-ink-muted"
+        }`}
+      >
+        {completed ? <CheckCircle2 size={11} /> : index}
+      </span>
+      <span className={`min-w-0 flex-1 truncate text-xs ${completed ? "text-ink-muted line-through" : "text-ink"}`}>
+        {topic.label}
+      </span>
+      {topic.mastery >= 0 && (
+        <span className={`shrink-0 text-[10px] ${masteryColor(topic.mastery)}`}>
+          {masteryPct(topic.mastery)}
+        </span>
+      )}
+      <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] ${chip.cls}`}>{chip.label}</span>
+      <button
+        onClick={onTeach}
+        disabled={busy}
+        className="flex shrink-0 items-center gap-1 rounded-md bg-accent/10 px-2 py-1 text-[10px] font-medium text-accent transition hover:bg-accent/20 disabled:opacity-50"
+      >
+        {busy ? <Loader2 size={10} className="animate-spin" /> : <Presentation size={10} />}
+        {started ? "Continue" : "Teach me"}
+      </button>
+    </div>
+  );
+}
+
+function ExamChaptersCard({
+  exam,
+  topics,
+  busyId,
+  onTeach,
+  onMock,
+}: {
+  exam: CrunchExam;
+  topics: CrunchTopic[];
+  busyId: string | null;
+  onTeach: (topicId: string) => void;
+  onMock: (examId: string) => void;
+}) {
+  const chapters = topics.filter((t) => t.examId === exam.id);
+  const done = chapters.filter((t) => t.chapterProgress?.status === "completed").length;
+  const daysLeft = daysFromNow(exam.date);
+  const hasSources = (exam.sourceIds?.length ?? 0) + (exam.pastExamSourceIds?.length ?? 0) > 0;
+  const mockBusy = busyId === `mock:${exam.id}`;
+  return (
+    <div className="flex flex-col gap-1.5 rounded-lg border border-edge bg-surface p-2.5">
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: exam.color }} />
+        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-ink">{exam.name}</span>
+        <span className="shrink-0 text-[10px] text-ink-muted">
+          {daysLeft >= 0 ? `${daysLeft}d left` : "past"} · {done}/{chapters.length} chapters
+        </span>
+        <button
+          onClick={() => onMock(exam.id)}
+          disabled={mockBusy || (exam.pastExamSourceIds?.length ?? 0) === 0}
+          title={
+            (exam.pastExamSourceIds?.length ?? 0) === 0
+              ? "Attach at least one past exam to run a mock exam"
+              : "Practice exam — the tutor quizzes you with questions in the style of your past papers"
+          }
+          className="flex shrink-0 items-center gap-1 rounded-md border border-warning/40 bg-warning-soft px-2 py-1 text-[10px] font-medium text-warning transition hover:brightness-95 disabled:opacity-40"
+        >
+          {mockBusy ? <Loader2 size={10} className="animate-spin" /> : <Zap size={10} />}
+          Mock exam
+        </button>
+      </div>
+      {!hasSources && (
+        <p className="text-[10px] text-ink-muted">
+          No study materials attached — attach sources via Edit to unlock Teach Me chapters.
+        </p>
+      )}
+      {hasSources && chapters.length === 0 && (
+        <p className="text-[10px] italic text-ink-muted">No chapters for this exam.</p>
+      )}
+      <div className="flex flex-col gap-1">
+        {chapters.map((t, i) => (
+          <ChapterRow
+            key={t.id}
+            index={i + 1}
+            topic={t}
+            busy={busyId === `teach:${t.id}`}
+            onTeach={() => onTeach(t.id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChaptersPanel({
+  data,
+  focusExamId,
+  busyId,
+  onTeach,
+  onMock,
+}: {
+  data: CrunchPlanData;
+  focusExamId: string | null;
+  busyId: string | null;
+  onTeach: (topicId: string) => void;
+  onMock: (examId: string) => void;
+}) {
+  const [open, setOpen] = useState(Boolean(focusExamId));
+  const done = data.topics.filter((t) => t.chapterProgress?.status === "completed").length;
+  const started = data.topics.filter((t) => t.chapterProgress && t.chapterProgress.status !== "not_started").length;
+  return (
+    <div className="rounded-xl border border-edge bg-surface-2">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-ink"
+      >
+        <ChevronDown size={12} className={`shrink-0 text-ink-muted transition ${open ? "" : "-rotate-90"}`} />
+        <ListChecks size={13} className="shrink-0 text-accent" />
+        <span className="flex-1 font-medium">Chapters</span>
+        <span className="text-[10px] text-ink-muted">
+          {done}/{data.topics.length} complete{started > done ? ` · ${started - done} in progress` : ""}
+        </span>
+      </button>
+      {open && (
+        <div className="flex max-h-72 flex-col gap-2 overflow-y-auto border-t border-edge px-3 py-2">
+          {data.exams.map((exam) => (
+            <ExamChaptersCard
+              key={exam.id}
+              exam={exam}
+              topics={data.topics}
+              busyId={busyId}
+              onTeach={onTeach}
+              onMock={onMock}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ----- main component -----
 
 export default function CrunchApp({ win }: { win: WindowInstance }) {
@@ -395,8 +697,11 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
   // row). When set, a banner is shown with a "Review now" CTA that opens the
   // Flashcards app on the concept's linked deck.
   const [pulseAtRisk, setPulseAtRisk] = useState<{ label: string; deckIds: string[] } | null>(null);
+  const [teachBusy, setTeachBusy] = useState<string | null>(null);
+  const [focusExamId, setFocusExamId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { open } = useWindows();
+  const globalLanguage = useLanguage((s) => s.language);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
@@ -455,13 +760,19 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
   useEffect(() => {
     if (!win?.id) return;
     const raw = sessionStorage.getItem(`crunch:pulse-at-risk:${win.id}`);
-    if (!raw) return;
-    sessionStorage.removeItem(`crunch:pulse-at-risk:${win.id}`);
-    try {
-      const parsed = JSON.parse(raw) as { label: string; deckIds: string[] };
-      setPulseAtRisk(parsed);
-    } catch {
-      // ignore malformed signal
+    if (raw) {
+      sessionStorage.removeItem(`crunch:pulse-at-risk:${win.id}`);
+      try {
+        const parsed = JSON.parse(raw) as { label: string; deckIds: string[] };
+        setPulseAtRisk(parsed);
+      } catch {
+        // ignore malformed signal
+      }
+    }
+    const examFocus = sessionStorage.getItem(`crunch:focus-exam:${win.id}`);
+    if (examFocus) {
+      sessionStorage.removeItem(`crunch:focus-exam:${win.id}`);
+      setFocusExamId(examFocus);
     }
   }, [win?.id]);
 
@@ -519,6 +830,34 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
     }
   };
 
+  /** Start/resume the chapter's Teach Me session and open it. */
+  const teachChapter = async (topicId: string) => {
+    setTeachBusy(`teach:${topicId}`);
+    setError(null);
+    try {
+      const res = await crunchApi.teach(topicId, globalLanguage === "cs" ? "cs" : "en");
+      open(teachLaunchInput(res.sessionId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start the chapter session");
+    } finally {
+      setTeachBusy(null);
+    }
+  };
+
+  /** Start/resume the exam's mock-exam session and open it. */
+  const startMock = async (examId: string) => {
+    setTeachBusy(`mock:${examId}`);
+    setError(null);
+    try {
+      const res = await crunchApi.mock(examId);
+      open(teachLaunchInput(res.sessionId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start the mock exam");
+    } finally {
+      setTeachBusy(null);
+    }
+  };
+
   const data = state?.data ?? null;
   const today = todayStr();
 
@@ -529,6 +868,11 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
     date: e.date,
     syllabus: e.syllabus,
     courseId: e.courseId ?? "",
+    sourceIds: new Set(e.sourceIds ?? []),
+    pastExamSourceIds: new Set(e.pastExamSourceIds ?? []),
+    syllabusSourceId: e.syllabusSourceId ?? "",
+    workspaceId: e.workspaceId ?? "",
+    mockSessionId: e.mockSessionId ?? "",
   })) : [];
 
   // Navigation: scroll to focus date or today.
@@ -690,6 +1034,17 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
             <Sparkles size={15} /> Set up my exams
           </button>
         </div>
+      )}
+
+      {/* Chapters (Teach Me) */}
+      {data && !showSetup && (
+        <ChaptersPanel
+          data={data}
+          focusExamId={focusExamId}
+          busyId={teachBusy}
+          onTeach={teachChapter}
+          onMock={startMock}
+        />
       )}
 
       {/* Day-by-day plan */}

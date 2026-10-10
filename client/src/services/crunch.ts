@@ -13,6 +13,15 @@ export interface CrunchExamInput {
   courseId?: string;
   syllabus: string;
   color?: string;
+  /** StudySource ids: study materials for this exam. */
+  sourceIds?: string[];
+  /** StudySource ids: past exams from previous years. */
+  pastExamSourceIds?: string[];
+  /** StudySource id whose text is appended to the syllabus before parsing. */
+  syllabusSourceId?: string;
+  workspaceId?: string;
+  /** Preserved across regenerations (set when editing an existing exam). */
+  mockSessionId?: string;
 }
 
 export interface CrunchExam {
@@ -22,6 +31,19 @@ export interface CrunchExam {
   courseId?: string;
   syllabus: string;
   color: string;
+  sourceIds: string[];
+  pastExamSourceIds: string[];
+  syllabusSourceId?: string;
+  workspaceId?: string;
+  mockSessionId?: string;
+}
+
+export interface ChapterProgress {
+  status: "not_started" | "in_progress" | "completed";
+  covered: number;
+  total: number;
+  /** 0..1 average pass rate; -1 = nothing checked. */
+  passRate: number;
 }
 
 export interface CrunchTopic {
@@ -32,6 +54,8 @@ export interface CrunchTopic {
   priority: number; // 1..5
   estimatedHours: number;
   deckIds: string[];
+  teachSessionId?: string;
+  chapterProgress?: ChapterProgress;
 }
 
 export type CrunchTaskType = "new" | "review" | "practice" | "mock";
@@ -97,4 +121,12 @@ export const crunchApi = {
     api.post<{ data: CrunchPlanData }>("/api/crunch/day-complete", { date }),
 
   delete: () => api.delete<{ ok: boolean }>("/api/crunch"),
+
+  /** Get or create the Teach Me session for a plan chapter. */
+  teach: (topicId: string, language?: "en" | "cs") =>
+    api.post<{ sessionId: string; created: boolean; title: string }>("/api/crunch/teach", { topicId, language }),
+
+  /** Get or create the exam's mock-exam session (examiner mode). */
+  mock: (examId: string) =>
+    api.post<{ sessionId: string; created: boolean; title: string }>("/api/crunch/mock", { examId }),
 };

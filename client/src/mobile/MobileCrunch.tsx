@@ -7,14 +7,15 @@ import { useState, useEffect, useCallback } from "react";
 import {
   CalendarClock, Plus, Trash2, RefreshCw, Loader2, AlertCircle,
   CheckCircle2, Circle, Clock, Brain, BookOpen, Target, Zap,
-  TrendingDown, Sparkles, GraduationCap,
+  TrendingDown, Sparkles, GraduationCap, Presentation,
 } from "lucide-react";
 import {
   crunchApi,
   type CrunchState, type CrunchPlanData, type CrunchExamInput,
-  type CrunchDayTask, type CrunchTopic, type CrunchTaskType,
+  type CrunchDayTask, type CrunchTopic, type CrunchTaskType, type CrunchExam,
 } from "../services/crunch";
 import type { MobileTool } from "./MobileLauncher";
+import type { MobileToolPayload } from "./MobileToolPage";
 import { MobileContainer, MobileHeader, MobileEmpty } from "./MobileUi";
 
 const TASK_TYPE_META: Record<CrunchTaskType, { label: string; icon: typeof Brain; color: string }> = {
@@ -35,7 +36,7 @@ function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => void; onOpenTool: (tool: MobileTool) => void }) {
+export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => void; onOpenTool: (tool: MobileTool, payload?: MobileToolPayload) => void }) {
   const [state, setState] = useState<CrunchState | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -43,6 +44,7 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
   const [showSetup, setShowSetup] = useState(false);
   const [examRows, setExamRows] = useState([{ id: "tmp_1", name: "", date: "", syllabus: "" }]);
   const [dailyMinutes, setDailyMinutes] = useState(120);
+  const [teachBusy, setTeachBusy] = useState<string | null>(null);
 
   const poll = useCallback(async () => {
     const id = setInterval(async () => {
@@ -133,6 +135,34 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
       setShowSetup(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
+    }
+  };
+
+  /** Start/resume a chapter's Teach Me session and open the teach tool. */
+  const teachChapter = async (topicId: string) => {
+    setTeachBusy(`teach:${topicId}`);
+    setError(null);
+    try {
+      const res = await crunchApi.teach(topicId);
+      onOpenTool("teach", { teach: { sessionId: res.sessionId } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start the chapter session");
+    } finally {
+      setTeachBusy(null);
+    }
+  };
+
+  /** Start/resume the exam's mock-exam session and open the teach tool. */
+  const startMock = async (examId: string) => {
+    setTeachBusy(`mock:${examId}`);
+    setError(null);
+    try {
+      const res = await crunchApi.mock(examId);
+      onOpenTool("teach", { teach: { sessionId: res.sessionId } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start the mock exam");
+    } finally {
+      setTeachBusy(null);
     }
   };
 
@@ -304,6 +334,21 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
             </div>
           )}
 
+          {/* Chapters (Teach Me) */}
+          <h2 className="mb-2 text-sm font-semibold text-ink">Chapters</h2>
+          <div className="mb-6 space-y-3">
+            {data.exams.map((exam) => (
+              <MobileExamChapters
+                key={exam.id}
+                exam={exam}
+                topics={data.topics}
+                busyId={teachBusy}
+                onTeach={teachChapter}
+                onMock={startMock}
+              />
+            ))}
+          </div>
+
           {/* Today's tasks */}
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-ink">Today</h2>
@@ -376,6 +421,78 @@ export default function MobileCrunch({ onClose, onOpenTool }: { onClose: () => v
         </>
       )}
     </MobileContainer>
+  );
+}
+
+function MobileExamChapters({
+  exam,
+  topics,
+  busyId,
+  onTeach,
+  onMock,
+}: {
+  exam: CrunchExam;
+  topics: CrunchTopic[];
+  busyId: string | null;
+  onTeach: (topicId: string) => void;
+  onMock: (examId: string) => void;
+}) {
+  const chapters = topics.filter((t) => t.examId === exam.id);
+  const done = chapters.filter((t) => t.chapterProgress?.status === "completed").length;
+  const hasSources = (exam.sourceIds?.length ?? 0) + (exam.pastExamSourceIds?.length ?? 0) > 0;
+  return (
+    <div className="rounded-2xl border border-edge bg-surface-2 p-3.5">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: exam.color }} />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{exam.name}</span>
+        <span className="shrink-0 text-[11px] text-ink-muted">{done}/{chapters.length}</span>
+        <button
+          onClick={() => onMock(exam.id)}
+          disabled={busyId === `mock:${exam.id}` || (exam.pastExamSourceIds?.length ?? 0) === 0}
+          className="flex shrink-0 items-center gap-1 rounded-lg bg-warning-soft px-2.5 py-1.5 text-[11px] font-medium text-warning disabled:opacity-40"
+        >
+          {busyId === `mock:${exam.id}` ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} />}
+          Mock
+        </button>
+      </div>
+      {!hasSources && (
+        <p className="text-[11px] text-ink-muted">No materials attached — attach sources in the desktop app to unlock chapters.</p>
+      )}
+      <div className="space-y-1.5">
+        {chapters.map((t, i) => {
+          const p = t.chapterProgress;
+          const completed = p?.status === "completed";
+          const started = p && p.status !== "not_started";
+          return (
+            <div key={t.id} className="flex items-center gap-2 rounded-xl border border-edge bg-surface px-3 py-2">
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+                  completed ? "bg-success text-white" : "bg-surface-3 text-ink-muted"
+                }`}
+              >
+                {completed ? <CheckCircle2 size={12} /> : i + 1}
+              </span>
+              <span className={`min-w-0 flex-1 truncate text-xs ${completed ? "text-ink-muted line-through" : "text-ink"}`}>
+                {t.label}
+              </span>
+              {p?.status === "in_progress" && (
+                <span className="shrink-0 text-[10px] text-accent">
+                  {p.total > 0 ? `${p.covered}/${p.total}` : "…"}
+                </span>
+              )}
+              <button
+                onClick={() => onTeach(t.id)}
+                disabled={busyId === `teach:${t.id}` || !hasSources}
+                className="flex shrink-0 items-center gap-1 rounded-lg bg-accent/10 px-2.5 py-1.5 text-[11px] font-medium text-accent disabled:opacity-40"
+              >
+                {busyId === `teach:${t.id}` ? <Loader2 size={11} className="animate-spin" /> : <Presentation size={11} />}
+                {started ? "Continue" : "Teach"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

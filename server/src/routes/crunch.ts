@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { authMiddleware } from "../middleware/auth";
+import { isStudyFunctionEnabled } from "../services/study-functions";
 import { isAppAvailableFor } from "../services/features";
 import { isLlmConfiguredFor, acquireLlmModel, LlmError } from "../services/athena/llm";
 import {
@@ -18,6 +19,8 @@ import {
   logDayComplete,
   checkBehindAlert,
   deleteCrunchPlan,
+  ensureChapterSession,
+  ensureMockSession,
   type CrunchGenerateInput,
   type LogProgressInput,
 } from "../services/crunch";
@@ -43,6 +46,11 @@ const crunchExamSchema = z.object({
   courseId: z.string().max(200).optional(),
   syllabus: z.string().max(50000),
   color: z.string().max(50).optional(),
+  sourceIds: z.array(z.string()).max(50).optional(),
+  pastExamSourceIds: z.array(z.string()).max(50).optional(),
+  syllabusSourceId: z.string().max(200).optional(),
+  workspaceId: z.string().max(200).optional(),
+  mockSessionId: z.string().max(200).optional(),
 });
 
 const generateCrunchSchema = z.object({
@@ -129,6 +137,63 @@ crunch.delete("/", async (c) => {
   const { userId } = c.get("auth");
   await deleteCrunchPlan(userId);
   return c.json({ ok: true });
+});
+
+// ----- Teach Me integration -----
+
+const teachSchema = z.object({
+  topicId: z.string().max(200),
+  language: z.enum(["en", "cs"]).optional().default("en"),
+});
+
+const mockSchema = z.object({
+  examId: z.string().max(200),
+});
+
+/** Shared LLM acquisition for teach/mock endpoints. Returns the model or a
+ *  JSON error response. Also verifies the Teach Me function isn't disabled
+ *  for the user's tier (sessions bypass the /api/teacher middleware). */
+async function acquireForTeach(userId: string, c: any) {
+  if (!(await isStudyFunctionEnabled(userId, "teach"))) {
+    return { error: c.json({ error: "Teach Me is disabled for your tier." }, 403) };
+  }
+  const configured = await isLlmConfiguredFor(userId);
+  if (!configured) {
+    return { error: c.json({ error: "No AI provider configured. Add an API key in Settings → AI." }, 400) };
+  }
+  try {
+    const { model } = await acquireLlmModel(userId, { feature: "teacher" });
+    return { model };
+  } catch (e) {
+    if (e instanceof LlmError) {
+      return { error: c.json({ error: e.message }, e.status as 400 | 402 | 429 | 500) };
+    }
+    return { error: c.json({ error: e instanceof Error ? e.message : "LLM error" }, 500) };
+  }
+}
+
+/** POST /teach — get or create the Teach Me session for a plan chapter.
+ *  Returns the session id; the client opens the Teach Me app on it. */
+crunch.post("/teach", zValidator("json", teachSchema), async (c) => {
+  const { userId } = c.get("auth");
+  const body = c.req.valid("json");
+  const { model, error } = await acquireForTeach(userId, c);
+  if (error) return error;
+  const result = await ensureChapterSession(userId, model!, body.topicId, body.language);
+  if (!result.ok) return c.json({ error: result.error }, 404);
+  return c.json({ sessionId: result.sessionId, created: result.created, title: result.title });
+});
+
+/** POST /mock — get or create the exam's mock-exam session (examiner mode
+ *  grounded on attached past exams). */
+crunch.post("/mock", zValidator("json", mockSchema), async (c) => {
+  const { userId } = c.get("auth");
+  const body = c.req.valid("json");
+  const { model, error } = await acquireForTeach(userId, c);
+  if (error) return error;
+  const result = await ensureMockSession(userId, model!, body.examId);
+  if (!result.ok) return c.json({ error: result.error }, 404);
+  return c.json({ sessionId: result.sessionId, created: result.created, title: result.title });
 });
 
 export default crunch;

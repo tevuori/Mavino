@@ -70,7 +70,21 @@ export interface LessonPlan {
   suggestedSources?: number[];
 }
 
-export type TeachingStyle = "explain" | "socratic";
+export type TeachingStyle = "explain" | "socratic" | "mock_exam";
+
+/** Link from a Teach Me session back to a Crunch exam/chapter. Written by
+ *  the Crunch service when a session is created for a plan chapter (or as
+ *  the exam's mock exam); used to ground the prompt in exam context. */
+export interface CrunchSessionRef {
+  examId: string;
+  examName: string;
+  examDate: string;
+  /** Set for chapter sessions. */
+  topicId?: string;
+  topicLabel?: string;
+  /** True for mock-exam sessions. */
+  mock?: boolean;
+}
 
 /** A source that could not be displayed on the student's screen. */
 export interface SourceIssue {
@@ -112,6 +126,8 @@ export interface TeacherSessionState {
   sourceImages?: SourceImageMeta[];
   /** Turn number when images were last attached to the LLM thread (avoids re-attaching every turn). */
   imagesAttachedOnTurn?: number;
+  /** Crunch exam/chapter this session belongs to (chapter-prep sessions). */
+  crunchRef?: CrunchSessionRef;
 }
 
 const LEVELS = ["beginner", "intermediate", "advanced"] as const;
@@ -294,9 +310,9 @@ export function announcedUndeliveredCheck(text: string, teachingStyle?: Teaching
   if (!text.trim()) return false;
   const tail = text.slice(-500);
   if (CHECK_ANNOUNCE_RE.test(tail)) return true;
-  // In socratic mode asking questions in plain text IS the teaching style —
-  // only explicit card announcements count there.
-  if (teachingStyle === "socratic") return false;
+  // In socratic and mock-exam modes asking questions in plain text IS the
+  // teaching style — only explicit card announcements count there.
+  if (teachingStyle === "socratic" || teachingStyle === "mock_exam") return false;
   // Require a substantive turn so a short conversational reply ending in "?"
   // (e.g. "Want to continue?") does not trigger a forced check.
   if (text.length < 200) return false;
@@ -315,6 +331,14 @@ const STYLE_INSTRUCTIONS: Record<TeachingStyle, string> = {
     "- Ask ONE question at a time and wait for the answer. Acknowledge partial progress explicitly before probing further.\n" +
     "- Only state the full answer after the student has arrived at it, or after they explicitly ask you to reveal it.\n" +
     "- Keep each turn short: at most a sentence or two of scaffolding plus the question.",
+  mock_exam:
+    "TEACHING MODE — MOCK EXAM:\n" +
+    "- You are the examiner, not a tutor. Run a realistic oral exam based on the PAST EXAM sources attached to this session.\n" +
+    "- Ask ONE exam-style question at a time, in the style and difficulty of the past papers. Wait for the student's answer before continuing.\n" +
+    "- Grade each answer with check_comprehension: strict but fair — award the pass only when the answer would earn the points on the real exam.\n" +
+    "- Keep a running score. After grading, briefly say what was missing, then move to the next question. Do NOT lecture or explain at length unless the student asks after grading.\n" +
+    "- Cover different topics across questions — do not drill a single area unless the student keeps failing it.\n" +
+    "- When the student asks to stop (or after ~10 questions), give a final summary: score, weakest topics, and what to review next.",
 };
 
 export function teacherSystemPrompt(
@@ -324,7 +348,9 @@ export function teacherSystemPrompt(
   lang?: StudyLanguage,
   visionCapable = false,
   /** Full turns elapsed since the last comprehension check (0 = just asked). */
-  turnsSinceCheck = 0
+  turnsSinceCheck = 0,
+  /** Live Crunch chapter-progress summary (when the session has a crunchRef). */
+  crunchSummary?: string
 ): string {
   const imageAware = state.imageAware !== false;
   const sourceImages = imageAware ? (state.sourceImages ?? []) : [];
@@ -361,7 +387,10 @@ export function teacherSystemPrompt(
         .join("\n")
     : "  (no checks yet)";
 
-  const style: TeachingStyle = state.teachingStyle === "socratic" ? "socratic" : "explain";
+  const style: TeachingStyle =
+    state.teachingStyle === "socratic" || state.teachingStyle === "mock_exam"
+      ? state.teachingStyle
+      : "explain";
   const buckets = masteryBuckets(state);
   const adaptiveLevel = state.inferredLevel ?? inferAdaptiveLevel(state);
   const misconceptions = openMisconceptions(state);
@@ -407,6 +436,29 @@ ${issues.map((i) => `  - ${i.name ?? i.refId ?? "source"}: ${i.reason}`).join("\
       : state.paceFeedback === "too_easy"
         ? "PACE: the student said this is TOO EASY. Move faster, skip basics and go deeper."
         : "";
+
+  const isMock = style === "mock_exam";
+
+  const crunchRef = state.crunchRef;
+  const crunchBlock = crunchRef
+    ? crunchRef.mock
+      ? `CRUNCH MOCK EXAM:
+- Exam: "${crunchRef.examName}" on ${crunchRef.examDate}.
+- The sources below include the student's past exams — base your questions on their style, format and difficulty.${crunchSummary ? `\n- Prep status across the study plan: ${crunchSummary}` : ""}`
+      : `CRUNCH CHAPTER PREP:
+- Exam: "${crunchRef.examName}" on ${crunchRef.examDate}.
+- Chapter: "${crunchRef.topicLabel ?? "this chapter"}" — stay scoped to this chapter; if the student wanders into other topics, gently steer back or suggest another chapter session.${crunchSummary ? `\n- Chapter progress across the study plan: ${crunchSummary}` : ""}`
+    : "";
+
+  const lessonFlowBlock = isMock
+    ? `EXAM FLOW:
+- Ask ONE exam-style question per turn, drawn from the past-exam sources (or in their style when you run out of real questions).
+- After the student answers, grade the answer with check_comprehension, give a brief verdict plus the running score, then ask the next question.
+- Do NOT use mark_concept_covered or finish_lesson on your own — this is an exam, not a lesson. Only wrap up with a score summary when the student asks to stop.${hasImages ? "\n- When a question refers to a figure or table in a past paper, use point_at_image / show_source so the student sees it." : ""}`
+    : `LESSON FLOW:
+- Work ONE objective per turn: introduce the concept, ground it in the source, then verify with a single comprehension check. Do NOT rush through multiple objectives in one turn — the student needs time to absorb and answer.
+- Call mark_concept_covered as soon as you have finished explaining a concept AND its comprehension check has been answered, so the agenda stays in sync.
+- When every objective is covered (or the student asks to wrap up), call finish_lesson with a recap and the concepts that still need work.${hasImages ? "\n- When a source contains images (see IMAGES IN SOURCES below), work them into your explanation naturally. Figures and diagrams often contain the most important information — don't skip them." : ""}`;
 
   const imageListLines = sourceImages
     .map(
@@ -468,10 +520,7 @@ SHOW & TELL (the core of this mode):
 
 CRITICAL: After calling any tool (show_source, highlight_source, etc.), you MUST continue your explanation. Do NOT stop after a tool call. The tool call is a visual aid that happens DURING your explanation, not a replacement for it. Always provide a complete, substantive explanation of the topic — never just an intro followed by a tool call with no continuation.
 
-LESSON FLOW:
-- Work ONE objective per turn: introduce the concept, ground it in the source, then verify with a single comprehension check. Do NOT rush through multiple objectives in one turn — the student needs time to absorb and answer.
-- Call mark_concept_covered as soon as you have finished explaining a concept AND its comprehension check has been answered, so the agenda stays in sync.
-- When every objective is covered (or the student asks to wrap up), call finish_lesson with a recap and the concepts that still need work.${hasImages ? "\n- When a source contains images (see IMAGES IN SOURCES below), work them into your explanation naturally. Figures and diagrams often contain the most important information — don't skip them." : ""}
+${lessonFlowBlock}
 
 COMPREHENSION CHECKS:
 - After explaining a key concept, call check_comprehension with ONE short question and the expectedConcept it tests. The answer is graded automatically and comes back to you with the verdict.
@@ -491,7 +540,7 @@ CITATION AND FORMATTING RULES:
 ${planBlock}
 
 ${masteryBlock}
-${misconceptionBlock ? `\n${misconceptionBlock}\n` : ""}${issueBlock ? `\n${issueBlock}\n` : ""}${paceBlock ? `\n${paceBlock}\n` : ""}${imageBlock ? `\n${imageBlock}\n` : ""}
+${misconceptionBlock ? `\n${misconceptionBlock}\n` : ""}${issueBlock ? `\n${issueBlock}\n` : ""}${paceBlock ? `\n${paceBlock}\n` : ""}${crunchBlock ? `\n${crunchBlock}\n` : ""}${imageBlock ? `\n${imageBlock}\n` : ""}
 SOURCE HISTORY (sources shown so far this session, in order):
 ${historyLines}
 

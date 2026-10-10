@@ -896,6 +896,11 @@ export default function AthenaApp({
         if (payload.date) {
           sessionStorage.setItem(`crunch:focus:${id}`, String(payload.date));
         }
+        // If an examId is provided, store it so the Crunch app expands that
+        // exam's chapters panel.
+        if (payload.examId) {
+          sessionStorage.setItem(`crunch:focus-exam:${id}`, String(payload.examId));
+        }
         break;
       }
       // ===== Compass (Pro research & literature review) =====

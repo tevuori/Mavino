@@ -43,6 +43,8 @@ export type MobileToolPayload = {
   };
   // Files: open a specific folder
   files?: { folderId?: string };
+  // Teach Me: open a specific session (e.g. a Crunch chapter session)
+  teach?: { sessionId?: string };
 };
 
 const SCREENS: Partial<Record<MobileTool, (props: { onClose: () => void; onOpenTool: (tool: MobileTool, payload?: MobileToolPayload) => void; payload?: MobileToolPayload }) => ReactNode>> = {
@@ -53,7 +55,7 @@ const SCREENS: Partial<Record<MobileTool, (props: { onClose: () => void; onOpenT
   study: (props) => <MobileStudy {...props} />,
   teach: (props) => (
     <TeachAccessBoundary onUpgrade={() => props.onOpenTool("plans")}>
-      <MobileTeach {...props} />
+      <MobileTeach {...props} initialSessionId={props.payload?.teach?.sessionId ?? null} />
     </TeachAccessBoundary>
   ),
   focus: (props) => <MobileFocus {...props} />,

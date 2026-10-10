@@ -22,6 +22,11 @@ import prisma from "../db/client";
 import { generateJson } from "./study/llm-json";
 import { decryptNtfyConfig } from "./ntfy/config";
 import { publish } from "./ntfy/client";
+import { generateLessonPlan } from "./study/teacher-lesson";
+import { extractSessionImages } from "./study/teacher-images";
+import { logSessionSafe } from "./study/logSession";
+import type { GroundedSource } from "./study/prompts";
+import type { TeacherSessionState } from "./study/teacher-prompt";
 
 // ----- Plan data shape (stored as JSON in CrunchPlan.data) -----
 
@@ -32,6 +37,16 @@ export interface CrunchExamInput {
   courseId?: string;
   syllabus: string;
   color?: string;
+  /** StudySource ids: study materials for this exam (files, notes, urls). */
+  sourceIds?: string[];
+  /** StudySource ids: past exams from previous years. */
+  pastExamSourceIds?: string[];
+  /** StudySource id whose text is appended to the syllabus before parsing. */
+  syllabusSourceId?: string;
+  /** LearningWorkspace the sources were imported from (metadata only). */
+  workspaceId?: string;
+  /** Preserved across regenerations when editing an existing exam. */
+  mockSessionId?: string;
 }
 
 export interface CrunchExam {
@@ -41,6 +56,21 @@ export interface CrunchExam {
   courseId?: string;
   syllabus: string;
   color: string;
+  sourceIds: string[];
+  pastExamSourceIds: string[];
+  syllabusSourceId?: string;
+  workspaceId?: string;
+  /** TeacherSession id for the exam's mock exam (created lazily). */
+  mockSessionId?: string;
+}
+
+/** Read-time progress of a chapter's linked Teach Me session. */
+export interface ChapterProgress {
+  status: "not_started" | "in_progress" | "completed";
+  covered: number;
+  total: number;
+  /** 0..1 average pass rate across checked concepts; -1 = nothing checked. */
+  passRate: number;
 }
 
 export interface CrunchTopic {
@@ -51,6 +81,10 @@ export interface CrunchTopic {
   priority: number; // 1..5
   estimatedHours: number;
   deckIds: string[];
+  /** TeacherSession id for this chapter (created lazily via /teach). */
+  teachSessionId?: string;
+  /** Computed at read time from the linked session — not persisted. */
+  chapterProgress?: ChapterProgress;
 }
 
 export type CrunchTaskType = "new" | "review" | "practice" | "mock";
@@ -135,7 +169,83 @@ const SR_INTERVALS = [1, 3, 7, 14];
 export async function getCrunchStatus(userId: string): Promise<CrunchStatus | null> {
   const row = await prisma.crunchPlan.findUnique({ where: { userId } });
   if (!row) return null;
-  return serializeStatus(row);
+  const status = serializeStatus(row);
+  if (status.data) await attachChapterProgress(status.data);
+  return status;
+}
+
+/** Derive per-chapter progress from linked Teach Me sessions. Mutates
+ *  `data.topics` in place (the value is read-time only, never persisted). */
+async function attachChapterProgress(data: CrunchPlanData): Promise<void> {
+  const sessionIds = data.topics.map((t) => t.teachSessionId).filter((s): s is string => Boolean(s));
+  if (sessionIds.length === 0) return;
+  const sessions = await prisma.teacherSession.findMany({
+    where: { id: { in: sessionIds } },
+    select: { id: true, state: true },
+  });
+  const stateById = new Map<string, TeacherSessionState>();
+  for (const s of sessions) {
+    try {
+      const v = JSON.parse(s.state);
+      stateById.set(s.id, v && typeof v === "object" ? v : {});
+    } catch {
+      stateById.set(s.id, {});
+    }
+  }
+  for (const topic of data.topics) {
+    if (!topic.teachSessionId) continue;
+    const state = stateById.get(topic.teachSessionId);
+    if (!state) continue;
+    topic.chapterProgress = chapterProgressFromState(state);
+  }
+}
+
+/** One-line per-chapter progress summary for an exam — injected into the
+ *  teacher system prompt so the tutor knows where the student stands across
+ *  the whole plan. Returns null when the exam can't be found. */
+export async function examChapterSummary(userId: string, examId: string): Promise<string | null> {
+  const row = await prisma.crunchPlan.findUnique({ where: { userId } });
+  if (!row || row.status !== "ready") return null;
+  let data: CrunchPlanData;
+  try {
+    data = JSON.parse(row.data) as CrunchPlanData;
+  } catch {
+    return null;
+  }
+  const exam = data.exams.find((e) => e.id === examId);
+  if (!exam) return null;
+  await attachChapterProgress(data);
+  const chapters = data.topics.filter((t) => t.examId === examId);
+  const done = chapters.filter((t) => t.chapterProgress?.status === "completed").length;
+  const lines = chapters.map((t, i) => {
+    const p = t.chapterProgress;
+    const mark = p?.status === "completed" ? "done" : p?.status === "in_progress" ? `in progress (${p.covered}/${p.total} concepts)` : "not started";
+    return `${i + 1}. ${t.label} — ${mark}`;
+  });
+  return `${done}/${chapters.length} chapters complete: ${lines.join("; ")}`;
+}
+
+export function chapterProgressFromState(state: TeacherSessionState): ChapterProgress {
+  const keyConcepts = state.lessonPlan?.keyConcepts ?? [];
+  const coveredSet = new Set((state.coveredConcepts ?? []).map((c) => c.toLowerCase()));
+  const covered = keyConcepts.filter((c) => coveredSet.has(c.toLowerCase())).length;
+  const total = keyConcepts.length;
+  const masteryEntries = Object.values(state.mastery ?? {});
+  const checked = masteryEntries.filter((m) => m.checksTotal > 0);
+  const passRate =
+    checked.length > 0
+      ? checked.reduce((a, m) => a + m.checksPassed / m.checksTotal, 0) / checked.length
+      : -1;
+  const hasActivity =
+    (state.coveredConcepts?.length ?? 0) > 0 || (state.comprehensionLog?.length ?? 0) > 0;
+  const completed =
+    Boolean(state.lessonCompletedAt) || (total > 0 && covered >= total);
+  return {
+    status: completed ? "completed" : hasActivity ? "in_progress" : "not_started",
+    covered,
+    total,
+    passRate,
+  };
 }
 
 function serializeStatus(row: {
@@ -232,6 +342,13 @@ export async function generateCrunchPlan(
       courseId: e.courseId,
       syllabus: e.syllabus.trim(),
       color: e.color || colors[i % colors.length],
+      sourceIds: (e.sourceIds ?? []).slice(0, 50),
+      pastExamSourceIds: (e.pastExamSourceIds ?? []).slice(0, 50),
+      syllabusSourceId: e.syllabusSourceId,
+      workspaceId: e.workspaceId,
+      // Mock session survives regeneration (chapters get new ids and are
+      // intentionally re-linked; the mock session stays bound to the exam).
+      mockSessionId: e.mockSessionId,
     }))
     .filter((e) => parseDate(e.date).getTime() > now.getTime() - 86400000); // include today
 
@@ -308,10 +425,13 @@ export async function generateCrunchPlan(
     if (totalWeight > 0) courseGrade.set(courseId, weightedScore / totalWeight);
   }
 
-  // 5. Parse syllabi into topics via LLM (or use course assignments as fallback).
+  // 5. Parse syllabi into chapter topics via LLM (or use course assignments
+  //    as fallback). Source material + past exams ground the outline when
+  //    attached to the exam.
   const topics: CrunchTopic[] = [];
   for (const exam of exams) {
-    const examTopics = await parseSyllabus(model, exam, decks, courses);
+    const srcs = await loadExamSources(userId, exam);
+    const examTopics = await parseSyllabus(model, exam, decks, courses, srcs);
     for (const t of examTopics) {
       // Compute mastery from linked decks + course grade.
       let mastery = -1;
@@ -365,17 +485,61 @@ interface ParsedTopic {
   deckIds: string[];
 }
 
-/** Parse a syllabus into topics. Uses LLM for free-text syllabi; falls back
- *  to course assignments if the exam has a courseId but no syllabus. */
+interface ExamSources {
+  materials: GroundedSource[];
+  pastExams: GroundedSource[];
+  syllabusText: string;
+}
+
+/** Load the StudySource texts attached to an exam (materials + past exams +
+ *  an optional syllabus file). Only sources owned by the user are returned. */
+export async function loadExamSources(userId: string, exam: CrunchExam): Promise<ExamSources> {
+  // Legacy plans (pre-sources) may not have the arrays at all.
+  const sourceIds = exam.sourceIds ?? [];
+  const pastExamSourceIds = exam.pastExamSourceIds ?? [];
+  const ids = [...new Set([...sourceIds, ...pastExamSourceIds, ...(exam.syllabusSourceId ? [exam.syllabusSourceId] : [])])];
+  if (ids.length === 0) return { materials: [], pastExams: [], syllabusText: exam.syllabus };
+  const rows = await prisma.studySource.findMany({
+    where: { id: { in: ids }, userId },
+    select: { id: true, name: true, kind: true, refId: true, textCache: true },
+  });
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const toSource = (id: string, i: number): GroundedSource | null => {
+    const r = byId.get(id);
+    if (!r) return null;
+    return { index: i + 1, name: r.name, kind: r.kind, refId: r.refId, text: r.textCache };
+  };
+  const materials = sourceIds.map((id, i) => toSource(id, i)).filter((s): s is GroundedSource => s !== null);
+  const pastExams = pastExamSourceIds.map((id, i) => toSource(id, i)).filter((s): s is GroundedSource => s !== null);
+  const syllabusSrc = exam.syllabusSourceId ? byId.get(exam.syllabusSourceId) : null;
+  const syllabusText = [exam.syllabus, syllabusSrc?.textCache?.trim()]
+    .filter((s): s is string => Boolean(s && s.trim()))
+    .join("\n\n")
+    .slice(0, 20000);
+  return { materials, pastExams, syllabusText };
+}
+
+function excerpt(text: string, max = 3000): string {
+  return text.length > max ? text.slice(0, max) + "…" : text;
+}
+
+/** Parse a syllabus (+ attached sources) into chapter topics. Uses the LLM
+ *  for free-text syllabi and source-grounded outlines; falls back to course
+ *  assignments or line-splitting when the LLM fails. */
 async function parseSyllabus(
   model: LlmModel,
   exam: CrunchExam,
   decks: { id: string; name: string; cards: { id: string; front: string; back: string }[] }[],
-  courses: { id: string; name: string; code: string }[]
+  courses: { id: string; name: string; code: string }[],
+  srcs?: ExamSources
 ): Promise<ParsedTopic[]> {
-  // If no syllabus but has a course, use course assignments as topics.
-  if (!exam.syllabus && exam.courseId) {
-    // Fallback: create one topic per course name.
+  const syllabusText = srcs?.syllabusText ?? exam.syllabus;
+  const materials = srcs?.materials ?? [];
+  const pastExams = srcs?.pastExams ?? [];
+  const hasSources = materials.length > 0 || pastExams.length > 0;
+
+  // If no syllabus and no sources but has a course, use the course as topic.
+  if (!syllabusText && !hasSources && exam.courseId) {
     const course = courses.find((c) => c.id === exam.courseId);
     return [{
       label: course?.name ?? exam.name,
@@ -385,7 +549,7 @@ async function parseSyllabus(
     }];
   }
 
-  if (!exam.syllabus) {
+  if (!syllabusText && !hasSources) {
     return [{
       label: exam.name,
       priority: 3,
@@ -394,9 +558,17 @@ async function parseSyllabus(
     }];
   }
 
-  // LLM extraction.
+  // LLM extraction — grounded in the syllabus text plus short excerpts of the
+  // attached materials and past exams (past exams raise the priority of
+  // topics that keep reappearing).
   const deckNames = decks.map((d) => d.name).filter(Boolean).slice(0, 20);
-  const prompt = `You are an exam planner. Break down the following exam syllabus into study topics. For each topic, estimate its priority (1-5, 5 = most important/hardest) and estimated study hours (1-20).\n\nExam: ${exam.name}\nExam date: ${exam.date}\nSyllabus:\n${exam.syllabus}\n\n${deckNames.length > 0 ? `The user has these flashcard decks (match topics to decks by name if relevant): ${deckNames.join(", ")}` : ""}\n\nReturn JSON: { "topics": [{ "label": string, "priority": number, "estimatedHours": number, "deckName": string|null }] }. Aim for 3-12 topics. Keep labels short (1-5 words).`;
+  const materialBlock = materials.length
+    ? `\nSTUDY MATERIALS (excerpts):\n${materials.map((s) => `--- ${s.name} ---\n${excerpt(s.text)}`).join("\n")}\n`
+    : "";
+  const pastExamBlock = pastExams.length
+    ? `\nPAST EXAMS (excerpts — topics that keep reappearing here are high priority):\n${pastExams.map((s) => `--- ${s.name} ---\n${excerpt(s.text)}`).join("\n")}\n`
+    : "";
+  const prompt = `You are an exam planner. Build a study outline for the exam below: an ORDERED list of chapters (topics) the student must master, ordered so each builds on the previous one.\n\nExam: ${exam.name}\nExam date: ${exam.date}\n${syllabusText ? `Syllabus:\n${syllabusText}\n` : ""}${materialBlock}${pastExamBlock}\n${deckNames.length > 0 ? `The user has these flashcard decks (match topics to decks by name if relevant): ${deckNames.join(", ")}\n` : ""}\nRules:\n- For each chapter estimate priority (1-5, 5 = most important/hardest; raise it for topics that recur in past exams) and estimated study hours (1-20).\n- 3-12 chapters when the syllabus is text-only; up to 15 when source materials are attached. Keep labels short (1-5 words), using the sources' wording.\n\nReturn JSON: { "topics": [{ "label": string, "priority": number, "estimatedHours": number, "deckName": string|null }] }.`;
   const schemaHint = `Respond with { "topics": [{ "label": string, "priority": number, "estimatedHours": number, "deckName": string|null }] }.`;
   try {
     const raw = await generateJson<{ topics: any[] }>(model, prompt, schemaHint);
@@ -415,11 +587,20 @@ async function parseSyllabus(
     // LLM failure — fall back to simple splitting.
   }
 
-  // Fallback: split syllabus by lines or commas.
+  // Fallback: split the typed syllabus by lines or commas (materials can't be
+  // parsed without the LLM, so source-only exams get one chapter per file).
   const parts = exam.syllabus
     .split(/[\n,;]+/)
     .map((s) => s.trim())
     .filter((s) => s.length > 2 && s.length < 100);
+  if (parts.length === 0) {
+    return materials.slice(0, 8).map((s) => ({
+      label: s.name.slice(0, 60),
+      priority: 3,
+      estimatedHours: 5,
+      deckIds: matchDecks(decks, s.name),
+    }));
+  }
   return parts.slice(0, 12).map((label) => ({
     label,
     priority: 3,
@@ -800,4 +981,269 @@ export async function checkBehindAlert(userId: string): Promise<boolean> {
 
 export async function deleteCrunchPlan(userId: string): Promise<void> {
   await prisma.crunchPlan.deleteMany({ where: { userId } });
+}
+
+// ----- Teach Me integration: chapter + mock sessions -----
+
+export interface TeachSessionResult {
+  ok: boolean;
+  sessionId?: string;
+  created?: boolean;
+  title?: string;
+  error?: string;
+}
+
+/** Result of loading the plan row + parsed data for session linking. */
+async function loadReadyPlan(
+  userId: string
+): Promise<{ rowId: string; data: CrunchPlanData } | null> {
+  const row = await prisma.crunchPlan.findUnique({ where: { userId } });
+  if (!row || row.status !== "ready") return null;
+  try {
+    const data = JSON.parse(row.data) as CrunchPlanData;
+    return { rowId: row.id, data };
+  } catch {
+    return null;
+  }
+}
+
+/** Ordered sourceIds a teach session should be grounded on. Chapter sessions
+ *  lead with study materials; mock sessions lead with past exams. */
+function sessionSourceIds(exam: CrunchExam, mock: boolean): string[] {
+  const ids = mock
+    ? [...(exam.pastExamSourceIds ?? []), ...(exam.sourceIds ?? [])]
+    : [...(exam.sourceIds ?? []), ...(exam.pastExamSourceIds ?? [])];
+  return [...new Set(ids)];
+}
+
+/** Load GroundedSources (with cached text) in the given id order. */
+async function groundedSourcesFor(userId: string, sourceIds: string[]): Promise<GroundedSource[]> {
+  if (sourceIds.length === 0) return [];
+  const rows = await prisma.studySource.findMany({
+    where: { id: { in: sourceIds }, userId },
+    select: { id: true, name: true, kind: true, refId: true, textCache: true },
+  });
+  return sourceIds
+    .map((id, i) => {
+      const r = rows.find((x) => x.id === id);
+      if (!r) return null;
+      return { index: i + 1, name: r.name, kind: r.kind, refId: r.refId, text: r.textCache };
+    })
+    .filter((s): s is GroundedSource => s !== null);
+}
+
+async function sessionExists(userId: string, sessionId: string): Promise<boolean> {
+  const row = await prisma.teacherSession.findFirst({
+    where: { id: sessionId, userId },
+    select: { id: true },
+  });
+  return row !== null;
+}
+
+/** Post-creation parity with /api/teacher: log the study session + kick off
+ *  background PDF image extraction (persists into session state). */
+async function afterSessionCreated(
+  userId: string,
+  sessionId: string,
+  title: string,
+  sourceIds: string[],
+  sources: GroundedSource[],
+  state: TeacherSessionState
+): Promise<void> {
+  await logSessionSafe(userId, "teach_session_started", title, sourceIds[0] ?? "", {
+    sources: sourceIds.length,
+    studentLevel: state.studentLevel,
+    teachingStyle: state.teachingStyle,
+  });
+  if (state.imageAware !== false && sources.length > 0) {
+    extractSessionImages(userId, sources)
+      .then(async (images) => {
+        if (images.length > 0) {
+          const row = await prisma.teacherSession.findFirst({
+            where: { id: sessionId },
+            select: { state: true },
+          });
+          let current: TeacherSessionState = {};
+          try {
+            const v = JSON.parse(row?.state ?? "{}");
+            current = v && typeof v === "object" ? v : {};
+          } catch { /* keep {} */ }
+          current.sourceImages = images;
+          await prisma.teacherSession.update({
+            where: { id: sessionId },
+            data: { state: JSON.stringify(current) },
+          });
+        }
+      })
+      .catch((e) => console.error("[crunch] background image extraction failed:", e));
+  }
+}
+
+/**
+ * Get or create the Teach Me session for a plan chapter (topic). The session
+ * is grounded on the exam's study materials + past exams and gets a lesson
+ * plan focused on the chapter label. The session id is written back into the
+ * plan JSON so progress can be derived on every GET.
+ */
+export async function ensureChapterSession(
+  userId: string,
+  model: LlmModel,
+  topicId: string,
+  language: "en" | "cs" = "en"
+): Promise<TeachSessionResult> {
+  const loaded = await loadReadyPlan(userId);
+  if (!loaded) return { ok: false, error: "No ready Crunch plan." };
+  const { rowId, data } = loaded;
+
+  const topic = data.topics.find((t) => t.id === topicId);
+  if (!topic) return { ok: false, error: "Chapter not found." };
+  const exam = data.exams.find((e) => e.id === topic.examId);
+  if (!exam) return { ok: false, error: "Exam not found." };
+
+  if (topic.teachSessionId && (await sessionExists(userId, topic.teachSessionId))) {
+    return { ok: true, sessionId: topic.teachSessionId, created: false, title: `${exam.name} — ${topic.label}` };
+  }
+
+  const sourceIds = sessionSourceIds(exam, false);
+  const sources = await groundedSourcesFor(userId, sourceIds);
+  if (sources.length === 0) {
+    return { ok: false, error: "This exam has no study materials attached. Add sources in the exam setup first." };
+  }
+
+  const crunchRef = {
+    examId: exam.id,
+    examName: exam.name,
+    examDate: exam.date,
+    topicId: topic.id,
+    topicLabel: topic.label,
+  };
+  const state: TeacherSessionState = {
+    studentLevel: "intermediate",
+    sourceHistory: [],
+    coveredConcepts: [],
+    comprehensionLog: [],
+    mastery: {},
+    teachingStyle: "explain",
+    followPlan: true,
+    imageAware: true,
+    crunchRef,
+  };
+
+  const created = await prisma.teacherSession.create({
+    data: {
+      userId,
+      title: `${exam.name} — ${topic.label}`.slice(0, 200),
+      sourceIds: JSON.stringify(sourceIds),
+      messages: "[]",
+      state: JSON.stringify(state),
+    },
+  });
+  await afterSessionCreated(userId, created.id, created.title, sourceIds, sources, state);
+
+  // Generate the chapter lesson plan (non-fatal if it fails — the tutor can
+  // still teach from the sources without an agenda).
+  try {
+    const plan = await generateLessonPlan(model, sources, {
+      studentLevel: "intermediate",
+      focus: `Chapter "${topic.label}" for the upcoming exam "${exam.name}". Cover only this chapter's material, building toward exam readiness.`,
+      language,
+    });
+    if (plan) {
+      const nextState: TeacherSessionState = { ...state, lessonPlan: plan, followPlan: true };
+      await prisma.teacherSession.update({
+        where: { id: created.id },
+        data: { state: JSON.stringify(nextState) },
+      });
+    }
+  } catch {
+    // lesson plan unavailable — session still usable
+  }
+
+  // Persist the link back into the plan (keep any concurrent task edits).
+  const current = await loadReadyPlan(userId);
+  if (current) {
+    const t = current.data.topics.find((x) => x.id === topicId);
+    if (t) {
+      t.teachSessionId = created.id;
+      await prisma.crunchPlan.update({
+        where: { id: rowId },
+        data: { data: JSON.stringify(current.data) },
+      });
+    }
+  }
+
+  return { ok: true, sessionId: created.id, created: true, title: created.title };
+}
+
+/**
+ * Get or create the exam's mock-exam Teach Me session: an examiner-style
+ * session grounded primarily on the attached past exams. Stored on
+ * `exam.mockSessionId` (one mock session per exam).
+ */
+export async function ensureMockSession(
+  userId: string,
+  _model: LlmModel,
+  examId: string
+): Promise<TeachSessionResult> {
+  const loaded = await loadReadyPlan(userId);
+  if (!loaded) return { ok: false, error: "No ready Crunch plan." };
+  const { rowId, data } = loaded;
+
+  const exam = data.exams.find((e) => e.id === examId);
+  if (!exam) return { ok: false, error: "Exam not found." };
+
+  if (exam.mockSessionId && (await sessionExists(userId, exam.mockSessionId))) {
+    return { ok: true, sessionId: exam.mockSessionId, created: false, title: `${exam.name} — Mock exam` };
+  }
+
+  const sourceIds = sessionSourceIds(exam, true);
+  const sources = await groundedSourcesFor(userId, sourceIds);
+  if (sources.length === 0) {
+    return { ok: false, error: "This exam has no sources attached. Add past exams or study materials first." };
+  }
+  if ((exam.pastExamSourceIds?.length ?? 0) === 0) {
+    return { ok: false, error: "Add at least one past exam to run a mock exam." };
+  }
+
+  const state: TeacherSessionState = {
+    studentLevel: "intermediate",
+    sourceHistory: [],
+    coveredConcepts: [],
+    comprehensionLog: [],
+    mastery: {},
+    teachingStyle: "mock_exam",
+    followPlan: false,
+    imageAware: true,
+    crunchRef: {
+      examId: exam.id,
+      examName: exam.name,
+      examDate: exam.date,
+      mock: true,
+    },
+  };
+
+  const created = await prisma.teacherSession.create({
+    data: {
+      userId,
+      title: `${exam.name} — Mock exam`.slice(0, 200),
+      sourceIds: JSON.stringify(sourceIds),
+      messages: "[]",
+      state: JSON.stringify(state),
+    },
+  });
+  await afterSessionCreated(userId, created.id, created.title, sourceIds, sources, state);
+
+  const current = await loadReadyPlan(userId);
+  if (current) {
+    const e = current.data.exams.find((x) => x.id === examId);
+    if (e) {
+      e.mockSessionId = created.id;
+      await prisma.crunchPlan.update({
+        where: { id: rowId },
+        data: { data: JSON.stringify(current.data) },
+      });
+    }
+  }
+
+  return { ok: true, sessionId: created.id, created: true, title: created.title };
 }

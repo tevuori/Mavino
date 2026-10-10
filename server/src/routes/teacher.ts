@@ -47,6 +47,7 @@ import { createQuiz, type StoredQuizQuestion } from "../services/study/quiz-stor
 import { quizGeneratePrompt, quizGenerateSchemaHint, type QuizQuestionSpec } from "../services/study/prompts";
 import type { GroundedSource, StudyLanguage } from "../services/study/prompts";
 import { logSessionSafe } from "../services/study/logSession";
+import { examChapterSummary } from "../services/crunch";
 
 const teacher = new Hono();
 teacher.use("*", authMiddleware, studyFunctionMiddleware("teach"));
@@ -673,13 +674,19 @@ teacher.post("/:id/stream", zValidator("json", streamSchema), async (c) => {
           history2.filter((m) => m.role === "assistant").length -
             (state.comprehensionLog?.length ?? 0)
         );
+  // For Crunch-linked sessions, inject the live chapter-progress summary so
+  // the tutor knows where the student stands across the whole study plan.
+  const crunchSummary = state.crunchRef?.examId
+    ? await examChapterSummary(userId, state.crunchRef.examId).catch(() => null)
+    : null;
   let systemPrompt = teacherSystemPrompt(
     sources,
     history,
     state,
     body.language as StudyLanguage,
     visionCapable,
-    turnsSinceCheck
+    turnsSinceCheck,
+    crunchSummary ?? undefined
   );
   // Re-state the comprehension-check rule at the very end of the system prompt
   // so it is not buried by the long source/mastery blocks and conversation history.

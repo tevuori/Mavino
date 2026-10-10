@@ -3,7 +3,9 @@
 // what's due today, see behind alerts, and open the Crunch app.
 
 import type { ToolDef } from "./plugin";
-import { getCrunchStatus, logProgress, checkBehindAlert } from "../../crunch";
+import { getCrunchStatus, logProgress, checkBehindAlert, ensureChapterSession, ensureMockSession } from "../../crunch";
+import { isStudyFunctionEnabled } from "../../study-functions";
+import { acquireLlmModel } from "../llm";
 
 export const crunchTools: ToolDef[] = [
   {
@@ -25,12 +27,22 @@ export const crunchTools: ToolDef[] = [
         status: status.status,
         updatedAt: status.updatedAt,
         stats: d.stats,
-        exams: d.exams.map((e) => ({ name: e.name, date: e.date })),
-        topics: d.topics.slice(0, 15).map((t) => ({
-          label: t.label,
-          mastery: t.mastery,
-          priority: t.priority,
-          examName: d.exams.find((e) => e.id === t.examId)?.name ?? "Unknown",
+        exams: d.exams.map((e) => ({
+          name: e.name,
+          date: e.date,
+          materials: e.sourceIds?.length ?? 0,
+          pastExams: e.pastExamSourceIds?.length ?? 0,
+          hasMockSession: Boolean(e.mockSessionId),
+          chapters: d.topics
+            .filter((t) => t.examId === e.id)
+            .map((t) => ({
+              label: t.label,
+              mastery: t.mastery,
+              priority: t.priority,
+              progress: t.chapterProgress?.status ?? "not_started",
+              covered: t.chapterProgress?.covered ?? 0,
+              total: t.chapterProgress?.total ?? 0,
+            })),
         })),
       };
     },
@@ -93,14 +105,71 @@ export const crunchTools: ToolDef[] = [
     },
   },
   {
+    name: "crunch_teach",
+    description:
+      "Start (or resume) a Teach Me session for a Crunch chapter, or run the exam's mock exam. Use this when the user asks to be taught a chapter/topic from their Crunch exam plan, or wants to do a mock/practice exam. Returns the session as an open_teach client action — the Teach Me app opens on it automatically.",
+    clientAction: true,
+    proOnly: true,
+    destructive: true,
+    parameters: [
+      { name: "exam", type: "string", description: "Exam name (or a distinctive part of it) from crunch_status", required: true },
+      { name: "chapter", type: "string", description: "Chapter/topic label to teach. Omit when mock=true." },
+      { name: "mock", type: "boolean", description: "true = run the mock exam (examiner mode on past papers) instead of a chapter session" },
+    ],
+    handler: async (args, { userId }) => {
+      if (!(await isStudyFunctionEnabled(userId, "teach"))) {
+        return { error: "Teach Me is disabled for this user's tier." };
+      }
+      const status = await getCrunchStatus(userId);
+      if (!status || status.status !== "ready" || !status.data) {
+        return { error: "No Crunch plan yet. Ask the user to set up their exams in the Crunch app first." };
+      }
+      const d = status.data;
+      const examQuery = String(args.exam ?? "").trim().toLowerCase();
+      const exam = d.exams.find((e) => e.name.toLowerCase() === examQuery)
+        ?? d.exams.find((e) => e.name.toLowerCase().includes(examQuery))
+        ?? d.exams.find((e) => examQuery.includes(e.name.toLowerCase()));
+      if (!exam) {
+        return { error: `No exam matching "${args.exam}". Available: ${d.exams.map((e) => e.name).join(", ")}` };
+      }
+
+      const mock = args.mock === true;
+      if (mock) {
+        const { model } = await acquireLlmModel(userId, { feature: "athena.tools" });
+        const result = await ensureMockSession(userId, model, exam.id);
+        if (!result.ok) return { error: result.error };
+        return { sessionId: result.sessionId, title: result.title, action: "open_teach" };
+      }
+
+      const chapterQuery = String(args.chapter ?? "").trim().toLowerCase();
+      if (!chapterQuery) return { error: "Provide a chapter to teach (or set mock=true for a mock exam)." };
+      const chapters = d.topics.filter((t) => t.examId === exam.id);
+      const topic = chapters.find((t) => t.label.toLowerCase() === chapterQuery)
+        ?? chapters.find((t) => t.label.toLowerCase().includes(chapterQuery))
+        ?? chapters.find((t) => chapterQuery.includes(t.label.toLowerCase()));
+      if (!topic) {
+        return { error: `No chapter matching "${args.chapter}" in "${exam.name}". Chapters: ${chapters.map((t) => t.label).join(", ")}` };
+      }
+      const { model } = await acquireLlmModel(userId, { feature: "athena.tools" });
+      const result = await ensureChapterSession(userId, model, topic.id);
+      if (!result.ok) return { error: result.error };
+      return { sessionId: result.sessionId, title: result.title, action: "open_teach" };
+    },
+  },
+  {
     name: "open_crunch",
     description:
-      "Open the Crunch app on the user's desktop, optionally focused on a specific date. Use after answering an exam-prep question so the user can see their full day-by-day plan.",
+      "Open the Crunch app on the user's desktop, optionally focused on a specific date or exam. Use after answering an exam-prep question so the user can see their full day-by-day plan and chapter progress.",
     clientAction: true,
     proOnly: true,
     parameters: [
       { name: "date", type: "string", description: "Optional date to focus on (YYYY-MM-DD)" },
+      { name: "examId", type: "string", description: "Optional exam id — expands the chapters panel for that exam" },
     ],
-    handler: async (args) => ({ action: "open_crunch", date: args.date ? String(args.date) : undefined }),
+    handler: async (args) => ({
+      action: "open_crunch",
+      date: args.date ? String(args.date) : undefined,
+      examId: args.examId ? String(args.examId) : undefined,
+    }),
   },
 ];

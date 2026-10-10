@@ -12,7 +12,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BookOpen, ChevronDown, GraduationCap, Image, Loader2, Mic, Pause, Play,
+  BookOpen, ChevronDown, GraduationCap, Image, Loader2, Mic, Pause, Play, Zap,
   Plus, Send, Sparkles, Square, Trash2, Volume2, VolumeX, X,
 } from "lucide-react";
 import type { StudentLevel, TeachingStyle } from "../services/teacher";
@@ -571,6 +571,20 @@ export default function MobileTeach({ initialSessionId = null, language: request
         </button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-lg font-bold text-ink">{session?.title ?? "Lesson"}</p>
+          {teachState.crunchRef && (
+            <span
+              className={`mt-0.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                teachState.crunchRef.mock
+                  ? "border-warning/40 bg-warning-soft text-warning"
+                  : "border-accent/30 bg-accent/10 text-accent"
+              }`}
+            >
+              {teachState.crunchRef.mock ? <Zap size={10} /> : <GraduationCap size={10} />}
+              {teachState.crunchRef.mock
+                ? `Mock exam · ${teachState.crunchRef.examName}`
+                : `Crunch · ${teachState.crunchRef.examName}${teachState.crunchRef.topicLabel ? ` · ${teachState.crunchRef.topicLabel}` : ""}`}
+            </span>
+          )}
         </div>
         <button
           onClick={() => setAutoSpeak((v) => !v)}

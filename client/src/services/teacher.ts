@@ -31,7 +31,17 @@ export interface TeacherSourceHistoryEntry {
   openPayload?: Record<string, unknown>;
 }
 
-export type TeachingStyle = "explain" | "socratic";
+export type TeachingStyle = "explain" | "socratic" | "mock_exam";
+
+/** Link from a Teach Me session back to a Crunch exam/chapter. */
+export interface CrunchSessionRef {
+  examId: string;
+  examName: string;
+  examDate: string;
+  topicId?: string;
+  topicLabel?: string;
+  mock?: boolean;
+}
 export type StudentLevel = "beginner" | "intermediate" | "advanced";
 export type PaceFeedback = "too_easy" | "just_right" | "too_hard";
 
@@ -85,6 +95,8 @@ export interface TeacherSessionState {
   lessonCompletedAt?: string;
   /** Whether image-aware tutoring is enabled for this session. */
   imageAware?: boolean;
+  /** Crunch exam/chapter this session belongs to (chapter-prep sessions). */
+  crunchRef?: CrunchSessionRef;
 }
 
 export interface TeacherAssessment {

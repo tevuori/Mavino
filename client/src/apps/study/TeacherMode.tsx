@@ -20,7 +20,7 @@ import {
   FileText, File as FileIcon, Link2, ClipboardPaste,
   Volume2, VolumeX, Mic, MicOff, Pause, Play,
   PanelLeftClose, PanelLeftOpen, Settings2, X, AlertTriangle,
-  ArrowUp, ArrowDown, Pencil, RotateCcw, HelpCircle,
+  ArrowUp, ArrowDown, Pencil, RotateCcw, HelpCircle, Zap,
 } from "lucide-react";
 import type { StudentLevel, TeachingStyle, TeacherSourceHistoryEntry } from "../../services/teacher";
 import { type StudySource } from "../../services/study-sources";
@@ -954,6 +954,24 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
               />
             </div>
 
+            {/* Crunch context: exam/chapter this session belongs to */}
+            {teachState.crunchRef && (
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                    teachState.crunchRef.mock
+                      ? "border-warning/40 bg-warning-soft text-warning"
+                      : "border-accent/30 bg-accent/10 text-accent"
+                  }`}
+                >
+                  {teachState.crunchRef.mock ? <Zap size={10} /> : <GraduationCap size={10} />}
+                  {teachState.crunchRef.mock
+                    ? `Mock exam · ${teachState.crunchRef.examName}`
+                    : `Crunch · ${teachState.crunchRef.examName}${teachState.crunchRef.topicLabel ? ` · ${teachState.crunchRef.topicLabel}` : ""}`}
+                </span>
+              </div>
+            )}
+
             <LessonAgenda
               plan={teachState.lessonPlan}
               covered={teachState.coveredConcepts ?? []}
@@ -1398,18 +1416,24 @@ function SessionSettings({
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] text-ink-muted">Style:</span>
-        {(["explain", "socratic"] as const).map((st) => (
-          <button
-            key={st}
-            onClick={() => onStyle(st)}
-            className={`rounded-md px-2 py-1 text-[11px] capitalize transition ${
-              teachingStyle === st ? "bg-accent/15 text-accent" : "text-ink-muted hover:bg-surface-3 hover:text-ink"
-            }`}
-            title={st === "socratic" ? "Mavino only asks guiding questions" : "Mavino explains, then checks"}
-          >
-            {st}
-          </button>
-        ))}
+        {teachingStyle === "mock_exam" ? (
+          <span className="flex items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-2 py-1 text-[10px] font-medium text-warning">
+            <Zap size={10} /> Mock exam — examiner mode (set by Crunch)
+          </span>
+        ) : (
+          (["explain", "socratic"] as const).map((st) => (
+            <button
+              key={st}
+              onClick={() => onStyle(st)}
+              className={`rounded-md px-2 py-1 text-[11px] capitalize transition ${
+                teachingStyle === st ? "bg-accent/15 text-accent" : "text-ink-muted hover:bg-surface-3 hover:text-ink"
+              }`}
+              title={st === "socratic" ? "Mavino only asks guiding questions" : "Mavino explains, then checks"}
+            >
+              {st}
+            </button>
+          ))
+        )}
       </div>
 
       <label className="flex items-center gap-1.5 text-[11px] text-ink-muted" title="Extract and describe images from PDF sources (requires a vision-capable model)">
