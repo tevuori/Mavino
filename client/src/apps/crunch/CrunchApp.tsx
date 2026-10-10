@@ -650,7 +650,7 @@ function ChaptersPanel({
   onTeach: (topicId: string) => void;
   onMock: (examId: string) => void;
 }) {
-  const [open, setOpen] = useState(Boolean(focusExamId));
+  const [open, setOpen] = useState(true);
   const done = data.topics.filter((t) => t.chapterProgress?.status === "completed").length;
   const started = data.topics.filter((t) => t.chapterProgress && t.chapterProgress.status !== "not_started").length;
   return (
