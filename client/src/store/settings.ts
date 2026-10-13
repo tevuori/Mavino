@@ -42,6 +42,10 @@ interface SettingsState {
   athenaQuickSize: AthenaQuickSize | null;
   /** Auto-enter Spotify fullscreen chill mode after 10 min of inactivity while music plays. */
   autoChillOnIdle: boolean;
+  /** Whether Mavino should enter browser fullscreen on the next user gesture after login. */
+  preferFullscreen: boolean;
+  /** Whether the fullscreen welcome prompt has already been dismissed. */
+  fullscreenPromptDismissed: boolean;
   /** IDs of users who completed the first-run onboarding tour on this browser.
    *  Tracked per account (not globally) so a new account on a shared browser
    *  still gets the tour. */
@@ -60,6 +64,8 @@ interface SettingsState {
   setAthenaRollEdge: (e: AthenaRollEdge) => void;
   setAthenaQuickSize: (s: AthenaQuickSize) => void;
   setAutoChillOnIdle: (b: boolean) => void;
+  setPreferFullscreen: (b: boolean) => void;
+  setFullscreenPromptDismissed: (b: boolean) => void;
   setOnboarded: (userId: string, done: boolean) => void;
   setShortcut: (action: ShortcutAction, shortcut: Shortcut) => void;
   resetShortcuts: () => void;
@@ -80,6 +86,8 @@ interface PersistedSettings {
   athenaRollEdge: AthenaRollEdge;
   athenaQuickSize: AthenaQuickSize | null;
   autoChillOnIdle: boolean;
+  preferFullscreen: boolean;
+  fullscreenPromptDismissed: boolean;
   onboardedUserIds: string[];
   shortcuts: Record<ShortcutAction, Shortcut>;
   dockFavorites: AppId[];
@@ -135,6 +143,8 @@ const defaults: PersistedSettings = {
   athenaRollEdge: "bottom",
   athenaQuickSize: null,
   autoChillOnIdle: false,
+  preferFullscreen: true,
+  fullscreenPromptDismissed: false,
   onboardedUserIds: [],
   shortcuts: { ...DEFAULT_SHORTCUTS },
   dockFavorites: [...DEFAULT_DOCK_FAVORITES] as AppId[],
@@ -226,6 +236,14 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setAutoChillOnIdle: (autoChillOnIdle) => {
     set({ autoChillOnIdle });
     persist({ ...get(), autoChillOnIdle } as PersistedSettings);
+  },
+  setPreferFullscreen: (preferFullscreen) => {
+    set({ preferFullscreen });
+    persist({ ...get(), preferFullscreen } as PersistedSettings);
+  },
+  setFullscreenPromptDismissed: (fullscreenPromptDismissed) => {
+    set({ fullscreenPromptDismissed });
+    persist({ ...get(), fullscreenPromptDismissed } as PersistedSettings);
   },
   setOnboarded: (userId, done) => {
     const cur = get().onboardedUserIds;

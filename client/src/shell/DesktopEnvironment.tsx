@@ -14,10 +14,12 @@ import AthenaQuickPanel from "./AthenaQuickPanel";
 import OnboardingOverlay from "./OnboardingOverlay";
 import { useWindows } from "../store/windows";
 import { useAthenaQuick } from "../store/athenaQuick";
-import { useHasOnboarded } from "../store/settings";
+import { useHasOnboarded, useSettings } from "../store/settings";
 import { useAuth } from "../store/auth";
 import { useShortcut } from "../store/shortcuts";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFullscreen } from "./useFullscreen";
+import FullscreenPrompt from "./FullscreenPrompt";
 
 export default function DesktopEnvironment() {
   const { open, focusedId, snap, toggleMaximize, close } = useWindows();
@@ -28,6 +30,9 @@ export default function DesktopEnvironment() {
   const hasOnboarded = useHasOnboarded(user?.id);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const isDemo = user?.role === "DEMO";
+  const { preferFullscreen, fullscreenPromptDismissed } = useSettings();
+  const { isFullscreen, enterFullscreen } = useFullscreen();
+  const autoEnterTriggered = useRef(false);
 
   // Demo bootstrap: skip onboarding (demo users never see it) and auto-open
   // Study Hub once after login.
@@ -47,13 +52,37 @@ export default function DesktopEnvironment() {
   // Configurable keyboard shortcuts (via useShortcut hook)
   useShortcut("toggleAthenaQuickPanel", () => toggleAthenaQuick());
   useShortcut("toggleFullscreen", () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
-    } else {
-      document.exitFullscreen?.().catch(() => {});
-    }
+    const fn = document.fullscreenElement
+      ? document.exitFullscreen?.bind(document)
+      : document.documentElement.requestFullscreen?.bind(document.documentElement);
+    fn?.().catch(() => {});
   });
   useShortcut("toggleWorkspaceOverview", () => setOverviewOpen((v) => !v));
+
+  // Auto-enter fullscreen on the first safe user gesture when the preference is
+  // enabled. Browsers require a gesture, so we listen on the desktop container.
+  useEffect(() => {
+    if (!preferFullscreen || isFullscreen || autoEnterTriggered.current) return;
+    const isSafeTarget = (target: EventTarget | null) => {
+      const el = target as HTMLElement;
+      if (!el) return true;
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable) return false;
+      return true;
+    };
+    const onFirstGesture = (e: PointerEvent | KeyboardEvent) => {
+      if (!isSafeTarget(e.target)) return;
+      autoEnterTriggered.current = true;
+      enterFullscreen();
+      window.removeEventListener("pointerdown", onFirstGesture);
+      window.removeEventListener("keydown", onFirstGesture);
+    };
+    window.addEventListener("pointerdown", onFirstGesture, { passive: true });
+    window.addEventListener("keydown", onFirstGesture);
+    return () => {
+      window.removeEventListener("pointerdown", onFirstGesture);
+      window.removeEventListener("keydown", onFirstGesture);
+    };
+  }, [preferFullscreen, isFullscreen, enterFullscreen]);
 
   // Window management shortcuts
   useShortcut("snapWindowLeft", () => { if (focusedId) snap(focusedId, "left"); });
@@ -107,6 +136,9 @@ export default function DesktopEnvironment() {
         <QuickCapture />
         <DialogRenderer />
         {!hasOnboarded && !isDemo && <OnboardingOverlay />}
+        {hasOnboarded && preferFullscreen && !isFullscreen && !fullscreenPromptDismissed && !isDemo && (
+          <FullscreenPrompt />
+        )}
       </div>
     </div>
   );

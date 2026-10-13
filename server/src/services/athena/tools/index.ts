@@ -36,6 +36,7 @@ import { forgeTools } from "./forge";
 import { bridgeTools } from "./bridge";
 import { scribeTools } from "./scribe";
 import { circleTools } from "./circle";
+import { fullscreenTools } from "./fullscreen";
 import { loadPluginTools } from "../../plugins";
 import type { ClientWindowInfo } from "./plugin";
 
@@ -96,6 +97,7 @@ function scopedStudyHubTools(): ToolDef[] {
 export const ALL_TOOLS: ToolDef[] = [
   // Core assistant workspace: tasks, notes, files, search, window/workspace
   // management, cross-app workflows, and everyday utilities.
+  ...tag(fullscreenTools, ["core"]),
   ...tag(taskTools, ["core"]),
   ...tag(taskWorkspaceTools, ["core"]),
   ...tag(gradeTools, ["core"]),

@@ -4,12 +4,13 @@ import {
   Sparkles, StickyNote, CheckSquare, Calendar, Settings as SettingsIcon,
   Palette, Plug, ArrowRight, ArrowLeft, X, Check, Lightbulb,
   Keyboard, Music, GraduationCap, Brain, Folder, Timer, Flame, PenTool, Mic, Globe, UserRound,
-  Loader2, ExternalLink, ShieldAlert, KeyRound,
+  Loader2, ExternalLink, ShieldAlert, KeyRound, Maximize,
 } from "lucide-react";
 import { useWindows } from "../store/windows";
 import { useAuth } from "../store/auth";
 import { useSettings } from "../store/settings";
 import { formatShortcut } from "../store/shortcuts";
+import { useFullscreen } from "./useFullscreen";
 import { isAppAvailable } from "../store/features";
 import { APP_MAP } from "../apps/registry";
 import { aiApi } from "../services/ai";
@@ -44,6 +45,7 @@ const STEPS: StepDef[] = [
   { id: "appearance", openApp: { appId: "settings", section: "appearance", size: { width: 760, height: 560 } } },
   { id: "integrations", openApp: { appId: "settings", section: "integrations", size: { width: 760, height: 560 } } },
   { id: "shortcuts", centered: true },
+  { id: "fullscreen", centered: true },
   { id: "complete", centered: true },
 ];
 
@@ -330,6 +332,8 @@ function StepContent({ stepId, name, onNameChange, onSubmitName, geminiSaveRef }
       />;
     case "shortcuts":
       return <ShortcutsStep />;
+    case "fullscreen":
+      return <FullscreenStep />;
     case "complete":
       return <CompleteStep />;
     default:
@@ -659,6 +663,41 @@ function ShortcutsStep() {
             <kbd className="rounded border border-edge bg-surface-3 px-2 py-0.5 text-[11px] font-mono text-ink">{formatShortcut(s.action)}</kbd>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function FullscreenStep() {
+  const { enterFullscreen } = useFullscreen();
+  const { setPreferFullscreen } = useSettings();
+  return (
+    <div className="text-center">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/20 text-accent">
+        <Maximize size={32} />
+      </div>
+      <h2 className="mb-2 text-2xl font-bold text-ink">Mavino Works Best in Fullscreen</h2>
+      <p className="mx-auto max-w-sm text-sm text-ink-muted">
+        Hide the browser chrome and use Mavino like a real desktop. You can always exit fullscreen with Esc or the tray button.
+      </p>
+      <div className="mx-auto mt-5 flex max-w-sm gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setPreferFullscreen(true);
+            void enterFullscreen();
+          }}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-fg transition hover:opacity-90"
+        >
+          <Maximize size={16} /> Enter fullscreen
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreferFullscreen(false)}
+          className="rounded-lg border border-edge px-4 py-2.5 text-sm text-ink-muted transition hover:bg-surface-3"
+        >
+          Keep windowed
+        </button>
       </div>
     </div>
   );

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, type RefObject } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Power, LogOut, Lock } from "lucide-react";
+import { Search, Power, LogOut, Lock, Maximize } from "lucide-react";
 import { renderAppIcon } from "./AppIcon";
 import { useAccessibleApps } from "../store/features";
 import { useWindows } from "../store/windows";
 import { useAuth } from "../store/auth";
 import { useI18n } from "../i18n";
+import { useFullscreen } from "./useFullscreen";
 
 interface Props {
   open: boolean;
@@ -16,6 +17,7 @@ interface Props {
 export default function StartMenu({ open, onClose, triggerRef }: Props) {
   const { open: openWindow } = useWindows();
   const { user, logout } = useAuth();
+  const { toggleFullscreen } = useFullscreen();
   const apps = useAccessibleApps();
   const { appName } = useI18n();
   const [query, setQuery] = useState("");
@@ -115,7 +117,7 @@ export default function StartMenu({ open, onClose, triggerRef }: Props) {
               )}
             </div>
 
-            {/* Footer: user + power */}
+            {/* Footer: user + fullscreen + power */}
             <div className="flex items-center justify-between border-t border-edge pt-3">
               <div className="flex items-center gap-2">
                 <div
@@ -127,6 +129,16 @@ export default function StartMenu({ open, onClose, triggerRef }: Props) {
                 <span className="text-sm text-ink">{user?.displayName || user?.username}</span>
               </div>
               <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    void toggleFullscreen();
+                    onClose();
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-3 hover:text-ink"
+                  title="Toggle fullscreen"
+                >
+                  <Maximize size={16} />
+                </button>
                 <button
                   onClick={() => {
                     logout();

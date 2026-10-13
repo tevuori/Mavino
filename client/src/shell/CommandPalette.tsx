@@ -17,6 +17,7 @@ import {
   Calendar,
   Flame,
   Zap,
+  Maximize,
 } from "lucide-react";
 import { useWindows, type AppId } from "../store/windows";
 import { useAccessibleApps } from "../store/features";
@@ -34,6 +35,7 @@ import { useQuickCapture } from "../store/quickCapture";
 import { useSettings } from "../store/settings";
 import { renderAppIcon } from "./AppIcon";
 import { useOverlayFocus } from "../ui/overlays";
+import { useFullscreen } from "./useFullscreen";
 import type { Note, Task, VFile } from "../types";
 
 interface SearchResult {
@@ -88,6 +90,7 @@ export default function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null);
   const panelRef = useOverlayFocus(open, () => setOpen(false));
   const { open: openWindow } = useWindows();
+  const { toggleFullscreen } = useFullscreen();
   const apps = useAccessibleApps();
 
   // Load notes + tasks + files when palette opens
@@ -279,6 +282,16 @@ export default function CommandPalette() {
           setOpen(false);
         },
         keywords: ["capture", "quick", "inbox", "idea", "note", "task"],
+      },
+      {
+        title: "Toggle fullscreen",
+        subtitle: "Enter or exit fullscreen mode",
+        icon: <Maximize size={18} className="text-accent" />,
+        action: () => {
+          void toggleFullscreen();
+          setOpen(false);
+        },
+        keywords: ["fullscreen", "maximize", "f11", "screen"],
       },
     ];
     for (const qa of quickActions) {

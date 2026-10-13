@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import * as Lucide from "lucide-react";
-import { Bell, Volume2, VolumeX, Wifi, BatteryFull, BellOff, CheckCheck, X } from "lucide-react";
+import { Bell, Volume2, VolumeX, Wifi, BatteryFull, BellOff, CheckCheck, X, Maximize, Minimize } from "lucide-react";
 import { useSettings } from "../store/settings";
+import { useFullscreen } from "./useFullscreen";
 import { useNotifications } from "../store/notifications";
 import { useWindows, type AppId } from "../store/windows";
 
 export default function SystemTray() {
   const { volume, setVolume, doNotDisturb, setDoNotDisturb, notificationsEnabled } = useSettings();
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
   const {
     persistent,
     ephemeral,
@@ -102,6 +104,20 @@ export default function SystemTray() {
         aria-label="Volume"
       >
         {volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+      </button>
+      <button
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => {
+          setShowVolume(false);
+          setShowNotifs(false);
+          setShowCalendar(false);
+          void toggleFullscreen();
+        }}
+        className="flex h-7 w-7 items-center justify-center rounded text-ink-muted hover:bg-surface-3 hover:text-ink"
+        title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+        aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+      >
+        {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
       </button>
       <div
         className="hidden h-7 w-7 items-center justify-center text-ink-muted sm:flex"

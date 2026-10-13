@@ -28,6 +28,7 @@ import { useBrowser } from "../../store/browser";
 import { useMaps } from "../../store/maps";
 import { useAuth } from "../../store/auth";
 import { useDataRefresh } from "../../store/dataRefresh";
+import { useFullscreen } from "../../shell/useFullscreen";
 import IntelligentUploadDialog from "./IntelligentUploadDialog";
 import { Dialog } from "../../ui/overlays";
 import { Button } from "../../ui/primitives";
@@ -150,6 +151,8 @@ export default function AthenaApp({
   const retile = useWindows((s) => s.retile);
   const athenaRollEdge = useSettings((s) => s.athenaRollEdge);
   const setAthenaRollEdge = useSettings((s) => s.setAthenaRollEdge);
+  const { setPreferFullscreen, setFullscreenPromptDismissed } = useSettings();
+  const { isFullscreen, enterFullscreen, exitFullscreen } = useFullscreen();
   const setAthenaQuickOpen = useAthenaQuick((s) => s.setOpen);
   const browserUrls = useBrowser((s) => s.urls);
   const requestNav = useBrowser((s) => s.requestNav);
@@ -172,6 +175,8 @@ export default function AthenaApp({
   issueCmdRef.current = issueCommand;
   const issueMapCmdRef = useRef(issueMapCommand);
   issueMapCmdRef.current = issueMapCommand;
+  const fullscreenRef = useRef({ isFullscreen, enterFullscreen, exitFullscreen, setPreferFullscreen, setFullscreenPromptDismissed });
+  fullscreenRef.current = { isFullscreen, enterFullscreen, exitFullscreen, setPreferFullscreen, setFullscreenPromptDismissed };
   // Ref to the send function so dispatchClientAction can trigger a chat
   // message (used by Quick Capture's open_athena client action).
   const sendRef = useRef<((text: string) => void) | null>(null);
@@ -537,6 +542,34 @@ export default function AthenaApp({
         // set_user_name changed the display name server-side — pull the fresh
         // profile so greetings and the Start menu update immediately.
         void useAuth.getState().refresh();
+        break;
+      }
+      case "manage_fullscreen": {
+        const fs = fullscreenRef.current;
+        const operation = String(payload.operation ?? "toggle");
+        if (operation === "exit") {
+          void fs.exitFullscreen();
+        } else if (operation === "set_preference") {
+          const enabled = Boolean(payload.enabled);
+          fs.setPreferFullscreen(enabled);
+          if (!enabled) {
+            void fs.exitFullscreen();
+          }
+        } else {
+          // enter / toggle — attempt to enter if not already fullscreen,
+          // otherwise exit. If entering fails because we're not in a user
+          // gesture (e.g., triggered from an SSE chunk), enable the preference
+          // and re-surface the desktop prompt so the user can confirm.
+          if (fs.isFullscreen) {
+            void fs.exitFullscreen();
+          } else {
+            fs.setPreferFullscreen(true);
+            fs.setFullscreenPromptDismissed(false);
+            void fs.enterFullscreen().catch(() => {
+              // Prompt will take over if gesture requirement blocks entry.
+            });
+          }
+        }
         break;
       }
       case "start_pomodoro": {

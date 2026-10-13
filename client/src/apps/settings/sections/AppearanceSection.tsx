@@ -1,4 +1,4 @@
-import { Sun, Moon, Palette } from "lucide-react";
+import { Sun, Moon, Palette, Maximize } from "lucide-react";
 import { useSettings, type ThemeMode } from "../../../store/settings";
 import { SectionHeader } from "../ui";
 
@@ -9,7 +9,7 @@ const ACCENT_PRESETS = [
 ];
 
 export default function AppearanceSection() {
-  const { theme, setTheme, accent, setAccent } = useSettings();
+  const { theme, setTheme, accent, setAccent, preferFullscreen, setPreferFullscreen } = useSettings();
   return (
     <section id="appearance" className="mb-8">
       <SectionHeader icon={<Palette size={18} />} title="Appearance" description="Customize how Mavino looks." />
@@ -54,6 +54,22 @@ export default function AppearanceSection() {
             title="Custom color"
           />
         </div>
+      </div>
+      <div className="mt-5">
+        <label className="mb-2 flex items-center gap-2 text-sm font-medium text-ink">
+          <Maximize size={15} /> Fullscreen
+        </label>
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            checked={preferFullscreen}
+            onChange={(e) => setPreferFullscreen(e.target.checked)}
+            className="h-4 w-4 accent-accent"
+          />
+          <span className="text-sm text-ink-muted">
+            Enter fullscreen automatically on the next click or keypress after login
+          </span>
+        </label>
       </div>
     </section>
   );
