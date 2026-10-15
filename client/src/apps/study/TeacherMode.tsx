@@ -16,7 +16,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, Fragment } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
-  Sparkles, Send, Square, Plus, Trash2,
+  Sparkles, Send, Square, Plus, Trash2, Loader2,
   ChevronDown, GraduationCap, MessageSquare, Check,
   FileText, File as FileIcon, Link2, ClipboardPaste,
   Volume2, VolumeX, Mic, MicOff, Pause, Play,
@@ -1052,9 +1052,14 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                     ? { minHeight: reserveHeight }
                     : undefined}
                 >
-                  <div className={`group max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                    m.role === "user" ? "bg-accent/15 text-ink" : "bg-surface-2 text-ink"
-                  }`}>
+                  <div
+                    className={`group max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                      m.role === "user" ? "bg-accent/15 text-ink" : "bg-surface-2 text-ink"
+                    }`}
+                    style={reservationActive && !streamText && m.role === "assistant" && i === messages.length - 1
+                      ? { minHeight: reserveHeight, width: "85%" }
+                      : undefined}
+                  >
                     {m.role === "assistant" ? (
                       <>
                         <HighlightableMarkdown
@@ -1117,15 +1122,17 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             );
           })}
           {(streaming || streamText) && (
-            <div ref={stageRef} className="flex shrink-0 flex-col gap-3" style={{ minHeight: reserveHeight }}>
-              {streamText && (
-                <div className="flex justify-start">
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
-                    className="max-w-[85%] rounded-lg bg-surface-2 px-3 py-2 text-sm"
-                  >
+            <div ref={stageRef} className="flex shrink-0 justify-start" style={{ minHeight: reserveHeight }}>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
+                className="w-[85%] rounded-lg bg-surface-2 px-3 py-2 text-sm"
+                style={{ minHeight: reserveHeight }}
+              >
+                {toolChips.length > 0 && <div className="mb-2"><ToolChipRow chips={toolChips} /></div>}
+                {streamText ? (
+                  <>
                     <HighlightableMarkdown
                       content={streamText}
                       scope="teacher"
@@ -1136,10 +1143,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                       enabled={false}
                     />
                     <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-accent align-middle" />
-                  </motion.div>
-                </div>
-              )}
-              <ToolChipRow chips={toolChips} />
+                  </>
+                ) : (
+                  <Loader2 size={16} className="animate-spin text-accent" />
+                )}
+              </motion.div>
             </div>
           )}
 

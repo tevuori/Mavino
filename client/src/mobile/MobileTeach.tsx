@@ -640,7 +640,12 @@ export default function MobileTeach({ initialSessionId = null, language: request
                   {m.content}
                 </div>
               ) : (
-                <div className="rounded-2xl rounded-bl-sm border border-edge bg-surface-2 px-3.5 py-2.5">
+                <div
+                  className="rounded-2xl rounded-bl-sm border border-edge bg-surface-2 px-3.5 py-2.5"
+                  style={reservationActive && !streamText && i === messages.length - 1
+                    ? { minHeight: reserveHeight }
+                    : undefined}
+                >
                   <HighlightableMarkdown
                     content={m.content}
                     scope="teacher"
@@ -700,6 +705,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
               animate={{ opacity: 1 }}
               transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
               className="rounded-2xl rounded-bl-sm border border-edge bg-surface-2 px-3.5 py-2.5"
+              style={{ minHeight: reserveHeight }}
             >
               {toolChips.length > 0 && <div className="mb-2"><ToolChipRow chips={toolChips} /></div>}
               {streamText ? (
