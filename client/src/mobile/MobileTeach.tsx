@@ -11,6 +11,7 @@
 //   - lesson exports (note / flashcards / quiz / review tasks)
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   BookOpen, ChevronDown, GraduationCap, Image, Loader2, Mic, Pause, Play, Zap,
   Plus, Send, Sparkles, Square, Trash2, Volume2, VolumeX, X,
@@ -29,6 +30,7 @@ import type { CitationTarget } from "../apps/study/studyMarkdown";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../services/speech";
 import { findHighlightRange } from "../apps/study/highlightRange";
 import { sourceNavigationFromAction, sourceNavigationFromCommand, sourceNavigationFromHistory, sourceNavigationHistoryPatch } from "../apps/study/sourceNavigation";
+import { useReservedStreamScroll } from "../apps/study/useReservedStreamScroll";
 import { PptxViewer } from "../apps/shared/PptxViewer";
 import { PdfJsViewer } from "../apps/shared/PdfJsViewer";
 import { useLanguage } from "../store/language";
@@ -102,9 +104,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
   const sheetRef = useRef<SourceSheet | null>(null);
   sheetRef.current = sheet;
 
-  const scrollRef = useRef<HTMLDivElement>(null);
   const sheetContainerRef = useRef<HTMLDivElement>(null);
-  const followStreamRef = useRef(true);
   const sessionRef = useRef<ReturnType<typeof useTeacherSession> | null>(null);
 
   // ----- source bottom-sheet: resolve text + apply highlight -----
@@ -251,6 +251,14 @@ export default function MobileTeach({ initialSessionId = null, language: request
     updateTeachState, setPaceFeedback, answerComprehension,
     send, stop, retry, canRetry, setOnTurnDone,
   } = teach;
+  const reducedMotion = useReducedMotion();
+  const {
+    scrollRef,
+    stageRef,
+    onScroll: onTranscriptScroll,
+    reserveHeight,
+    reservationActive,
+  } = useReservedStreamScroll(streaming, sessionId);
 
   // ----- speech (TTS) with speech-synced sheet highlighting -----
 
@@ -359,11 +367,6 @@ export default function MobileTeach({ initialSessionId = null, language: request
   }, []);
 
   // ----- misc -----
-
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (element && followStreamRef.current) element.scrollTop = element.scrollHeight;
-  }, [messages, streamText]);
 
   const citationMeta: CitationMeta[] = useMemo(
     () => attachedSources.map((source, index) => ({ index: index + 1, name: source.name, kind: source.kind, refId: source.refId })),
@@ -615,13 +618,10 @@ export default function MobileTeach({ initialSessionId = null, language: request
       {/* transcript */}
       <div
         ref={scrollRef}
-        onScroll={(event) => {
-          const element = event.currentTarget;
-          followStreamRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48;
-        }}
+        onScroll={onTranscriptScroll}
         className="flex-1 space-y-3 overflow-y-auto pb-3"
       >
-        {messages.length === 0 && !streaming && (
+        {messages.length === 0 && !streaming && !streamText && (
           <MobileEmpty text="Ask a question, or tap the mic to speak. Mavino will teach from your sources." />
         )}
         {messages.map((m, i) => (
@@ -629,7 +629,12 @@ export default function MobileTeach({ initialSessionId = null, language: request
             {/* Hidden messages (comprehension-check answers) keep their index
                 for check anchoring but do not render a bubble. */}
             {!m.hidden && (
-            <div className={m.role === "user" ? "flex justify-end" : ""}>
+            <div
+              className={m.role === "user" ? "flex justify-end" : ""}
+              style={reservationActive && !streamText && m.role === "assistant" && i === messages.length - 1
+                ? { minHeight: reserveHeight }
+                : undefined}
+            >
               {m.role === "user" ? (
                 <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-accent px-3.5 py-2 text-sm text-ink">
                   {m.content}
@@ -688,21 +693,28 @@ export default function MobileTeach({ initialSessionId = null, language: request
           </Fragment>
         ))}
 
-        {streaming && (
-          <div className="rounded-2xl rounded-bl-sm border border-edge bg-surface-2 px-3.5 py-2.5">
-            {toolChips.length > 0 && <div className="mb-2"><ToolChipRow chips={toolChips} /></div>}
-            {streamText ? (
-              <HighlightableMarkdown
-                content={streamText}
-                scope="teacher"
-                scopeId={`${sessionId}:stream`}
-                citations={citationMeta}
-                onOpenCitation={openCitation}
-                enabled={false}
-              />
-            ) : (
-              <Loader2 size={16} className="animate-spin text-accent" />
-            )}
+        {(streaming || streamText) && (
+          <div ref={stageRef} style={{ minHeight: reserveHeight }}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
+              className="rounded-2xl rounded-bl-sm border border-edge bg-surface-2 px-3.5 py-2.5"
+            >
+              {toolChips.length > 0 && <div className="mb-2"><ToolChipRow chips={toolChips} /></div>}
+              {streamText ? (
+                <HighlightableMarkdown
+                  content={streamText}
+                  scope="teacher"
+                  scopeId={`${sessionId}:stream`}
+                  citations={citationMeta}
+                  onOpenCitation={openCitation}
+                  enabled={false}
+                />
+              ) : (
+                <Loader2 size={16} className="animate-spin text-accent" />
+              )}
+            </motion.div>
           </div>
         )}
 

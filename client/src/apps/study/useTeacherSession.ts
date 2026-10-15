@@ -481,7 +481,6 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
         onDone: () => {
           setStreaming(false);
           const finalText = streamTextRef.current;
-          setStreamText("");
           const firstTurn = messages.length === 0;
           void (async () => {
             try {
@@ -510,6 +509,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
                 setSessions((prev) => prev.map((s) => (s.id === titled.id ? { ...s, title: titled.title } : s)));
               } catch { /* keep the fallback title */ }
             }
+            setStreamText("");
           })();
           onTurnDoneRef.current?.(finalText);
         },

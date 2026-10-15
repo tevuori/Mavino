@@ -14,6 +14,7 @@
 //    each turn so Athena can resolve "go back to the first file".
 
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, Fragment } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Sparkles, Send, Square, Plus, Trash2,
   ChevronDown, GraduationCap, MessageSquare, Check,
@@ -36,6 +37,7 @@ import { prepareSpeech, segmentAtOffset, type SpeechSegment } from "./teacherSpe
 import { LessonAgenda, ToolChipRow, ComprehensionCard, PaceFeedbackRow, ExportMenu } from "./teachPanels";
 import TeachSourcePane, { type PaneSource, type PaneHighlight } from "./TeachSourcePane";
 import { sourceNavigationFromAction, sourceNavigationFromCommand, sourceNavigationHistoryPatch } from "./sourceNavigation";
+import { useReservedStreamScroll } from "./useReservedStreamScroll";
 import type { CitationTarget } from "./studyMarkdown";
 import TeachErrorBoundary from "./TeachErrorBoundary";
 import { isSpeechRecognitionSupported, createTranscriber, type SpeechTranscriber } from "../../services/speech";
@@ -165,8 +167,6 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     return () => { removeShowWindow(paneId); };
   }, [paneId, removeShowWindow]);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const followStreamRef = useRef(true);
   const windowsRef = useRef(windows);
   windowsRef.current = windows;
   const autoSpeakRef = useRef(autoSpeak);
@@ -440,6 +440,14 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     answerComprehension, send, stop, retry, canRetry, setLibrary, setOnTurnDone,
     attachedSources, setError,
   } = teach;
+  const reducedMotion = useReducedMotion();
+  const {
+    scrollRef,
+    stageRef,
+    onScroll: onTranscriptScroll,
+    reserveHeight,
+    reservationActive,
+  } = useReservedStreamScroll(streaming, sessionId);
 
   // ----- speech-synced source highlighting -----
 
@@ -616,12 +624,6 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     setAskSelection(null);
     window.getSelection()?.removeAllRanges();
   }, [askSelection, language, send]);
-
-  // Auto-scroll to bottom on new content.
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (element && followStreamRef.current) element.scrollTop = element.scrollHeight;
-  }, [messages, streamText]);
 
   // Keep the pre-session selection in sync with the loaded session.
   useEffect(() => {
@@ -1025,10 +1027,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         {/* Messages */}
         <div
           ref={scrollRef}
-          onScroll={(event) => {
-            const element = event.currentTarget;
-            followStreamRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48;
-          }}
+          onScroll={onTranscriptScroll}
           className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1"
         >
           {messages.length === 0 && !streamText && session && (
@@ -1047,7 +1046,12 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                     to the model) keep their index for check anchoring but do
                     not render a bubble. */}
                 {!m.hidden && (
-                <div className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`flex ${reservationActive && !streamText && m.role === "assistant" && i === messages.length - 1 ? "shrink-0 " : ""}${m.role === "user" ? "justify-end" : "justify-start"}`}
+                  style={reservationActive && !streamText && m.role === "assistant" && i === messages.length - 1
+                    ? { minHeight: reserveHeight }
+                    : undefined}
+                >
                   <div className={`group max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                     m.role === "user" ? "bg-accent/15 text-ink" : "bg-surface-2 text-ink"
                   }`}>
@@ -1112,24 +1116,32 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
               </Fragment>
             );
           })}
-          {streamText && (
-            <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-lg bg-surface-2 px-3 py-2 text-sm">
-                <HighlightableMarkdown
-                  content={streamText}
-                  scope="teacher"
-                  scopeId={sessionId ? `${sessionId}#stream` : "stream"}
-                  sourceName={session?.title ? `Teach Me: ${session.title}` : "Teach Me"}
-                  citations={citationMeta}
-                  onOpenCitation={openCitation}
-                  enabled={false}
-                />
-                <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-accent align-middle" />
-              </div>
+          {(streaming || streamText) && (
+            <div ref={stageRef} className="flex shrink-0 flex-col gap-3" style={{ minHeight: reserveHeight }}>
+              {streamText && (
+                <div className="flex justify-start">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
+                    className="max-w-[85%] rounded-lg bg-surface-2 px-3 py-2 text-sm"
+                  >
+                    <HighlightableMarkdown
+                      content={streamText}
+                      scope="teacher"
+                      scopeId={sessionId ? `${sessionId}#stream` : "stream"}
+                      sourceName={session?.title ? `Teach Me: ${session.title}` : "Teach Me"}
+                      citations={citationMeta}
+                      onOpenCitation={openCitation}
+                      enabled={false}
+                    />
+                    <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-accent align-middle" />
+                  </motion.div>
+                </div>
+              )}
+              <ToolChipRow chips={toolChips} />
             </div>
           )}
-
-          <ToolChipRow chips={toolChips} />
 
           {/* Checks asked during the turn that's still streaming (or that
               somehow outran the message list) render here, at the end. */}
