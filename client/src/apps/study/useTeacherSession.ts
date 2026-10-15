@@ -334,6 +334,15 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     }
   }, [sessionId]);
 
+  const closeSourceHistory = useCallback((windowId: string) => {
+    const next = sourceHistoryRef.current.filter((entry) => entry.windowId !== windowId);
+    sourceHistoryRef.current = next;
+    setSourceHistory(next);
+    if (sessionId) {
+      teacherApi.patch(sessionId, { state: { sourceHistory: next } }).catch(() => {});
+    }
+  }, [sessionId]);
+
   /** Persist a state patch (level / style / follow-plan / pace). */
   const updateTeachState = useCallback(async (patch: Partial<TeacherSessionState>) => {
     const next = { ...teachStateRef.current, ...patch };
@@ -614,7 +623,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     streaming, streamText, error, setError, loadingSession,
     // teach state
     teachState, patchState, updateTeachState, setPaceFeedback,
-    sourceHistory, setSourceHistory,
+    sourceHistory, setSourceHistory, closeSourceHistory,
     comprehensionChecks, answerComprehension,
     toolChips, planning, generatePlan,
     exporting, exportResult, setExportResult, exportLesson,

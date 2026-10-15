@@ -43,7 +43,7 @@ export function LessonAgenda({
   onRegenerate: () => void;
   planning: boolean;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const coveredSet = new Set(covered.map((c) => c.toLowerCase()));
 
   if (!plan) {

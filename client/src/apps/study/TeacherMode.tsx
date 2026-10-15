@@ -20,7 +20,7 @@ import {
   ChevronDown, GraduationCap, MessageSquare, Check,
   FileText, File as FileIcon, Link2, ClipboardPaste,
   Volume2, VolumeX, Mic, MicOff, Pause, Play,
-  PanelLeftClose, PanelLeftOpen, Settings2, X, AlertTriangle,
+  PanelLeftClose, PanelLeftOpen, Settings2, X, AlertTriangle, Maximize2, Minimize2,
   ArrowUp, ArrowDown, Pencil, RotateCcw, HelpCircle, Zap,
 } from "lucide-react";
 import type { StudentLevel, TeachingStyle, TeacherSourceHistoryEntry } from "../../services/teacher";
@@ -134,6 +134,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [showIssue, setShowIssue] = useState<string>("");
   const [askSelection, setAskSelection] = useState<{ text: string; rect: DOMRect } | null>(null);
+  const [chatFocusMode, setChatFocusMode] = useState(false);
 
   // Side-by-side source pane (replaces floating source windows). One stable
   // paneId backs the show-control channel; the active source is swapped via
@@ -433,7 +434,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   sessionRef.current = teach;
   const {
     sessions, session, sessionId, messages, streaming, streamText, error, loadingSession,
-    teachState, sourceHistory, comprehensionChecks, toolChips, planning,
+    teachState, sourceHistory, closeSourceHistory, comprehensionChecks, toolChips, planning,
     exporting, exportResult, setExportResult, exportLesson, generatePlan,
     loadSession, startNewSession, deleteSession, resetSession, renameSession,
     setSessionSources, updateTeachState, setPaceFeedback,
@@ -732,12 +733,31 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     });
   };
 
+  const closeSource = useCallback((windowId: string) => {
+    closeSourceHistory(windowId);
+    delete sourceMetaRef.current[windowId];
+    if (paneSourceRef.current?.windowId === windowId) {
+      setPaneSource(null);
+      setPanePending(null);
+    }
+  }, [closeSourceHistory]);
+
   const newSession = () => {
     resetSession();
     setSelectedSourceIds(new Set());
     setShowSourcePanel(true);
     setSettingsOpen(false);
+    setChatFocusMode(false);
   };
+
+  useEffect(() => {
+    if (!chatFocusMode) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setChatFocusMode(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [chatFocusMode]);
 
   // ----- render -----
 
@@ -748,7 +768,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   return (
     <div className="flex h-full min-h-0 gap-3 overflow-hidden">
       {/* Session list — collapsible sidebar @4xl+ */}
-      {sidebarOpen ? (
+      {!chatFocusMode && (sidebarOpen ? (
         <div className="hidden w-56 shrink-0 flex-col @4xl:flex">
           <div className="flex items-center justify-between border-b border-edge px-1 pb-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Sessions</span>
@@ -806,12 +826,27 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             <PanelLeftOpen size={16} />
           </button>
         </div>
-      )}
+      ))}
 
       {/* Chat panel */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+        {chatFocusMode && session && (
+          <div className="flex shrink-0 items-center gap-2 border-b border-edge pb-2">
+            <MessageSquare size={14} className="text-accent" />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{session.title}</span>
+            <button
+              type="button"
+              onClick={() => setChatFocusMode(false)}
+              className="flex items-center gap-1 rounded-md border border-edge px-2 py-1 text-[11px] text-ink-muted hover:bg-surface-2 hover:text-ink"
+              title="Exit chat focus (Esc)"
+              aria-label="Exit chat focus"
+            >
+              <Minimize2 size={12} /> Exit focus
+            </button>
+          </div>
+        )}
         {/* Mobile session list dropdown */}
-        <div className="flex items-center gap-2 @4xl:hidden">
+        <div className={`${chatFocusMode ? "hidden" : "flex"} items-center gap-2 @4xl:hidden`}>
           <div className="relative flex-1">
             <button
               onClick={() => setListOpen((v) => !v)}
@@ -913,7 +948,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         )}
 
         {/* Session header: title, agenda, settings, export */}
-        {session && (
+        {session && !chatFocusMode && (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               {titleDraft === null ? (
@@ -940,6 +975,15 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                   className="min-w-0 flex-1 rounded-md border border-edge bg-surface-2 px-2 py-1 text-sm text-ink outline-none focus:border-focus/50"
                 />
               )}
+              <button
+                type="button"
+                onClick={() => { setAskSelection(null); setChatFocusMode(true); }}
+                className="flex items-center gap-1 rounded-md border border-edge px-2 py-1 text-[11px] text-ink-muted hover:bg-surface-2 hover:text-ink"
+                title="Focus chat"
+                aria-label="Focus chat"
+              >
+                <Maximize2 size={11} /> Focus chat
+              </button>
               <button
                 onClick={() => setSettingsOpen((v) => !v)}
                 className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] transition ${
@@ -1251,21 +1295,32 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
         </div>
 
         {/* Active source-history indicator */}
-        {sourceHistory.length > 0 && (
+        {!chatFocusMode && sourceHistory.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] uppercase tracking-wide text-ink-muted">Open sources:</span>
             {sourceHistory.map((h) => {
               const Icon = KIND_ICON[h.kind] ?? FileText;
               const sourceIndex = attachedSources.findIndex((source) => source.refId === h.refId) + 1;
               return (
-                <button
-                  key={h.windowId}
-                  onClick={() => sourceIndex > 0 && openCitation({ index: sourceIndex })}
-                  className="flex items-center gap-1 rounded-md border border-edge bg-surface-2 px-1.5 py-0.5 text-[10px] text-ink-muted hover:bg-surface-3 hover:text-ink"
-                  title={`Focus ${h.name}`}
-                >
-                  <Icon size={10} /> [{sourceIndex || h.index}] {h.name}
-                </button>
+                <div key={h.windowId} className="flex items-center rounded-md border border-edge bg-surface-2 text-[10px] text-ink-muted">
+                  <button
+                    type="button"
+                    onClick={() => sourceIndex > 0 && openCitation({ index: sourceIndex })}
+                    className="flex items-center gap-1 px-1.5 py-0.5 hover:bg-surface-3 hover:text-ink"
+                    title={`Focus ${h.name}`}
+                  >
+                    <Icon size={10} /> [{sourceIndex || h.index}] {h.name}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => closeSource(h.windowId)}
+                    className="border-l border-edge p-0.5 hover:bg-surface-3 hover:text-danger"
+                    title={`Close ${h.name}`}
+                    aria-label={`Close ${h.name}`}
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -1276,23 +1331,17 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
           Replaces floating source windows — the teacher's show_source /
           highlight_source / focus_source / close_source commands drive this
           pane via the shared show-control channel (paneId). */}
-      <div ref={sourcePaneRef} className="teach-source-pane hidden w-[30rem] shrink-0 @4xl:flex">
-        <TeachSourcePane
-          paneId={paneId}
-          source={paneSource}
-          pending={panePending}
-          onPendingApplied={() => setPanePending(null)}
-          onClose={() => {
-            const wid = paneSource?.windowId;
-            if (wid) {
-              teach.setSourceHistory((prev) => prev.filter((h) => h.windowId !== wid));
-              delete sourceMetaRef.current[wid];
-            }
-            setPaneSource(null);
-            setPanePending(null);
-          }}
-        />
-      </div>
+      {!chatFocusMode && paneSource && (
+        <div ref={sourcePaneRef} className="teach-source-pane hidden w-[30rem] shrink-0 @4xl:flex">
+          <TeachSourcePane
+            paneId={paneId}
+            source={paneSource}
+            pending={panePending}
+            onPendingApplied={() => setPanePending(null)}
+            onClose={() => closeSource(paneSource.windowId)}
+          />
+        </div>
+      )}
 
       {/* Ask-about-selection button for text selected inside the source pane. */}
       {askSelection && (
