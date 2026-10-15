@@ -7,6 +7,7 @@ import { SectionHeader, Card, Field, inputClass } from "../ui";
 import { confirmDialog } from "../../../store/mobileDialog";
 import { Dialog } from "../../../ui/overlays";
 import { Alert } from "../../../ui/primitives";
+import OpenTestingPanel from "./OpenTestingPanel";
 
 const AVATAR_PRESETS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
@@ -102,6 +103,8 @@ export default function UsersSection() {
               />
             </button>
           </Card>
+
+          <OpenTestingPanel />
         </>
       )}
 

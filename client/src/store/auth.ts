@@ -19,6 +19,14 @@ interface AuthState {
     acceptPrivacy: true;
     turnstileToken?: string;
   }) => Promise<void>;
+  registerWithInvite: (data: {
+    registrationToken: string;
+    username: string;
+    password: string;
+    displayName?: string;
+    ageBand: "AGE_13_17" | "AGE_18_PLUS";
+    guardianEmail?: string;
+  }) => Promise<void>;
   tryDemo: () => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -65,6 +73,16 @@ export const useAuth = create<AuthState>((set, get) => ({
     // Bootstrap-only endpoint (first admin). After that it 403s.
     const data = await api.post<{ token: string; refreshToken: string | null; user: User }>(
       "/api/auth/register",
+      registration
+    );
+    setToken(data.token);
+    setRefreshToken(data.refreshToken);
+    set({ token: data.token, user: data.user, status: "authenticated" });
+  },
+
+  registerWithInvite: async (registration) => {
+    const data = await api.post<{ token: string; refreshToken: string | null; user: User }>(
+      "/api/auth/register-with-invite",
       registration
     );
     setToken(data.token);

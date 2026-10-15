@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes } from "node:crypto";
 import prisma from "../db/client";
-import { signToken, issueRefreshToken, rotateRefreshToken, revokeRefreshToken } from "../services/jwt";
+import { signToken, verifyToken, issueRefreshToken, rotateRefreshToken, revokeRefreshToken } from "../services/jwt";
 import { authMiddleware } from "../middleware/auth";
 import { rateLimit } from "../middleware/rateLimit";
 import {
@@ -309,6 +309,73 @@ auth.post("/register", rateLimit({ max: 5, windowMs: 60_000 }), zValidator("json
     },
   });
   if (isMinor && guardianEmail) await requestGuardianConsent(user.id, guardianEmail);
+  const token = await signToken({ sub: user.id, username: user.username });
+  return c.json({ token, refreshToken: null, user: publicUser(user) });
+});
+
+const registerWithInviteSchema = z.object({
+  registrationToken: z.string().min(1),
+  username: z.string().min(2).max(32),
+  password: z.string().min(4).max(128),
+  displayName: z.string().max(64).optional().default(""),
+  ageBand: z.enum(["AGE_13_17", "AGE_18_PLUS"]),
+  guardianEmail: z.string().email().max(320).optional(),
+}).superRefine((value, ctx) => {
+  if (value.ageBand === "AGE_13_17" && !value.guardianEmail) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["guardianEmail"], message: "Guardian email is required." });
+  }
+});
+
+/**
+ * POST /auth/register-with-invite
+ * Complete registration using a short-lived invite token issued by
+ * /open-testing/verify. The email is taken from the verified invite.
+ */
+auth.post("/register-with-invite", rateLimit({ max: 5, windowMs: 60_000 }), zValidator("json", registerWithInviteSchema), async (c) => {
+  const { registrationToken, username, password, displayName, ageBand, guardianEmail } = c.req.valid("json");
+
+  const payload = await verifyToken(registrationToken);
+  if (!payload || !payload.invite) {
+    return c.json({ error: "Invalid or expired invite. Please request a new code." }, 400);
+  }
+
+  const now = new Date();
+  const invite = await prisma.openTestingInvite.findUnique({
+    where: { id: payload.sub },
+  });
+  if (!invite || invite.status !== "SENT" || (invite.expiresAt && invite.expiresAt < now)) {
+    return c.json({ error: "Invalid or expired invite. Please request a new code." }, 400);
+  }
+
+  const existing = await prisma.user.findUnique({ where: { username } });
+  if (existing) {
+    return c.json({ error: "Username already taken" }, 409);
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const isMinor = ageBand === "AGE_13_17";
+  const user = await prisma.user.create({
+    data: {
+      username,
+      email: invite.email,
+      passwordHash,
+      displayName,
+      role: "FREE",
+      ageBand,
+      guardianConsentStatus: isMinor ? "PENDING" : "NOT_REQUIRED",
+      termsAcceptedAt: now,
+      privacyAcceptedAt: now,
+      aiSource: "hosted",
+    },
+  });
+
+  await prisma.openTestingInvite.update({
+    where: { id: invite.id },
+    data: { status: "USED", usedAt: now, userId: user.id },
+  });
+
+  if (isMinor && guardianEmail) await requestGuardianConsent(user.id, guardianEmail);
+
   const token = await signToken({ sub: user.id, username: user.username });
   return c.json({ token, refreshToken: null, user: publicUser(user) });
 });

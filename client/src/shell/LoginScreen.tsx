@@ -8,7 +8,12 @@ import { api } from "../services/api";
 import AppLogo from "./AppLogo";
 import TurnstileWidget from "./TurnstileWidget";
 
-export default function LoginScreen() {
+interface Props {
+  embedded?: boolean;
+  onSwitchToSignup?: () => void;
+}
+
+export default function LoginScreen({ embedded = false, onSwitchToSignup }: Props) {
   const { login, loginWithTotp, register, tryDemo } = useAuth();
   const isNative = Capacitor.isNativePlatform();
   const [serverUrl, setServerUrl] = useState(getBaseUrl());
@@ -190,33 +195,26 @@ export default function LoginScreen() {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[15000] flex items-center justify-center bg-canvas px-5">
-      <div className="absolute inset-0 bg-surface-sunken/35" />
-      <motion.div
-        initial={{ y: 20, opacity: 0, scale: 0.97 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className="relative z-10 w-full max-w-sm rounded-xl border border-edge/70 bg-surface p-8 shadow-panel"
-      >
-        <div className="mb-6 text-center">
-          <AppLogo size={56} className="mx-auto mb-3" />
-          <h1 className="text-xl font-semibold text-ink">Mavino</h1>
-          <p className="text-sm text-ink-muted">
-            {mode === "login"
-              ? "Sign in to your Student OS"
-              : mode === "register"
-              ? "Create your Student OS account"
-              : mode === "totp"
-              ? "Enter your verification code"
-              : "Reset your password"}
-          </p>
-          {mode === "login" && (
-            <p className="mt-1 text-[11px] text-ink-muted">Made by students, for students</p>
-          )}
-        </div>
+  const card = (
+    <>
+      <div className="mb-6 text-center">
+        {!embedded && <AppLogo size={56} className="mx-auto mb-3" />}
+        <h1 className="text-xl font-semibold text-ink">Mavino</h1>
+        <p className="text-sm text-ink-muted">
+          {mode === "login"
+            ? "Sign in to your Student OS"
+            : mode === "register"
+            ? "Create your Student OS account"
+            : mode === "totp"
+            ? "Enter your verification code"
+            : "Reset your password"}
+        </p>
+        {mode === "login" && !embedded && (
+          <p className="mt-1 text-[11px] text-ink-muted">Made by students, for students</p>
+        )}
+      </div>
 
-        {mode === "forgot" ? (
+      {mode === "forgot" ? (
           <form onSubmit={submitForgot} className="space-y-3">
             {forgotSent ? (
               <div className="space-y-3">
@@ -488,8 +486,12 @@ export default function LoginScreen() {
                 <button
                   type="button"
                   onClick={() => {
-                    setMode("register");
-                    setError(null);
+                    if (embedded && onSwitchToSignup) {
+                      onSwitchToSignup();
+                    } else {
+                      setMode("register");
+                      setError(null);
+                    }
                   }}
                   className="font-medium text-accent hover:underline"
                 >
@@ -518,6 +520,21 @@ export default function LoginScreen() {
             Don't have an account? Ask your administrator.
           </p>
         )}
+      </>
+    );
+
+  return embedded ? (
+    card
+  ) : (
+    <div className="fixed inset-0 z-[15000] flex items-center justify-center bg-canvas px-5">
+      <div className="absolute inset-0 bg-surface-sunken/35" />
+      <motion.div
+        initial={{ y: 20, opacity: 0, scale: 0.97 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+        className="relative z-10 w-full max-w-sm rounded-xl border border-edge/70 bg-surface p-8 shadow-panel"
+      >
+        {card}
       </motion.div>
     </div>
   );

@@ -89,6 +89,38 @@ export function getAppBaseUrl(): string {
 }
 
 /**
+ * Send an open-testing invite code email. Returns true if the email was sent
+ * (or would have been sent in dev mode), false on error.
+ */
+export async function sendOpenTestingInviteEmail(opts: {
+  to: string;
+  code: string;
+  expiresAt: Date;
+}): Promise<boolean> {
+  const baseUrl = getAppBaseUrl();
+  const subject = "Mavino — Your open testing invite code";
+  const expiryText = opts.expiresAt.toLocaleString();
+  const text = `Hello,
+
+Your Mavino open testing invite code is:
+
+${opts.code}
+
+Enter this code on the sign-up page to create your account. It expires on ${expiryText}.
+
+If you didn't request this, you can safely ignore this email.
+
+— Mavino Student OS`;
+  const html = `<p>Hello,</p>
+<p>Your Mavino open testing invite code is:</p>
+<p style="font-size:1.5rem;font-weight:bold;letter-spacing:0.1em;margin:16px 0;">${opts.code}</p>
+<p>Enter this code on the <a href="${baseUrl}">sign-up page</a> to create your account. It expires on ${expiryText}.</p>
+<p>If you didn't request this, you can safely ignore this email.</p>
+<p>— Mavino Student OS</p>`;
+  return sendEmail({ to: opts.to, subject, text, html });
+}
+
+/**
  * Send a password reset email. Returns true if the email was sent (or would
  * have been sent in dev mode), false on error.
  */

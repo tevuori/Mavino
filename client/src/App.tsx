@@ -6,10 +6,12 @@ import { startNotificationPolling, stopNotificationPolling } from "./store/notif
 import { useFormFactor, initFormFactorListeners } from "./store/formfactor";
 import { useLanguage } from "./store/language";
 import { startMaintenancePolling, stopMaintenancePolling, useMaintenance } from "./store/maintenance";
+import { Capacitor } from "@capacitor/core";
 import { installGlobalErrorHandlers } from "./services/errorReporter";
 import { cleanupStaleServiceWorkersInDev } from "./services/sw-cleanup";
 import BootScreen from "./shell/BootScreen";
 import LoginScreen from "./shell/LoginScreen";
+import LandingPage from "./shell/LandingPage";
 import ResetPasswordScreen from "./shell/ResetPasswordScreen";
 import ForceChangePasswordScreen from "./shell/ForceChangePasswordScreen";
 import DesktopEnvironment from "./shell/DesktopEnvironment";
@@ -101,7 +103,12 @@ export default function App() {
   }
 
   if (status !== "authenticated") {
-    return <LoginScreen />;
+    // Native builds need the server URL screen before anything else; web
+    // visitors see the marketing landing page.
+    if (Capacitor.isNativePlatform() && !__PLAY_BUILD__) {
+      return <LoginScreen />;
+    }
+    return <LandingPage />;
   }
 
   // If the user's password must be changed (seed/temporary password), force

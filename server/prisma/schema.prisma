@@ -106,6 +106,29 @@ model User {
   sharedDeckShares   SharedDeck[]      @relation("SharedDeckShares")
   sharedFolderShares SharedNoteFolder[] @relation("SharedFolderShares")
   notifications       Notification[]
+  openTestingInvite   OpenTestingInvite?
+}
+
+// ===== Open testing invites =====
+// Controlled-access registration for beta/open testing. A visitor requests
+// an invite by email; the server stores a hash of the raw code and emails the
+// code. The code is single-use, bound to the email, and expires after 24h.
+// If testing is closed/full, the email is kept as a WAITLIST entry instead.
+
+model OpenTestingInvite {
+  id        String    @id @default(cuid())
+  email     String
+  codeHash  String    @unique
+  status    String    @default("PENDING") // PENDING | SENT | USED | WAITLIST
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+  usedAt    DateTime?
+  userId    String?   @unique
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([status])
 }
 
 // ===== Password reset tokens =====

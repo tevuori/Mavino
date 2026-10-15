@@ -47,9 +47,10 @@ const ACCESS_EXPIRY = "15m";
 const REFRESH_TTL_DAYS = 90;
 
 export interface JwtPayload {
-  sub: string; // user id
+  sub: string; // user id or invite id
   username: string;
   totpChallenge?: boolean;
+  invite?: boolean;
 }
 
 /**
@@ -60,6 +61,7 @@ export async function signToken(payload: JwtPayload, expiresIn?: string): Promis
   const jwtBuilder = new SignJWT({
     username: payload.username,
     ...(payload.totpChallenge ? { totpChallenge: true } : {}),
+    ...(payload.invite ? { invite: true } : {}),
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
@@ -83,6 +85,7 @@ export async function verifyToken(token: string): Promise<JwtPayload | null> {
       sub: payload.sub,
       username: payload.username as string,
       totpChallenge: payload.totpChallenge === true,
+      invite: payload.invite === true,
     };
   } catch {
     return null;
