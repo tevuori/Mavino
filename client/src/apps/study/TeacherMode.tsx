@@ -1132,7 +1132,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
               >
                 {toolChips.length > 0 && <div className="mb-2"><ToolChipRow chips={toolChips} /></div>}
                 {streamText ? (
-                  <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: reducedMotion ? 0 : 0.3, ease: "easeOut" }}
+                  >
                     <HighlightableMarkdown
                       content={streamText}
                       scope="teacher"
@@ -1143,7 +1147,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                       enabled={false}
                     />
                     <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-accent align-middle" />
-                  </>
+                  </motion.div>
                 ) : (
                   <Loader2 size={16} className="animate-spin text-accent" />
                 )}

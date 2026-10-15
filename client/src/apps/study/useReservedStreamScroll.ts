@@ -78,7 +78,7 @@ export function useReservedStreamScroll(streaming: boolean, sessionKey: string |
     const observer = new ResizeObserver(updateHeight);
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [sessionKey]);
 
   useEffect(() => {
     cancelAnimation();

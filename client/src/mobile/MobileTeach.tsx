@@ -709,14 +709,20 @@ export default function MobileTeach({ initialSessionId = null, language: request
             >
               {toolChips.length > 0 && <div className="mb-2"><ToolChipRow chips={toolChips} /></div>}
               {streamText ? (
-                <HighlightableMarkdown
-                  content={streamText}
-                  scope="teacher"
-                  scopeId={`${sessionId}:stream`}
-                  citations={citationMeta}
-                  onOpenCitation={openCitation}
-                  enabled={false}
-                />
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: reducedMotion ? 0 : 0.3, ease: "easeOut" }}
+                >
+                  <HighlightableMarkdown
+                    content={streamText}
+                    scope="teacher"
+                    scopeId={`${sessionId}:stream`}
+                    citations={citationMeta}
+                    onOpenCitation={openCitation}
+                    enabled={false}
+                  />
+                </motion.div>
               ) : (
                 <Loader2 size={16} className="animate-spin text-accent" />
               )}
