@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { BarChart3, Brain, Languages, Library, Mic, Network, Presentation, Sparkles, Video } from "lucide-react";
 import type { WindowInstance } from "../../store/windows";
 import { useWindows } from "../../store/windows";
@@ -22,6 +23,9 @@ export default function TeachApp({ win }: { win: WindowInstance }) {
   const setLanguageOverride = useLanguage((state) => state.setOverride);
   const language = preference === "global" ? globalLanguage : preference;
   const initialSessionId = typeof win.payload?.sessionId === "string" ? win.payload.sessionId : null;
+  // Once a lesson session is running, collapse the app-shortcut strip out of
+  // the header (slides away + fades) so the chat gets the space.
+  const [sessionActive, setSessionActive] = useState(false);
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-surface">
@@ -42,7 +46,11 @@ export default function TeachApp({ win }: { win: WindowInstance }) {
           <p className="truncate text-[11px] text-ink-muted">Your adaptive, source-grounded classroom</p>
         </div>
 
-        <nav className="ml-auto hidden items-center gap-1 @3xl:flex">
+        <nav
+          className={`ml-auto hidden items-center gap-1 overflow-hidden transition-all duration-300 ease-in-out @3xl:flex ${
+            sessionActive ? "pointer-events-none max-w-0 opacity-0" : "max-w-[900px] opacity-100"
+          }`}
+        >
           {TOOLS.map((tool) => {
             const Icon = tool.icon;
             return (
@@ -76,12 +84,14 @@ export default function TeachApp({ win }: { win: WindowInstance }) {
       <div className="relative z-10 flex min-h-0 flex-1 flex-col p-3 @3xl:p-4">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-edge bg-surface p-3 shadow-sm @3xl:p-4">
           <TeachAccessBoundary>
-            <TeacherMode initialSessionId={initialSessionId} language={language} />
+            <TeacherMode initialSessionId={initialSessionId} language={language} onSessionChange={(s) => setSessionActive(Boolean(s))} />
           </TeachAccessBoundary>
         </div>
       </div>
 
-      <div className="relative z-10 flex shrink-0 items-center justify-around border-t border-edge bg-surface-2 px-2 py-1.5 @3xl:hidden">
+      <div className={`relative z-10 flex shrink-0 items-center justify-around overflow-hidden border-t border-edge bg-surface-2 px-2 transition-all duration-300 ease-in-out @3xl:hidden ${
+        sessionActive ? "pointer-events-none max-h-0 border-t-0 py-0 opacity-0" : "max-h-16 py-1.5 opacity-100"
+      }`}>
         {TOOLS.map((tool) => {
           const Icon = tool.icon;
           return (

@@ -14,6 +14,7 @@ import type {
   PaceFeedback,
 } from "../../services/teacher";
 import type { ComprehensionCheck, ToolChip } from "./useTeacherSession";
+import { conceptsMatch, findMatchingConcept } from "./conceptMatch";
 import CitationMarkdown from "./CitationMarkdown";
 import type { CitationMeta } from "./CitationMarkdown";
 import type { CitationTarget } from "./studyMarkdown";
@@ -44,7 +45,14 @@ export function LessonAgenda({
   planning: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const coveredSet = new Set(covered.map((c) => c.toLowerCase()));
+  // Covered/mastery concepts arrive from the model as free-form strings that
+  // are often paraphrased or truncated versions of plan.keyConcepts — match
+  // fuzzily instead of exact-string equality (which silently dropped coverage).
+  const isCovered = (concept: string) => covered.some((c) => conceptsMatch(c, concept));
+  const masteryFor = (concept: string) => {
+    const key = findMatchingConcept(Object.keys(mastery), concept);
+    return key ? mastery[key] : undefined;
+  };
 
   if (!plan) {
     return (
@@ -59,7 +67,7 @@ export function LessonAgenda({
     );
   }
 
-  const done = plan.keyConcepts.filter((c) => coveredSet.has(c.toLowerCase())).length;
+  const done = plan.keyConcepts.filter(isCovered).length;
 
   return (
     <div className="rounded-lg border border-edge bg-surface-2">
@@ -85,16 +93,17 @@ export function LessonAgenda({
           )}
           <div className="flex flex-wrap gap-1">
             {plan.keyConcepts.map((concept) => {
-              const isCovered = coveredSet.has(concept.toLowerCase());
-              const rate = passRate(mastery[concept]);
+              const covered = isCovered(concept);
+              const masteryEntry = masteryFor(concept);
+              const rate = passRate(masteryEntry);
               const strong = rate >= 0.8;
-              const weak = mastery[concept] && rate < 0.6;
+              const weak = masteryEntry && rate < 0.6;
               return (
                 <span
                   key={concept}
                   title={
-                    mastery[concept]
-                      ? `${mastery[concept].checksPassed}/${mastery[concept].checksTotal} checks passed`
+                    masteryEntry
+                      ? `${masteryEntry.checksPassed}/${masteryEntry.checksTotal} checks passed`
                       : "Not checked yet"
                   }
                   className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${
@@ -102,12 +111,12 @@ export function LessonAgenda({
                       ? "border-success bg-success-soft text-success"
                       : weak
                         ? "border-warning bg-warning-soft text-warning"
-                        : isCovered
+                        : covered
                           ? "border-accent/40 bg-accent/10 text-accent"
                           : "border-edge text-ink-muted"
                   }`}
                 >
-                  {isCovered && <Check size={9} />} {concept}
+                  {covered && <Check size={9} />} {concept}
                 </span>
               );
             })}

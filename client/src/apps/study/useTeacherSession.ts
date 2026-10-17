@@ -29,6 +29,7 @@ import {
 import { studySourcesApi, type StudySource } from "../../services/study-sources";
 import { useDataRefreshVersion } from "../../store/dataRefresh";
 import type { AthenaClientAction, AthenaToolEvent, AthenaWindowState } from "../../services/athena";
+import { conceptsMatch } from "./conceptMatch";
 
 /** A comprehension check rendered as a card, with its graded outcome. */
 export interface ComprehensionCheck {
@@ -428,7 +429,16 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
       case "mark_concept_covered": {
         const concept = String(p.concept ?? "").trim();
         if (concept) {
-          const next = [...new Set([...(teachStateRef.current.coveredConcepts ?? []), concept])];
+          // The model often reports a paraphrased or truncated variant of the
+          // plan concept — merge fuzzy duplicates (keeping the fuller string)
+          // instead of piling up near-identical entries.
+          const prevCovered = teachStateRef.current.coveredConcepts ?? [];
+          const withoutDupes = prevCovered.filter(
+            (c) => !(conceptsMatch(c, concept) && c.length <= concept.length)
+          );
+          const next = withoutDupes.some((c) => conceptsMatch(c, concept))
+            ? withoutDupes
+            : [...withoutDupes, concept];
           patchState({ coveredConcepts: next });
           // Persist the covered concept immediately so the agenda survives a reload.
           void updateTeachStateRef.current({ coveredConcepts: next });

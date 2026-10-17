@@ -379,7 +379,7 @@ teacher.post("/:id/plan", zValidator("json", planSchema), async (c) => {
 const assessSchema = z.object({
   question: z.string().min(1).max(2000),
   answer: z.string().max(4000),
-  expectedConcept: z.string().max(200).optional(),
+  expectedConcept: z.string().max(2000).optional(),
   /** Index of the assistant message that asked the check (transcript anchoring). */
   messageIndex: z.number().int().min(0).optional(),
   language: z.enum(["en", "cs"]).optional().default("en"),

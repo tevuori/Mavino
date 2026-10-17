@@ -23,7 +23,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Settings2, X, AlertTriangle, Maximize2, Minimize2,
   ArrowUp, ArrowDown, Pencil, RotateCcw, HelpCircle, Zap,
 } from "lucide-react";
-import type { StudentLevel, TeachingStyle, TeacherMessage, TeacherSourceHistoryEntry } from "../../services/teacher";
+import type { StudentLevel, TeachingStyle, TeacherMessage, TeacherSession, TeacherSourceHistoryEntry } from "../../services/teacher";
 import { type StudySource } from "../../services/study-sources";
 import WorkspaceSourceSelector from "./WorkspaceSourceSelector";
 import HighlightableMarkdown from "./HighlightableMarkdown";
@@ -105,6 +105,9 @@ function inferSourceApp(kind: string, refId: string, name = ""): { appId: PaneSo
 interface Props {
   initialSessionId?: string | null;
   language?: "en" | "cs";
+  /** Notified whenever the active session changes (TeachApp hides its app-nav
+   *  strip once a lesson is running). */
+  onSessionChange?: (session: TeacherSession | null) => void;
 }
 
 export default function TeacherMode(props: Props) {
@@ -241,7 +244,7 @@ const MessageBubble = memo(function MessageBubble({
   );
 });
 
-function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
+function DesktopTeacher({ initialSessionId, language = "en", onSessionChange }: Props) {
   const [input, setInput] = useState("");
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(new Set());
   const [showSourcePanel, setShowSourcePanel] = useState(true);
@@ -565,6 +568,14 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     answerComprehension, send, stop, retry, canRetry, setLibrary, setOnTurnDone,
     attachedSources, setError,
   } = teach;
+  // Report session lifecycle upward (TeachApp collapses its app-nav strip
+  // once a lesson is running).
+  const onSessionChangeRef = useRef(onSessionChange);
+  onSessionChangeRef.current = onSessionChange;
+  useEffect(() => {
+    onSessionChangeRef.current?.(session);
+  }, [session]);
+
   const reducedMotion = useReducedMotion();
   const {
     scrollRef,

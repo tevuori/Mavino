@@ -362,11 +362,11 @@ export const teacherTools: ToolDef[] = [
       "student's progress indicator stay in sync. Call it right after the explanation.",
     clientAction: true,
     parameters: [
-      { name: "concept", type: "string", description: "The concept just taught (short label)", required: true },
+      { name: "concept", type: "string", description: "The concept just taught — copy it EXACTLY as written in the lesson plan's keyConcepts", required: true },
     ],
     handler: async (args) => ({
       action: "mark_concept_covered",
-      concept: String(args.concept ?? "").slice(0, 120),
+      concept: String(args.concept ?? "").slice(0, 500),
     }),
   },
   {

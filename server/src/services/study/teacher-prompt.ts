@@ -16,6 +16,7 @@
 // sessions keep working.
 
 import { budgetSources, type GroundedSource, langInstr, type StudyLanguage } from "./prompts";
+import { findMatchingConcept } from "./conceptMatch";
 import type { SourceImageMeta } from "./teacher-images";
 
 /** An entry in the ordered source-history shown during a session. */
@@ -159,7 +160,7 @@ export interface MasteryBuckets {
 export function masteryBuckets(state: TeacherSessionState): MasteryBuckets {
   const mastery = state.mastery ?? {};
   const planConcepts = state.lessonPlan?.keyConcepts ?? [];
-  const covered = new Set(state.coveredConcepts ?? []);
+  const covered = state.coveredConcepts ?? [];
   const known = new Set([...planConcepts, ...Object.keys(mastery), ...covered]);
 
   const toCover: string[] = [];
@@ -167,9 +168,12 @@ export function masteryBuckets(state: TeacherSessionState): MasteryBuckets {
   const mastered: string[] = [];
 
   for (const concept of known) {
-    const entry = mastery[concept];
+    // Covered/mastery keys arrive as free-form strings that are often
+    // paraphrased or truncated plan concepts — match fuzzily (see conceptMatch).
+    const masteryKey = findMatchingConcept(Object.keys(mastery), concept);
+    const entry = masteryKey ? mastery[masteryKey] : undefined;
     if (!entry || entry.checksTotal === 0) {
-      if (!covered.has(concept)) toCover.push(concept);
+      if (!findMatchingConcept(covered, concept)) toCover.push(concept);
       continue;
     }
     const rate = passRate(entry);
