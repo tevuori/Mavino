@@ -261,6 +261,41 @@ function DesktopTeacher({ initialSessionId, language = "en", onSessionChange }: 
   const [askSelection, setAskSelection] = useState<{ text: string; rect: DOMRect } | null>(null);
   const [chatFocusMode, setChatFocusMode] = useState(false);
 
+  // Resizable chat/source split — width of the source pane in px, persisted.
+  const [paneWidth, setPaneWidth] = useState<number>(() => {
+    try {
+      const v = Number(localStorage.getItem("athena:teach:paneWidth"));
+      return Number.isFinite(v) && v >= 280 ? v : 480;
+    } catch { return 480; }
+  });
+  const paneResizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const onPaneResizeDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    paneResizeRef.current = { startX: e.clientX, startWidth: paneWidth };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }, [paneWidth]);
+
+  const onPaneResizeMove = useCallback((e: React.PointerEvent) => {
+    const st = paneResizeRef.current;
+    if (!st) return;
+    // Pane sits on the right — dragging left grows it.
+    const maxW = Math.max(320, (containerRef.current?.clientWidth ?? 1200) * 0.6);
+    const next = Math.round(Math.min(maxW, Math.max(280, st.startWidth + (st.startX - e.clientX))));
+    setPaneWidth(next);
+  }, []);
+
+  const onPaneResizeUp = useCallback((e: React.PointerEvent) => {
+    if (!paneResizeRef.current) return;
+    paneResizeRef.current = null;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    setPaneWidth((w) => {
+      try { localStorage.setItem("athena:teach:paneWidth", String(w)); } catch { /* non-fatal */ }
+      return w;
+    });
+  }, []);
+
   // Side-by-side source pane (replaces floating source windows). One stable
   // paneId backs the show-control channel; the active source is swapped via
   // paneSource. panePending is the highlight to apply once the source loads.
@@ -925,7 +960,7 @@ function DesktopTeacher({ initialSessionId, language = "en", onSessionChange }: 
   }
 
   return (
-    <div className="flex h-full min-h-0 gap-3 overflow-hidden">
+    <div ref={containerRef} className="flex h-full min-h-0 gap-3 overflow-hidden">
       {/* Session list — collapsible sidebar @4xl+ */}
       {!chatFocusMode && (sidebarOpen ? (
         <div className="hidden w-56 shrink-0 flex-col @4xl:flex">
@@ -1445,7 +1480,20 @@ function DesktopTeacher({ initialSessionId, language = "en", onSessionChange }: 
           highlight_source / focus_source / close_source commands drive this
           pane via the shared show-control channel (paneId). */}
       {!chatFocusMode && paneSource && (
-        <div ref={sourcePaneRef} className="teach-source-pane hidden w-[30rem] shrink-0 @4xl:flex">
+        <>
+          {/* Drag handle — resizes the chat/source split */}
+          <div
+            onPointerDown={onPaneResizeDown}
+            onPointerMove={onPaneResizeMove}
+            onPointerUp={onPaneResizeUp}
+            className="hidden w-1.5 shrink-0 cursor-col-resize rounded-full bg-edge/60 transition-colors hover:bg-accent/50 active:bg-accent/70 @4xl:block"
+            title="Drag to resize"
+          />
+        <div
+          ref={sourcePaneRef}
+          className="teach-source-pane hidden shrink-0 @4xl:flex"
+          style={{ width: paneWidth }}
+        >
           <TeachSourcePane
             paneId={paneId}
             source={paneSource}
@@ -1454,6 +1502,7 @@ function DesktopTeacher({ initialSessionId, language = "en", onSessionChange }: 
             onClose={() => closeSource(paneSource.windowId)}
           />
         </div>
+        </>
       )}
 
       {/* Ask-about-selection button for text selected inside the source pane. */}

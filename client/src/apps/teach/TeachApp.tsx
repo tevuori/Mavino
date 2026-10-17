@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BarChart3, Brain, Languages, Library, Mic, Network, Presentation, Sparkles, Video } from "lucide-react";
 import type { WindowInstance } from "../../store/windows";
 import { useWindows } from "../../store/windows";
@@ -18,14 +18,22 @@ const TOOLS = [
 
 export default function TeachApp({ win }: { win: WindowInstance }) {
   const openWindow = useWindows((state) => state.open);
+  const setTitle = useWindows((state) => state.setTitle);
   const globalLanguage = useLanguage((state) => state.language);
   const preference = useLanguage((state) => state.overrides.teach);
   const setLanguageOverride = useLanguage((state) => state.setOverride);
   const language = preference === "global" ? globalLanguage : preference;
   const initialSessionId = typeof win.payload?.sessionId === "string" ? win.payload.sessionId : null;
-  // Once a lesson session is running, collapse the app-shortcut strip out of
-  // the header (slides away + fades) so the chat gets the space.
+  // Once a lesson session is running, collapse the app-shortcut strip AND the
+  // whole "Teach Me / Learning studio" header out of the way — the window
+  // title bar shows "Teach Me — <lesson>" instead.
   const [sessionActive, setSessionActive] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTitle(win.id, sessionTitle ? `Teach Me — ${sessionTitle}` : "Teach Me");
+    return () => setTitle(win.id, "Teach Me");
+  }, [sessionTitle, setTitle, win.id]);
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-surface">
@@ -34,7 +42,11 @@ export default function TeachApp({ win }: { win: WindowInstance }) {
         <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-info/8 blur-3xl" />
       </div>
 
-      <header className="relative z-10 flex shrink-0 items-center gap-3 border-b border-edge bg-surface-2/90 px-4 py-3">
+      <header
+        className={`relative z-10 flex shrink-0 items-center gap-3 overflow-hidden border-edge bg-surface-2/90 px-4 transition-all duration-300 ease-in-out ${
+          sessionActive ? "max-h-0 border-b-0 py-0 opacity-0" : "max-h-20 border-b py-3 opacity-100"
+        }`}
+      >
         <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-fg shadow-sm">
           <Presentation size={20} />
         </div>
@@ -84,7 +96,14 @@ export default function TeachApp({ win }: { win: WindowInstance }) {
       <div className="relative z-10 flex min-h-0 flex-1 flex-col p-3 @3xl:p-4">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-edge bg-surface p-3 shadow-sm @3xl:p-4">
           <TeachAccessBoundary>
-            <TeacherMode initialSessionId={initialSessionId} language={language} onSessionChange={(s) => setSessionActive(Boolean(s))} />
+            <TeacherMode
+              initialSessionId={initialSessionId}
+              language={language}
+              onSessionChange={(s) => {
+                setSessionActive(Boolean(s));
+                setSessionTitle(s?.title ?? null);
+              }}
+            />
           </TeachAccessBoundary>
         </div>
       </div>
