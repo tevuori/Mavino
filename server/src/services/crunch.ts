@@ -27,6 +27,7 @@ import { extractSessionImages } from "./study/teacher-images";
 import { logSessionSafe } from "./study/logSession";
 import type { GroundedSource } from "./study/prompts";
 import type { TeacherSessionState } from "./study/teacher-prompt";
+import { findMatchingConcept } from "./study/conceptMatch";
 
 // ----- Plan data shape (stored as JSON in CrunchPlan.data) -----
 
@@ -227,8 +228,12 @@ export async function examChapterSummary(userId: string, examId: string): Promis
 
 export function chapterProgressFromState(state: TeacherSessionState): ChapterProgress {
   const keyConcepts = state.lessonPlan?.keyConcepts ?? [];
-  const coveredSet = new Set((state.coveredConcepts ?? []).map((c) => c.toLowerCase()));
-  const covered = keyConcepts.filter((c) => coveredSet.has(c.toLowerCase())).length;
+  // Covered concepts arrive as free-form strings — often paraphrased or
+  // truncated variants of the plan's keyConcepts — so exact matching
+  // undercounts coverage (same issue as the lesson agenda had).
+  const covered = keyConcepts.filter((c) =>
+    findMatchingConcept(state.coveredConcepts ?? [], c)
+  ).length;
   const total = keyConcepts.length;
   const masteryEntries = Object.values(state.mastery ?? {});
   const checked = masteryEntries.filter((m) => m.checksTotal > 0);
