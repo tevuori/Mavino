@@ -577,13 +577,23 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
 
   // After creating a new session (and optionally generating a plan) start the
   // first teaching turn automatically so the student doesn't have to type it.
+  // NOTE: `session` must be in the deps — for deep-linked sessions (Crunch)
+  // sessionId already equals initialSessionId at mount, so applySession's
+  // state writes change none of the other deps and this effect would never
+  // re-run to consume autoStartFor (that's why Crunch sessions needed the
+  // student to type "start" manually while fresh sessions auto-started).
   useEffect(() => {
-    if (autoStartFor.current && sessionId === autoStartFor.current && !planning && !streaming && messages.length === 0) {
+    if (autoStartFor.current && session?.id === autoStartFor.current && sessionId === autoStartFor.current && !planning && !streaming && messages.length === 0) {
       autoStartFor.current = null;
       // Chapter sessions opened from Crunch name the chapter in the kick-off
       // prompt so the tutor starts on the right topic straight away.
       const topicLabel = teachStateRef.current.crunchRef?.topicLabel;
-      const prompt = topicLabel
+      const isMock = teachStateRef.current.crunchRef?.mock === true;
+      const prompt = isMock
+        ? language === "cs"
+          ? "Začni zkoušku."
+          : "Start the mock exam."
+        : topicLabel
         ? language === "cs"
           ? `Začni výuku kapitoly „${topicLabel}“.`
           : `Start teaching the chapter "${topicLabel}".`
@@ -592,7 +602,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
           : "Start the lesson.";
       send(prompt);
     }
-  }, [sessionId, planning, streaming, messages.length, send, language]);
+  }, [session, sessionId, planning, streaming, messages.length, send, language]);
 
   // ----- comprehension assessment -----
 
