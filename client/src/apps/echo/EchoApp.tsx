@@ -79,7 +79,7 @@ export default function EchoApp({ win: _win }: { win: WindowInstance }) {
   const sendingRef = useRef<boolean>(false);
   const sessionIdRef = useRef<string | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
-  const { open } = useWindows();
+  const open = useWindows((s) => s.open);
 
   // ----- recording loop -----
 

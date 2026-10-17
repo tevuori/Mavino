@@ -190,7 +190,7 @@ export default function AtlasApp({ win }: { win: WindowInstance }) {
   const zoomRef = useRef(1); // current globalScale, updated via onZoom for link/pointer callbacks
   const [zoomLevel, setZoomLevel] = useState(1); // for the zoom indicator badge
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { open } = useWindows();
+  const open = useWindows((s) => s.open);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 

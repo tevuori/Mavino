@@ -247,7 +247,7 @@ export default function PulseApp({ win: _win }: { win: WindowInstance }) {
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { open } = useWindows();
+  const open = useWindows((s) => s.open);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 

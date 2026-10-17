@@ -85,7 +85,7 @@ function MarkdownText({ content, className = "" }: { content: string; className?
 // ----- main component -----
 
 export default function ForgeApp({ win }: { win: WindowInstance }) {
-  const { open } = useWindows();
+  const open = useWindows((s) => s.open);
   const [sets, setSets] = useState<ForgeProblemSetSummary[]>([]);
   const [activeSet, setActiveSet] = useState<ForgeProblemSet | null>(null);
   const [loading, setLoading] = useState(true);

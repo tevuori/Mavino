@@ -141,6 +141,15 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
 
   const handleRef = useRef<TeacherChatHandle | null>(null);
   const streamTextRef = useRef("");
+  const streamFlushRef = useRef<number | null>(null);
+  /** Flush any buffered stream chunks into state synchronously. */
+  const flushStreamText = useCallback(() => {
+    if (streamFlushRef.current !== null) {
+      cancelAnimationFrame(streamFlushRef.current);
+      streamFlushRef.current = null;
+    }
+    setStreamText(streamTextRef.current);
+  }, []);
   const autoStartFor = useRef<string | null>(null);
   const teachStateRef = useRef(teachState);
   teachStateRef.current = teachState;
@@ -484,7 +493,15 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
       {
         onContent: (t) => {
           streamTextRef.current += t;
-          setStreamText((prev) => prev + t);
+          // Batch UI updates to at most one per animation frame — updating
+          // React state on every SSE token re-rendered the whole transcript
+          // dozens of times per second in long conversations.
+          if (streamFlushRef.current === null) {
+            streamFlushRef.current = requestAnimationFrame(() => {
+              streamFlushRef.current = null;
+              setStreamText(streamTextRef.current);
+            });
+          }
         },
         onTool: (ev: AthenaToolEvent) => {
           const done = ev.state === "completed" || ev.state === "error" || ev.state === "canceled";
@@ -499,8 +516,9 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
           }
         },
         onClientAction: dispatchAction,
-        onError: (msg) => { setError(msg); setStreaming(false); },
+        onError: (msg) => { flushStreamText(); setError(msg); setStreaming(false); },
         onDone: () => {
+          flushStreamText();
           setStreaming(false);
           const finalText = streamTextRef.current;
           const firstTurn = messages.length === 0;
@@ -538,12 +556,13 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
       },
       { windows: windowSnapshot?.() ?? [], sourceHistory: sourceHistoryRef.current, state, language, hidden: opts?.hidden }
     );
-  }, [sessionId, streaming, dispatchAction, windowSnapshot, language, messages.length]);
+  }, [sessionId, streaming, dispatchAction, windowSnapshot, language, messages.length, flushStreamText]);
 
   const stop = useCallback(() => {
     handleRef.current?.abort();
+    flushStreamText();
     setStreaming(false);
-  }, []);
+  }, [flushStreamText]);
 
   /** Retry the last turn after a streaming error. */
   const retry = useCallback(() => {

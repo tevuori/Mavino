@@ -700,7 +700,7 @@ export default function CrunchApp({ win }: { win: WindowInstance }) {
   const [teachBusy, setTeachBusy] = useState<string | null>(null);
   const [focusExamId, setFocusExamId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { open } = useWindows();
+  const open = useWindows((s) => s.open);
   const globalLanguage = useLanguage((s) => s.language);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);

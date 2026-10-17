@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function StartMenu({ open, onClose, triggerRef }: Props) {
-  const { open: openWindow } = useWindows();
+  const openWindow = useWindows((s) => s.open);
   const { user, logout } = useAuth();
   const { toggleFullscreen } = useFullscreen();
   const apps = useAccessibleApps();

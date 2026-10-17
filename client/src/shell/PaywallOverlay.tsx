@@ -28,7 +28,7 @@ const TIER_PRICES: Record<string, string> = {
  * Plans app. "Maybe later" dismisses the overlay but keeps the preview.
  */
 export default function PaywallOverlay({ requiredTier, highlights = [], dismissible = true, onDismiss }: Props) {
-  const { open } = useWindows();
+  const open = useWindows((s) => s.open);
   const tierLabel = TIER_LABELS[requiredTier] ?? "Paid";
   const tierPrice = TIER_PRICES[requiredTier] ?? "€5/mo";
 

@@ -20,7 +20,7 @@ export default function SystemTray() {
     dismissEphemeral,
     markAllRead,
   } = useNotifications();
-  const { open: openWindow } = useWindows();
+  const openWindow = useWindows((s) => s.open);
   const [now, setNow] = useState(new Date());
   const [showVolume, setShowVolume] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);

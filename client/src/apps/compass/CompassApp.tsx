@@ -82,7 +82,7 @@ interface GraphLink extends LinkObject<GraphNode> {
 // ----- main component -----
 
 export default function CompassApp({ win }: { win: WindowInstance }) {
-  const { open } = useWindows();
+  const open = useWindows((s) => s.open);
   const [projects, setProjects] = useState<CompassProjectSummary[]>([]);
   const [activeProject, setActiveProject] = useState<CompassProject | null>(null);
   const [loading, setLoading] = useState(true);

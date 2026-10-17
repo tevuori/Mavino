@@ -150,8 +150,9 @@ export default function AthenaApp({
   conversationsRef.current = conversations;
   const titleGeneratingRef = useRef(false);
 
-  const windows = useWindows((s) => s.windows);
-  const focusedId = useWindows((s) => s.focusedId);
+  // windows/focusedId are only needed imperatively (window snapshot per
+  // request + the client-action dispatcher) — read them via getState() so the
+  // whole chat doesn't re-render 60x/s while the user drags a window around.
   const openWindow = useWindows((s) => s.open);
   const closeWindow = useWindows((s) => s.close);
   const focusWindow = useWindows((s) => s.focus);
@@ -174,8 +175,9 @@ export default function AthenaApp({
   // Keep a ref to the latest windows + store actions so the client-action
   // dispatcher always sees current state even when multiple actions fire in
   // quick succession during a single SSE stream (e.g. open_app x2 then tile).
-  const windowsRef = useRef(windows);
-  windowsRef.current = windows;
+  // Updated via a non-reactive subscription — no render subscription needed.
+  const windowsRef = useRef(useWindows.getState().windows);
+  useEffect(() => useWindows.subscribe((s) => { windowsRef.current = s.windows; }), []);
   const storeRef = useRef({ openWindow, closeWindow, focusWindow, minimizeWindow, setRect, closeAll, closeAllEverywhere, retile });
   storeRef.current = { openWindow, closeWindow, focusWindow, minimizeWindow, setRect, closeAll, closeAllEverywhere, retile };
   const browserUrlsRef = useRef(browserUrls);
@@ -194,7 +196,7 @@ export default function AthenaApp({
 
   // Build the window state snapshot to send with each chat request.
   const buildWindowState = useCallback((): AthenaWindowState[] => {
-    const wsMap = useWindows.getState().workspaces;
+    const { windows, focusedId, workspaces: wsMap } = useWindows.getState();
     return windows.map((w) => ({
       id: w.id,
       appId: w.appId,
@@ -209,7 +211,7 @@ export default function AthenaApp({
         : {}),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [windows, focusedId, browserUrls, mapsCenters]);
+  }, [browserUrls, mapsCenters]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });

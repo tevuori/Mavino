@@ -22,7 +22,11 @@ import { useFullscreen } from "./useFullscreen";
 import FullscreenPrompt from "./FullscreenPrompt";
 
 export default function DesktopEnvironment() {
-  const { open, focusedId, snap, toggleMaximize, close } = useWindows();
+  const open = useWindows((s) => s.open);
+  const focusedId = useWindows((s) => s.focusedId);
+  const snap = useWindows((s) => s.snap);
+  const toggleMaximize = useWindows((s) => s.toggleMaximize);
+  const close = useWindows((s) => s.close);
   const switchRelative = useWindows((s) => s.switchRelative);
   const moveFocusedRelative = useWindows((s) => s.moveFocusedRelative);
   const toggleAthenaQuick = useAthenaQuick((s) => s.toggle);

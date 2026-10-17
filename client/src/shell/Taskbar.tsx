@@ -17,7 +17,16 @@ interface Props {
 }
 
 export default function Taskbar({ onOpenOverview }: Props) {
-  const { windows, focusedId, restoreOrMinimize, open } = useWindows();
+  // Subscribe to a scalar "revision" of only the fields the taskbar cares
+  // about — rect changes during window drags produce the same key, so the
+  // taskbar doesn't re-render 60x/s while a window is being moved/resized.
+  useWindows((s) =>
+    s.windows.map((w) => `${w.id}|${w.appId}|${w.minimized}|${w.workspaceId}|${w.zIndex}`).join(",")
+  );
+  const windows = useWindows.getState().windows;
+  const focusedId = useWindows((s) => s.focusedId);
+  const restoreOrMinimize = useWindows((s) => s.restoreOrMinimize);
+  const open = useWindows((s) => s.open);
   const apps = useAccessibleApps();
   const { appName } = useI18n();
   const activeWorkspaceId = useWindows((s) => s.activeWorkspaceId);

@@ -26,7 +26,7 @@ interface Props {
 }
 
 export default function StudyFunctionLocked({ fn, minTier, onUpgrade }: Props) {
-  const { open } = useWindows();
+  const open = useWindows((s) => s.open);
   const handleUpgrade = onUpgrade ?? (() => open({ appId: "plans", title: "Plans", icon: "CreditCard" }));
   const tierLabel = minTier ? TIER_LABELS[minTier] ?? "Paid" : null;
   const tierPrice = minTier ? TIER_PRICES[minTier] ?? "€5/mo" : null;

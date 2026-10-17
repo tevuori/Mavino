@@ -13,7 +13,7 @@
 //  - Source-history is tracked in local state and sent back to the server on
 //    each turn so Athena can resolve "go back to the first file".
 
-import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, memo } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Sparkles, Send, Square, Plus, Trash2, Loader2,
@@ -23,7 +23,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Settings2, X, AlertTriangle, Maximize2, Minimize2,
   ArrowUp, ArrowDown, Pencil, RotateCcw, HelpCircle, Zap,
 } from "lucide-react";
-import type { StudentLevel, TeachingStyle, TeacherSourceHistoryEntry } from "../../services/teacher";
+import type { StudentLevel, TeachingStyle, TeacherMessage, TeacherSourceHistoryEntry } from "../../services/teacher";
 import { type StudySource } from "../../services/study-sources";
 import WorkspaceSourceSelector from "./WorkspaceSourceSelector";
 import HighlightableMarkdown from "./HighlightableMarkdown";
@@ -35,6 +35,8 @@ import { useTeacherTts } from "./useTeacherTts";
 import { useTeacherSession } from "./useTeacherSession";
 import { prepareSpeech, segmentAtOffset, type SpeechSegment } from "./teacherSpeech";
 import { LessonAgenda, ToolChipRow, ComprehensionCard, PaceFeedbackRow, ExportMenu } from "./teachPanels";
+import type { ComprehensionCheck } from "./useTeacherSession";
+import type { CitationMeta } from "./CitationMarkdown";
 import TeachSourcePane, { type PaneSource, type PaneHighlight } from "./TeachSourcePane";
 import { sourceNavigationFromAction, sourceNavigationFromCommand, sourceNavigationHistoryPatch } from "./sourceNavigation";
 import { useReservedStreamScroll } from "./useReservedStreamScroll";
@@ -51,6 +53,9 @@ const KIND_ICON: Record<string, typeof FileText> = {
   paste: ClipboardPaste,
   url: Link2,
 };
+
+/** Stable empty array so memoized bubbles share one reference. */
+const EMPTY_CHECKS: ComprehensionCheck[] = [];
 
 const APP_ICONS: Record<string, string> = {
   notes: "StickyNote", editor: "Code", viewer: "Image", browser: "Globe",
@@ -120,6 +125,122 @@ export default function TeacherMode(props: Props) {
   );
 }
 
+interface MessageBubbleProps {
+  message: TeacherMessage;
+  msgId: string;
+  /** True when this bubble should reserve the stream-stage height (last assistant message while a turn is pending). */
+  reserved: boolean;
+  reserveHeight: number;
+  sessionId: string | null;
+  sessionTitle?: string;
+  citations: CitationMeta[];
+  checks: ComprehensionCheck[];
+  onOpenCitation: (target: CitationTarget) => void;
+  onAskAboutSelection: (text: string) => void;
+  onAnswer: (id: string, answer: string) => void;
+  ttsSupported: boolean;
+  isSpeaking: boolean;
+  ttsPaused: boolean;
+  ttsProgress: number;
+  onSpeak: (text: string, id: string) => void;
+  onTtsPauseResume: () => void;
+  onTtsStop: () => void;
+}
+
+/**
+ * A single transcript bubble + the comprehension checks anchored to it.
+ * Memoized so streaming updates (and plain typing in the input box) don't
+ * re-render every already-finished ReactMarkdown bubble in long sessions.
+ */
+const MessageBubble = memo(function MessageBubble({
+  message: m, msgId, reserved, reserveHeight, sessionId, sessionTitle,
+  citations, checks, onOpenCitation, onAskAboutSelection, onAnswer,
+  ttsSupported, isSpeaking, ttsPaused, ttsProgress, onSpeak, onTtsPauseResume, onTtsStop,
+}: MessageBubbleProps) {
+  return (
+    <>
+      {/* Hidden messages (e.g. comprehension-check answers fed back
+          to the model) keep their index for check anchoring but do
+          not render a bubble. */}
+      {!m.hidden && (
+        <div
+          className={`flex ${reserved ? "shrink-0 " : ""}${m.role === "user" ? "justify-end" : "justify-start"}`}
+          // content-visibility lets the browser skip layout/paint for
+          // off-screen bubbles in very long transcripts.
+          style={{
+            contentVisibility: "auto",
+            containIntrinsicSize: "auto 80px",
+            ...(reserved ? { minHeight: reserveHeight } : undefined),
+          }}
+        >
+          <div
+            className={`group max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+              m.role === "user" ? "bg-accent/15 text-ink" : "bg-surface-2 text-ink"
+            }`}
+            style={reserved ? { minHeight: reserveHeight, width: "85%" } : undefined}
+          >
+            {m.role === "assistant" ? (
+              <>
+                <HighlightableMarkdown
+                  content={m.content}
+                  scope="teacher"
+                  scopeId={sessionId ? `${sessionId}#${msgId}` : msgId}
+                  sourceName={sessionTitle ? `Teach Me: ${sessionTitle}` : "Teach Me"}
+                  citations={citations}
+                  onOpenCitation={onOpenCitation}
+                  onAskAboutSelection={onAskAboutSelection}
+                />
+                {ttsSupported && (
+                  <div className={`mt-1 flex items-center gap-1.5 transition-opacity ${isSpeaking ? "" : "opacity-0 group-hover:opacity-100"}`}>
+                    {isSpeaking ? (
+                      <>
+                        <button
+                          onClick={onTtsPauseResume}
+                          className="flex items-center gap-1 text-[10px] text-accent hover:opacity-80"
+                        >
+                          {ttsPaused ? <Play size={11} /> : <Pause size={11} />} {ttsPaused ? "Resume" : "Pause"}
+                        </button>
+                        <button onClick={onTtsStop} className="flex items-center gap-1 text-[10px] text-ink-muted hover:text-ink">
+                          <Square size={10} /> Stop
+                        </button>
+                        <span className="h-1 w-20 overflow-hidden rounded-full bg-surface-3">
+                          <span className="block h-full bg-accent transition-all" style={{ width: `${Math.round(ttsProgress * 100)}%` }} />
+                        </span>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => onSpeak(m.content, msgId)}
+                        className="flex items-center gap-1 text-[10px] text-ink-muted hover:text-accent"
+                        title="Read aloud"
+                      >
+                        <Volume2 size={11} /> Read aloud
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="whitespace-pre-wrap">{m.content}</p>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Comprehension checks stay pinned right after the assistant
+          message that asked them, instead of piling up at the
+          bottom as the conversation grows. */}
+      {checks.map((c) => (
+        <ComprehensionCard
+          key={c.id}
+          check={c}
+          onAnswer={(ans) => onAnswer(c.id, ans)}
+          citations={citations}
+          onOpenCitation={onOpenCitation}
+        />
+      ))}
+    </>
+  );
+});
+
 function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const [input, setInput] = useState("");
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(new Set());
@@ -157,8 +278,11 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const sttSupported = isSpeechRecognitionSupported();
 
   const openWindow = useWindows((s) => s.open);
-  const windows = useWindows((s) => s.windows);
-  const focusedId = useWindows((s) => s.focusedId);
+  // windows/focusedId are only read imperatively for the per-request window
+  // snapshot — a render subscription here re-rendered the whole Teach Me UI
+  // (including every markdown message) on every frame of a window drag.
+  const windowsRef = useRef(useWindows.getState().windows);
+  useEffect(() => useWindows.subscribe((s) => { windowsRef.current = s.windows; }), []);
   const issueShowCommand = useShowControl((s) => s.issueCommand);
   const showResults = useShowControl((s) => s.results);
   const setSpeakingWindow = useShowControl((s) => s.setSpeakingWindow);
@@ -169,14 +293,13 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     return () => { removeShowWindow(paneId); };
   }, [paneId, removeShowWindow]);
 
-  const windowsRef = useRef(windows);
-  windowsRef.current = windows;
   const autoSpeakRef = useRef(autoSpeak);
   autoSpeakRef.current = autoSpeak;
 
   /** Build an AthenaWindowState[] snapshot for the server (so tools like
    *  list_open_windows work during a teacher turn). */
   const windowSnapshot = useCallback((): AthenaWindowState[] => {
+    const focusedId = useWindows.getState().focusedId;
     return windowsRef.current.map((w) => ({
       id: w.id,
       appId: w.appId,
@@ -185,7 +308,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
       minimized: w.minimized,
       focused: w.id === focusedId,
     }));
-  }, [focusedId]);
+  }, []);
 
   // ----- source pane client actions (desktop-specific) -----
   // Sources are shown in the side-by-side TeachSourcePane (not floating
@@ -719,6 +842,29 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
     index: index + 1, name: source.name, kind: source.kind, refId: source.refId,
   })), [attachedSources]);
 
+  // Index comprehension checks once per change instead of filtering the whole
+  // array for every message during render.
+  const checksByIndex = useMemo(() => {
+    const map = new Map<number, ComprehensionCheck[]>();
+    for (const c of comprehensionChecks) {
+      const list = map.get(c.afterMessageIndex);
+      if (list) list.push(c); else map.set(c.afterMessageIndex, [c]);
+    }
+    return map;
+  }, [comprehensionChecks]);
+
+  const answerMessage = useCallback((id: string, ans: string) => {
+    void answerComprehension(id, ans);
+  }, [answerComprehension]);
+
+  // Stable TTS controls for the memoized bubbles (read through ttsRef so the
+  // callbacks never change identity).
+  const ttsPauseResume = useCallback(() => {
+    const t = ttsRef.current;
+    if (t.paused) t.resume(); else t.pause();
+  }, []);
+  const ttsStop = useCallback(() => ttsRef.current.stop(), []);
+
   const askAboutSelection = useCallback((text: string) => {
     const prompt = language === "cs" ? `Vysvětli mi tohle podrobněji: "${text}"` : `Explain this in more detail: "${text}"`;
     send(prompt);
@@ -1096,84 +1242,29 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
             const msgId = `msg-${i}`;
             const isSpeaking = tts.speakingId === msgId && tts.playing;
             return (
-              <Fragment key={i}>
-                {/* Hidden messages (e.g. comprehension-check answers fed back
-                    to the model) keep their index for check anchoring but do
-                    not render a bubble. */}
-                {!m.hidden && (
-                <div
-                  className={`flex ${reservationActive && !streamText && m.role === "assistant" && i === messages.length - 1 ? "shrink-0 " : ""}${m.role === "user" ? "justify-end" : "justify-start"}`}
-                  style={reservationActive && !streamText && m.role === "assistant" && i === messages.length - 1
-                    ? { minHeight: reserveHeight }
-                    : undefined}
-                >
-                  <div
-                    className={`group max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                      m.role === "user" ? "bg-accent/15 text-ink" : "bg-surface-2 text-ink"
-                    }`}
-                    style={reservationActive && !streamText && m.role === "assistant" && i === messages.length - 1
-                      ? { minHeight: reserveHeight, width: "85%" }
-                      : undefined}
-                  >
-                    {m.role === "assistant" ? (
-                      <>
-                        <HighlightableMarkdown
-                          content={m.content}
-                          scope="teacher"
-                          scopeId={sessionId ? `${sessionId}#msg-${i}` : msgId}
-                          sourceName={session?.title ? `Teach Me: ${session.title}` : "Teach Me"}
-                          citations={citationMeta}
-                          onOpenCitation={openCitation}
-                          onAskAboutSelection={askAboutSelection}
-                        />
-                        {tts.supported && (
-                          <div className={`mt-1 flex items-center gap-1.5 transition-opacity ${isSpeaking ? "" : "opacity-0 group-hover:opacity-100"}`}>
-                            {isSpeaking ? (
-                              <>
-                                <button
-                                  onClick={() => (tts.paused ? tts.resume() : tts.pause())}
-                                  className="flex items-center gap-1 text-[10px] text-accent hover:opacity-80"
-                                >
-                                  {tts.paused ? <Play size={11} /> : <Pause size={11} />} {tts.paused ? "Resume" : "Pause"}
-                                </button>
-                                <button onClick={tts.stop} className="flex items-center gap-1 text-[10px] text-ink-muted hover:text-ink">
-                                  <Square size={10} /> Stop
-                                </button>
-                                <span className="h-1 w-20 overflow-hidden rounded-full bg-surface-3">
-                                  <span className="block h-full bg-accent transition-all" style={{ width: `${Math.round(tts.progress * 100)}%` }} />
-                                </span>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => speakMessage(m.content, msgId)}
-                                className="flex items-center gap-1 text-[10px] text-ink-muted hover:text-accent"
-                                title="Read aloud"
-                              >
-                                <Volume2 size={11} /> Read aloud
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <p className="whitespace-pre-wrap">{m.content}</p>
-                    )}
-                  </div>
-                </div>
-                )}
-                {/* Comprehension checks stay pinned right after the assistant
-                    message that asked them, instead of piling up at the
-                    bottom as the conversation grows. */}
-                {comprehensionChecks.filter((c) => c.afterMessageIndex === i).map((c) => (
-                  <ComprehensionCard
-                    key={c.id}
-                    check={c}
-                    onAnswer={(ans) => void answerComprehension(c.id, ans)}
-                    citations={citationMeta}
-                    onOpenCitation={openCitation}
-                  />
-                ))}
-              </Fragment>
+              <MessageBubble
+                key={i}
+                message={m}
+                msgId={msgId}
+                reserved={Boolean(reservationActive && !streamText && m.role === "assistant" && i === messages.length - 1)}
+                reserveHeight={reserveHeight}
+                sessionId={sessionId}
+                sessionTitle={session?.title}
+                citations={citationMeta}
+                checks={checksByIndex.get(i) ?? EMPTY_CHECKS}
+                onOpenCitation={openCitation}
+                onAskAboutSelection={askAboutSelection}
+                onAnswer={answerMessage}
+                ttsSupported={tts.supported}
+                isSpeaking={isSpeaking}
+                // Paused/progress only vary for the speaking bubble — passing
+                // neutral values to the rest keeps them memoized during playback.
+                ttsPaused={isSpeaking ? tts.paused : false}
+                ttsProgress={isSpeaking ? tts.progress : 0}
+                onSpeak={speakMessage}
+                onTtsPauseResume={ttsPauseResume}
+                onTtsStop={ttsStop}
+              />
             );
           })}
           {(streaming || streamText) && (

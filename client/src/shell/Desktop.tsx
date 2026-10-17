@@ -30,7 +30,7 @@ const QUICK_ANIM_BGS: { id: AnimatedBgId; name: string }[] = [
 ];
 
 export default function Desktop() {
-  const { open } = useWindows();
+  const open = useWindows((s) => s.open);
   const apps = useAccessibleApps();
   const { appName } = useI18n();
   const { setWallpaper, setAnimatedBg } = useSettings();

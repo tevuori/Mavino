@@ -15,7 +15,10 @@ interface Props {
 export default function WorkspaceSwitcher({ onOpenOverview }: Props) {
   const workspaces = useWindows((s) => s.workspaces);
   const activeWorkspaceId = useWindows((s) => s.activeWorkspaceId);
-  const windows = useWindows((s) => s.windows);
+  // Only needs per-workspace window membership — a scalar key keeps this
+  // from re-rendering on every rect change while dragging windows.
+  useWindows((s) => s.windows.map((w) => w.workspaceId).join(","));
+  const windows = useWindows.getState().windows;
   const switchWorkspace = useWindows((s) => s.switchWorkspace);
   const createWorkspace = useWindows((s) => s.createWorkspace);
   const renameWorkspace = useWindows((s) => s.renameWorkspace);

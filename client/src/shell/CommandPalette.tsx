@@ -89,7 +89,7 @@ export default function CommandPalette() {
   const [fileList, setFileList] = useState<VFile[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
   const panelRef = useOverlayFocus(open, () => setOpen(false));
-  const { open: openWindow } = useWindows();
+  const openWindow = useWindows((s) => s.open);
   const { toggleFullscreen } = useFullscreen();
   const apps = useAccessibleApps();
 

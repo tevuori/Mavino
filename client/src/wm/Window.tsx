@@ -1,14 +1,51 @@
-import { useRef, useCallback, useState, type ReactNode } from "react";
+import { useRef, useCallback, useState, memo, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Minus, Square, X, Copy } from "lucide-react";
 import { useWindows, type WindowInstance, type SnapZone } from "../store/windows";
 import { useShowControl } from "../store/showControl";
 import ContextMenu, { type MenuItem } from "../shell/ContextMenu";
+import { APP_MAP, isPluginAppId } from "../apps/registry";
+import LockedAppPreview from "../shell/LockedAppPreview";
+import PluginAppWrapper from "../apps/plugins/PluginAppWrapper";
 
 interface Props {
   win: WindowInstance;
-  children: ReactNode;
 }
+
+/** Loading fallback shown while a lazy-loaded app chunk is downloading. */
+function AppLoader() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-surface-sunken">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+    </div>
+  );
+}
+
+/** Resolves which app component renders inside the window chrome. */
+function WindowAppInner({ win }: Props) {
+  // Plugin apps: render via PluginAppWrapper (not in the static APP_MAP).
+  if (isPluginAppId(win.appId)) {
+    return <PluginAppWrapper win={win} />;
+  }
+  const def = APP_MAP[win.appId];
+  if (!def) return null;
+  if (win.payload?.preview) {
+    return <LockedAppPreview win={win} />;
+  }
+  return <def.component win={win} />;
+}
+
+/**
+ * The app content is memoized on the window's IDENTITY fields only — changes
+ * to rect/zIndex/tiling/focus happen constantly while dragging other windows
+ * and must NOT re-render the (potentially heavy) app subtree.
+ */
+const WindowApp = memo(WindowAppInner, (a, b) =>
+  a.win.id === b.win.id &&
+  a.win.appId === b.win.appId &&
+  a.win.title === b.win.title &&
+  a.win.payload === b.win.payload
+);
 
 const MIN_W = 320;
 const MIN_H = 200;
@@ -43,8 +80,17 @@ function detectSnapZone(clientX: number, clientY: number): SnapZone {
   return "none";
 }
 
-export default function Window({ win, children }: Props) {
-  const { focus, close, minimize, toggleMaximize, snap, setRect } = useWindows();
+function Window({ win }: Props) {
+  // Per-action selectors: store actions are stable references, so these never
+  // trigger a re-render. Subscribing to the whole store (useWindows()) used to
+  // re-render every window on every setRect — i.e. every pointermove during a
+  // drag.
+  const focus = useWindows((s) => s.focus);
+  const close = useWindows((s) => s.close);
+  const minimize = useWindows((s) => s.minimize);
+  const toggleMaximize = useWindows((s) => s.toggleMaximize);
+  const snap = useWindows((s) => s.snap);
+  const setRect = useWindows((s) => s.setRect);
   const focusedId = useWindows((s) => s.focusedId);
   const workspaces = useWindows((s) => s.workspaces);
   // Teach Me: the source the tutor's voice is currently anchored to glows.
@@ -94,12 +140,15 @@ export default function Window({ win, children }: Props) {
       if (st.mode === "move") {
         x += dx;
         y += dy;
-        // Snap detection at screen edges + corners
+        // Snap detection at screen edges + corners — dispatch only on a zone
+        // change so SnapPreview doesn't setState on every pointermove.
         const zone = detectSnapZone(e.clientX, e.clientY);
-        snapPreviewRef.current = zone;
-        document.dispatchEvent(
-          new CustomEvent("snap-preview", { detail: zone })
-        );
+        if (zone !== snapPreviewRef.current) {
+          snapPreviewRef.current = zone;
+          document.dispatchEvent(
+            new CustomEvent("snap-preview", { detail: zone })
+          );
+        }
         if (useGrid) {
           x = snapToGrid(x);
           y = snapToGrid(y);
@@ -275,7 +324,11 @@ export default function Window({ win, children }: Props) {
       </div>
 
       {/* Content */}
-      <div className="relative flex-1 overflow-hidden bg-surface @container">{children}</div>
+      <div className="relative flex-1 overflow-hidden bg-surface @container">
+        <Suspense fallback={<AppLoader />}>
+          <WindowApp win={win} />
+        </Suspense>
+      </div>
 
       {/* Resize handles (hidden when maximized) */}
       {!isMax && (
@@ -333,3 +386,10 @@ export default function Window({ win, children }: Props) {
     </motion.div>
   );
 }
+
+/**
+ * Memoized on the window object reference — the store only creates a new
+ * object for windows that actually changed, so dragging/resizing one window
+ * skips re-rendering all the others entirely.
+ */
+export default memo(Window);

@@ -36,7 +36,7 @@ interface ClipboardItem {
 }
 
 export default function FilesApp(_: { win: WindowInstance }) {
-  const { open: openWindow } = useWindows();
+  const openWindow = useWindows((s) => s.open);
   const refreshVersion = useDataRefreshVersion("files");
 
   // ---- State ----

@@ -39,7 +39,7 @@ export default function QuickCapture() {
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
   const panelRef = useOverlayFocus(open, () => setOpen(false));
-  const { open: openWindow } = useWindows();
+  const openWindow = useWindows((s) => s.open);
   const pushNotification = useNotifications((s) => s.push);
   const rec = useRecorder();
   const quickCaptureShortcut = useSettings((s) => s.shortcuts.toggleQuickCapture);

@@ -6,7 +6,14 @@ import { renderAppIcon } from "../shell/AppIcon";
 
 /** Alt+Tab (and Shift+Alt+Tab) window switcher overlay. Uses the configurable cycleWindows shortcut. */
 export default function AltTabSwitcher() {
-  const { windows, focusedId, cycleFocus } = useWindows();
+  // Scalar revision selector: only re-render when the fields this overlay
+  // uses actually change — rect churn during drags produces the same key.
+  useWindows((s) =>
+    s.windows.map((w) => `${w.id}|${w.appId}|${w.title}|${w.minimized}|${w.workspaceId}|${w.zIndex}`).join(",")
+  );
+  const windows = useWindows.getState().windows;
+  const focusedId = useWindows((s) => s.focusedId);
+  const cycleFocus = useWindows((s) => s.cycleFocus);
   const activeWorkspaceId = useWindows((s) => s.activeWorkspaceId);
   const cycleShortcut = useSettings((s) => s.shortcuts.cycleWindows);
   const [visible, setVisible] = useState(false);
