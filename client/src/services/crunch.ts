@@ -123,8 +123,8 @@ export const crunchApi = {
   delete: () => api.delete<{ ok: boolean }>("/api/crunch"),
 
   /** Get or create the Teach Me session for a plan chapter. */
-  teach: (topicId: string, language?: "en" | "cs") =>
-    api.post<{ sessionId: string; created: boolean; title: string }>("/api/crunch/teach", { topicId, language }),
+  teach: (topicId: string, language?: "en" | "cs", customPrompt?: string) =>
+    api.post<{ sessionId: string; created: boolean; title: string }>("/api/crunch/teach", { topicId, language, customPrompt }),
 
   /** Get or create the exam's mock-exam session (examiner mode). */
   mock: (examId: string) =>

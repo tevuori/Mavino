@@ -144,6 +144,7 @@ crunch.delete("/", async (c) => {
 const teachSchema = z.object({
   topicId: z.string().max(200),
   language: z.enum(["en", "cs"]).optional().default("en"),
+  customPrompt: z.string().max(4000).optional(),
 });
 
 const mockSchema = z.object({
@@ -179,7 +180,7 @@ crunch.post("/teach", zValidator("json", teachSchema), async (c) => {
   const body = c.req.valid("json");
   const { model, error } = await acquireForTeach(userId, c);
   if (error) return error;
-  const result = await ensureChapterSession(userId, model!, body.topicId, body.language);
+  const result = await ensureChapterSession(userId, model!, body.topicId, body.language, body.customPrompt);
   if (!result.ok) return c.json({ error: result.error }, 404);
   return c.json({ sessionId: result.sessionId, created: result.created, title: result.title });
 });

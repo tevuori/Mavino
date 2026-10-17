@@ -24,6 +24,10 @@ export function useReservedStreamScroll(streaming: boolean, sessionKey: string |
   const frameRef = useRef<number | null>(null);
   const targetRef = useRef(0);
   const animatingRef = useRef(false);
+  // The scrollTop value our own animation last wrote — used to detect when
+  // the position changed WITHOUT us (user dragged the scrollbar, pressed
+  // PageUp, etc.), which cancels the follow animation.
+  const expectedRef = useRef<number | null>(null);
   const [reserveHeight, setReserveHeight] = useState(0);
   const [reservationActive, setReservationActive] = useState(false);
 
@@ -31,6 +35,7 @@ export function useReservedStreamScroll(streaming: boolean, sessionKey: string |
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     frameRef.current = null;
     animatingRef.current = false;
+    expectedRef.current = null;
   }, []);
 
   const scrollToTarget = useCallback((top: number) => {
@@ -51,14 +56,25 @@ export function useReservedStreamScroll(streaming: boolean, sessionKey: string |
         cancelAnimation();
         return;
       }
+      // Someone other than our animation moved the scroll position (scrollbar
+      // drag, keyboard, programmatic scroll) — wheel/touchstart already cover
+      // the common cases, but scrollbar drags fire neither, which used to
+      // leave the user locked in place while a turn kept streaming.
+      if (expectedRef.current !== null && Math.abs(current.scrollTop - expectedRef.current) > 1) {
+        cancelAnimation();
+        followRef.current = false;
+        return;
+      }
       const delta = targetRef.current - current.scrollTop;
       if (Math.abs(delta) < 0.5) {
         current.scrollTop = targetRef.current;
+        expectedRef.current = targetRef.current;
         frameRef.current = null;
         animatingRef.current = false;
         return;
       }
       current.scrollTop += delta * 0.2;
+      expectedRef.current = current.scrollTop;
       frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
@@ -115,9 +131,11 @@ export function useReservedStreamScroll(streaming: boolean, sessionKey: string |
     };
     element.addEventListener("wheel", interrupt, { passive: true });
     element.addEventListener("touchstart", interrupt, { passive: true });
+    element.addEventListener("pointerdown", interrupt, { passive: true });
     return () => {
       element.removeEventListener("wheel", interrupt);
       element.removeEventListener("touchstart", interrupt);
+      element.removeEventListener("pointerdown", interrupt);
     };
   }, [cancelAnimation]);
 

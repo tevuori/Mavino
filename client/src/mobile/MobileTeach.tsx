@@ -94,6 +94,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
   const [studentLevel, setStudentLevel] = useState<StudentLevel>("intermediate");
   const [teachingStyle, setTeachingStyle] = useState<TeachingStyle>("explain");
   const [withPlan, setWithPlan] = useState(true);
+  const [customPrompt, setCustomPrompt] = useState("");
   const [imageAware, setImageAware] = useState(true);
   const [view, setView] = useState<"list" | "new">("list");
 
@@ -399,7 +400,7 @@ export default function MobileTeach({ initialSessionId = null, language: request
   };
 
   const startSession = () => {
-    void startNewSession({ sourceIds: [...selectedSourceIds], studentLevel, teachingStyle, imageAware, withPlan });
+    void startNewSession({ sourceIds: [...selectedSourceIds], studentLevel, teachingStyle, imageAware, withPlan, customPrompt: customPrompt.trim() || undefined });
   };
 
   const submit = () => {
@@ -501,6 +502,15 @@ export default function MobileTeach({ initialSessionId = null, language: request
               <span className={`block h-4 w-4 rounded-full bg-surface-2 transition ${imageAware ? "translate-x-4" : ""}`} />
             </span>
           </button>
+
+          <p className="mb-2 text-sm font-semibold text-ink">Custom instructions <span className="font-normal text-ink-muted">(optional)</span></p>
+          <textarea
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            placeholder={"e.g. Focus on exam-style problems, explain in Czech, keep it brief…"}
+            rows={3}
+            className="mb-4 w-full resize-none rounded-2xl border border-edge bg-surface-2 px-4 py-3 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-focus"
+          />
 
           {error && <p className="mb-3 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}
 

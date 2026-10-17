@@ -128,6 +128,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
   const [teachingStyle, setTeachingStyle] = useState<TeachingStyle>("explain");
   const [withPlan, setWithPlan] = useState(true);
   const [imageAware, setImageAware] = useState(true);
+  const [customPrompt, setCustomPrompt] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -730,6 +731,7 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
       teachingStyle,
       imageAware,
       withPlan,
+      customPrompt: customPrompt.trim() || undefined,
     });
   };
 
@@ -944,6 +946,13 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                 <Sparkles size={13} /> Start Teaching
               </ActionButton>
             </div>
+            <textarea
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              placeholder="Custom instructions for the lesson (optional) — e.g. &quot;focus on exam problems&quot;, &quot;explain simply&quot;, &quot;quiz me more often&quot;"
+              rows={2}
+              className="w-full resize-none rounded-md border border-edge bg-surface-2 px-2.5 py-1.5 text-xs text-ink outline-none placeholder:text-ink-muted focus:border-focus/50"
+            />
           </div>
         )}
 
@@ -1039,6 +1048,8 @@ function DesktopTeacher({ initialSessionId, language = "en" }: Props) {
                 onLevel={(lvl) => void updateTeachState({ studentLevel: lvl })}
                 onStyle={(st) => void updateTeachState({ teachingStyle: st })}
                 onImageAware={(v) => void updateTeachState({ imageAware: v })}
+                customPrompt={teachState.customPrompt ?? ""}
+                onCustomPrompt={(v) => void updateTeachState({ customPrompt: v })}
                 onSourceAdded={(s) => setLibrary((prev) => [s, ...prev.filter((x) => x.id !== s.id)])}
                 onClose={() => setSettingsOpen(false)}
               />
@@ -1376,6 +1387,8 @@ function SessionSettings({
   onLevel,
   onStyle,
   onImageAware,
+  customPrompt,
+  onCustomPrompt,
   onSourceAdded,
   onClose,
 }: {
@@ -1388,6 +1401,8 @@ function SessionSettings({
   onLevel: (lvl: StudentLevel) => void;
   onStyle: (st: TeachingStyle) => void;
   onImageAware: (v: boolean) => void;
+  customPrompt: string;
+  onCustomPrompt: (v: string) => void;
   onSourceAdded: (s: StudySource) => void;
   onClose: () => void;
 }) {
@@ -1513,6 +1528,17 @@ function SessionSettings({
         <input type="checkbox" checked={imageAware} onChange={(e) => onImageAware(e.target.checked)} />
         Image recognition
       </label>
+
+      <div className="flex flex-col gap-1">
+        <span className="text-[11px] text-ink-muted">Custom instructions</span>
+        <textarea
+          defaultValue={customPrompt}
+          onBlur={(e) => onCustomPrompt(e.target.value.trim())}
+          placeholder="e.g. focus on exam problems, explain simply, quiz me more often…"
+          rows={2}
+          className="w-full resize-none rounded-md border border-edge bg-surface px-2 py-1.5 text-[11px] text-ink outline-none placeholder:text-ink-muted focus:border-focus/50"
+        />
+      </div>
     </div>
   );
 }

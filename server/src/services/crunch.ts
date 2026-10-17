@@ -1089,7 +1089,8 @@ export async function ensureChapterSession(
   userId: string,
   model: LlmModel,
   topicId: string,
-  language: "en" | "cs" = "en"
+  language: "en" | "cs" = "en",
+  customPrompt?: string
 ): Promise<TeachSessionResult> {
   const loaded = await loadReadyPlan(userId);
   if (!loaded) return { ok: false, error: "No ready Crunch plan." };
@@ -1102,6 +1103,23 @@ export async function ensureChapterSession(
 
   if (topic.teachSessionId && (await sessionExists(userId, topic.teachSessionId))) {
     return { ok: true, sessionId: topic.teachSessionId, created: false, title: `${exam.name} — ${topic.label}` };
+  }
+
+  // Plan regenerations drop topic.teachSessionId, orphaning the chapter's
+  // session (which looks to the student like their sources + checks were
+  // wiped). Recover it by matching the crunchRef topicId stored in state.
+  const orphan = await prisma.teacherSession.findFirst({
+    where: { userId, state: { contains: `"topicId":"${topic.id}"` } },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true },
+  });
+  if (orphan) {
+    topic.teachSessionId = orphan.id;
+    await prisma.crunchPlan.update({
+      where: { id: rowId },
+      data: { data: JSON.stringify(data) },
+    });
+    return { ok: true, sessionId: orphan.id, created: false, title: `${exam.name} — ${topic.label}` };
   }
 
   const sourceIds = sessionSourceIds(exam, false);
@@ -1127,6 +1145,7 @@ export async function ensureChapterSession(
     followPlan: true,
     imageAware: true,
     crunchRef,
+    customPrompt: customPrompt?.trim() || undefined,
   };
 
   const created = await prisma.teacherSession.create({
@@ -1141,11 +1160,21 @@ export async function ensureChapterSession(
   await afterSessionCreated(userId, created.id, created.title, sourceIds, sources, state);
 
   // Generate the chapter lesson plan (non-fatal if it fails — the tutor can
-  // still teach from the sources without an agenda).
+  // still teach from the sources without an agenda). The focus names the
+  // chapter's position + the sibling chapters explicitly, otherwise the model
+  // produces the same whole-syllabus plan for every chapter of the exam.
   try {
+    const siblings = data.topics.filter((t) => t.examId === exam.id);
+    const chapterIndex = siblings.findIndex((t) => t.id === topic.id);
+    const otherChapters = siblings.filter((t) => t.id !== topic.id).map((t) => `"${t.label}"`).join(", ");
+    const focus =
+      `Chapter ${chapterIndex + 1} of ${siblings.length}: "${topic.label}" for the upcoming exam "${exam.name}". ` +
+      `Cover ONLY material belonging to this specific chapter — locate it inside the sources (headings, sections, page ranges) and ignore everything else. ` +
+      `This exam's other chapters (${otherChapters}) are handled by separate sessions — do NOT include their concepts in this plan.` +
+      (customPrompt?.trim() ? ` Student's additional instructions: ${customPrompt.trim().slice(0, 500)}` : "");
     const plan = await generateLessonPlan(model, sources, {
       studentLevel: "intermediate",
-      focus: `Chapter "${topic.label}" for the upcoming exam "${exam.name}". Cover only this chapter's material, building toward exam readiness.`,
+      focus,
       language,
     });
     if (plan) {

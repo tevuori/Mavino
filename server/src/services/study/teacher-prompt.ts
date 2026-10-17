@@ -128,6 +128,8 @@ export interface TeacherSessionState {
   imagesAttachedOnTurn?: number;
   /** Crunch exam/chapter this session belongs to (chapter-prep sessions). */
   crunchRef?: CrunchSessionRef;
+  /** Student-provided custom instructions for the lesson (persisted). */
+  customPrompt?: string;
 }
 
 const LEVELS = ["beginner", "intermediate", "advanced"] as const;
@@ -450,6 +452,11 @@ ${issues.map((i) => `  - ${i.name ?? i.refId ?? "source"}: ${i.reason}`).join("\
 - Chapter: "${crunchRef.topicLabel ?? "this chapter"}" — stay scoped to this chapter; if the student wanders into other topics, gently steer back or suggest another chapter session.${crunchSummary ? `\n- Chapter progress across the study plan: ${crunchSummary}` : ""}`
     : "";
 
+  const customBlock = state.customPrompt?.trim()
+    ? `STUDENT'S CUSTOM INSTRUCTIONS (the student explicitly asked for these — follow them throughout the lesson, as long as they don't conflict with safety or source-grounding rules):
+${state.customPrompt.trim().slice(0, 2000)}`
+    : "";
+
   const lessonFlowBlock = isMock
     ? `EXAM FLOW:
 - Ask ONE exam-style question per turn, drawn from the past-exam sources (or in their style when you run out of real questions).
@@ -540,7 +547,7 @@ CITATION AND FORMATTING RULES:
 ${planBlock}
 
 ${masteryBlock}
-${misconceptionBlock ? `\n${misconceptionBlock}\n` : ""}${issueBlock ? `\n${issueBlock}\n` : ""}${paceBlock ? `\n${paceBlock}\n` : ""}${crunchBlock ? `\n${crunchBlock}\n` : ""}${imageBlock ? `\n${imageBlock}\n` : ""}
+${misconceptionBlock ? `\n${misconceptionBlock}\n` : ""}${issueBlock ? `\n${issueBlock}\n` : ""}${paceBlock ? `\n${paceBlock}\n` : ""}${crunchBlock ? `\n${crunchBlock}\n` : ""}${customBlock ? `\n${customBlock}\n` : ""}${imageBlock ? `\n${imageBlock}\n` : ""}
 SOURCE HISTORY (sources shown so far this session, in order):
 ${historyLines}
 

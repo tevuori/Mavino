@@ -1,6 +1,7 @@
 import type { Context, Next } from "hono";
 import { verifyToken } from "../services/jwt";
 import { runWithRls } from "../db/rls";
+import prisma from "../db/client";
 
 export interface AuthVars {
   userId: string;
@@ -13,6 +14,38 @@ declare module "hono" {
   interface ContextVariableMap {
     auth: AuthVars;
   }
+}
+
+// ----- Mandatory 2FA for privileged roles -----
+// ADMIN and MANAGER accounts must have TOTP 2FA enabled before they can use
+// the API at all. Without it every authenticated endpoint returns 403
+// (code TOTP_SETUP_REQUIRED) except the small set needed to complete setup.
+const TOTP_REQUIRED_ROLES = new Set(["ADMIN", "MANAGER"]);
+const TOTP_EXEMPT_PREFIXES = [
+  "/api/auth/me",
+  "/api/auth/password",
+  "/api/auth/2fa/",
+  "/api/auth/logout",
+  "/api/auth/export",
+];
+
+async function totpEnforcementResponse(c: Context, userId: string) {
+  const path = c.req.path;
+  if (TOTP_EXEMPT_PREFIXES.some((p) => path.startsWith(p))) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, totpEnabled: true },
+  });
+  if (user && TOTP_REQUIRED_ROLES.has(user.role) && !user.totpEnabled) {
+    return c.json(
+      {
+        error: "Two-factor authentication is required for administrator and manager accounts. Set up an authenticator app to continue.",
+        code: "TOTP_SETUP_REQUIRED",
+      },
+      403
+    );
+  }
+  return null;
 }
 
 /** Extracts a Bearer token from the Authorization header, verifies the JWT,
@@ -29,6 +62,8 @@ export async function authMiddleware(c: Context, next: Next) {
   if (!payload) {
     return c.json({ error: "Unauthorized" }, 401);
   }
+  const blocked = await totpEnforcementResponse(c, payload.sub);
+  if (blocked) return blocked;
   c.set("auth", { userId: payload.sub, username: payload.username });
   // Wrap the entire downstream chain in an RLS context so that all Prisma
   // queries are automatically scoped to this user by PostgreSQL RLS.
@@ -53,6 +88,8 @@ export async function authMiddlewareWithQuery(c: Context, next: Next) {
   if (!payload) {
     return c.json({ error: "Unauthorized" }, 401);
   }
+  const blocked = await totpEnforcementResponse(c, payload.sub);
+  if (blocked) return blocked;
   c.set("auth", { userId: payload.sub, username: payload.username });
   return runWithRls(payload.sub, false, () => next());
 }

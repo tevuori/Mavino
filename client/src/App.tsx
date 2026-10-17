@@ -14,6 +14,7 @@ import LoginScreen from "./shell/LoginScreen";
 import LandingPage from "./shell/LandingPage";
 import ResetPasswordScreen from "./shell/ResetPasswordScreen";
 import ForceChangePasswordScreen from "./shell/ForceChangePasswordScreen";
+import ForceTotpSetupScreen from "./shell/ForceTotpSetupScreen";
 import DesktopEnvironment from "./shell/DesktopEnvironment";
 import MobileShell from "./shell/mobile/MobileShell";
 import UpdateDialog from "./shell/UpdateDialog";
@@ -115,6 +116,13 @@ export default function App() {
   // them to set a new one before they can access the desktop.
   if (user?.passwordMustChange) {
     return <ForceChangePasswordScreen />;
+  }
+
+  // Admin + manager accounts must have TOTP 2FA configured — the server
+  // enforces the same rule on every API call, this screen just guides them
+  // through setup.
+  if ((user?.role === "ADMIN" || user?.role === "MANAGER") && !user.totpEnabled) {
+    return <ForceTotpSetupScreen />;
   }
 
   // Phone form factor → mobile shell; everything else → desktop shell.

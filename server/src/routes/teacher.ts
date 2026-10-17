@@ -164,6 +164,8 @@ const createSchema = z.object({
   studentLevel: z.enum(["beginner", "intermediate", "advanced"]).optional(),
   teachingStyle: z.enum(["explain", "socratic"]).optional(),
   imageAware: z.boolean().optional(),
+  /** Student-provided custom instructions for the lesson. */
+  customPrompt: z.string().max(4000).optional(),
   sources: z
     .array(
       z.object({
@@ -218,6 +220,7 @@ teacher.post("/", zValidator("json", createSchema), async (c) => {
     teachingStyle: body.teachingStyle ?? "explain",
     followPlan: true,
     imageAware: body.imageAware !== false,
+    customPrompt: body.customPrompt?.trim() || undefined,
   };
 
   const created = await prisma.teacherSession.create({
@@ -350,7 +353,7 @@ teacher.post("/:id/plan", zValidator("json", planSchema), async (c) => {
     const { model } = await acquireLlmModel(userId, { feature: "teacher" });
     plan = await generateLessonPlan(model, sources, {
       studentLevel: state.studentLevel ?? "intermediate",
-      focus: body.focus,
+      focus: body.focus ?? state.customPrompt,
       language: body.language as StudyLanguage,
     });
   } catch (e) {

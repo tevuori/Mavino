@@ -14,6 +14,10 @@ import CodeMirror from "@uiw/react-codemirror";
 import { EditorView } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { markdown } from "@codemirror/lang-markdown";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { BookOpen, Loader2, X, AlertTriangle, ExternalLink } from "lucide-react";
 import { notesApi } from "../../services/notes";
 import { filesApi, isPdfFile, isPptxFile, isImageFile } from "../../services/files";
@@ -158,7 +162,10 @@ function SourceContent(props: ContentProps) {
   if (appId === "paste" || source.kind === "paste") {
     return <PastePane {...props} />;
   }
-  if (appId === "notes" || appId === "editor") {
+  if (appId === "notes") {
+    return <MarkdownPane {...props} />;
+  }
+  if (appId === "editor") {
     return <CodemirrorPane {...props} />;
   }
   if (appId === "viewer") {
@@ -263,7 +270,190 @@ function PastePane({ paneId, source, pending, onPendingApplied, onLoadingChange,
   );
 }
 
-// ----- notes / text files: read-only CodeMirror -----
+// ----- note sources: rendered markdown with DOM-range highlighting -----
+// Notes are displayed FORMATTED (like the Notes app preview), not as raw
+// markdown. Highlighting works on the rendered text: the teacher's phrase /
+// line-number targets are resolved against the concatenated text nodes and
+// wrapped in <mark> elements.
+
+/** Text nodes under `root` with their offsets in the concatenated string. */
+function collectTextNodes(root: HTMLElement): { nodes: { node: Text; start: number }[]; text: string } {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const parent = node.parentElement;
+      if (!parent) return NodeFilter.FILTER_REJECT;
+      const tag = parent.tagName.toLowerCase();
+      if (tag === "script" || tag === "style") return NodeFilter.FILTER_REJECT;
+      if (parent.closest("mark[data-teach-hl]")) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  const nodes: { node: Text; start: number }[] = [];
+  let text = "";
+  let n: Node | null;
+  while ((n = walker.nextNode())) {
+    const t = n as Text;
+    nodes.push({ node: t, start: text.length });
+    text += t.data;
+  }
+  return { nodes, text };
+}
+
+function clearTeachMarks(root: HTMLElement) {
+  for (const m of Array.from(root.querySelectorAll("mark[data-teach-hl]"))) {
+    const parent = m.parentNode;
+    if (!parent) continue;
+    while (m.firstChild) parent.insertBefore(m.firstChild, m);
+    parent.removeChild(m);
+  }
+  root.normalize();
+}
+
+/** Wrap [from, to) of the concatenated text nodes in <mark> elements.
+ *  Returns the first inserted mark (for scrollIntoView) or null. */
+function markTextRange(
+  nodes: { node: Text; start: number }[],
+  from: number,
+  to: number
+): HTMLElement | null {
+  let first: HTMLElement | null = null;
+  for (const { node, start } of nodes) {
+    const end = start + node.data.length;
+    if (end <= from || start >= to) continue;
+    const localFrom = Math.max(0, from - start);
+    const localTo = Math.min(node.data.length, to - start);
+    const target = localFrom > 0 ? node.splitText(localFrom) : node;
+    if (localTo < target.data.length) target.splitText(localTo);
+    const mark = document.createElement("mark");
+    mark.dataset.teachHl = "1";
+    mark.className = "rounded bg-warning-soft text-warning";
+    target.parentNode?.insertBefore(mark, target);
+    mark.appendChild(target);
+    if (!first) first = mark;
+  }
+  return first;
+}
+
+/** Strip markdown syntax so a quote taken from raw note text can be matched
+ *  against the rendered (formatting-free) text. */
+function stripMarkdownSyntax(s: string): string {
+  return s.replace(/[*_~`#>|[\]()]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** Resolve a highlight request against the RENDERED note text. posStart/posEnd
+ *  are raw-markdown offsets and do not map to the rendered DOM, so resolution
+ *  goes through the phrase (and a line-derived phrase for line targets). */
+function resolveRenderedRange(
+  renderedText: string,
+  rawContent: string,
+  opts: { text?: string; line?: number; lineEnd?: number }
+): { from: number; to: number } | null {
+  const needles: string[] = [];
+  if (opts.text) needles.push(opts.text, stripMarkdownSyntax(opts.text));
+  if (typeof opts.line === "number" && opts.line > 0) {
+    const lines = rawContent.split("\n");
+    const raw = lines.slice(opts.line - 1, Math.min(lines.length, opts.lineEnd ?? opts.line)).join(" ");
+    needles.push(raw, stripMarkdownSyntax(raw));
+  }
+  for (const needle of needles) {
+    if (!needle) continue;
+    const r = findHighlightRange(renderedText, { text: needle });
+    if (r) return r;
+  }
+  return null;
+}
+
+function MarkdownPane({ paneId, source, pending, onPendingApplied, onLoadingChange, onError }: ContentProps) {
+  const commands = useShowControl((s) => s.commands);
+  const reportResult = useShowControl((s) => s.reportResult);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [content, setContent] = useState<string | null>(null);
+  const lastSeq = useRef(0);
+  const appliedPendingKeyRef = useRef<string | null>(null);
+
+  // Fetch the note's markdown source.
+  useEffect(() => {
+    let cancelled = false;
+    onLoadingChange(true);
+    setContent(null);
+    appliedPendingKeyRef.current = null;
+    (async () => {
+      try {
+        const { note } = await notesApi.get(source.refId);
+        if (!cancelled) setContent(note.content ?? "");
+      } catch (e) {
+        if (!cancelled) onError(e instanceof Error ? e.message : "Failed to load note");
+      } finally {
+        if (!cancelled) onLoadingChange(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [source.refId, onLoadingChange, onError]);
+
+  /** Apply (or clear) a highlight against the rendered DOM. */
+  const applyHighlight = useCallback(
+    (opts: { text?: string; line?: number; lineEnd?: number }): boolean => {
+      const root = containerRef.current;
+      if (!root || content === null) return false;
+      clearTeachMarks(root);
+      const { nodes, text } = collectTextNodes(root);
+      const range = resolveRenderedRange(text, content, opts);
+      if (!range) return false;
+      const mark = markTextRange(nodes, range.from, range.to);
+      mark?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return mark !== null;
+    },
+    [content]
+  );
+
+  // Apply a pending highlight once the note has rendered.
+  useEffect(() => {
+    if (content === null || !pending) return;
+    const key = JSON.stringify(pending);
+    if (appliedPendingKeyRef.current === key) return;
+    appliedPendingKeyRef.current = key;
+    applyHighlight({ text: pending.text, line: pending.line, lineEnd: pending.lineEnd });
+    onPendingApplied();
+  }, [content, pending, applyHighlight, onPendingApplied]);
+
+  // Live show-control commands (highlight / scroll_to / clear_highlight).
+  const cmd = commands[paneId];
+  useEffect(() => {
+    if (!cmd || cmd.seq === lastSeq.current || content === null) return;
+    lastSeq.current = cmd.seq;
+    if (cmd.kind === "highlight" || cmd.kind === "scroll_to") {
+      const ok = applyHighlight({ text: cmd.text, line: cmd.lineStart, lineEnd: cmd.lineEnd ?? cmd.lineStart });
+      reportResult(paneId, cmd.seq, cmd.kind, ok, ok ? undefined : "no-match");
+    } else if (cmd.kind === "clear_highlight") {
+      const root = containerRef.current;
+      if (root) clearTeachMarks(root);
+      reportResult(paneId, cmd.seq, cmd.kind, true);
+    }
+  }, [cmd, content, paneId, reportResult, applyHighlight]);
+
+  if (content === null) return null;
+  return (
+    <div className="h-full w-full overflow-y-auto p-4">
+      <div ref={containerRef} className="selectable markdown-body prose-sm mx-auto max-w-none text-ink">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+          components={{
+            a: ({ href, children }) => (
+              <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent underline hover:opacity-80">
+                {children}
+              </a>
+            ),
+          }}
+        >
+          {content || "*This note is empty.*"}
+        </ReactMarkdown>
+      </div>
+    </div>
+  );
+}
+
+// ----- text files: read-only CodeMirror -----
 
 function CodemirrorPane({ paneId, source, pending, onPendingApplied, onLoadingChange, onError, isDark }: ContentProps) {
   const { extensions: showExtensions, onCreateEditor: onCreateEditorShow } = useCodemirrorShowControl(paneId);

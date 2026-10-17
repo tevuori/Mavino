@@ -54,6 +54,7 @@ function publicUser(u: {
   avatarColor: string;
   role: string;
   passwordMustChange?: boolean;
+  totpEnabled?: boolean;
   ageBand?: string;
   guardianConsentStatus?: string;
   aiSource?: string;
@@ -66,6 +67,7 @@ function publicUser(u: {
     avatarColor: u.avatarColor,
     role: u.role,
     passwordMustChange: u.passwordMustChange ?? false,
+    totpEnabled: u.totpEnabled ?? false,
     ageBand: u.ageBand ?? "UNKNOWN",
     guardianConsentStatus: u.guardianConsentStatus ?? "NOT_REQUIRED",
     aiSource: u.aiSource ?? "choice_required",
@@ -611,6 +613,10 @@ auth.post("/2fa/disable", authMiddleware, zValidator("json", disable2faSchema), 
   if (!user) return c.json({ error: "Not found" }, 404);
   if (!user.totpEnabled) {
     return c.json({ error: "2FA is not enabled." }, 400);
+  }
+  // Privileged roles may not turn 2FA off — it is mandatory for them.
+  if (user.role === "ADMIN" || user.role === "MANAGER") {
+    return c.json({ error: "Two-factor authentication is mandatory for administrator and manager accounts and cannot be disabled." }, 403);
   }
   // Require password confirmation.
   if (!(await bcrypt.compare(password, user.passwordHash))) {

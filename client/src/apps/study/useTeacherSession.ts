@@ -193,18 +193,26 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
       ...(loaded.state ?? {}),
     });
     // Restore comprehension-check cards from localStorage first (keeps pending checks),
-    // then fall back to the server's answered comprehension log.
+    // then fall back to the server's answered comprehension log. An EMPTY stored
+    // array is treated as "nothing stored" — the persistence effect can write []
+    // before the session finishes loading, which used to wipe the restored cards.
     let checks: ComprehensionCheck[] | null = null;
     try {
       const raw = localStorage.getItem(comprehensionChecksKey(loaded.id));
       if (raw) checks = JSON.parse(raw) as ComprehensionCheck[];
     } catch { /* ignore */ }
-    if (checks) {
+    if (checks && checks.length > 0) {
       setComprehensionChecks(checks);
     } else if (loaded.state?.comprehensionLog?.length) {
       setComprehensionChecks(logToChecks(loaded.state.comprehensionLog, (loaded.messages ?? []).length));
     } else {
-      setComprehensionChecks([]);
+      setComprehensionChecks(checks ?? []);
+    }
+    // A session with no messages yet (e.g. freshly created from Crunch) starts
+    // the first teaching turn automatically — the student should not have to
+    // type "start the lesson" themselves.
+    if ((loaded.messages ?? []).length === 0) {
+      autoStartFor.current = loaded.id;
     }
   }, []);
 
@@ -244,6 +252,8 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
     /** Generate a lesson plan right away (one extra model call). */
     withPlan?: boolean;
     planFocus?: string;
+    /** Student-provided custom instructions for the lesson. */
+    customPrompt?: string;
   }) => {
     if (input.sourceIds.length === 0) {
       setError("Select at least one source to start a Teach Me session.");
@@ -257,6 +267,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
         studentLevel: input.studentLevel,
         teachingStyle: input.teachingStyle,
         imageAware: input.imageAware,
+        customPrompt: input.customPrompt,
       });
       applySession(created);
       void refreshLists();
@@ -264,7 +275,7 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
         setPlanning(true);
         try {
           const { plan, session: withPlan } = await teacherApi.plan(created.id, {
-            focus: input.planFocus,
+            focus: input.planFocus ?? input.customPrompt,
             language,
           });
           applySession({ ...withPlan, state: { ...withPlan.state, lessonPlan: plan } });
@@ -429,12 +440,14 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
   }, []);
 
   // Persist pending/answered comprehension cards so they survive a re-enter.
+  // Only write once the session has actually loaded — writing the initial []
+  // for a not-yet-loaded session would clobber the previously stored cards.
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || session?.id !== sessionId) return;
     try {
       localStorage.setItem(comprehensionChecksKey(sessionId), JSON.stringify(comprehensionChecks));
     } catch { /* ignore */ }
-  }, [sessionId, comprehensionChecks]);
+  }, [sessionId, session?.id, comprehensionChecks]);
 
   // ----- streaming a turn -----
 
@@ -548,7 +561,16 @@ export function useTeacherSession(opts: UseTeacherSessionOpts = {}) {
   useEffect(() => {
     if (autoStartFor.current && sessionId === autoStartFor.current && !planning && !streaming && messages.length === 0) {
       autoStartFor.current = null;
-      const prompt = language === "cs" ? "Začni výuku." : "Start the lesson.";
+      // Chapter sessions opened from Crunch name the chapter in the kick-off
+      // prompt so the tutor starts on the right topic straight away.
+      const topicLabel = teachStateRef.current.crunchRef?.topicLabel;
+      const prompt = topicLabel
+        ? language === "cs"
+          ? `Začni výuku kapitoly „${topicLabel}“.`
+          : `Start teaching the chapter "${topicLabel}".`
+        : language === "cs"
+          ? "Začni výuku."
+          : "Start the lesson.";
       send(prompt);
     }
   }, [sessionId, planning, streaming, messages.length, send, language]);

@@ -97,6 +97,8 @@ export interface TeacherSessionState {
   imageAware?: boolean;
   /** Crunch exam/chapter this session belongs to (chapter-prep sessions). */
   crunchRef?: CrunchSessionRef;
+  /** Student-provided custom instructions for the lesson. */
+  customPrompt?: string;
 }
 
 export interface TeacherAssessment {
@@ -148,6 +150,7 @@ export const teacherApi = {
     studentLevel?: StudentLevel;
     teachingStyle?: TeachingStyle;
     imageAware?: boolean;
+    customPrompt?: string;
     sources?: { kind: string; id?: string; text?: string; url?: string; name?: string }[];
   }): Promise<{ session: TeacherSession }> {
     return api.post("/api/teacher", input);
