@@ -9,7 +9,7 @@
 // content has finished loading (so show_source → switch source → highlight
 // works even though loading is async).
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, memo } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { EditorView } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -65,7 +65,12 @@ interface Props {
   onClose: () => void;
 }
 
-export default function TeachSourcePane({ paneId, source, pending, onPendingApplied, onClose }: Props) {
+/**
+ * Memoized: the pane hosts heavy viewers (PDF iframe, CodeMirror, markdown)
+ * and TeacherMode re-renders on every keystroke/stream chunk — without memo
+ * those viewers re-render constantly in long conversations.
+ */
+export default memo(function TeachSourcePane({ paneId, source, pending, onPendingApplied, onClose }: Props) {
   const isDark = useSettings((s) => s.theme === "dark");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +139,7 @@ export default function TeachSourcePane({ paneId, source, pending, onPendingAppl
       </div>
     </div>
   );
-}
+});
 
 function EmptyState() {
   return (

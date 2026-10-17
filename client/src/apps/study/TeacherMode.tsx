@@ -936,6 +936,14 @@ function DesktopTeacher({ initialSessionId, language = "en", onSessionChange }: 
     }
   }, [closeSourceHistory]);
 
+  // Stable props for the memoized TeachSourcePane — inline arrows would break
+  // memoization and re-render the heavy source viewer on every keystroke.
+  const onPanePendingApplied = useCallback(() => setPanePending(null), []);
+  const onPaneClose = useCallback(() => {
+    const w = paneSourceRef.current?.windowId;
+    if (w) closeSource(w);
+  }, [closeSource]);
+
   const newSession = () => {
     resetSession();
     setSelectedSourceIds(new Set());
@@ -1498,8 +1506,8 @@ function DesktopTeacher({ initialSessionId, language = "en", onSessionChange }: 
             paneId={paneId}
             source={paneSource}
             pending={panePending}
-            onPendingApplied={() => setPanePending(null)}
-            onClose={() => closeSource(paneSource.windowId)}
+            onPendingApplied={onPanePendingApplied}
+            onClose={onPaneClose}
           />
         </div>
         </>
