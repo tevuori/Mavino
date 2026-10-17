@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./store/auth";
+import { getToken, getRefreshToken } from "./services/api";
 import { useFeatures } from "./store/features";
 import { usePlugins } from "./store/plugins";
 import { startNotificationPolling, stopNotificationPolling } from "./store/notifications";
@@ -35,7 +36,12 @@ export default function App() {
   const loadLanguage = useLanguage((s) => s.load);
   const mode = useFormFactor((s) => s.mode);
   const { t } = useI18n();
-  const [phase, setPhase] = useState<Phase>("boot");
+  // The 0→100% boot animation is only for returning users entering the
+  // environment — a visitor with no stored session goes straight to the
+  // landing page (or the native login screen) without it.
+  const [phase, setPhase] = useState<Phase>(() =>
+    getToken() || getRefreshToken() ? "boot" : "app"
+  );
   const [adminSignIn, setAdminSignIn] = useState(false);
 
   // On mount, check existing token + set up form-factor listeners + global error handlers

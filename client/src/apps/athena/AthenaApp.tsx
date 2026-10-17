@@ -59,6 +59,17 @@ function mergeConsecutiveMessages(messages: AthenaMessage[]): AthenaMessage[] {
   return result;
 }
 
+/** Index just past the end of the last complete sentence in `text`, or -1.
+ *  A sentence ends on ., !, ? or …, optionally followed by closing quotes /
+ *  brackets, when followed by whitespace or end-of-text. */
+function lastSentenceBoundary(text: string): number {
+  const re = /[.!?…]["'”’)\]»]*(?=\s|$)/g;
+  let idx = -1;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) idx = m.index + m[0].length;
+  return idx;
+}
+
 const SUGGESTIONS = [
   "Create a task: review lecture notes, due Friday",
   "What are my most recent files?",
@@ -1138,17 +1149,36 @@ export default function AthenaApp({
                 // If the current assistant turn already has text AND has
                 // accumulated tool calls, the LLM is resuming narration after
                 // a tool phase. Start a new assistant turn so each text
-                // segment between tool calls is its own message bubble.
+                // segment between tool calls is its own message bubble — but
+                // ONLY at a sentence boundary. Tool events can interleave
+                // mid-sentence (even mid-word), and splitting there used to
+                // tear text in half ("Pro" / "šel jsem…").
                 if (last.content.length > 0 && (last.tools?.length ?? 0) > 0) {
-                  // Mark the previous turn as done — it won't receive more
-                  // content (tools may still update via onTool).
-                  next[next.length - 1] = { ...last, pending: false };
-                  next.push({
-                    role: "assistant",
-                    content: chunk,
-                    tools: [],
-                    pending: !done,
-                  });
+                  const combined = last.content + chunk;
+                  const boundary = lastSentenceBoundary(combined);
+                  if (boundary <= 0) {
+                    // No complete sentence yet — keep accumulating in the
+                    // same turn until one closes.
+                    next[next.length - 1] = {
+                      ...last,
+                      content: combined,
+                      pending: !done && last.pending,
+                    };
+                  } else {
+                    // Completed sentences stay in the old bubble; the rest of
+                    // the chunk starts a fresh one.
+                    next[next.length - 1] = {
+                      ...last,
+                      content: combined.slice(0, boundary).trimEnd(),
+                      pending: false,
+                    };
+                    next.push({
+                      role: "assistant",
+                      content: combined.slice(boundary).replace(/^\s+/, ""),
+                      tools: [],
+                      pending: !done,
+                    });
+                  }
                 } else {
                   next[next.length - 1] = {
                     ...last,
@@ -1216,6 +1246,17 @@ export default function AthenaApp({
               const last = next[next.length - 1];
               if (last && last.role === "assistant") {
                 next[next.length - 1] = { ...last, pending: false };
+              }
+              // Drop a trailing empty assistant bubble — a sentence-boundary
+              // split can leave one behind when the stream ends right after
+              // the boundary.
+              while (next.length > 1) {
+                const t = next[next.length - 1];
+                if (t.role === "assistant" && !t.content.trim() && !t.error && (t.tools?.length ?? 0) === 0) {
+                  next.pop();
+                } else {
+                  break;
+                }
               }
               finalTurns = next;
               return next;
